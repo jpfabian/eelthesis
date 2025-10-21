@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EEL</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.1/lucide.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="loading-screen">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <p>Loading Classes</p>
+        </div>
+    </div>
+
+    <!-- Main Application Layout -->
+    <div id="main-app" class="flex h-screen bg-background hidden">
+        <!-- Sidebar -->
+        <div id="sidebar" class="w-64 bg-sidebar border-r border-sidebar-border h-full flex flex-col">
+            <!-- Sidebar Header -->
+            <div class="p-6">
+                <h1 id="sidebar-title" class="text-xl font-semibold">EEL</h1>
+                <p id="sidebar-welcome" class="text-sm text-muted-foreground mt-1">Welcome</p>
+            </div>
+            
+            <!-- Navigation -->
+            <nav id="sidebar-nav" class="flex-1 px-4 space-y-2">
+                <!-- Navigation items will be populated by JavaScript -->
+            </nav>
+
+            <!-- Logout Button -->
+            <div class="p-4">
+                <button id="logout-btn" class="w-full p-3 logout-button btn-side-bar border">
+                    <i data-lucide="log-out"></i>
+                    Logout
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <main id="main-content" class="flex-1 overflow-auto">
+            <!-- Teacher Classes Content -->
+            <div id="classes-grid-teacher" class="hidden">
+                <div class="p-6 space-y-6">
+                    <h3 class="text-lg font-semibold mb-4">Active Classes</h3>
+                    <div id="teacher-classes-grid" class="grid grid-cols-4 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <!-- JS will populate class cards here -->
+                        <div class="card group cursor-pointer hover:shadow-lg transition-all duration-300 hover:-translate-y-1" onclick="openClassModal()">
+                            <div class="card-content p-4 text-center space-y-3">
+                                <div class="mx-auto w-12 h-12 rounded-full flex items-center justify-center bg-primary/10">
+                                    <i data-lucide="plus" class="size-6 text-primary"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-medium text-sm">Create Class</h4>
+                                    <p class="text-xs text-muted-foreground">Create designated classroom for your student</p>
+                                </div>
+                                <button class="btn btn-outline w-full">
+                                    <i data-lucide="plus" class="size-3 mr-1"></i>
+                                    Create
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+
+            <!-- Student Classes Grid -->
+            <div id="classes-grid-student" class="hidden p-6 space-y-6">
+                <h3 class="text-lg font-semibold mb-4">Active Classes</h3>
+                <div id="student-classes-grid" class="grid grid-cols-4 md:grid-cols-2 lg:grid-cols-4 gap-4">
+
+                    <!-- Join Class Card -->
+                    <div id="join-card-student" class="card group cursor-pointer hover:shadow-lg transition-all duration-300 hover:-translate-y-1" onclick="openJoinModal()">
+                        <div class="card-content p-4 text-center space-y-3">
+                            <div class="mx-auto w-12 h-12 rounded-full flex items-center justify-center bg-primary/10">
+                                <i data-lucide="book-open" class="size-6 text-primary"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-medium text-sm">Join Class</h4>
+                                <p class="text-xs text-muted-foreground">Join your designated class</p>
+                            </div>
+                            <button class="btn btn-outline w-full">
+                                <i data-lucide="plus" class="size-3 mr-1"></i> Join
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================
+            🎓 JOIN CLASS MODAL (Redesigned to match Schedule Modal)
+            ============================================ -->
+            <div id="join-class-modal" class="modal-overlay hidden">
+                <div class="modal-card" style="width: 90%; max-width: 600px;">
+                    <div class="modal-header">
+                        <h3 class="modal-title">🎓 Join Class</h3>
+                        <button class="close-btn" onclick="closeJoinModal()">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div class="modal-content space-y-5">
+                        <div class="space-y-9">
+                            <label class="form-label">🔑 Class Code</label>
+                            <input type="text" id="join-class-code" class="form-input" placeholder="Enter class code">
+                        </div>
+
+                        <div style="padding: 1rem; background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 0.5rem;">
+                            <p style="font-size: 0.875rem; color: #3730a3;">
+                                💡 <strong>Tip:</strong> You can get the class code from your teacher to join the correct class.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button onclick="closeJoinModal()" style="padding: 0.625rem 1.5rem; border: 1px solid var(--border); border-radius: 0.5rem; background: white;">Cancel</button>
+                        <button onclick="joinClass()" style="padding: 0.625rem 1.5rem; background: linear-gradient(135deg, #10b981, #6366f1); color: white; border: none; border-radius: 0.5rem; cursor: pointer;">
+                            Join Class
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============================================
+            📘 CREATE CLASS MODAL (Redesigned to match Schedule Modal)
+            ============================================ -->
+            <div id="create-class-modal" class="modal-overlay hidden">
+                <div class="modal-card" style="width: 90%; max-width: 600px;">
+                    <div class="modal-header">
+                        <h3 class="modal-title">📘 Create New Class</h3>
+                        <button class="close-btn" onclick="closeClassModal()">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div class="modal-content space-y-5">
+                        <div class="space-y-9">
+                            <label class="form-label">🏷️ Class Name</label>
+                            <input type="text" id="class-name" class="form-input" placeholder="Enter class name">
+                        </div>
+
+                        <div class="space-y-9">
+                            <label class="form-label">🏫 Section</label>
+                            <input type="text" id="class-section" class="form-input" placeholder="e.g., 11-A">
+                        </div>
+
+                        <div class="space-y-9">
+                            <label class="form-label">📚 Subject</label>
+                            <select id="class-subject" class="form-input">
+                                <option value="" disabled selected>Select a subject</option>
+                                <option value="oral communication">Oral Communication</option>
+                                <option value="reading and writing skills">Reading and Writing Skills</option>
+                                <option value="creative writing">Creative Writing</option>
+                                <option value="creative non-fiction">Creative Non-Fiction</option>
+                                <option value="english for academic and professional purposes">English for Academic and Professional Purposes</option>
+                            </select>
+                        </div>
+
+                        <div style="padding: 1rem; background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 0.5rem;">
+                            <p style="font-size: 0.875rem; color: #3730a3;">
+                                💡 <strong>Tip:</strong> Use clear and consistent class names for easier management.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button onclick="closeClassModal()" style="padding: 0.625rem 1.5rem; border: 1px solid var(--border); border-radius: 0.5rem; background: white;">Cancel</button>
+                        <button id="save-class-btn" onclick="saveClass()" style="padding: 0.625rem 1.5rem; background: linear-gradient(135deg, #10b981, #6366f1); color: white; border: none; border-radius: 0.5rem; cursor: pointer;">
+                            Save Class
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/navigation.js"></script>
+    <script src="js-front-end/front-classes.js"></script>
+</body>
+</html>

@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recitation - EEL</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.1/lucide.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="loading-screen">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <p>Loading Recitation...</p>
+        </div>
+    </div>
+
+    <!-- Main Application Layout -->
+    <div id="main-app" class="flex h-screen bg-background hidden">
+        <!-- Sidebar -->
+        <div id="sidebar" class="w-64 bg-sidebar border-r border-sidebar-border h-full flex flex-col">
+            <!-- Sidebar Header -->
+            <div class="p-6">
+                <h1 id="sidebar-title" class="text-xl font-semibold">EEL</h1>
+                <p id="sidebar-welcome" class="text-sm text-muted-foreground mt-1">Welcome</p>
+            </div>
+                        
+            <!-- back to class Button -->
+            <div class="p-4">
+                <button id="back-class-btn" class="nav-button btn btn-side-bar w-full justify-start gap-3 p-3 rounded-md text-left transition-all flex items-center">
+                    <i data-lucide="arrow-left" class="size-5"></i>
+                    Back to Classes
+                </button>
+            </div>
+            
+            <!-- Navigation -->
+            <nav id="sidebar-nav" class="flex-1 px-4 space-y-2">
+                <!-- Navigation items will be populated by JavaScript -->
+            </nav>
+
+            <div class="p-4">
+                <button id="logout-btn" class="w-full p-3 logout-button btn-side-bar border">
+                    <i data-lucide="log-out"></i>
+                    Logout
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <main id="main-content" class="flex-1 overflow-auto">
+            <div class="p-6 space-y-6">
+                <div>
+                    <h2 class="text-2xl font-semibold mb-2">Interactive Recitation</h2>
+                    <p class="text-muted-foreground">Conduct engaging recitation sessions with your students</p>
+                </div>
+
+                <!-- Session Setup -->
+                <div id="session-setup" class="content-view active space-y-6">
+                    <div class="grid grid-cols-2 lg:grid-cols-2 gap-6">
+                    <div class="card group cursor-pointer hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+                            <div class="card-header">
+                                <h3 class="card-title">Upload Presentation</h3>
+                                <p class="card-description">Upload PowerPoint or PDF files for your lesson</p>
+                            </div>
+                            <div class="card-content space-y-4">
+                                <div class="border-2 border-dashed border-border rounded-lg p-8 text-center">
+                                    <input type="file" id="file-upload" accept=".ppt,.pptx,.pdf,.png,.jpg,.jpeg" class="hidden">
+                                    <div id="upload-area" class="cursor-pointer" onclick="document.getElementById('file-upload').click()">
+                                        <i data-lucide="upload" class="size-12 text-muted-foreground mx-auto mb-4"></i>
+                                        <p class="text-muted-foreground mb-2">Click to upload or drag and drop</p>
+                                        <p class="text-xs text-muted-foreground">PowerPoint or PDF</p>
+                                    </div>
+                                    <div id="file-preview" class="hidden">
+                                        <i data-lucide="file-text" class="size-12 text-primary mx-auto mb-4"></i>
+                                        <p id="file-name" class="font-medium mb-2"></p>
+                                        <p id="file-size" class="text-sm text-muted-foreground mb-2"></p> <!-- Add this -->
+                                        <button class="btn btn-outline btn-sm" onclick="removeFile()">
+                                            <i data-lucide="x" class="size-3 mr-1"></i>
+                                            Remove
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Question Type Setup -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">Question Configuration</h3>
+                                <p class="card-description">Set up question types for the recitation</p>
+                            </div>
+                            <div class="card-content space-y-4">
+                                <div class="space-y-3">
+                                    <label class="form-label">Question Types</label>
+                                    <div class="space-y-2">
+                                        <label class="flex items-center gap-2">
+                                            <input type="checkbox" class="question-type" data-type="multiple-choice" checked>
+                                            <span>Multiple Choice</span>
+                                        </label>
+                                        <label class="flex items-center gap-2">
+                                            <input type="checkbox" class="question-type" data-type="noun">
+                                            <span>Noun Identification</span>
+                                        </label>
+                                        <label class="flex items-center gap-2">
+                                            <input type="checkbox" class="question-type" data-type="pronoun">
+                                            <span>Pronoun Questions</span>
+                                        </label>
+                                        <label class="flex items-center gap-2">
+                                            <input type="checkbox" class="question-type" data-type="past-tense">
+                                            <span>Past Tense</span>
+                                        </label>
+                                        <label class="flex items-center gap-2">
+                                            <input type="checkbox" class="question-type" data-type="comprehension">
+                                            <span>Reading Comprehension</span>
+                                        </label>
+                                        <label class="flex items-center gap-2">
+                                            <input type="checkbox" class="question-type" data-type="vocabulary">
+                                            <span>Vocabulary</span>
+                                        </label>
+                                        <!-- Added Spelling -->
+                                        <label class="flex items-center gap-2">
+                                            <input type="checkbox" class="question-type" data-type="spelling">
+                                            <span>Spelling</span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="space-y-2">
+                                    <label class="form-label">Number of Questions</label>
+                                    <select id="question-count" class="form-input">
+                                        <option value="5">5 Questions</option>
+                                        <option value="10" selected>10 Questions</option>
+                                        <option value="15">15 Questions</option>
+                                        <option value="20">20 Questions</option>
+                                    </select>
+                                </div>
+
+                                <button id="generate-questions" class="btn btn-primary w-full" disabled>
+                                    <i data-lucide="brain" class="size-4 mr-2"></i>
+                                    Generate Questions
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Start Session Button -->
+                    <div class="text-center">
+                        <button id="start-session" class="btn btn-primary" onclick="startSession()" disabled>
+                            <i data-lucide="play" class="size-4 mr-2"></i>
+                            Start Recitation Session
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Student Picker Modal -->
+    <div id="student-picker" class="modal-overlay hidden" 
+        style="
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(5px);
+            z-index: 999;
+            font-family: 'Poppins', sans-serif;
+            color: #222;
+        ">
+        <div class="modal-card" 
+            style="
+                background: #ffffff;
+                width: 100%;
+                max-width: 1800px;
+                border-radius: 20px;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+                overflow: hidden;
+                animation: fadeIn 0.6s ease;
+                height: 100%;
+                max-height: 1100px;
+            ">
+            
+            <!-- Header -->
+            <div class="modal-header" 
+                style="
+                    display: flex; 
+                    justify-content: space-between; 
+                    align-items: center; 
+                    background: linear-gradient(135deg, #4e54c8, #8f94fb);
+                    padding: 1.2rem 2rem;
+                    color: #fff;
+                ">
+                <div>
+                    <h2 style="margin: 0; font-size: 1.6rem;">🎓 Recitation Session</h2>
+                    <p class="text-muted" style="margin: 0; opacity: 0.9;">
+                        Question <span id="current-question-num">1</span> of <span id="total-questions">10</span>
+                    </p>
+                </div>
+                <button class="close-btn" onclick="backToSetup()" 
+                    style="
+                        background: transparent;
+                        border: none;
+                        color: white;
+                        cursor: pointer;
+                        transition: transform 0.2s;
+                    "
+                    onmouseover="this.style.transform='scale(1.2)'"
+                    onmouseout="this.style.transform='scale(1)'">
+                    ✖
+                </button>
+            </div>
+
+            <!-- Content -->
+            <div class="modal-content" 
+                style="
+                    padding: 2rem;
+                    text-align: center;
+                    background: #f9fafb;
+                ">
+                <div class="picker-title" style="margin-bottom: 1.5rem;">
+                    <h3 style="font-size: 1.5rem; margin-bottom: 0.3rem;">🎯 Pick a Student</h3>
+                    <p class="text-muted" style="color: #666;">Click play ▶️ to randomly select a student</p>
+                </div>
+
+                <!-- Slider -->
+                <div class="slider-container center"
+                    style="
+                        position: relative;
+                        margin: 2rem auto;
+                        width: 90%;
+                        height: 100%;
+                        max-height: 500px;
+                        overflow: hidden;
+                        border-radius: 15px;
+                        border: 3px solid #8f94fb;
+                        background: white;
+                        box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+                    ">
+                    <div id="student-slider" class="student-slider"
+                        style="
+                            display: flex;
+                            align-items: center;
+                            justify-content: flex-start;
+                            gap: 2rem;
+                            transition: transform 0.3s ease-in-out;
+                            height: 100%;
+                            padding-left: 20px;
+                        ">
+                        <!-- JS will populate students here -->
+                    </div>
+                    <div class="selection-indicator"
+                        style="
+                            position: absolute;
+                            top: 0;
+                            bottom: 0;
+                            left: 50%;
+                            width: 2px;
+                            background: red;
+                            transform: translateX(-50%);
+                            box-shadow: 0 0 10px rgba(255,0,0,0.5);
+                            animation: pulse 1.5s infinite;
+                        "></div>
+                </div>
+            </div>
+
+            <!-- Footer / Controls -->
+            <div class="modal-footer" 
+                style="
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    padding: 1rem 2rem;
+                    background: #fff;
+                    border-top: 1px solid #eee;
+                ">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <button id="play-button" onclick="onPlayButtonClick()" 
+                        style="
+                            padding: 0.7rem 1.8rem; 
+                            border: none; 
+                            border-radius: 12px;
+                            background: linear-gradient(135deg, #8f94fb, #4e54c8);
+                            color: white; 
+                            font-weight: 600;
+                            font-size: 1rem;
+                            cursor: pointer;
+                            display: flex;
+                            align-items: center;
+                            gap: 0.5rem;
+                            transition: all 0.3s ease;
+                            box-shadow: 0 4px 10px rgba(78,84,200,0.3);
+                        "
+                        onmouseover="this.style.transform='scale(1.05)'"
+                        onmouseout="this.style.transform='scale(1)'">
+                        ▶️ <span id="play-btn-text">Play</span>
+                    </button>
+
+                    <label style="font-size: 0.95rem; color: #444; cursor: pointer;">
+                        <input type="checkbox" id="auto-pick-toggle" style="margin-right: 0.4rem;"> 🤖 Auto Pick
+                    </label>
+                </div>
+
+                <p class="text-muted" style="margin: 0; font-size: 0.95rem;">
+                    👩‍🎓 <span id="students-remaining" style="font-weight: 600;">10</span> students remaining
+                </p>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ============================================
+    🎯 QUESTION MODAL (Enhanced)
+    ============================================ -->
+    <div id="question-modal" class="modal-overlay hidden" style="
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(6px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        transition: opacity 0.3s ease;
+    ">
+        <div class="modal-card" style="
+            width: 95%;
+            max-width: 1600px;
+            max-height: 90vh;
+            background: #ffffff;
+            border-radius: 20px;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+            animation: slideIn 0.4s ease;
+            display: flex;
+            flex-direction: column;
+        ">
+            <!-- Modal Header -->
+            <div class="modal-header">
+                <h3 class="modal-title" style="font-size: 1.6rem; font-weight: 600;">
+                    🎓 Question for <span id="modal-student-name" style="color: #fde68a;"></span>
+                </h3>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="modal-content" style="
+                padding: 2rem;
+                overflow-y: auto;
+                flex-grow: 1;
+                background: #f9fafb;
+            ">
+                <!-- Question Type -->
+                <p class="text-muted" style="font-size: 1rem; margin-bottom: 0.5rem;">
+                    🧠 <strong>Type:</strong> <span id="modal-question-type" style="color: #2563eb;"></span>
+                </p>
+
+                <!-- Question Text -->
+                <div class="question-section" style="margin-bottom: 1.5rem;">
+                    <label class="form-label" style="font-weight: 600; color: #111827;">Question:</label>
+                    <p id="modal-question-text" style="
+                        font-size: 2rem;
+                        line-height: 1.5;
+                        font-weight: 700;
+                        color: #1e293b;
+                        background: #ffffff;
+                        border-radius: 12px;
+                        padding: 1rem 1.25rem;
+                        border: 2px solid #e5e7eb;
+                        box-shadow: inset 0 0 5px rgba(0,0,0,0.05);
+                        margin-top: 0.5rem;
+                        transition: transform 0.2s ease;
+                    " onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                    </p>
+                </div>
+
+                <!-- Answer Input -->
+                <div id="answer-section" class="answer-section" style="margin-bottom: 1.5rem;">
+                    <label class="form-label" style="font-weight: 600; color: #111827;">✏️ Answer:</label>
+                    <div id="answer-input-container" style="
+                        background: #fff;
+                        padding: 1rem;
+                        border-radius: 10px;
+                        border: 1px solid #d1d5db;
+                        box-shadow: inset 0 0 3px rgba(0,0,0,0.05);
+                    "></div>
+                </div>
+
+                <!-- Result Section -->
+                <div id="result-section" class="result-section hidden" style="margin-top: 1.5rem;">
+                    <div id="result-content"></div>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="modal-footer" style="
+                padding: 1rem 1.5rem;
+                border-top: 1px solid #e5e7eb;
+                background: #ffffff;
+                display: flex;
+                gap: 0.5rem;
+                justify-content: flex-end;
+            ">
+                <button class="btn btn-outline" onclick="closeQuestionModal()" style="
+                    background: transparent;
+                    border: 2px solid #9ca3af;
+                    border-radius: 8px;
+                    padding: 0.6rem 1rem;
+                    font-weight: 600;
+                    color: #374151;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                " onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='transparent'">
+                    ❌ Cancel
+                </button>
+                <button class="btn btn-primary" onclick="submitAnswer()" style="
+                    background: linear-gradient(90deg, #3b82f6, #2563eb);
+                    border: none;
+                    border-radius: 8px;
+                    padding: 0.6rem 1rem;
+                    color: white;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: transform 0.2s ease;
+                " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                    🚀 Submit Answer
+                </button>
+                <button id="continue-button" class="btn btn-primary hidden" onclick="continueToNext()" style="
+                    background: linear-gradient(90deg, #10b981, #059669);
+                    border: none;
+                    border-radius: 8px;
+                    padding: 0.6rem 1rem;
+                    color: white;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: transform 0.2s ease;
+                " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                    ➡️ Continue to Next Student
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/navigation.js"></script>
+    <script src="js-front-end/front-recitation.js"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const classId = urlParams.get('class_id');
+
+            if (classId) {
+                // Store class ID in localStorage
+                localStorage.setItem("eel_selected_class_id", classId);
+
+                // Remove class_id from URL without reloading the page
+                const newUrl = window.location.origin + window.location.pathname;
+                window.history.replaceState({}, document.title, newUrl);
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const user = getCurrentUser();
+            if (!user) {
+                // Not logged in, redirect
+                window.location.href = 'login.html';
+                return;
+            }
+
+            // Only teachers can access recitation page
+            if (user.role !== 'teacher') {
+                window.location.href = 'dashboard.html'; // or quiz-take.html
+                return;
+            }
+
+            // Read class_id from URL if present
+            const urlParams = new URLSearchParams(window.location.search);
+            const classId = urlParams.get('class_id');
+
+            if (classId) {
+                localStorage.setItem("eel_selected_class_id", classId);
+                const newUrl = window.location.origin + window.location.pathname;
+                window.history.replaceState({}, document.title, newUrl);
+            }
+
+            // ✅ Setup sidebar with current page
+            setupSidebar(user, 'recitation');
+
+            // ✅ Render Lucide icons
+            lucide.createIcons();
+
+            // Show main app
+            document.getElementById('main-app').classList.remove('hidden');
+            document.getElementById('loading-screen').classList.add('hidden');
+        })
+    </script>
+</body>
+</html>

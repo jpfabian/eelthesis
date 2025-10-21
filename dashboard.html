@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EEL</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.1/lucide.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="loading-screen">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <p>Loading Dashboard...</p>
+        </div>
+    </div>
+
+    <!-- Main Application Layout -->
+    <div id="main-app" class="flex h-screen bg-background hidden">
+        <!-- Sidebar -->
+        <div id="sidebar" class="w-64 bg-sidebar border-r border-sidebar-border h-full flex flex-col">
+            <!-- Sidebar Header -->
+            <div class="p-6">
+                <h1 id="sidebar-title" class="text-xl font-semibold">EEL</h1>
+                <p id="sidebar-welcome" class="text-sm text-muted-foreground mt-1">Welcome</p>
+            </div>
+            <!-- back to class Button -->
+            <div class="p-4">
+                <button id="back-class-btn" class="nav-button btn btn-side-bar w-full justify-start gap-3 p-3 rounded-md text-left transition-all flex items-center">
+                    <i data-lucide="arrow-left" class="size-5"></i>
+                    Back to Classes
+                </button>
+            </div>
+            <!-- Navigation -->
+            <nav id="sidebar-nav" class="flex-1 px-4 space-y-2">
+                <!-- Navigation items will be populated by JavaScript -->
+            </nav>
+
+            <!-- Logout Button -->
+            <div class="p-4">
+                <button id="logout-btn" class="w-full p-3 logout-button btn-side-bar border">
+                    <i data-lucide="log-out"></i>
+                    Logout
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <main id="main-content" class="flex-1 overflow-auto">
+            <!-- Teacher Dashboard Content -->
+            <div id="teacher-dashboard" class="hidden">
+                <div class="p-6 space-y-6">
+                    <div>
+                        <h2 class="text-2xl font-semibold mb-2">Teaching Dashboard</h2>
+                        <p class="text-muted-foreground">Manage your lessons, track student progress, and create engaging content</p>
+                    </div>
+
+                    <!-- Stats Overview -->
+                    <div class="grid grid-cols-4 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div class="card bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+                            <div class="card-content p-6">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h3 class="text-sm font-medium">Total Students</h3>
+                                    <i data-lucide="users" class="size-4 text-primary"></i>
+                                </div>
+                                <div class="text-2xl font-bold text-primary">2</div>
+                                <p class="text-xs text-muted-foreground">0 currently online</p>
+                            </div>
+                        </div>
+
+                        <div class="card bg-gradient-to-br from-secondary/5 to-secondary/10 border-secondary/20">
+                            <div class="card-content p-6">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h3 class="text-sm font-medium">Active Lessons</h3>
+                                    <i data-lucide="book-open" class="size-4 text-secondary"></i>
+                                </div>
+                                <div class="text-2xl font-bold text-secondary">0</div>
+                                <p class="text-xs text-muted-foreground">5 created this week</p>
+                            </div>
+                        </div>
+
+                        <div class="card bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+                            <div class="card-content p-6">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h3 class="text-sm font-medium">Quizzes Created</h3>
+                                    <i data-lucide="pen-tool" class="size-4 text-primary"></i>
+                                </div>
+                                <div class="text-2xl font-bold text-primary">0</div>
+                                <p class="text-xs text-muted-foreground">AI-powered assessments</p>
+                            </div>
+                        </div>
+
+                        <div class="card bg-gradient-to-br from-secondary/5 to-secondary/10 border-secondary/20">
+                            <div class="card-content p-6">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h3 class="text-sm font-medium">Avg. Score</h3>
+                                    <i data-lucide="trending-up" class="size-4 text-secondary"></i>
+                                </div>
+                                <div class="text-2xl font-bold text-secondary">0%</div>
+                                <p class="text-xs text-muted-foreground">0% from last month</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div>
+                        <h3 class="text-lg font-semibold mb-4">Quick Actions</h3>
+                        <div class="grid grid-cols-4 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <div class="card group cursor-pointer hover:shadow-lg transition-all duration-300 hover:-translate-y-1" onclick="window.location.href='reading-lessons.html'">
+                                <div class="card-content p-4 text-center space-y-3">
+                                    <div class="mx-auto w-12 h-12 rounded-full flex items-center justify-center bg-primary/10">
+                                        <i data-lucide="book-open" class="size-6 text-primary"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-medium text-sm">Create Reading Lesson</h4>
+                                        <p class="text-xs text-muted-foreground">Design new comprehension exercises</p>
+                                    </div>
+                                    <button class="btn btn-outline w-full">
+                                        <i data-lucide="plus" class="size-3 mr-1"></i>
+                                        Create
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="card group cursor-pointer hover:shadow-lg transition-all duration-300 hover:-translate-y-1" onclick="window.location.href='exam-generator.html'">
+                                <div class="card-content p-4 text-center space-y-3">
+                                    <div class="mx-auto w-12 h-12 rounded-full flex items-center justify-center bg-secondary/10">
+                                        <i data-lucide="pen-tool" class="size-6 text-secondary"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-medium text-sm">Generate Exam</h4>
+                                        <p class="text-xs text-muted-foreground">Create AI-powered assessments</p>
+                                    </div>
+                                    <button class="btn btn-outline w-full">
+                                        <i data-lucide="plus" class="size-3 mr-1"></i>
+                                        Create
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="card group cursor-pointer hover:shadow-lg transition-all duration-300 hover:-translate-y-1" onclick="window.location.href='pronunciation-lessons.html'">
+                                <div class="card-content p-4 text-center space-y-3">
+                                    <div class="mx-auto w-12 h-12 rounded-full flex items-center justify-center bg-primary/10">
+                                        <i data-lucide="brain" class="size-6 text-primary"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-medium text-sm">Pronunciation Lesson</h4>
+                                        <p class="text-xs text-muted-foreground">Build speaking exercises</p>
+                                    </div>
+                                    <button class="btn btn-outline w-full">
+                                        <i data-lucide="plus" class="size-3 mr-1"></i>
+                                        Create
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="card group cursor-pointer hover:shadow-lg transition-all duration-300 hover:-translate-y-1" onclick="window.location.href='recitation.html'">
+                                <div class="card-content p-4 text-center space-y-3">
+                                    <div class="mx-auto w-12 h-12 rounded-full flex items-center justify-center bg-secondary/10">
+                                        <i data-lucide="presentation" class="size-6 text-secondary"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-medium text-sm">Start Recitation</h4>
+                                        <p class="text-xs text-muted-foreground">Interactive class sessions</p>
+                                    </div>
+                                    <button class="btn btn-outline w-full">
+                                        <i data-lucide="plus" class="size-3 mr-1"></i>
+                                        Start
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Activity and Upcoming Lessons -->
+                    <div class="grid grid-cols-2 lg:grid-cols-2 gap-6">
+                        <!-- Recent Activity -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title flex items-center gap-2">
+                                    <i data-lucide="clock" class="size-5 text-primary"></i>
+                                    Recent Activity
+                                </h3>
+                            </div>
+                            <div class="card-content space-y-3">
+                                <div class="flex items-center gap-3 p-3 bg-gradient-to-r from-accent/30 to-accent/10 rounded-lg">
+                                    <div class="w-8 h-8 rounded-full flex items-center justify-center bg-primary/20">
+                                        <i data-lucide="book-open" class="size-4 text-primary"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <p class="text-sm font-medium">Created new reading quiz: 'Paraphrasing Messages'</p>
+                                        <p class="text-xs text-muted-foreground">2 hours ago</p>
+                                    </div>
+                                </div>
+
+                                <div class="flex items-center gap-3 p-3 bg-gradient-to-r from-accent/30 to-accent/10 rounded-lg">
+                                    <div class="w-8 h-8 rounded-full flex items-center justify-center bg-secondary/20">
+                                        <i data-lucide="pen-tool" class="size-4 text-secondary"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <p class="text-sm font-medium">Generated pronunciation quiz</p>
+                                        <p class="text-xs text-muted-foreground">4 hours ago</p>
+                                    </div>
+                                </div>
+
+                                <div class="flex items-center gap-3 p-3 bg-gradient-to-r from-accent/30 to-accent/10 rounded-lg">
+                                    <div class="w-8 h-8 rounded-full flex items-center justify-center bg-primary/20">
+                                        <i data-lucide="presentation" class="size-4 text-primary"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <p class="text-sm font-medium">Conducted recitation session with 15 students</p>
+                                        <p class="text-xs text-muted-foreground">6 hours ago</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Upcoming Lessons -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title flex items-center gap-2">
+                                    <i data-lucide="calendar" class="size-5 text-secondary"></i>
+                                    Upcoming Lessons
+                                </h3>
+                            </div>
+                            <div class="card-content space-y-3">
+                                <div class="flex items-center justify-between p-3 bg-gradient-to-r from-accent/30 to-accent/10 rounded-lg">
+                                    <div class="flex-1">
+                                        <h4 class="font-medium text-sm">Advanced Reading Comprehension</h4>
+                                        <p class="text-xs text-muted-foreground">Today, 2:00 PM</p>
+                                        <div class="flex items-center gap-2 mt-1">
+                                            <span class="px-2 py-1 text-xs rounded border border-border bg-background">Reading</span>
+                                            <span class="text-xs text-muted-foreground">2 students</span>
+                                        </div>
+                                    </div>
+                                    <button class="btn btn-outline">View</button>
+                                </div>
+
+                                <div class="flex items-center justify-between p-3 bg-gradient-to-r from-accent/30 to-accent/10 rounded-lg">
+                                    <div class="flex-1">
+                                        <h4 class="font-medium text-sm">Pronunciation Workshop</h4>
+                                        <p class="text-xs text-muted-foreground">Tomorrow, 10:00 AM</p>
+                                        <div class="flex items-center gap-2 mt-1">
+                                            <span class="px-2 py-1 text-xs rounded border border-border bg-background">Pronunciation</span>
+                                            <span class="text-xs text-muted-foreground">2 students</span>
+                                        </div>
+                                    </div>
+                                    <button class="btn btn-outline">View</button>
+                                </div>
+
+                                <div class="flex items-center justify-between p-3 bg-gradient-to-r from-accent/30 to-accent/10 rounded-lg">
+                                    <div class="flex-1">
+                                        <h4 class="font-medium text-sm">Recitation Session</h4>
+                                        <p class="text-xs text-muted-foreground">Friday, 3:00 PM</p>
+                                        <div class="flex items-center gap-2 mt-1">
+                                            <span class="px-2 py-1 text-xs rounded border border-border bg-background">Interactive</span>
+                                            <span class="text-xs text-muted-foreground">2 students</span>
+                                        </div>
+                                    </div>
+                                    <button class="btn btn-outline">View</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Student Dashboard Content -->
+            <div id="student-dashboard" class="hidden">
+                <div class="p-6 space-y-8">
+                    <!-- Hero Section -->
+                    <div class="text-center space-y-6 py-8">
+                        <div class="space-y-4">
+                            <h1 class="text-4xl md:text-6xl font-bold text-gradient">
+                                ENHANCE YOUR ENGLISH
+                            </h1>
+                            <h1 class="text-4xl md:text-6xl font-bold text-gradient">
+                                LITERACY WITH EEL
+                            </h1>
+                            <p class="text-lg text-muted-foreground max-w-2xl mx-auto">
+                                Master reading comprehension, perfect your pronunciation, and excel with AI-generated quizzes 
+                                tailored to your learning level.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="grid grid-cols-3 md:grid-cols-3 gap-6">
+                        <div class="card group cursor-pointer hover:shadow-lg transition-all duration-300 hover:-translate-y-1" onclick="window.location.href='lessons.html'">
+                            <div class="card-content p-6 text-center space-y-4">
+                                <div class="mx-auto w-16 h-16 rounded-full flex items-center justify-center bg-primary/10">
+                                    <i data-lucide="library" class="size-8 text-primary"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-semibold mb-2">Start Lessons</h3>
+                                    <p class="text-sm text-muted-foreground">Learn in every topic</p>
+                                </div>
+                                <button class="btn btn-outline w-full group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                                    Get Started
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="card group cursor-pointer hover:shadow-lg transition-all duration-300 hover:-translate-y-1" onclick="window.location.href='reading-lessons.html'">
+                            <div class="card-content p-6 text-center space-y-4">
+                                <div class="mx-auto w-16 h-16 rounded-full flex items-center justify-center bg-secondary/10">
+                                    <i data-lucide="book-open" class="size-8 text-secondary"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-semibold mb-2">Enhance Reading</h3>
+                                    <p class="text-sm text-muted-foreground">Improve reading comprehension</p>
+                                </div>
+                                <button class="btn btn-outline w-full group-hover:bg-secondary group-hover:text-secondary-foreground transition-colors">
+                                    Get Started
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="card group cursor-pointer hover:shadow-lg transition-all duration-300 hover:-translate-y-1" onclick="window.location.href='pronunciation-lessons.html'">
+                            <div class="card-content p-6 text-center space-y-4">
+                                <div class="mx-auto w-16 h-16 rounded-full flex items-center justify-center bg-primary/10">
+                                    <i data-lucide="trophy" class="size-8 text-primary"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-semibold mb-2">Practice Speaking</h3>
+                                    <p class="text-sm text-muted-foreground">Improve pronunciation</p>
+                                </div>
+                                <button class="btn btn-outline w-full group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                                    Get Started
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Stats Overview -->
+                    <div class="grid grid-cols-4 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div class="card bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+                            <div class="card-content p-6">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h3 class="text-sm font-medium">Reading Lessons</h3>
+                                    <i data-lucide="book-open" class="size-4 text-primary"></i>
+                                </div>
+                                <div class="text-2xl font-bold text-primary">2</div>
+                                <p class="text-xs text-muted-foreground">Completed this month</p>
+                            </div>
+                        </div>
+
+                        <div class="card bg-gradient-to-br from-secondary/5 to-secondary/10 border-secondary/20">
+                            <div class="card-content p-6">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h3 class="text-sm font-medium">Pronunciation</h3>
+                                    <i data-lucide="brain" class="size-4 text-secondary"></i>
+                                </div>
+                                <div class="text-2xl font-bold text-secondary">0</div>
+                                <p class="text-xs text-muted-foreground">Sessions completed</p>
+                            </div>
+                        </div>
+
+                        <div class="card bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+                            <div class="card-content p-6">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h3 class="text-sm font-medium">Average Score</h3>
+                                    <i data-lucide="trophy" class="size-4 text-primary"></i>
+                                </div>
+                                <div class="text-2xl font-bold text-primary">0%</div>
+                                <p class="text-xs text-muted-foreground">Across all quizzes</p>
+                            </div>
+                        </div>
+
+                        <div class="card bg-gradient-to-br from-secondary/5 to-secondary/10 border-secondary/20">
+                            <div class="card-content p-6">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h3 class="text-sm font-medium">Study Time</h3>
+                                    <i data-lucide="clock" class="size-4 text-secondary"></i>
+                                </div>
+                                <div class="text-2xl font-bold text-secondary">5h</div>
+                                <p class="text-xs text-muted-foreground">This month</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Progress Section -->
+                    <div class="grid grid-cols-2 lg:grid-cols-2 gap-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title flex items-center gap-2">
+                                    <i data-lucide="trophy" class="size-5 text-primary"></i>
+                                    Learning Streak
+                                </h3>
+                            </div>
+                            <div class="card-content space-y-4">
+                                <div class="text-center">
+                                    <div class="text-4xl font-bold text-primary">2</div>
+                                    <p class="text-muted-foreground">days in a row</p>
+                                </div>
+                                <div class="w-full bg-muted rounded-full h-3">
+                                    <div class="bg-primary h-3 rounded-full" style="width: 30%"></div>
+                                </div>
+                                <p class="text-sm text-muted-foreground text-center">
+                                    Keep going! 8 more days to reach your monthly goal
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title flex items-center gap-2">
+                                    <i data-lucide="clock" class="size-5 text-secondary"></i>
+                                    Recent Activity
+                                </h3>
+                            </div>
+                            <div class="card-content space-y-3">
+                                <div class="flex items-center justify-between p-3 bg-gradient-to-r from-accent/50 to-accent/20 rounded-lg">
+                                    <div class="flex-1">
+                                        <p class="font-medium text-sm">Grammar and Vocabulary Quiz</p>
+                                        <p class="text-xs text-muted-foreground">Today</p>
+                                    </div>
+                                    <span class="px-2 py-1 text-xs rounded bg-primary text-primary-foreground">92%</span>
+                                </div>
+
+                                <div class="flex items-center justify-between p-3 bg-gradient-to-r from-accent/50 to-accent/20 rounded-lg">
+                                    <div class="flex-1">
+                                        <p class="font-medium text-sm">Pronunciation Practice - Vowels</p>
+                                        <p class="text-xs text-muted-foreground">Yesterday</p>
+                                    </div>
+                                    <span class="px-2 py-1 text-xs rounded bg-secondary text-secondary-foreground">88%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/navigation.js"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const classId = urlParams.get('class_id');
+
+            if (classId) {
+                // Store class ID in localStorage
+                localStorage.setItem("eel_selected_class_id", classId);
+
+                // Remove class_id from URL without reloading the page
+                const newUrl = window.location.origin + window.location.pathname;
+                window.history.replaceState({}, document.title, newUrl);
+            }
+        });
+
+        function getCurrentUser() {
+            const user = localStorage.getItem("eel_user");
+            return user ? JSON.parse(user) : null;
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const user = getCurrentUser();
+            if (!user || !isAuthenticated()) {
+                window.location.href = '/';
+                return;
+            }
+
+            // Set page title
+            document.title = user.role === 'teacher' ? 'EEL - Teacher' : 'EEL - Student';
+
+            // Setup dashboard
+            setupDashboard(user);
+
+            // Back to Classes
+            const backBtn = document.getElementById('back-class-btn');
+            if (backBtn) backBtn.addEventListener('click', () => window.location.href = 'classes.html');
+
+            // Logout
+            const logoutBtn = document.getElementById('logout-btn');
+            if (logoutBtn) logoutBtn.addEventListener('click', () => {
+                localStorage.removeItem('eel_user');
+                window.location.href = 'index.html';
+            });
+
+            // Hide loading
+            setTimeout(() => {
+                document.getElementById('loading-screen').classList.add('hidden');
+                document.getElementById('main-app').classList.remove('hidden');
+                lucide.createIcons();
+            }, 500);
+        });
+
+        function setupDashboard(user) {
+            setupSidebar(user, 'dashboard');
+
+            if (user.role === 'teacher') {
+                document.getElementById('teacher-dashboard').classList.remove('hidden');
+                document.getElementById('student-dashboard').classList.add('hidden');
+            } else {
+                document.getElementById('student-dashboard').classList.remove('hidden');
+                document.getElementById('teacher-dashboard').classList.add('hidden');
+            }
+        }
+    </script>
+</body>
+</html>

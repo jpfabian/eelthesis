@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Progress - EEL</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.1/lucide.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="loading-screen">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <p>Loading Student Progress...</p>
+        </div>
+    </div>
+
+    <!-- Main Application Layout -->
+    <div id="main-app" class="flex h-screen bg-background hidden">
+        <!-- Sidebar -->
+        <div id="sidebar" class="w-64 bg-sidebar border-r border-sidebar-border h-full flex flex-col">
+            <div class="p-6">
+                <h1 id="sidebar-title" class="text-xl font-semibold">EEL</h1>
+                <p id="sidebar-welcome" class="text-sm text-muted-foreground mt-1">Welcome</p>
+            </div>
+            
+            <div class="p-4">
+                <button id="back-class-btn" class="nav-button btn btn-side-bar w-full justify-start gap-3 p-3 rounded-md text-left transition-all flex items-center">
+                    <i data-lucide="arrow-left" class="size-5"></i>
+                    Back to Classes
+                </button>
+            </div>
+
+            <nav id="sidebar-nav" class="flex-1 px-4 space-y-2">
+                <!-- Navigation items injected here if needed -->
+            </nav>
+            <div class="p-4">
+                <button id="logout-btn" class="w-full p-3 logout-button btn-side-bar border">
+                    <i data-lucide="log-out"></i>
+                    Logout
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <main id="main-content" class="flex-1 overflow-auto">
+            <div class="p-6 space-y-6">
+                <div>
+                    <h2 class="text-2xl font-semibold mb-2">Student Progress</h2>
+                    <p class="text-muted-foreground">Monitor and analyze your students' learning progress and performance</p>
+                </div>
+
+                <!-- Class Overview Stats -->
+                <div class="grid grid-cols-3 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div id="total-students-card" class="card bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20 cursor-pointer hover:shadow-lg transition">
+                        <div class="card-content p-6">
+                            <div class="flex items-center justify-between mb-2">
+                                <h3 class="text-sm font-medium">Total Students</h3>
+                                <i data-lucide="users" class="size-4 text-primary"></i>
+                            </div>
+                            <div class="text-2xl font-bold text-primary" id="student-count">0</div>
+                            <p class="text-xs text-muted-foreground">Student Joined</p>
+                        </div>
+                    </div>
+
+                    <div id="average-score-card" class="card bg-gradient-to-br from-secondary/5 to-secondary/10 border-secondary/20 cursor-pointer hover:shadow-lg transition">
+                        <div class="card-content p-6">
+                            <div class="flex items-center justify-between mb-2">
+                                <h3 class="text-sm font-medium">Average Score</h3>
+                                <i data-lucide="trending-up" class="size-4 text-secondary"></i>
+                            </div>
+                            <div class="text-2xl font-bold text-secondary">0%</div>
+                            <p class="text-xs text-muted-foreground">+3% from last month</p>
+                        </div>
+                    </div>
+
+                    <div class="card bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+                        <div class="card-content p-6">
+                            <div class="flex items-center justify-between mb-2">
+                                <h3 class="text-sm font-medium">Completion Rate</h3>
+                                <i data-lucide="check-circle" class="size-4 text-primary"></i>
+                            </div>
+                            <div class="text-2xl font-bold text-primary">0%</div>
+                            <p class="text-xs text-muted-foreground">Assignments completed</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Student Management Section -->
+                <div id="students-section" class="hidden mt-6">
+                    <div class="card p-6">
+                        <h2 class="text-lg font-semibold mb-4">Students waiting for acceptance <span id="pending-count" class="text-primary">(0)</span></h2>
+                        <div id="pending-students" class="space-y-2"></div>
+
+                        <hr class="my-6">
+
+                        <h2 class="text-lg font-semibold mb-4">Joined Students <span id="enrolled-count" class="text-primary">(0)</span></h2>
+                        <div id="enrolled-students" class="space-y-2"></div>
+                    </div>
+                </div>
+
+                <!-- Average Score Modal -->
+                <div id="average-score" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div class="card w-full max-w-lg p-6 relative">
+                        <h2 class="text-lg font-semibold mb-4 text-secondary">Student Quiz Scores</h2>
+                        <div id="average-score-list" class="space-y-3 max-h-80 overflow-y-auto"></div>
+                        <table class="w-full mt-4 border">
+                            <thead id="average-table-head" class="bg-gray-100"></thead>
+                            <tbody id="average-table-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/navigation.js"></script>
+    <script>
+    const API_BASE = 'http://localhost:3000/api';
+    document.addEventListener('DOMContentLoaded', () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const classId = urlParams.get('class_id');
+
+        if (classId) {
+            // Store class ID in localStorage
+            localStorage.setItem("eel_selected_class_id", classId);
+
+            // Remove class_id from URL without reloading the page
+            const newUrl = window.location.origin + window.location.pathname;
+            window.history.replaceState({}, document.title, newUrl);
+        }
+    });
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        try {
+            const user = await initializePage();
+            if (!user) return window.location.href = 'login.html';
+            if (user.role !== 'teacher') return window.location.href = 'my-progress.html';
+
+            hideLoading();
+
+            // Use class ID from localStorage
+            const selectedClass = JSON.parse(localStorage.getItem("eel_selected_class"));
+            if (!selectedClass?.id) return console.error('❌ No class selected in localStorage.');
+            const classId = selectedClass.id;
+
+            await loadStudents(classId);
+
+            // Back button
+            document.getElementById('back-class-btn')?.addEventListener('click', () => window.location.href = 'classes.html');
+
+            // Modal toggle function
+            function toggleSection(section, fetchDataCallback = null) {
+                const isVisible = !section.classList.contains('hidden');
+                document.querySelectorAll('#students-section, #average-score').forEach(el => el.classList.add('hidden'));
+                if (!isVisible) {
+                    section.classList.remove('hidden');
+                    if (fetchDataCallback) fetchDataCallback();
+                }
+            }
+
+            const totalStudentsCard = document.getElementById('total-students-card');
+            const studentsSection = document.getElementById('students-section');
+
+            totalStudentsCard?.addEventListener('click', () => {
+                toggleSection(studentsSection, () => loadStudents(classId));
+            });
+
+            const avgScoreCard = document.getElementById('average-score-card');
+            const avgModal = document.getElementById('average-score');
+            const avgList = document.getElementById('average-score-list');
+            const tableBody = document.getElementById('average-table-body');
+            const closeAvgModal = document.getElementById('close-average-modal');
+
+            avgScoreCard?.addEventListener('click', async () => {
+                toggleSection(avgModal, async () => {
+                    avgList.innerHTML = `<p class="text-sm text-gray-500">Loading...</p>`;
+                    tableBody.innerHTML = `<tr><td colspan="5" class="text-center py-3 text-gray-500">Loading...</td></tr>`;
+
+                    try {
+                        const res = await fetch(`${API_BASE}/class/${classId}/average-scores`);
+                        if (!res.ok) throw new Error('Failed to fetch');
+                        const data = await res.json();
+
+                        if (!data.length) {
+                            avgList.innerHTML = `<p class="text-sm text-gray-500">No quiz records found.</p>`;
+                            tableBody.innerHTML = `<tr><td colspan="5" class="text-center py-3 text-gray-500">No quiz data found</td></tr>`;
+                            return;
+                        }
+
+                        avgList.innerHTML = data.map(s => `
+                            <div class="flex items-center justify-between border-b pb-2">
+                                <div>
+                                    <p class="font-medium">${s.student_fname} ${s.student_lname}</p>
+                                    <p class="text-sm text-muted-foreground">
+                                        Reading: ${s.reading_avg ?? 0}% | Pronunciation: ${s.pronunciation_avg ?? 0}%
+                                    </p>
+                                </div>
+                                <span class="text-sm font-semibold text-secondary">${s.overall_avg ?? 0}%</span>
+                            </div>
+                        `).join('');
+
+                        const allQuizNames = Array.from(new Set(data.flatMap(s => s.quizzes.map(q => q.quiz_name))));
+                        document.getElementById("average-table-head").innerHTML = `
+                            <tr>
+                                <th class="px-4 py-2 text-left">Student Name</th>
+                                ${allQuizNames.map(q => `<th class="px-4 py-2 text-center">${q}</th>`).join('')}
+                                <th class="px-4 py-2 text-center">Total</th>
+                            </tr>
+                        `;
+
+                        tableBody.innerHTML = data.map(s => {
+                            const scores = allQuizNames.map(qName => {
+                                const q = s.quizzes.find(quiz => quiz.quiz_name === qName);
+                                return `<td class="px-4 py-2 text-center">${q ? q.score : '-'}</td>`;
+                            }).join('');
+
+                            return `
+                                <tr class="hover:bg-gray-50 transition">
+                                    <td class="px-4 py-2 font-medium">${s.student_lname}, ${s.student_fname}</td>
+                                    ${scores}
+                                    <td class="px-4 py-2 text-center font-semibold text-secondary">${s.total || 0}</td>
+                                </tr>
+                            `;
+                        }).join('');
+
+                        lucide.createIcons();
+                    } catch (err) {
+                        avgList.innerHTML = `<p class="text-sm text-red-500">Failed to load scores.</p>`;
+                    }
+                });
+            });
+
+            closeAvgModal?.addEventListener('click', () => avgModal.classList.add('hidden'));
+
+        } catch (err) {
+            console.error('Error initializing page:', err);
+            hideLoading();
+        }
+    });
+
+    function maskEmail(email) {
+        const [local, domain] = email.split('@');
+        if (local.length <= 2) return email;
+        return local[0] + '****' + local.slice(-1) + '@' + domain;
+    }
+
+    async function loadStudents(classId) {
+        try {
+            const res = await fetch(`${API_BASE}/class/${classId}/students`);
+            if (!res.ok) throw new Error('Failed to fetch students');
+            const data = await res.json();
+
+            const enrolledContainer = document.getElementById('enrolled-students');
+            const pendingContainer = document.getElementById('pending-students');
+            enrolledContainer.innerHTML = '';
+            pendingContainer.innerHTML = '';
+
+            const enrolled = data.filter(s => s.status === 'accepted');
+            const pending = data.filter(s => s.status === 'pending');
+
+            document.getElementById('enrolled-count').textContent = `(${enrolled.length})`;
+            document.getElementById('pending-count').textContent = `(${pending.length})`;
+            document.getElementById('student-count').textContent = enrolled.length;
+
+            function capitalizeName(name) {
+                if (!name) return "";
+                return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+            }
+
+            enrolled.forEach(s => {
+                enrolledContainer.innerHTML += `
+                    <div class="flex items-center justify-between border rounded-lg p-3 bg-muted/20 bg-gradient-to-br from-secondary/5 to-secondary/10 border-secondary/20">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shadow-md">
+                                <i data-lucide="user" class="w-5 h-5 text-white"></i>
+                            </div>
+                            <div>
+                                <p class="font-medium">
+                                    ${capitalizeName(s.student_fname)} ${capitalizeName(s.student_lname)}
+                                </p>
+                                <p class="text-sm text-muted-foreground">${maskEmail(s.email)}</p>
+                            </div>
+                        </div>
+                        <span class="font-medium bg-primary/10 text-primary">Joined</span>
+                    </div>`;
+            });
+
+            pending.forEach(s => {
+                pendingContainer.innerHTML += `
+                    <div class="flex items-center justify-between border rounded-lg p-3 bg-muted/10">
+                        <div class="flex items-center gap-6">
+                            <div class="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
+                                <i data-lucide="user" class="size-4 text-gray-500"></i>
+                            </div>
+                            <div>
+                                <p class="font-medium">
+                                    ${capitalizeName(s.student_fname)} ${capitalizeName(s.student_lname)}
+                                </p>
+                                <p class="text-sm text-muted-foreground">${maskEmail(s.email)}</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="updateStudentStatus('${s.id}', 'accepted')" class="bg-green-100 hover:bg-green-200 p-2 rounded-full bg-secondary/10 text-secondary">
+                                <i data-lucide="check" class="size-4 text-green-600"></i>
+                            </button>
+                            <button onclick="updateStudentStatus('${s.id}', 'rejected')" class="bg-red-100 hover:bg-red-200 p-2 rounded-full bg-secondary/10 text-secondary">
+                                <i data-lucide="x" class="size-4 text-red-600"></i>
+                            </button>
+                        </div>
+                    </div>`;
+            });
+
+
+            lucide.createIcons();
+        } catch (err) {
+            console.error('Error loading students:', err);
+        }
+    }
+
+    async function updateStudentStatus(studentId, status) {
+        try {
+            const res = await fetch(`${API_BASE}/students/${studentId}/status`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status })
+            });
+            if (res.ok) {
+                const classId = new URLSearchParams(window.location.search).get('class_id');
+                await loadStudents(classId);
+            }
+        } catch (err) {
+            console.error('Error updating status:', err);
+        }
+    }
+    </script>
+</body>
+</html>

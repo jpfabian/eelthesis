@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Exam Generator - EEL</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.1/lucide.min.css" rel="stylesheet">
+</head>
+
+<body>
+  <!-- Loading Screen -->
+  <div id="loading-screen" class="loading-screen">
+    <div class="loading-content">
+      <div class="loading-spinner"></div>
+      <p>Loading Exam Generator...</p>
+    </div>
+  </div>
+
+  <!-- Main Application Layout -->
+  <div id="main-app" class="flex h-screen bg-background hidden">
+    <!-- Sidebar -->
+    <div id="sidebar" class="w-64 bg-sidebar border-r border-sidebar-border h-full flex flex-col">
+      <div class="p-6">
+        <h1 id="sidebar-title" class="text-xl font-semibold">EEL</h1>
+        <p id="sidebar-welcome" class="text-sm text-muted-foreground mt-1">Welcome</p>
+      </div>
+
+      <!-- Back to Class Button -->
+      <div class="p-4">
+        <button id="back-class-btn"
+          class="nav-button btn btn-side-bar w-full justify-start gap-3 p-3 rounded-md text-left transition-all flex items-center">
+          <i data-lucide="arrow-left" class="size-5"></i>
+          Back to Classes
+        </button>
+      </div>
+
+      <nav id="sidebar-nav" class="flex-1 px-4 space-y-2"></nav>
+
+      <div class="p-4">
+        <button id="logout-btn" class="w-full p-3 logout-button btn-side-bar border">
+          <i data-lucide="log-out"></i>
+          Logout
+        </button>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <main id="main-content" class="flex-1 overflow-auto">
+      <div class="p-6 space-y-6">
+        <div>
+          <h2 class="text-2xl font-semibold mb-2">AI Exam Generator</h2>
+          <p class="text-muted-foreground">Create intelligent exams from any text or topic using AI</p>
+        </div>
+
+        <!-- Exam Generation Form -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div class="card group cursor-pointer hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+            <div class="card-header">
+              <h3 class="card-title">Generate New Exam</h3>
+              <p class="card-description">Provide a topic or text to generate exam questions automatically</p>
+            </div>
+            <div class="card-content space-y-6">
+              <!-- Generation Method -->
+              <div class="space-y-2">
+                <label class="form-label">Generation Method</label>
+                <div class="grid grid-cols-2 gap-4">
+                  <label
+                    class="flex items-center gap-2 p-3 border border-border rounded-lg cursor-pointer hover:bg-muted transition-colors" style="width: 100%; gap: 0.5rem; padding: 0.75rem 1rem; background: rgba(99, 102, 241, 0.05); color: #6366f1; border: 1px solid #6366f1; border-radius: 0.5rem;">
+                    <input type="radio" name="method" value="topic" checked>
+                    <div>
+                      <div class="font-medium">From Topic</div>
+                      <div class="text-xs text-muted-foreground">Generate questions about a specific topic</div>
+                    </div>
+                  </label>
+                  <label
+                    class="flex items-center gap-2 p-3 border border-border rounded-lg cursor-pointer hover:bg-muted transition-colors" style="width: 100%; gap: 0.5rem; padding: 0.75rem 1rem; background: rgba(99, 102, 241, 0.05); color: #6366f1; border: 1px solid #6366f1; border-radius: 0.5rem;">
+                    <input type="radio" name="method" value="text">
+                    <div>
+                      <div class="font-medium">From Text</div>
+                      <div class="text-xs text-muted-foreground">Generate questions from provided text</div>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Topic Input -->
+              <div id="topic-input" class="space-y-2">
+                <label class="form-label">Select Topics</label>
+                <div id="topicDropdownContainer" class="space-y-2 border rounded p-2" style="background: rgba(99, 102, 241, 0.05);"></div>
+              </div>
+
+              <!-- Text Input -->
+              <div id="text-input" class="space-y-2 hidden">
+                <label class="form-label">Source Text</label>
+                <textarea id="textField" class="form-textarea" rows="8" style="width: 100%; gap: 0.5rem; padding: 0.75rem 1rem; background: rgba(99, 102, 241, 0.05); border: 1px solid #6366f1; border-radius: 0.5rem;"
+                  placeholder="Paste your text here..."></textarea>
+              </div>
+
+              <!-- Question Types with Count -->
+              <div class="space-y-4">
+                <label class="form-label">Question Types & Quantity</label>
+                <div class="space-y-3">
+                  <!-- Multiple Choice -->
+                  <div style="width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.75rem 1rem; background: rgba(99, 102, 241, 0.05); color: #6366f1; border: 1px solid #6366f1; border-radius: 0.5rem;">
+                    <input type="checkbox" name="questionTypes" value="multiple-choice" class="form-checkbox"
+                      id="questionType-multiple-choice">
+                    <label for="questionType-multiple-choice" class="flex-1 cursor-pointer">
+                      Multiple Choice
+                    </label>
+                    <div class="flex items-center gap-2">
+                      <input type="number" min="0" class="form-input w-20 h-8" placeholder="0"
+                        id="count-multiple-choice" disabled>
+                      <span class="text-sm text-muted-foreground">questions</span>
+                    </div>
+                  </div>
+
+                  <!-- True/False -->
+                  <div style="width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.75rem 1rem; background: rgba(99, 102, 241, 0.05); color: #6366f1; border: 1px solid #6366f1; border-radius: 0.5rem;">
+                    <input type="checkbox" name="questionTypes" value="true-false" class="form-checkbox"
+                      id="questionType-true-false">
+                    <label for="questionType-true-false" class="flex-1 cursor-pointer">
+                      True/False
+                    </label>
+                    <div class="flex items-center gap-2">
+                      <input type="number" min="0" class="form-input w-20 h-8" placeholder="0"
+                        id="count-true-false" disabled>
+                      <span class="text-sm text-muted-foreground">questions</span>
+                    </div>
+                  </div>
+
+                  <!-- Identification -->
+                  <div style="width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.75rem 1rem; background: rgba(99, 102, 241, 0.05); color: #6366f1; border: 1px solid #6366f1; border-radius: 0.5rem;">
+                    <input type="checkbox" name="questionTypes" value="Identification" class="form-checkbox"
+                      id="questionType-identification">
+                    <label for="questionType-identification" class="flex-1 cursor-pointer">
+                      Identification
+                    </label>
+                    <div class="flex items-center gap-2">
+                      <input type="number" min="0" class="form-input w-20 h-8" placeholder="0"
+                        id="count-identification" disabled>
+                      <span class="text-sm text-muted-foreground">questions</span>
+                    </div>
+                  </div>
+
+                  <!-- Essay -->
+                  <div style="width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.75rem 1rem; background: rgba(99, 102, 241, 0.05); color: #6366f1; border: 1px solid #6366f1; border-radius: 0.5rem;">
+                    <input type="checkbox" name="questionTypes" value="essay" class="form-checkbox"
+                      id="questionType-essay">
+                    <label for="questionType-essay" class="flex-1 cursor-pointer">
+                      Essay
+                    </label>
+                    <div class="flex items-center gap-2">
+                      <input type="number" min="0" class="form-input w-20 h-8" placeholder="0"
+                        id="count-essay" disabled>
+                      <span class="text-sm text-muted-foreground">questions</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <button id="generateExamBtn" class="btn btn-primary">
+                <i data-lucide="brain" class="size-4 mr-2"></i>
+                Generate Exam with AI
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ✅ Generated Exam Result -->
+        <div id="generatedExamContainer" class="hidden mt-6 card border border-border rounded-lg p-6 bg-muted/20">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold text-primary">Generated Exam Result</h3>
+            <button id="editExamBtn" class="btn btn-outline btn-sm">
+              <i data-lucide="edit" class="size-3 mr-1"></i> Edit
+            </button>
+          </div>
+          <div id="generatedExamContent" class="whitespace-pre-wrap text-sm text-foreground"></div>
+        </div>
+
+        <!-- Recent Exams (Static for now) -->
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">Exam List</h3>
+          </div>
+          <div class="card-content">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="exam-list">
+              <!-- Exam list-->
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/navigation.js"></script>
+  <script src="js-front-end/front-exam.js"></script>
+    <script>
+      document.querySelectorAll('input[name="questionTypes"]').forEach(checkbox => {
+        checkbox.addEventListener('change', () => {
+          const countInput = document.getElementById(`count-${checkbox.value.toLowerCase().replace(/ /g,'-')}`);
+          if (checkbox.checked) {
+            countInput.value = 1;      // automatically set to 1
+            countInput.disabled = false; // enable input
+          } else {
+            countInput.value = 0;       // reset to 0
+            countInput.disabled = true; // disable input
+          }
+        });
+      });
+  </script>
+</body>
+</html>

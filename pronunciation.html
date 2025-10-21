@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pronunciation - EEL</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.1/lucide.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="loading-screen">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <p>Loading Pronunciation...</p>
+        </div>
+    </div>
+
+    <!-- Main Application Layout -->
+    <div id="main-app" class="flex h-screen bg-background hidden">
+        <!-- Sidebar -->
+        <div id="sidebar" class="w-64 bg-sidebar border-r border-sidebar-border h-full flex flex-col">
+            <div class="p-6">
+                <h1 id="sidebar-title" class="text-xl font-semibold">EEL</h1>
+                <p id="sidebar-welcome" class="text-sm text-muted-foreground mt-1">Welcome</p>
+            </div>
+            <nav id="sidebar-nav" class="flex-1 px-4 space-y-2"></nav>
+            <div class="p-4">
+                <button id="logout-btn" class="w-full p-3 logout-button btn-side-bar border">
+                    <i data-lucide="log-out"></i>
+                    Logout
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <main class="flex-1 overflow-auto">
+            <div class="p-6">
+                <!-- Breadcrumb -->
+                <div id="breadcrumb"></div>
+
+                <!-- Dynamic Content -->
+                <div id="main-content">
+                    <!-- Content populated by JavaScript based on user role -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Recording Modal -->
+    <div id="recording-modal" class="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 hidden">
+        <div class="fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] w-full max-w-2xl">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Pronunciation Practice</h3>
+                    <p class="card-description">Record yourself saying the word or phrase</p>
+                </div>
+                <div class="card-content text-center py-8">
+                    <div id="word-display" class="text-3xl font-bold text-primary mb-4">--</div>
+                    <div id="phonetic-display" class="text-lg text-muted-foreground mb-6">--</div>
+                    
+                    <div id="recording-controls" class="space-y-4">
+                        <button id="play-sample" class="btn btn-outline">
+                            <i data-lucide="volume-2" class="size-4 mr-2"></i>
+                            Play Sample
+                        </button>
+                        
+                        <div id="recording-area" class="p-8 border-2 border-dashed border-border rounded-lg">
+                            <i data-lucide="mic" class="size-16 text-muted-foreground mx-auto mb-4"></i>
+                            <p class="text-muted-foreground mb-4">Click to start recording</p>
+                            <button id="record-btn" class="btn btn-primary">
+                                <i data-lucide="mic" class="size-4 mr-2"></i>
+                                Start Recording
+                            </button>
+                        </div>
+                        
+                        <div id="playback-area" class="hidden">
+                            <div class="flex items-center justify-center gap-4 mb-4">
+                                <button id="play-recording" class="btn btn-outline">
+                                    <i data-lucide="play" class="size-4 mr-2"></i>
+                                    Play My Recording
+                                </button>
+                                <button id="re-record" class="btn btn-outline">
+                                    <i data-lucide="refresh-cw" class="size-4 mr-2"></i>
+                                    Re-record
+                                </button>
+                            </div>
+                            
+                            <!-- Accuracy Feedback -->
+                            <div id="accuracy-feedback" class="p-4 bg-muted rounded-lg">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-sm">Pronunciation Accuracy</span>
+                                    <span id="accuracy-score" class="font-bold text-primary">--</span>
+                                </div>
+                                <div class="w-full bg-background rounded-full h-3">
+                                    <div id="accuracy-bar" class="bg-primary h-3 rounded-full transition-all" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-center gap-4 mt-6">
+                        <button id="next-word" class="btn btn-secondary" disabled>
+                            <i data-lucide="skip-forward" class="size-4 mr-2"></i>
+                            Next Word
+                        </button>
+                        <button id="close-recording" class="btn btn-outline">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/navigation.js"></script>
+
+    <script>
+        // Pronunciation page controller
+        class PronunciationPage {
+            constructor() {
+                this.currentUser = null;
+                this.isRecording = false;
+                this.mediaRecorder = null;
+                this.recordedBlob = null;
+                this.currentWord = null;
+                this.practiceWords = this.getPracticeWords();
+                this.currentWordIndex = 0;
+                this.init();
+            }
+
+            async init() {
+                // Check authentication
+                if (!isAuthenticated()) {
+                    window.location.href = '/login.html';
+                    return;
+                }
+
+                this.currentUser = getCurrentUser();
+                this.setupUI();
+                this.renderContent();
+                
+                setTimeout(() => {
+                    document.getElementById('loading-screen').classList.add('hidden');
+                    document.getElementById('main-app').classList.remove('hidden');
+                    lucide.createIcons();
+                }, 500);
+            }
+
+            setupUI() {
+                // Setup sidebar and breadcrumb
+                Navigation.setupSidebar(this.currentUser, 'pronunciation');
+                document.getElementById('breadcrumb').innerHTML = 
+                    Navigation.renderBreadcrumb(this.currentUser, 'pronunciation');
+                
+                // Bind logout
+                document.getElementById('logout-btn').addEventListener('click', () => {
+                    logout();
+                    window.location.href = '/login.html';
+                });
+            }
+
+            renderContent() {
+                const content = this.currentUser.role === 'teacher' 
+                    ? this.getTeacherContent() 
+                    : this.getStudentContent();
+                
+                document.getElementById('main-content').innerHTML = content;
+                
+                // Bind events after content is rendered
+                setTimeout(() => this.bindEvents(), 100);
+            }
+
+            getTeacherContent() {
+                return `
+                    <!-- Header -->
+                    <div class="mb-8">
+                        <h2 class="text-2xl font-semibold mb-2">Pronunciation Lessons</h2>
+                        <p class="text-muted-foreground">Create pronunciation exercises and track student speaking progress</p>
+                    </div>
+
+                    <!-- Action Bar -->
+                    <div class="flex flex-wrap gap-4 mb-6">
+                        <button id="create-exercise" class="btn btn-primary">
+                            <i data-lucide="plus" class="size-4 mr-2"></i>
+                            Create Exercise
+                        </button>
+                        <button id="record-sample" class="btn btn-outline">
+                            <i data-lucide="mic" class="size-4 mr-2"></i>
+                            Record Sample
+                        </button>
+                        <button id="import-wordlist" class="btn btn-outline">
+                            <i data-lucide="upload" class="size-4 mr-2"></i>
+                            Import Word List
+                        </button>
+                        <button id="ai-suggestions" class="btn btn-outline">
+                            <i data-lucide="brain" class="size-4 mr-2"></i>
+                            AI Suggestions
+                        </button>
+                    </div>
+
+                    <!-- Stats Overview -->
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                        <div class="card bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+                            <div class="card-content p-4">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-sm text-muted-foreground">Total Exercises</p>
+                                        <p class="text-2xl font-bold text-primary">18</p>
+                                    </div>
+                                    <i data-lucide="brain" class="size-8 text-primary/60"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card bg-gradient-to-br from-secondary/5 to-secondary/10 border-secondary/20">
+                            <div class="card-content p-4">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-sm text-muted-foreground">Student Recordings</p>
+                                        <p class="text-2xl font-bold text-secondary">156</p>
+                                    </div>
+                                    <i data-lucide="mic" class="size-8 text-secondary/60"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+                            <div class="card-content p-4">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-sm text-muted-foreground">Avg. Accuracy</p>
+                                        <p class="text-2xl font-bold text-primary">84%</p>
+                                    </div>
+                                    <i data-lucide="target" class="size-8 text-primary/60"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card bg-gradient-to-br from-secondary/5 to-secondary/10 border-secondary/20">
+                            <div class="card-content p-4">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-sm text-muted-foreground">Improvement</p>
+                                        <p class="text-2xl font-bold text-secondary">+7%</p>
+                                    </div>
+                                    <i data-lucide="trending-up" class="size-8 text-secondary/60"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Exercise Categories -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                        ${this.getExerciseCategories().map(category => `
+                            <div class="card group cursor-pointer hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+                                <div class="card-content p-6">
+                                    <div class="flex items-center justify-between mb-4">
+                                        <div class="w-12 h-12 rounded-full bg-${category.color}/10 flex items-center justify-center">
+                                            <i data-lucide="${category.icon}" class="size-6 text-${category.color}"></i>
+                                        </div>
+                                        <span class="px-2 py-1 text-xs rounded bg-${category.color}/10 text-${category.color}">${category.exercises} exercises</span>
+                                    </div>
+                                    <h3 class="font-semibold mb-2">${category.title}</h3>
+                                    <p class="text-sm text-muted-foreground mb-4">${category.description}</p>
+                                    <div class="flex gap-2">
+                                        <button class="btn btn-outline flex-1 edit-category" data-category="${category.id}">
+                                            <i data-lucide="edit" class="size-3 mr-1"></i>
+                                            Edit
+                                        </button>
+                                        <button class="btn btn-outline view-stats" data-category="${category.id}">
+                                            <i data-lucide="bar-chart-3" class="size-3"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+
+                    <!-- Recent Student Recordings -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">Recent Student Recordings</h3>
+                            <p class="card-description">Latest pronunciation attempts from your students</p>
+                        </div>
+                        <div class="card-content">
+                            <div class="space-y-3">
+                                ${this.getStudentRecordings().map(recording => `
+                                    <div class="flex items-center justify-between p-3 border border-border rounded-lg">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                                                <span class="text-xs font-medium">${recording.studentAvatar}</span>
+                                            </div>
+                                            <div>
+                                                <p class="font-medium text-sm">${recording.studentName}</p>
+                                                <p class="text-xs text-muted-foreground">${recording.word} • ${recording.time}</p>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <span class="px-2 py-1 text-xs rounded ${recording.score >= 85 ? 'bg-green-100 text-green-800' : recording.score >= 70 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}">${recording.score}%</span>
+                                            <button class="btn btn-outline btn-sm listen-recording" data-recording-id="${recording.id}">
+                                                <i data-lucide="play" class="size-3"></i>
+                                            </button>
+                                            <button class="btn btn-outline btn-sm give-feedback" data-recording-id="${recording.id}">
+                                                <i data-lucide="message-square" class="size-3"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            getStudentContent() {
+                return `
+                    <!-- Header -->
+                    <div class="mb-8">
+                        <h2 class="text-2xl font-semibold mb-2">Pronunciation Practice</h2>
+                        <p class="text-muted-foreground">Improve your pronunciation with interactive exercises and AI feedback</p>
+                    </div>
+
+                    <!-- Progress Overview -->
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                        <div class="card bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+                            <div class="card-content p-4">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-sm text-muted-foreground">Sessions</p>
+                                        <p class="text-2xl font-bold text-primary">12</p>
+                                    </div>
+                                    <i data-lucide="mic" class="size-8 text-primary/60"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card bg-gradient-to-br from-secondary/5 to-secondary/10 border-secondary/20">
+                            <div class="card-content p-4">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-sm text-muted-foreground">Accuracy</p>
+                                        <p class="text-2xl font-bold text-secondary">84%</p>
+                                    </div>
+                                    <i data-lucide="target" class="size-8 text-secondary/60"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+                            <div class="card-content p-4">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-sm text-muted-foreground">Words Practiced</p>
+                                        <p class="text-2xl font-bold text-primary">156</p>
+                                    </div>
+                                    <i data-lucide="book" class="size-8 text-primary/60"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card bg-gradient-to-br from-secondary/5 to-secondary/10 border-secondary/20">
+                            <div class="card-content p-4">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-sm text-muted-foreground">Streak</p>
+                                        <p class="text-2xl font-bold text-secondary">5</p>
+                                    </div>
+                                    <i data-lucide="flame" class="size-8 text-secondary/60"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Practice Categories -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- Practice Exercises -->
+                        <div class="space-y-6">
+                            ${this.getExerciseCategories().map(category => `
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h3 class="card-title">${category.title}</h3>
+                                        <p class="card-description">${category.description}</p>
+                                    </div>
+                                    <div class="card-content space-y-4">
+                                        ${category.id === 'vowels' ? `
+                                            <div class="grid grid-cols-2 gap-3">
+                                                <button class="btn btn-outline flex items-center gap-2 sound-btn" data-sound="/æ/" data-example="cat">
+                                                    <i data-lucide="volume-2" class="size-4"></i>
+                                                    /æ/ as in "cat"
+                                                </button>
+                                                <button class="btn btn-outline flex items-center gap-2 sound-btn" data-sound="/ɪ/" data-example="bit">
+                                                    <i data-lucide="volume-2" class="size-4"></i>
+                                                    /ɪ/ as in "bit"
+                                                </button>
+                                                <button class="btn btn-outline flex items-center gap-2 sound-btn" data-sound="/ʌ/" data-example="but">
+                                                    <i data-lucide="volume-2" class="size-4"></i>
+                                                    /ʌ/ as in "but"
+                                                </button>
+                                                <button class="btn btn-outline flex items-center gap-2 sound-btn" data-sound="/ɔ/" data-example="hot">
+                                                    <i data-lucide="volume-2" class="size-4"></i>
+                                                    /ɔ/ as in "hot"
+                                                </button>
+                                            </div>
+                                        ` : category.id === 'consonants' ? `
+                                            <div class="space-y-3">
+                                                <div class="p-3 bg-muted rounded-lg">
+                                                    <div class="flex items-center justify-between">
+                                                        <span class="font-medium">/str/ sounds</span>
+                                                        <button class="btn btn-outline btn-sm sound-btn" data-sound="/str/" data-example="street">
+                                                            <i data-lucide="play" class="size-3"></i>
+                                                        </button>
+                                                    </div>
+                                                    <p class="text-sm text-muted-foreground mt-1">street, strong, destroy</p>
+                                                </div>
+                                                <div class="p-3 bg-muted rounded-lg">
+                                                    <div class="flex items-center justify-between">
+                                                        <span class="font-medium">/θr/ sounds</span>
+                                                        <button class="btn btn-outline btn-sm sound-btn" data-sound="/θr/" data-example="three">
+                                                            <i data-lucide="play" class="size-3"></i>
+                                                        </button>
+                                                    </div>
+                                                    <p class="text-sm text-muted-foreground mt-1">three, throw, through</p>
+                                                </div>
+                                            </div>
+                                        ` : category.id === 'stress' ? `
+                                            <div class="space-y-2">
+                                                <div class="p-3 border border-border rounded-lg hover:bg-accent cursor-pointer">
+                                                    <div class="flex items-center justify-between">
+                                                        <span class="font-medium">PHO-to-graph (first syllable)</span>
+                                                        <i data-lucide="play" class="size-4 text-primary"></i>
+                                                    </div>
+                                                </div>
+                                                <div class="p-3 border border-border rounded-lg hover:bg-accent cursor-pointer">
+                                                    <div class="flex items-center justify-between">
+                                                        <span class="font-medium">pho-TO-gra-pher (second syllable)</span>
+                                                        <i data-lucide="play" class="size-4 text-primary"></i>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ` : ''}
+                                        <button class="btn btn-primary w-full start-practice" data-category="${category.id}">
+                                            <i data-lucide="mic" class="size-4 mr-2"></i>
+                                            Start Practice Session
+                                        </button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+
+                        <!-- Recording Studio & Analytics -->
+                        <div class="space-y-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3 class="card-title">Quick Practice</h3>
+                                    <p class="card-description">Test any word or phrase</p>
+                                </div>
+                                <div class="card-content space-y-4">
+                                    <div class="space-y-2">
+                                        <label class="form-label">Word or Phrase</label>
+                                        <input type="text" id="custom-word" class="form-input" placeholder="Enter word to practice...">
+                                    </div>
+                                    <button id="practice-custom" class="btn btn-secondary w-full">
+                                        <i data-lucide="mic" class="size-4 mr-2"></i>
+                                        Practice This Word
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3 class="card-title">Class Performance</h3>
+                                </div>
+                                <div class="card-content space-y-4">
+                                    <div class="space-y-2">
+                                        <div class="flex justify-between text-sm">
+                                            <span>Vowel Sounds</span>
+                                            <span class="font-medium">78%</span>
+                                        </div>
+                                        <div class="w-full bg-muted rounded-full h-2">
+                                            <div class="bg-primary h-2 rounded-full" style="width: 78%"></div>
+                                        </div>
+                                    </div>
+                                    <div class="space-y-2">
+                                        <div class="flex justify-between text-sm">
+                                            <span>Consonant Clusters</span>
+                                            <span class="font-medium">65%</span>
+                                        </div>
+                                        <div class="w-full bg-muted rounded-full h-2">
+                                            <div class="bg-secondary h-2 rounded-full" style="width: 65%"></div>
+                                        </div>
+                                    </div>
+                                    <div class="space-y-2">
+                                        <div class="flex justify-between text-sm">
+                                            <span>Word Stress</span>
+                                            <span class="font-medium">89%</span>
+                                        </div>
+                                        <div class="w-full bg-muted rounded-full h-2">
+                                            <div class="bg-primary h-2 rounded-full" style="width: 89%"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3 class="card-title">Common Mistakes</h3>
+                                </div>
+                                <div class="card-content space-y-3">
+                                    <div class="p-3 bg-orange-50 rounded-lg border border-orange-200">
+                                        <div class="flex items-center justify-between">
+                                            <div>
+                                                <p class="font-medium text-sm">/θ/ vs /f/ confusion</p>
+                                                <p class="text-xs text-muted-foreground">12 students struggling</p>
+                                            </div>
+                                            <button class="btn btn-outline btn-sm">
+                                                <i data-lucide="lightbulb" class="size-3"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                                        <div class="flex items-center justify-between">
+                                            <div>
+                                                <p class="font-medium text-sm">Word stress patterns</p>
+                                                <p class="text-xs text-muted-foreground">8 students need practice</p>
+                                            </div>
+                                            <button class="btn btn-outline btn-sm">
+                                                <i data-lucide="lightbulb" class="size-3"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            getStudentContent() {
+                return `
+                    <!-- Header -->
+                    <div class="mb-8">
+                        <h2 class="text-2xl font-semibold mb-2">Pronunciation Practice</h2>
+                        <p class="text-muted-foreground">Improve your pronunciation with interactive exercises and real-time feedback</p>
+                    </div>
+
+                    <!-- Practice Categories -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- Practice Exercises -->
+                        <div class="space-y-6">
+                            ${this.getExerciseCategories().map(category => `
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h3 class="card-title">${category.title}</h3>
+                                        <p class="card-description">${category.description}</p>
+                                    </div>
+                                    <div class="card-content space-y-4">
+                                        ${category.id === 'vowels' ? `
+                                            <div class="grid grid-cols-2 gap-3">
+                                                <button class="btn btn-outline flex items-center gap-2 sound-btn" data-sound="/æ/" data-example="cat">
+                                                    <i data-lucide="volume-2" class="size-4"></i>
+                                                    /æ/ as in "cat"
+                                                </button>
+                                                <button class="btn btn-outline flex items-center gap-2 sound-btn" data-sound="/ɪ/" data-example="bit">
+                                                    <i data-lucide="volume-2" class="size-4"></i>
+                                                    /ɪ/ as in "bit"
+                                                </button>
+                                                <button class="btn btn-outline flex items-center gap-2 sound-btn" data-sound="/ʌ/" data-example="but">
+                                                    <i data-lucide="volume-2" class="size-4"></i>
+                                                    /ʌ/ as in "but"
+                                                </button>
+                                                <button class="btn btn-outline flex items-center gap-2 sound-btn" data-sound="/ɔ/" data-example="hot">
+                                                    <i data-lucide="volume-2" class="size-4"></i>
+                                                    /ɔ/ as in "hot"
+                                                </button>
+                                            </div>
+                                        ` : category.id === 'consonants' ? `
+                                            <div class="space-y-3">
+                                                <div class="p-3 bg-muted rounded-lg">
+                                                    <div class="flex items-center justify-between">
+                                                        <span class="font-medium">/str/ sounds</span>
+                                                        <button class="btn btn-outline btn-sm sound-btn" data-sound="/str/" data-example="street">
+                                                            <i data-lucide="play" class="size-3"></i>
+                                                        </button>
+                                                    </div>
+                                                    <p class="text-sm text-muted-foreground mt-1">street, strong, destroy</p>
+                                                </div>
+                                                <div class="p-3 bg-muted rounded-lg">
+                                                    <div class="flex items-center justify-between">
+                                                        <span class="font-medium">/θr/ sounds</span>
+                                                        <button class="btn btn-outline btn-sm sound-btn" data-sound="/θr/" data-example="three">
+                                                            <i data-lucide="play" class="size-3"></i>
+                                                        </button>
+                                                    </div>
+                                                    <p class="text-sm text-muted-foreground mt-1">three, throw, through</p>
+                                                </div>
+                                            </div>
+                                        ` : category.id === 'stress' ? `
+                                            <div class="space-y-2">
+                                                <div class="p-3 border border-border rounded-lg hover:bg-accent cursor-pointer word-stress" data-word="photograph" data-stress="PHO-to-graph">
+                                                    <div class="flex items-center justify-between">
+                                                        <span class="font-medium">PHO-to-graph (first syllable)</span>
+                                                        <i data-lucide="play" class="size-4 text-primary"></i>
+                                                    </div>
+                                                </div>
+                                                <div class="p-3 border border-border rounded-lg hover:bg-accent cursor-pointer word-stress" data-word="photographer" data-stress="pho-TO-gra-pher">
+                                                    <div class="flex items-center justify-between">
+                                                        <span class="font-medium">pho-TO-gra-pher (second syllable)</span>
+                                                        <i data-lucide="play" class="size-4 text-primary"></i>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ` : ''}
+                                        <button class="btn btn-primary w-full start-practice" data-category="${category.id}">
+                                            <i data-lucide="mic" class="size-4 mr-2"></i>
+                                            Start Practice Session
+                                        </button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+
+                        <!-- Recording Studio & Progress -->
+                        <div class="space-y-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3 class="card-title">Recording Studio</h3>
+                                    <p class="card-description">Practice pronunciation with instant feedback</p>
+                                </div>
+                                <div class="card-content space-y-4">
+                                    <div class="text-center p-8 border-2 border-dashed border-border rounded-lg">
+                                        <i data-lucide="mic" class="size-16 text-muted-foreground mx-auto mb-4"></i>
+                                        <p class="text-muted-foreground mb-4">Choose a word to practice</p>
+                                        <button id="start-recording-studio" class="btn btn-primary">
+                                            <i data-lucide="mic" class="size-4 mr-2"></i>
+                                            Open Recording Studio
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3 class="card-title">Recent Recordings</h3>
+                                </div>
+                                <div class="card-content space-y-3">
+                                    ${this.getMyRecordings().map(recording => `
+                                        <div class="flex items-center justify-between p-3 bg-muted rounded-lg">
+                                            <div>
+                                                <p class="font-medium text-sm">${recording.word}</p>
+                                                <p class="text-xs text-muted-foreground">${recording.time}</p>
+                                            </div>
+                                            <div class="flex items-center gap-2">
+                                                <span class="px-2 py-1 text-xs rounded ${recording.score >= 85 ? 'bg-primary text-primary-foreground' : recording.score >= 70 ? 'bg-secondary text-secondary-foreground' : 'bg-orange-500 text-white'}">${recording.score}%</span>
+                                                <button class="btn btn-outline btn-sm play-recording" data-recording-id="${recording.id}">
+                                                    <i data-lucide="play" class="size-3"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3 class="card-title">Improvement Areas</h3>
+                                </div>
+                                <div class="card-content space-y-3">
+                                    <div class="p-3 bg-orange-50 rounded-lg border border-orange-200">
+                                        <h4 class="font-medium text-orange-800 mb-2">Focus on /θ/ sounds</h4>
+                                        <p class="text-sm text-orange-700">Practice words like "think", "through", "three"</p>
+                                        <button class="btn btn-outline btn-sm mt-2 w-full">
+                                            <i data-lucide="brain" class="size-3 mr-1"></i>
+                                            Practice These
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            getExerciseCategories() {
+                return [
+                    {
+                        id: 'vowels',
+                        title: 'Vowel Sounds',
+                        description: 'Practice fundamental English vowel sounds',
+                        exercises: 12,
+                        color: 'primary',
+                        icon: 'volume-2'
+                    },
+                    {
+                        id: 'consonants',
+                        title: 'Consonant Clusters',
+                        description: 'Master difficult consonant combinations',
+                        exercises: 8,
+                        color: 'secondary',
+                        icon: 'layers'
+                    },
+                    {
+                        id: 'stress',
+                        title: 'Word Stress',
+                        description: 'Learn proper syllable emphasis',
+                        exercises: 15,
+                        color: 'primary',
+                        icon: 'zap'
+                    }
+                ];
+            }
+
+            getStudentRecordings() {
+                return [
+                    { id: 1, studentName: 'Sarah Anderson', studentAvatar: 'SA', word: 'photograph', score: 92, time: '2 hours ago' },
+                    { id: 2, studentName: 'Michael Johnson', studentAvatar: 'MJ', word: 'strength', score: 78, time: '3 hours ago' },
+                    { id: 3, studentName: 'Emily Wilson', studentAvatar: 'EW', word: 'through', score: 88, time: '5 hours ago' },
+                    { id: 4, studentName: 'David Brown', studentAvatar: 'DB', word: 'although', score: 65, time: '1 day ago' }
+                ];
+            }
+
+            getMyRecordings() {
+                return [
+                    { id: 1, word: 'Vowel Practice', score: 92, time: '2 hours ago' },
+                    { id: 2, word: 'Word Stress', score: 88, time: '1 day ago' },
+                    { id: 3, word: 'Consonants', score: 76, time: '2 days ago' }
+                ];
+            }
+
+            getPracticeWords() {
+                return [
+                    { word: 'photograph', phonetic: '/ˈfoʊtəˌɡræf/', difficulty: 'intermediate' },
+                    { word: 'strength', phonetic: '/streŋθ/', difficulty: 'advanced' },
+                    { word: 'through', phonetic: '/θru/', difficulty: 'intermediate' },
+                    { word: 'although', phonetic: '/ɔːlˈðoʊ/', difficulty: 'advanced' },
+                    { word: 'beautiful', phonetic: '/ˈbjutɪfəl/', difficulty: 'beginner' }
+                ];
+            }
+
+            bindEvents() {
+                // Sound buttons
+                document.querySelectorAll('.sound-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const sound = e.currentTarget.dataset.sound;
+                        const example = e.currentTarget.dataset.example;
+                        this.playSound(sound, example);
+                    });
+                });
+
+                // Practice session buttons
+                document.querySelectorAll('.start-practice').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const category = e.currentTarget.dataset.category;
+                        this.startPracticeSession(category);
+                    });
+                });
+
+                // Custom word practice
+                const customBtn = document.getElementById('practice-custom');
+                if (customBtn) {
+                    customBtn.addEventListener('click', () => {
+                        const word = document.getElementById('custom-word').value.trim();
+                        if (word) {
+                            this.practiceCustomWord(word);
+                        } else {
+                            Navigation.showNotification('Please enter a word to practice', 'error');
+                        }
+                    });
+                }
+
+                // Recording studio
+                const studioBtn = document.getElementById('start-recording-studio');
+                if (studioBtn) {
+                    studioBtn.addEventListener('click', () => this.openRecordingStudio());
+                }
+
+                // Teacher-specific events
+                if (this.currentUser.role === 'teacher') {
+                    const createBtn = document.getElementById('create-exercise');
+                    const recordBtn = document.getElementById('record-sample');
+                    const importBtn = document.getElementById('import-wordlist');
+                    const aiBtn = document.getElementById('ai-suggestions');
+
+                    if (createBtn) createBtn.addEventListener('click', () => this.createExercise());
+                    if (recordBtn) recordBtn.addEventListener('click', () => this.recordSample());
+                    if (importBtn) importBtn.addEventListener('click', () => this.importWordlist());
+                    if (aiBtn) aiBtn.addEventListener('click', () => this.getAISuggestions());
+
+                    // Student recording actions
+                    document.querySelectorAll('.listen-recording').forEach(btn => {
+                        btn.addEventListener('click', (e) => this.listenToRecording(e.currentTarget.dataset.recordingId));
+                    });
+
+                    document.querySelectorAll('.give-feedback').forEach(btn => {
+                        btn.addEventListener('click', (e) => this.giveFeedback(e.currentTarget.dataset.recordingId));
+                    });
+                }
+
+                // Recording modal events
+                this.bindRecordingModalEvents();
+            }
+
+            bindRecordingModalEvents() {
+                document.getElementById('close-recording').addEventListener('click', () => this.closeRecordingModal());
+                document.getElementById('record-btn').addEventListener('click', () => this.toggleRecording());
+                document.getElementById('play-sample').addEventListener('click', () => this.playCurrentSample());
+                document.getElementById('play-recording').addEventListener('click', () => this.playMyRecording());
+                document.getElementById('re-record').addEventListener('click', () => this.reRecord());
+                document.getElementById('next-word').addEventListener('click', () => this.nextPracticeWord());
+            }
+
+            // Practice methods
+            startPracticeSession(category) {
+                Navigation.showNotification(`Starting ${category} practice session...`, 'info');
+                this.openRecordingStudio(category);
+            }
+
+            practiceCustomWord(word) {
+                this.currentWord = { word, phonetic: `/${word}/`, difficulty: 'custom' };
+                this.openRecordingStudio();
+            }
+
+            openRecordingStudio(category = null) {
+                if (category) {
+                    const categoryWords = this.practiceWords.filter(w => w.category === category);
+                    this.currentWord = categoryWords[0] || this.practiceWords[0];
+                } else if (!this.currentWord) {
+                    this.currentWord = this.practiceWords[this.currentWordIndex];
+                }
+
+                document.getElementById('word-display').textContent = this.currentWord.word;
+                document.getElementById('phonetic-display').textContent = this.currentWord.phonetic;
+                document.getElementById('recording-modal').classList.remove('hidden');
+                
+                this.setupMicrophone();
+            }
+
+            closeRecordingModal() {
+                document.getElementById('recording-modal').classList.add('hidden');
+                if (this.mediaRecorder && this.mediaRecorder.state === 'recording') {
+                    this.mediaRecorder.stop();
+                }
+            }
+
+            async setupMicrophone() {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    this.mediaRecorder = new MediaRecorder(stream);
+                    
+                    this.mediaRecorder.ondataavailable = (event) => {
+                        this.recordedBlob = event.data;
+                    };
+                    
+                    this.mediaRecorder.onstop = () => {
+                        this.showPlaybackControls();
+                        this.analyzeRecording();
+                    };
+                    
+                } catch (error) {
+                    console.error('Microphone access denied:', error);
+                    Navigation.showNotification('Microphone access is required for pronunciation practice', 'error');
+                }
+            }
+
+            toggleRecording() {
+                const recordBtn = document.getElementById('record-btn');
+                
+                if (!this.isRecording) {
+                    this.startRecording();
+                    recordBtn.innerHTML = '<i data-lucide="square" class="size-4 mr-2"></i>Stop Recording';
+                    recordBtn.classList.remove('btn-primary');
+                    recordBtn.classList.add('btn-destructive');
+                } else {
+                    this.stopRecording();
+                    recordBtn.innerHTML = '<i data-lucide="mic" class="size-4 mr-2"></i>Start Recording';
+                    recordBtn.classList.remove('btn-destructive');
+                    recordBtn.classList.add('btn-primary');
+                }
+                
+                lucide.createIcons();
+            }
+
+            startRecording() {
+                if (this.mediaRecorder) {
+                    this.mediaRecorder.start();
+                    this.isRecording = true;
+                }
+            }
+
+            stopRecording() {
+                if (this.mediaRecorder) {
+                    this.mediaRecorder.stop();
+                    this.isRecording = false;
+                }
+            }
+
+            showPlaybackControls() {
+                document.getElementById('recording-area').classList.add('hidden');
+                document.getElementById('playback-area').classList.remove('hidden');
+                document.getElementById('next-word').disabled = false;
+            }
+
+            analyzeRecording() {
+                // Simulate AI pronunciation analysis
+                const accuracy = Math.floor(Math.random() * 30) + 70; // 70-100%
+                
+                setTimeout(() => {
+                    document.getElementById('accuracy-score').textContent = accuracy + '%';
+                    document.getElementById('accuracy-bar').style.width = accuracy + '%';
+                    
+                    // Change color based on accuracy
+                    const bar = document.getElementById('accuracy-bar');
+                    if (accuracy >= 85) {
+                        bar.className = 'bg-green-500 h-3 rounded-full transition-all';
+                    } else if (accuracy >= 70) {
+                        bar.className = 'bg-yellow-500 h-3 rounded-full transition-all';
+                    } else {
+                        bar.className = 'bg-red-500 h-3 rounded-full transition-all';
+                    }
+                    
+                    const feedbackMessage = accuracy >= 85 ? 'Excellent pronunciation!' : 
+                                          accuracy >= 70 ? 'Good, but could improve' : 
+                                          'Needs more practice';
+                    
+                    Navigation.showNotification(feedbackMessage, accuracy >= 70 ? 'success' : 'error');
+                }, 1500);
+            }
+
+            playCurrentSample() {
+                // Simulate playing audio sample
+                Navigation.showNotification(`Playing sample for "${this.currentWord.word}"`, 'info');
+            }
+
+            playMyRecording() {
+                if (this.recordedBlob) {
+                    const audio = new Audio(URL.createObjectURL(this.recordedBlob));
+                    audio.play();
+                }
+            }
+
+            reRecord() {
+                document.getElementById('playback-area').classList.add('hidden');
+                document.getElementById('recording-area').classList.remove('hidden');
+                document.getElementById('next-word').disabled = true;
+                this.recordedBlob = null;
+            }
+
+            nextPracticeWord() {
+                this.currentWordIndex = (this.currentWordIndex + 1) % this.practiceWords.length;
+                this.currentWord = this.practiceWords[this.currentWordIndex];
+                
+                document.getElementById('word-display').textContent = this.currentWord.word;
+                document.getElementById('phonetic-display').textContent = this.currentWord.phonetic;
+                
+                // Reset recording interface
+                this.reRecord();
+            }
+
+            playSound(sound, example) {
+                Navigation.showNotification(`Playing ${sound} sound with example "${example}"`, 'info');
+                // In real app, would play actual audio
+            }
+
+            // Teacher methods
+            createExercise() {
+                Navigation.showNotification('Opening exercise creator...', 'info');
+            }
+
+            recordSample() {
+                Navigation.showNotification('Opening sample recorder...', 'info');
+            }
+
+            importWordlist() {
+                Navigation.showNotification('Opening word list importer...', 'info');
+            }
+
+            getAISuggestions() {
+                Navigation.showNotification('Getting AI suggestions for common pronunciation issues...', 'info');
+            }
+
+            listenToRecording(recordingId) {
+                Navigation.showNotification(`Playing student recording ${recordingId}...`, 'info');
+            }
+
+            giveFeedback(recordingId) {
+                Navigation.showNotification(`Opening feedback interface for recording ${recordingId}...`, 'info');
+            }
+        }
+
+        // Initialize pronunciation page
+        document.addEventListener('DOMContentLoaded', () => {
+            new PronunciationPage();
+        });
+    </script>
+</body>
+</html>

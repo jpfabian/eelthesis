@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pronunciation Lessons - EEL</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.1/lucide.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="loading-screen">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <p>Loading Pronunciation Lessons...</p>
+        </div>
+    </div>
+
+    <!-- Main Application Layout -->
+    <div id="main-app" class="flex h-screen bg-background hidden">
+        <!-- Sidebar -->
+        <div id="sidebar" class="w-64 bg-sidebar border-r border-sidebar-border h-full flex flex-col">
+            <div class="p-6">
+                <h1 id="sidebar-title" class="text-xl font-semibold">EEL</h1>
+                <p id="sidebar-welcome" class="text-sm text-muted-foreground mt-1">Welcome</p>
+            </div>
+
+            <!-- back to class Button -->
+            <div class="p-4">
+                <button id="back-class-btn" class="nav-button btn btn-side-bar w-full justify-start gap-3 p-3 rounded-md text-left transition-all flex items-center">
+                    <i data-lucide="arrow-left" class="size-5"></i>
+                    Back to Classes
+                </button>
+            </div>
+            
+            <nav id="sidebar-nav" class="flex-1 px-4 space-y-2"></nav>
+            <div class="p-4">
+                <button id="logout-btn" class="w-full p-3 logout-button btn-side-bar border">
+                    <i data-lucide="log-out"></i>
+                    Logout
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <main id="main-content" class="flex-1 overflow-auto">
+            <div class="p-6 space-y-6">
+                <div>
+                    <h2 class="text-2xl font-semibold mb-2">Pronunciation Quizzes</h2>
+                    <p class="text-muted-foreground">Create and manage pronunciation exercises for your students</p>
+                </div>
+                <div class="container mx-auto flex gap-6">
+                    <!-- Left half -->
+                    <div class="card group card-content w-1/2 self-start max-h-80 space-y-8 left-card">
+                        <div class="flex flex-col gap-4 mt-8" id="tabs-container">
+                            <button id="tab-course" class="btn btn-primary">Built-in Quizzes <i data-lucide="star" class="size-4"></i></button>
+                            <button id="tab-created" class="btn btn-primary">Created by me</button>
+                        </div>
+                    </div>
+
+                    <!-- Right half -->
+                    <div class="card group card-content w-[600px] space-y-8 flex flex-col right-card h-[500px]">
+
+                        <!-- Course Grid -->
+                        <div class="flex-1 overflow-y-auto pr-2 mt-8">
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8" id="lessons-grid">
+                                <!-- Course lessons will be inserted here -->
+                            </div>
+                        </div>
+
+                        <!-- Created by me Grid -->
+                        <div>
+                            <div class="flex flex-wrap gap-4 mb-6 hidden" id="teacher-controls">
+                                <button class="btn btn-primary" onclick="createPronunciationQuiz()">
+                                    <i data-lucide="plus" class="size-4 mr-2"></i>
+                                    Create Pronunciation Quiz
+                                </button>
+                                <button class="btn btn-outline" onclick="generateWithAI()">
+                                    <i data-lucide="brain" class="size-4 mr-2"></i>
+                                    AI Generate
+                                </button>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8 hidden" id="created-lessons-grid">
+                                <!-- Lessons created by me will be inserted here -->
+                            </div> 
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ============================================
+     🎤 CREATE PRONUNCIATION QUIZ MODAL
+     ============================================ -->
+    <div id="create-pronunciation-modal" class="modal-overlay hidden">
+        <div class="modal-card" style="width: 100%; max-width: 1500px;">
+            <div class="modal-header">
+                <h3 class="modal-title">🎤 Create Pronunciation Quiz</h3>
+                <button class="close-btn" onclick="closePronunciationModal()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="modal-content space-y-6">
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
+                    <div class="space-y-2">
+                        <label class="form-label">🎯 Quiz Title</label>
+                        <input type="text" id="lesson-title" class="form-input" placeholder="e.g., Vowel Sounds Practice">
+                    </div>
+                    <div class="space-y-2">
+                        <label class="form-label">📊 Difficulty</label>
+                        <select id="lesson-difficulty" class="form-input">
+                            <option value="beginner">🟢 Beginner</option>
+                            <option value="intermediate">🟡 Intermediate</option>
+                            <option value="advanced">🔴 Advanced</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <label class="form-label">📝 Instructions</label>
+                    <textarea id="lesson-passage" class="form-textarea" rows="4" placeholder="Provide instructions for the pronunciation exercise..."></textarea>
+                </div>
+
+                <div id="questions-container" style="background: linear-gradient(135deg, rgba(236, 72, 153, 0.1), rgba(168, 85, 247, 0.1)); border: 1px solid rgba(236, 72, 153, 0.3); border-radius: 0.75rem; padding: 1.25rem;">
+                    <!-- Questions will be dynamically added here by setupQuestionsByDifficulty() -->
+                </div>
+
+                <button id="add-question-btn" style="width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.75rem 1rem; background: linear-gradient(135deg, rgba(236, 72, 153, 0.1), rgba(168, 85, 247, 0.1)); color: #ec4899; border: 1px solid rgba(236, 72, 153, 0.3); border-radius: 0.5rem; cursor: pointer;" class="hidden">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    Add Another Word
+                </button>
+            </div>
+
+            <div class="modal-footer">
+                <button onclick="closePronunciationModal()" style="padding: 0.625rem 1.5rem; border: 1px solid var(--border); border-radius: 0.5rem; background: white;">Cancel</button>
+                <button id="save-lesson-btn" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.625rem 1.5rem; background: linear-gradient(135deg, #ec4899, #a855f7); color: white; border: none; border-radius: 0.5rem; cursor: pointer;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                        <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                        <polyline points="7 3 7 8 15 8"></polyline>
+                    </svg>
+                    Save Quiz
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================
+     ✨ AI QUIZ GENERATOR MODAL
+     ============================================ -->
+    <div id="ai-quiz-generator-modal" class="modal-overlay hidden">
+        <div class="modal-card" style="width: 90%; max-width: 1500px;">
+            <!-- Header -->
+            <div class="modal-header" style="background: linear-gradient(to right, rgba(147, 51, 234, 0.05), rgba(99, 102, 241, 0.05), rgba(79, 70, 229, 0.05));">
+                <h3 class="modal-title" style="-webkit-text-fill-color: transparent;">
+                    <span style="display: inline-flex; align-items: center; gap: 0.5rem;">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#9333ea" stroke-width="2">
+                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
+                        </svg>
+                        ✨ AI Quiz Generator
+                    </span>
+                </h3>
+                <button class="close-btn" onclick="closeAIModal()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Content -->
+            <div class="modal-content space-y-6" style="max-height: 65vh; overflow-y: auto;">
+                <!-- Configuration Section -->
+                <div style="background: linear-gradient(135deg, rgba(147, 51, 234, 0.05), rgba(99, 102, 241, 0.05)); border: 1px solid rgba(147, 51, 234, 0.2); border-radius: 0.75rem; padding: 1.5rem;">
+                    <h4 style="font-weight: 600; font-size: 1.125rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9333ea" stroke-width="2">
+                            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38"></path>
+                        </svg>
+                        🎯 Quiz Configuration
+                    </h4>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-bottom: 1rem;">
+                        <!-- Topic -->
+                        <div class="space-y-2">
+                            <label class="form-label">📚 Topic / Subject</label>
+                            <input type="text" id="ai-topic" class="form-input" placeholder="e.g., Communication Skills, Grammar, Vocabulary" 
+                                style="border-color: rgba(147, 51, 234, 0.3); border-color: #9333ea;">
+                        </div>
+
+                        <!-- Quiz Type -->
+                        <div class="space-y-2">
+                            <label class="form-label">📝 Quiz Type</label>
+                            <select id="ai-quiz-type" class="form-input" style="border-color: rgba(147, 51, 234, 0.3);">
+                                <option value="reading">📖 Reading Comprehension</option>
+                            </select>
+                        </div>
+
+                        <!-- Difficulty -->
+                        <div class="space-y-2">
+                            <label class="form-label">⭐ Difficulty Level</label>
+                            <select id="ai-difficulty" class="form-input" style="border-color: rgba(147, 51, 234, 0.3);">
+                                <option value="beginner">🟢 Beginner - Consonant Cluster</option>
+                                <option value="intermediate">🟡 Intermediate - Word Stress</option>
+                                <option value="advanced">🔴 Advanced - Reduced/Linked form</option>
+                            </select>
+                        </div>
+
+                        <!-- Number of Questions -->
+                        <div class="space-y-2">
+                            <label class="form-label">🔢 Number of Questions</label>
+                            <input type="number" id="ai-num-questions" class="form-input" value="5" min="1" max="20" 
+                                style="border-color: rgba(147, 51, 234, 0.3);">
+                        </div>
+                    </div>
+
+                    <!-- Additional Context -->
+                    <div class="space-y-2">
+                        <label class="form-label">💡 Additional Instructions (Optional)</label>
+                        <textarea id="ai-context" class="form-textarea" rows="3" 
+                            placeholder="e.g., Focus on practical examples, Include idioms, Use formal language..."
+                            style="border-color: rgba(147, 51, 234, 0.3); resize: none;"></textarea>
+                    </div>
+
+                    <!-- Generate Button -->
+                    <div style="margin-top: 1.5rem;">
+                        <button id="ai-generate-btn" onclick="generateAIQuiz()" 
+                            style="width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 0.75rem; padding: 1rem 1.5rem; background: linear-gradient(135deg, #9333ea, #6366f1, #4f46e5); color: white; border: none; border-radius: 0.5rem; font-weight: 600; cursor: pointer; transition: all 0.3s;">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
+                            </svg>
+                            <span>✨ Generate Quiz with AI</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Generated Content Section (Hidden by default) -->
+                <div id="ai-generated-section" class="hidden space-y-4">
+                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <h4 style="font-weight: 600; font-size: 1.125rem; display: flex; align-items: center; gap: 0.5rem;">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9333ea" stroke-width="2">
+                                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
+                            </svg>
+                            📚 Generated Content
+                        </h4>
+                        <button onclick="generateAIQuiz()" 
+                            style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; background: rgba(147, 51, 234, 0.1); color: #9333ea; border: 1px solid rgba(147, 51, 234, 0.3); border-radius: 0.5rem; cursor: pointer;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38"></path>
+                            </svg>
+                            Regenerate
+                        </button>
+                    </div>
+
+                    <!-- Generated Passage (for reading quizzes) -->
+                    <div id="ai-passage-container" class="space-y-2">
+                        <label class="form-label">📖 Reading Passage</label>
+                        <textarea id="ai-generated-passage" class="form-textarea" rows="6" 
+                            style="border-color: rgba(147, 51, 234, 0.3); resize: vertical;"></textarea>
+                    </div>
+
+                    <!-- Generated Questions Container -->
+                    <div class="space-y-2">
+                        <label class="form-label">❓ Generated Questions</label>
+                        <div id="ai-questions-container" class="space-y-4">
+                            <!-- Questions will be dynamically added here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tips Section -->
+                <div style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(14, 165, 233, 0.05)); border: 1px solid rgba(59, 130, 246, 0.2); border-radius: 0.5rem; padding: 1rem;">
+                    <p style="font-size: 0.875rem; color: #1e40af;">
+                        💡 <strong>AI Tips:</strong> The more specific your topic and context, the better the generated questions will be. 
+                        You can edit any generated content before saving!
+                    </p>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="modal-footer">
+                <button onclick="closeAIModal()" style="padding: 0.625rem 1.5rem; border: 1px solid var(--border); border-radius: 0.5rem; background: white;">
+                    Cancel
+                </button>
+                <button id="ai-save-btn" onclick="saveAIQuiz()" disabled
+                    style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.625rem 1.5rem; background: linear-gradient(135deg, #9333ea, #6366f1); color: white; border: none; border-radius: 0.5rem; cursor: pointer; opacity: 0.5;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                        <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                        <polyline points="7 3 7 8 15 8"></polyline>
+                    </svg>
+                    Save Quiz
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================
+     📅 SCHEDULE MODAL
+     ============================================ -->
+    <div id="schedule-modal" class="modal-overlay hidden">
+        <div class="modal-card"  style="width: 90%; max-width: 1000px;">
+            <div class="modal-header">
+                <h3 class="modal-title">📅 Set Quiz Schedule</h3>
+                <button class="close-btn" onclick="closeScheduleModal()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="modal-content space-y-5">
+                <div class="space-y-9">
+                    <label class="form-label">🔓 Unlock Time</label>
+                    <input type="datetime-local" id="modal-unlock-time" class="form-input">
+                </div>
+
+                <div class="space-y-9">
+                    <label class="form-label">🔒 Lock Time</label>
+                    <input type="datetime-local" id="modal-lock-time" class="form-input">
+                </div>
+
+                <!-- 🆕 Time Limit -->
+                <div class="space-y-9">
+                    <label class="form-label">⏱️ Time Limit (minutes)</label>
+                    <input type="number" id="modal-time-limit" class="form-input" min="1" placeholder="Enter time in minutes">
+                </div>
+
+                <div class="space-y-9">
+                    <label class="form-label">🔄 Allow Retake?</label>
+                    <select id="retake-option" class="form-input">
+                        <option value="none">❌ No Retake</option>
+                        <option value="all">✅ All Students</option>
+                        <option value="specific">👥 Specific Students</option>
+                    </select>
+                </div>
+
+                <div id="specific-students-container" class="hidden space-y-9 gap-2">
+                    <label class="form-label">Select Students</label>
+                    <select id="specific-students" class="form-input" multiple style="min-height: 120px;">
+                        <!-- Student options will be populated dynamically -->
+                    </select>
+                </div>
+
+                <div style="padding: 1rem; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 0.5rem;">
+                    <p style="font-size: 0.875rem; color: #065f46;">
+                        💡 <strong>Tip:</strong> Setting appropriate unlock/lock times helps manage student access effectively.
+                    </p>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button onclick="closeScheduleModal()" style="padding: 0.625rem 1.5rem; border: 1px solid var(--border); border-radius: 0.5rem; background: white;">Cancel</button>
+                <button id="save-schedule-btn" style="padding: 0.625rem 1.5rem; background: linear-gradient(135deg, #10b981, #6366f1); color: white; border: none; border-radius: 0.5rem; cursor: pointer;">Save Schedule</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================
+        🎙️ TAKE PRONUNCIATION QUIZ MODAL (Student View)
+        ============================================ -->
+    <div id="take-pronunciation-modal" class="modal-quiz-overlay hidden">
+        <div class="quiz-card"  style="width: 90%; max-width: 1000px;">
+            <button onclick="closeTakePronunciationModal()" class="close-btn">&times;</button>
+
+            <!-- Progress Bar -->
+            <div class="progress-bar">
+                <div id="pronunciation-progress" class="progress" style="width: 33%;"></div>
+            </div>
+
+            <!-- Quiz Title -->
+            <h2 id="pronunciation-quiz-title" class="quiz-title">🎤 Pronunciation Practice</h2>
+
+            <!-- Countdown Timer -->
+            <div id="pronunciation-timer-container" class="quiz-timer" style="text-align: right; margin: 0.5rem 0; font-weight: bold;">
+                ⏱ Time limit: <span id="pronunciation-countdown">05:00</span>
+            </div>
+
+            <!-- Instructions / Passage Area -->
+            <div id="pronunciation-passage" class="quiz-passage">
+                <strong>Instructions:</strong> Click the microphone button to record your pronunciation. 
+                Listen to your recording before submitting. Make sure to speak clearly and at a natural pace.
+            </div>
+
+            <!-- Question Display Area -->
+            <div id="pronunciation-questions" class="quiz-questions">
+                <div class="question" id="pronunciation-question-content">
+                    <!-- Question Number and Difficulty -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                        <h4 style="font-weight: 600; font-size: 1.125rem;" id="pronunciation-question-num">Question 1 of 3</h4>
+                        <span class="difficulty-badge beginner" id="pronunciation-difficulty" style="padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; background: rgba(34, 197, 94, 0.1); color: #16a34a;">
+                            🟢 Beginner
+                        </span>
+                    </div>
+
+                    <!-- Word/Sentence to Pronounce -->
+                    <div id="pronunciation-content" style="text-align: center; margin-bottom: 2rem;">
+                        <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem;">🔤 Word to Pronounce:</h3>
+                        <div class="word-display">
+                            <span class="word-large">Test</span>
+                            <span class="pronunciation-guide">/test/</span>
+                        </div>
+                        <p class="pronunciation-tip">
+                            💡 <strong>Tip:</strong> Focus on the consonant cluster "st" at the end
+                        </p>
+                    </div>
+
+                    <!-- Recording Interface -->
+                    <div class="recording-interface">
+                        <!-- Recording Visual States -->
+                        <div class="recording-visual" style="min-height: 100px; display: flex; flex-direction: column; align-items: center; justify-content: center; margin-bottom: 1.5rem;">
+                            <!-- Idle State -->
+                            <div id="recording-idle" class="recording-idle">
+                                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--muted-foreground);">
+                                    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+                                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                                    <line x1="12" x2="12" y1="19" y2="22"></line>
+                                </svg>
+                                <p style="color: var(--muted-foreground); margin-top: 1rem;">Ready to record</p>
+                            </div>
+
+                            <!-- Recording State -->
+                            <div id="recording-active" class="recording-active hidden" style="position: relative;">
+                                <div class="pulse-rings">
+                                    <div class="pulse-ring ring-1"></div>
+                                    <div class="pulse-ring ring-2"></div>
+                                    <div class="pulse-ring ring-3"></div>
+                                </div>
+                                <svg class="recording-mic" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#f43f5e" stroke-width="2">
+                                    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+                                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                                    <line x1="12" x2="12" y1="19" y2="22"></line>
+                                </svg>
+                                <p style="color: #f43f5e; font-weight: 600; margin-top: 1rem;">Recording...</p>
+                                <div class="waveform">
+                                    <div class="wave-bar" style="animation-delay: 0s;"></div>
+                                    <div class="wave-bar" style="animation-delay: 0.1s;"></div>
+                                    <div class="wave-bar" style="animation-delay: 0.2s;"></div>
+                                    <div class="wave-bar" style="animation-delay: 0.3s;"></div>
+                                    <div class="wave-bar" style="animation-delay: 0.4s;"></div>
+                                    <div class="wave-bar" style="animation-delay: 0.5s;"></div>
+                                    <div class="wave-bar" style="animation-delay: 0.6s;"></div>
+                                    <div class="wave-bar" style="animation-delay: 0.7s;"></div>
+                                </div>
+                            </div>
+
+                            <!-- Complete State -->
+                            <div id="recording-complete" class="recording-complete hidden">
+                                <div class="success-checkmark">
+                                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2">
+                                        <polyline points="20 6 9 17 4 12"></polyline>
+                                    </svg>
+                                </div>
+                                <p style="color: #10b981; font-weight: 600; margin-top: 1rem;">Recording Complete!</p>
+                                <button id="play-recording-btn" onclick="playRecording()" class="replay-btn" style="margin-top: 1rem;">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                                    </svg>
+                                    Play Recording
+                                </button>
+                                <audio id="recorded-audio" controls class="hidden"></audio>
+                            </div>
+                        </div>
+
+                        <!-- Recording Controls -->
+                        <div class="recording-controls" style="display: flex; justify-content: center; gap: 1rem;">
+                            <button id="record-btn" class="record-button" onclick="toggleRecording()">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+                                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                                    <line x1="12" x2="12" y1="19" y2="22"></line>
+                                </svg>
+                                <span>Start Recording</span>
+                            </button>
+
+                            <div id="recorded-controls" class="recorded-controls hidden" style="display: flex; gap: 1rem;">
+                                <button class="btn-re-record" onclick="reRecord()">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+                                    </svg>
+                                    Re-record
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navigation Buttons -->
+            <div id="pronunciation-nav" class="quiz-nav">
+                <button id="pronunciation-prev-btn" onclick="pronunciationPrevQuestion()" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.625rem 1.25rem; border: 1px solid rgba(99, 102, 241, 0.3); color: #6366f1; background: white; border-radius: 0.5rem; cursor: pointer;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="19" y1="12" x2="5" y2="12"></line>
+                        <polyline points="12 19 5 12 12 5"></polyline>
+                    </svg>
+                    Previous
+                </button>
+                <div style="display: flex; gap: 0.75rem;">
+                    <button id="pronunciation-next-btn" onclick="pronunciationNextQuestion()" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.625rem 1.25rem; background: linear-gradient(135deg, #6366f1, #10b981); color: white; border: none; border-radius: 0.5rem; cursor: pointer;">
+                        Next
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                            <polyline points="12 5 19 12 12 19"></polyline>
+                        </svg>
+                    </button>
+                    <button id="pronunciation-submit-btn" type="button" class="hidden" onclick="submitPronunciationQuiz(event)" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.625rem 1.25rem; background: linear-gradient(135deg, #f59e0b, #eab308); color: white; border: none; border-radius: 0.5rem; cursor: pointer;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                        Submit
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/navigation.js"></script>
+    <script src="js-front-end/front-pronunciation.js"></script>
+</body>
+</html>

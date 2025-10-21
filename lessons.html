@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lessons - EEL</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.1/lucide.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="loading-screen">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <p>Loading Lessons...</p>
+        </div>
+    </div>
+
+    <!-- Main Application Layout -->
+    <div id="main-app" class="flex h-screen bg-background hidden">
+        <!-- Sidebar -->
+        <div id="sidebar" class="w-64 bg-sidebar border-r border-sidebar-border h-full flex flex-col">
+            <!-- Sidebar Header -->
+            <div class="p-6">
+                <h1 id="sidebar-title" class="text-xl font-semibold">EEL</h1>
+                <p id="sidebar-welcome" class="text-sm text-muted-foreground mt-1">Welcome</p>
+            </div>
+            
+            <!-- back to class Button -->
+            <div class="p-4">
+                <button id="back-class-btn" class="nav-button btn btn-side-bar w-full justify-start gap-3 p-3 rounded-md text-left transition-all flex items-center">
+                    <i data-lucide="arrow-left" class="size-5"></i>
+                    Back to Classes
+                </button>
+            </div>
+            
+            <!-- Navigation -->
+            <nav id="sidebar-nav" class="flex-1 px-4 space-y-2">
+                <!-- Navigation items will be populated by JavaScript -->
+            </nav>
+
+            <div class="p-4">
+                <button id="logout-btn" class="w-full p-3 logout-button btn-side-bar border">
+                    <i data-lucide="log-out"></i>
+                    Logout
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <main id="main-content" class="flex-1 overflow-auto">
+            <div class="p-6 space-y-6">
+                <div>
+                    <h2 class="text-2xl font-semibold mb-2">Lessons</h2>
+                    <p class="text-muted-foreground">Lessons for your students</p>
+                </div>
+                <div class="card group card-content w-[600px] space-y-8 right-card mx-auto gap-6">
+                    <div id="subject-name" class="text-xl font-semibold mt-3"></div>
+                    <div id="lessons-container" class="max-h-80 overflow-y-auto"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ============================================
+     📖 LESSON MODAL (PDF Viewer)
+     ============================================ -->
+    <div id="lesson-modal" class="modal-overlay hidden">
+        <div class="modal-card" style="width: 100%; max-width: 1500px;">
+            <div class="modal-header">
+                <h3 id="lesson-title" class="modal-title">📖 Lesson Presentation</h3>
+                <button class="close-btn" onclick="closeLesson()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="modal-content">
+                <!-- Embed PDF will update dynamically -->
+                <embed id="lesson-pdf" src="" type="application/pdf" width="100%" height="600px" style="border-radius: 0.5rem; border: 1px solid var(--border);" />
+                
+            </div>
+
+            <div class="modal-footer">
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/navigation.js"></script>
+    <script src="js-front-end/front-lessons.js"></script>
+</body>
+</html>

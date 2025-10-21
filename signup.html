@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up - EEL</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.1/lucide.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body>    
+    <a href="index.html" class="back-button">
+        <i data-lucide="arrow-left"></i> Back
+    </a>
+    <div class="signup-screen">
+        <div class="signup-container">
+            <!-- Header -->
+            <div class="signup-header">
+                <h1 class="hero-title primary-gradient">
+                    Join EEL Today
+                </h1>
+                <p class="hero-description">
+                    Start your personalized English learning journey
+                </p>
+            </div>
+
+            <!-- Signup Form -->
+            <div class="signup-form-card">
+                <!-- Role Selection -->
+                <div class="role-selection-step" id="role-step">
+                    <h3 class="step-title">Choose Your Role</h3>
+                    <p class="step-description">Are you a teacher or student?</p>
+                    
+                    <div class="role-cards">
+                        <div class="role-card-small teacher-card" data-role="teacher">
+                            <div class="role-icon-small teacher-icon">
+                                <i data-lucide="graduation-cap"></i>
+                            </div>
+                            <div class="role-content">
+                                <h4>Teacher</h4>
+                                <p>Create lessons and track progress</p>
+                            </div>
+                            <div class="role-check">
+                                <i data-lucide="check"></i>
+                            </div>
+                        </div>
+
+                        <div class="role-card-small student-card" data-role="student">
+                            <div class="role-icon-small student-icon">
+                                <i data-lucide="user"></i>
+                            </div>
+                            <div class="role-content">
+                                <h4>Student</h4>
+                                <p>Learn and practice English skills</p>
+                            </div>
+                            <div class="role-check">
+                                <i data-lucide="check"></i>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="button" class="btn btn-primary w-full" id="role-continue-btn" disabled>
+                        Continue
+                        <i data-lucide="arrow-right"></i>
+                    </button>
+                </div>
+
+                <!-- Registration Form -->
+                <div class="registration-step hidden" id="registration-step">
+                    <div class="step-header">
+                        <div>
+                            <h3 class="step-title">Create Your Account</h3>
+                            <p class="step-description">Fill in your details to get started</p>
+                        </div>
+                    </div>
+
+                    <form id="signup-form" class="signup-form">
+                        <div class="form-group">
+                            <label for="lname" class="form-label">Last Name</label>
+                            <input 
+                                type="text" 
+                                id="lname" 
+                                name="lname"
+                                class="form-input" 
+                                placeholder="e.g. Dela Cruz"
+                                required
+                            >
+                        </div>
+
+                        <div class="form-group">
+                            <label for="fname" class="form-label">First Name</label>
+                            <input 
+                                type="text" 
+                                id="fname" 
+                                name="fname"
+                                class="form-input" 
+                                placeholder="e.g. Juan"
+                                required
+                            >
+                        </div>
+
+                        <div class="form-group">
+                            <label for="email" class="form-label">Email Address</label>
+                            <input 
+                                type="email" 
+                                id="email" 
+                                name="email"
+                                class="form-input" 
+                                placeholder="Enter your email"
+                                required
+                            >
+                        </div>
+
+                        <div class="form-group">
+                            <label for="password" class="form-label">Password</label>
+                            <div class="password-input-container">
+                                <input 
+                                    type="password" 
+                                    id="password" 
+                                    name="password"
+                                    class="form-input" 
+                                    placeholder="Create a strong password"
+                                    required
+                                    minlength="6"
+                                >
+                                <button type="button" class="password-toggle" onclick="togglePassword('password')">
+                                    <i data-lucide="eye-off" id="password-icon"></i>
+                                </button>
+                            </div>
+                            <div class="password-strength" id="password-strength"></div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="confirm-password" class="form-label">Confirm Password</label>
+                            <div class="password-input-container">
+                                <input 
+                                    type="password" 
+                                    id="confirm-password" 
+                                    name="confirm-password"
+                                    class="form-input" 
+                                    placeholder="Confirm your password"
+                                    required
+                                >
+                                <button type="button" class="password-toggle" onclick="togglePassword('confirm-password')">
+                                    <i data-lucide="eye-off" id="confirm-password-icon"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="terms" name="terms" required>
+                                <span class="checkmark"></span>
+                                I agree to the <a href="#" class="text-link">Terms of Service</a> and <a href="#" class="text-link">Privacy Policy</a>
+                            </label>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-full" id="signup-btn">
+                            <i data-lucide="user-plus"></i>
+                            Create Account
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Login Link -->
+                <div class="login-link">
+                    <p>Already have an account? <a href="login.html">Sign in here</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="loading-screen hidden">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <p>Creating your account...</p>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js-front-end/front-signup.js"></script>
+</body>
+</html>
