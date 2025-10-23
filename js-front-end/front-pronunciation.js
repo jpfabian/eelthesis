@@ -132,6 +132,59 @@ function startLesson(lessonId) {
     }
 }
 
+function updatePassagePlaceholder() {
+    const difficulty = document.getElementById("lesson-difficulty").value;
+    const passageField = document.getElementById("lesson-passage");
+
+    if (difficulty === "beginner") {
+        passageField.placeholder = 
+            "🟢 Consonant Cluster Practice\n\n" +
+            "👉 Example instruction:\n" +
+            "Pronounce the given words focusing on blending consonant clusters smoothly.\n\n" +
+            "💬 Example Questions:\n" +
+            "Word: 'street'\n" +
+            "Student Says / Correct Pronunciation: 'stree-t'";
+    } 
+    else if (difficulty === "intermediate") {
+        passageField.placeholder = 
+            "🟡 Word Stress Practice\n\n" +
+            "👉 Example instruction:\n" +
+            "Identify and emphasize the correct stressed syllable in each word.\n\n" +
+            "💬 Example Questions:\n" +
+            "Word: 'photograph'\n" +
+            "Stressed Syllable / Student Says: 'PHO-to-graph'";
+    } 
+    else if (difficulty === "advanced") {
+        passageField.placeholder = 
+            "🔴 Reduced / Linked Form Practice\n\n" +
+            "👉 Example instruction:\n" +
+            "Practice connected speech and reduced forms in sentences.\n\n" +
+            "💬 Example Questions:\n" +
+            "Sentence with Blank: 'I ___ go to the store.'\n" +
+            "Reduced / Linked Form: 'wanna'\n" +
+            "Student Says: 'I wanna go to the store.'";
+    }
+}
+
+// 🧠 Initialize and update placeholder when difficulty changes
+document.addEventListener("DOMContentLoaded", () => {
+    const difficultySelect = document.getElementById("lesson-difficulty");
+
+    // Set initial placeholder
+    updatePassagePlaceholder();
+
+    // Update when user changes difficulty
+    difficultySelect.addEventListener("change", () => {
+        updatePassagePlaceholder();
+
+        // Optional: clear questions-container when switching levels
+        const container = document.getElementById('questions-container');
+        container.innerHTML = "";
+    });
+});
+
+
+
 function setupQuestionsByDifficulty(level) {
     const container = document.getElementById('questions-container');
     const addQuestionBtn = document.getElementById('add-question-btn');
@@ -496,16 +549,19 @@ function safeOpenPronunciationModal(quizId, isLocked) {
 // ============================================
 async function loadPronunciationQuizzes(user) {
     try {
-        // ✅ Kunin yung selected class (may subject_id)
+        // ✅ Get selected class (with subject_id)
         const selectedClass = JSON.parse(localStorage.getItem("eel_selected_class"));
-        const subjectId = selectedClass?.subject_id; 
+        const subjectId = selectedClass?.subject_id;
         if (!subjectId) {
             console.warn("⚠️ No subject_id found in selected class.");
             return;
         }
+
+        // ✅ Fetch pronunciation quizzes
         const res = await fetch(`http://localhost:3000/api/pronunciation-quizzes?subject_id=${subjectId}`);
         const quizzes = await res.json();
 
+        // ✅ Fetch student attempts (if user is a student)
         let studentAttempts = [];
         if (user.role === 'student') {
             try {
@@ -518,9 +574,24 @@ async function loadPronunciationQuizzes(user) {
         }
 
         const container = document.getElementById('lessons-grid');
-        container.className = 'space-y-4';
         container.innerHTML = '';
+        container.className = 'space-y-6';
 
+        // ✅ Difficulty sections
+        const beginnerContainer = document.createElement('div');
+        const intermediateContainer = document.createElement('div');
+        const advancedContainer = document.createElement('div');
+
+        beginnerContainer.innerHTML = `<h2 class="card-title text-center px-2 py-1 text-lg rounded-lg bg-secondary/10 text-secondary">Beginner</h2>`;
+        intermediateContainer.innerHTML = `<h2 class="card-title text-center px-2 py-1 text-lg rounded-lg bg-secondary/10 text-secondary">Intermediate</h2>`;
+        advancedContainer.innerHTML = `<h2 class="card-title text-center px-2 py-1 text-lg rounded-lg bg-secondary/10 text-secondary">Advanced</h2>`;
+
+        // ✅ Number counters for each difficulty
+        let beginnerCount = 1;
+        let intermediateCount = 1;
+        let advancedCount = 1;
+
+        // ✅ Loop through all quizzes
         quizzes.forEach(quiz => {
             const now = new Date();
             const unlockTime = quiz.unlock_time ? new Date(quiz.unlock_time.replace(' ', 'T')) : null;
@@ -533,6 +604,7 @@ async function loadPronunciationQuizzes(user) {
 
             let actionButtons = '';
 
+            // ✅ Teacher buttons
             if (user.role === 'teacher') {
                 actionButtons = `
                     <button class="btn btn-outline flex-1" onclick="openLeaderboardModal(${quiz.quiz_id})">
@@ -584,14 +656,25 @@ async function loadPronunciationQuizzes(user) {
                 `;
             }
 
+            // ✅ Determine quiz number per difficulty
+            let quizNumber;
+            if (quiz.difficulty === 'beginner') quizNumber = beginnerCount++;
+            else if (quiz.difficulty === 'intermediate') quizNumber = intermediateCount++;
+            else if (quiz.difficulty === 'advanced') quizNumber = advancedCount++;
+
+            // ✅ Create quiz card
             const quizCard = document.createElement('div');
             quizCard.className = 'card group cursor-pointer hover:shadow-lg transition-all duration-300 hover:-translate-y-1';
             quizCard.innerHTML = `
                 <div class="p-4 rounded-lg border border-border cursor-pointer">
                     <div class="flex items-center justify-between">
                         <div>
-                            <h3 class="font-semibold text-lg text-primary">${quiz.title}</h3>
-                            <p class="text-sm text-muted-foreground italic">${quiz.passage ? quiz.passage.substring(0, 100) + '...' : 'No description available.'}</p>
+                            <h3 class="font-semibold text-lg text-primary">
+                                ${quizNumber}. ${quiz.title}
+                            </h3>
+                            <p class="text-sm text-muted-foreground italic">
+                                ${quiz.passage ? quiz.passage.substring(0, 100) + '...' : 'No description available.'}
+                            </p>
                         </div>
                         <div class="flex items-center gap-2">
                             <span class="px-2 py-1 text-xs rounded bg-secondary/10 text-secondary capitalize">
@@ -600,18 +683,18 @@ async function loadPronunciationQuizzes(user) {
                             <i data-lucide="book-open" class="size-5 text-primary"></i>
                         </div>
                     </div>
+
                     <div class="hidden mt-4 border-t pt-3 quiz-details space-y-3">
                         <div class="flex flex-col text-xs text-muted-foreground gap-1">
                             <span>Start: ${quiz.unlock_time ? formatDateTime(quiz.unlock_time) : 'Not set'}</span>
                             <span>Deadline: ${quiz.lock_time ? formatDateTime(quiz.lock_time) : 'Not set'}</span>
                         </div>
-                        <div class="flex gap-2">
-                            ${actionButtons}
-                        </div>
+                        <div class="flex gap-2">${actionButtons}</div>
                     </div>
                 </div>
             `;
 
+            // ✅ Toggle details
             quizCard.addEventListener('click', () => {
                 const details = quizCard.querySelector('.quiz-details');
                 const allCards = container.querySelectorAll('.quiz-details');
@@ -620,10 +703,19 @@ async function loadPronunciationQuizzes(user) {
                 lucide.createIcons();
             });
 
-            container.appendChild(quizCard);
+            // ✅ Append to corresponding difficulty
+            if (quiz.difficulty === 'beginner') beginnerContainer.appendChild(quizCard);
+            else if (quiz.difficulty === 'intermediate') intermediateContainer.appendChild(quizCard);
+            else if (quiz.difficulty === 'advanced') advancedContainer.appendChild(quizCard);
         });
 
+        // ✅ Add sections to main container
+        container.appendChild(beginnerContainer);
+        container.appendChild(intermediateContainer);
+        container.appendChild(advancedContainer);
+
         lucide.createIcons();
+
     } catch (err) {
         console.error('Error loading pronunciation quizzes:', err);
         const container = document.getElementById('lessons-grid');

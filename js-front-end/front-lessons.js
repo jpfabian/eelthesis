@@ -148,7 +148,7 @@ async function loadCurriculum() {
         filteredSubjects[0].lessons.forEach(lesson => {
             let lessonHTML = `
                 <div class="card-header">
-                    <h3 class="card-title text-center px-2 py-1 text-lg rounded bg-secondary/10 text-secondary">
+                    <h3 class="card-title text-center px-2 py-1 text-lg rounded-lg bg-secondary/10 text-secondary">
                         ${lesson.lesson_title}
                     </h3>
                 </div>
@@ -160,7 +160,7 @@ async function loadCurriculum() {
                     <div class="topic-card flex flex-col gap-3 p-3 bg-gradient-to-r from-accent/30 to-accent/10 rounded-lg card group cursor-pointer hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
                         onclick="toggleLesson(this)">
                         <div class="flex items-center justify-between">
-                            <p class="px-2 py-1 text-6xl rounded bg-primary/10 text-primary">${topic.topic_title}</p>
+                            <p class="px-2 py-1 text-6xl rounded-lg bg-primary/10 text-primary">${topic.topic_title}</p>
                             <i data-lucide="book-open" class="size-5 text-primary"></i>
                         </div>
                         <div class="lesson-footer hidden mt-3 space-y-2">

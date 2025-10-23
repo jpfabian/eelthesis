@@ -169,29 +169,6 @@ router.put("/api/lock-quiz/:id", async (req, res) => {
   }
 });
 
-// ================= GET ALL QUIZZES =================
-router.get("/api/reading-quizzes", async (req, res) => {
-  const pool = req.pool;
-  const { subject_id } = req.query;
-
-  try {
-    let query = "SELECT * FROM reading_quizzes";
-    const params = [];
-
-    // ✅ If subject_id is provided, add a WHERE clause
-    if (subject_id) {
-      query += " WHERE subject_id = ?";
-      params.push(subject_id);
-    }
-
-    const [rows] = await pool.query(query, params);
-    res.json(rows);
-  } catch (err) {
-    console.error("❌ Get quizzes error:", err);
-    res.status(500).json({ error: "Database error" });
-  }
-});
-
 // ================= GET SINGLE QUIZ =================
 router.get("/api/reading-quizzes/:id", async (req, res) => {
   const pool = req.pool;
