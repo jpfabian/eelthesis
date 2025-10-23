@@ -521,8 +521,8 @@ async function gradeEssayWithGroq(studentAnswer) {
           {
             role: "system",
             content: `You are a strict but fair essay grader.
-Grade the student's essay from 0 to 100 based on relevance, grammar, and completeness.
-Respond ONLY in JSON like: {"score": 85, "feedback": "Good structure but weak conclusion."}`
+              Grade the student's essay from 0 to 100 based on relevance, grammar, and completeness.
+              Respond ONLY in JSON like: {"score": 85, "feedback": "Good structure but weak conclusion."}`
           },
           { role: "user", content: `Student's essay: """${studentAnswer}"""` }
         ],

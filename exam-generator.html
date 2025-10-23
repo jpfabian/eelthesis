@@ -64,21 +64,13 @@
               <!-- Generation Method -->
               <div class="space-y-2">
                 <label class="form-label">Generation Method</label>
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 gap-4">
                   <label
                     class="flex items-center gap-2 p-3 border border-border rounded-lg cursor-pointer hover:bg-muted transition-colors" style="width: 100%; gap: 0.5rem; padding: 0.75rem 1rem; background: rgba(99, 102, 241, 0.05); color: #6366f1; border: 1px solid #6366f1; border-radius: 0.5rem;">
                     <input type="radio" name="method" value="topic" checked>
                     <div>
                       <div class="font-medium">From Topic</div>
                       <div class="text-xs text-muted-foreground">Generate questions about a specific topic</div>
-                    </div>
-                  </label>
-                  <label
-                    class="flex items-center gap-2 p-3 border border-border rounded-lg cursor-pointer hover:bg-muted transition-colors" style="width: 100%; gap: 0.5rem; padding: 0.75rem 1rem; background: rgba(99, 102, 241, 0.05); color: #6366f1; border: 1px solid #6366f1; border-radius: 0.5rem;">
-                    <input type="radio" name="method" value="text">
-                    <div>
-                      <div class="font-medium">From Text</div>
-                      <div class="text-xs text-muted-foreground">Generate questions from provided text</div>
                     </div>
                   </label>
                 </div>
@@ -88,13 +80,6 @@
               <div id="topic-input" class="space-y-2">
                 <label class="form-label">Select Topics</label>
                 <div id="topicDropdownContainer" class="space-y-2 border rounded p-2" style="background: rgba(99, 102, 241, 0.05);"></div>
-              </div>
-
-              <!-- Text Input -->
-              <div id="text-input" class="space-y-2 hidden">
-                <label class="form-label">Source Text</label>
-                <textarea id="textField" class="form-textarea" rows="8" style="width: 100%; gap: 0.5rem; padding: 0.75rem 1rem; background: rgba(99, 102, 241, 0.05); border: 1px solid #6366f1; border-radius: 0.5rem;"
-                  placeholder="Paste your text here..."></textarea>
               </div>
 
               <!-- Question Types with Count -->
@@ -131,8 +116,8 @@
 
                   <!-- Identification -->
                   <div style="width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.75rem 1rem; background: rgba(99, 102, 241, 0.05); color: #6366f1; border: 1px solid #6366f1; border-radius: 0.5rem;">
-                    <input type="checkbox" name="questionTypes" value="Identification" class="form-checkbox"
-                      id="questionType-identification">
+                    <input type="checkbox" name="questionTypes" value="identification" class="form-checkbox"
+                        id="questionType-identification">
                     <label for="questionType-identification" class="flex-1 cursor-pointer">
                       Identification
                     </label>
@@ -167,15 +152,21 @@
           </div>
         </div>
 
-        <!-- ✅ Generated Exam Result -->
-        <div id="generatedExamContainer" class="hidden mt-6 card border border-border rounded-lg p-6 bg-muted/20">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="text-lg font-semibold text-primary">Generated Exam Result</h3>
-            <button id="editExamBtn" class="btn btn-outline btn-sm">
-              <i data-lucide="edit" class="size-3 mr-1"></i> Edit
+        <!-- ✅ Generated Exam Result (Hidden by Default) -->
+        <div id="generatedExamContainer" class="hidden mt-6 p-6 border rounded-lg bg-white shadow relative">
+          <h3 class="text-lg font-semibold text-primary mb-4">Generated Exam Result</h3>
+          
+          <div id="generatedExamContent" class="whitespace-pre-wrap text-sm text-gray-800"></div>
+
+          <!-- ✅ Buttons at bottom-right -->
+          <div class="absolute bottom-4 right-4 flex gap-2">
+            <button id="editExamBtn" class="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600">
+              ✏️ Edit
+            </button>
+            <button id="saveExamBtn" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+              💾 Save
             </button>
           </div>
-          <div id="generatedExamContent" class="whitespace-pre-wrap text-sm text-foreground"></div>
         </div>
 
         <!-- Recent Exams (Static for now) -->
@@ -184,7 +175,7 @@
             <h3 class="card-title">Exam List</h3>
           </div>
           <div class="card-content">
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="exam-list">
+            <div class="grid grid-cols-4 md:grid-cols-2 lg:grid-cols-3 gap-4" id="exam-list">
               <!-- Exam list-->
             </div>
           </div>
@@ -192,11 +183,12 @@
       </div>
     </main>
   </div>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/navigation.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <script src="js-front-end/front-exam.js"></script>
 
-  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
-  <script src="js/auth.js"></script>
-  <script src="js/navigation.js"></script>
-  <script src="js-front-end/front-exam.js"></script>
     <script>
       document.querySelectorAll('input[name="questionTypes"]').forEach(checkbox => {
         checkbox.addEventListener('change', () => {
@@ -210,6 +202,6 @@
           }
         });
       });
-  </script>
+    </script>
 </body>
 </html>

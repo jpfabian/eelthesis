@@ -1,5 +1,8 @@
 const express = require("express");
 const router = express.Router();
+require("dotenv").config();
+const Groq = require("groq-sdk");
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 // GET /api/class/:classId/students
 router.get('/api/class/:classId/students', async (req, res) => {

@@ -31,6 +31,8 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         setupExamGenerator(classId); // pass it to your function
         hideLoading();
+        // ✅ Always call after handling class_id
+        loadLessonsAndTopics();
 
         // Back to Classes
         const backBtn = document.getElementById('back-class-btn');
@@ -59,7 +61,7 @@ async function loadLessonsAndTopics() {
     container.innerHTML = '';
 
     data.forEach(lesson => {
-      // Lesson dropdown header
+      // Lesson header
       const lessonHeader = document.createElement('div');
       lessonHeader.textContent = lesson.lesson_title;
       lessonHeader.style.fontWeight = 'bold';
@@ -69,7 +71,7 @@ async function loadLessonsAndTopics() {
       lessonHeader.style.backgroundColor = '#e0e7ff';
       lessonHeader.classList.add('lesson-header');
 
-      // Topics container (hidden initially)
+      // Topics container
       const topicsDiv = document.createElement('div');
       topicsDiv.style.display = 'none';
       topicsDiv.style.padding = '0.5rem 1rem';
@@ -88,11 +90,10 @@ async function loadLessonsAndTopics() {
 
         label.appendChild(checkbox);
         label.appendChild(document.createTextNode(topic.topic_title));
-
         topicsDiv.appendChild(label);
       });
 
-      // Toggle topics on header click
+      // Toggle topics
       lessonHeader.addEventListener('click', () => {
         topicsDiv.style.display = topicsDiv.style.display === 'none' ? 'block' : 'none';
       });
@@ -107,160 +108,122 @@ async function loadLessonsAndTopics() {
 
 function getSelectedTopics() {
   const checkboxes = document.querySelectorAll('input[name="topics"]:checked');
-  return Array.from(checkboxes).map(cb => cb.value);
+  return Array.from(checkboxes).map(cb => cb.nextSibling.textContent.trim());
 }
 
-
-document.addEventListener('DOMContentLoaded', () => {
-  const urlParams = new URLSearchParams(window.location.search);
-  const classId = urlParams.get('class_id');
-
-  if (classId) {
-    localStorage.setItem("eel_selected_class_id", classId);
-    const newUrl = window.location.origin + window.location.pathname;
-    window.history.replaceState({}, document.title, newUrl);
-  }
-
-  // ✅ Always call after handling class_id
-  loadLessonsAndTopics();
-});
-
-
-// Call it on page load
-document.addEventListener('DOMContentLoaded', loadLessonsAndTopics);
-
-
-// Toggle input fields based on generation method
+// Toggle Topic/Text input
 const methodRadios = document.querySelectorAll('input[name="method"]');
 const topicInput = document.getElementById('topic-input');
 const textInput = document.getElementById('text-input');
 
 methodRadios.forEach(radio => {
-    radio.addEventListener('change', (e) => {
+  radio.addEventListener('change', (e) => {
     if (e.target.value === 'topic') {
-        topicInput.classList.remove('hidden');
-        textInput.classList.add('hidden');
+      topicInput.classList.remove('hidden');
+      textInput.classList.add('hidden');
     } else {
-        topicInput.classList.add('hidden');
-        textInput.classList.remove('hidden');
+      topicInput.classList.add('hidden');
+      textInput.classList.remove('hidden');
     }
-    });
+  });
 });
 
-// Enable/disable number inputs based on checkbox state
+// Enable/disable count inputs based on checkbox
 const questionTypeCheckboxes = document.querySelectorAll('input[name="questionTypes"]');
 
 questionTypeCheckboxes.forEach(checkbox => {
-    checkbox.addEventListener('change', (e) => {
+  checkbox.addEventListener('change', (e) => {
     const type = e.target.value;
     const countInput = document.getElementById(`count-${type}`);
-    
-    if (e.target.checked) {
-        countInput.disabled = false;
-        countInput.value = '';
-    } else {
-        countInput.disabled = true;
-        countInput.value = '';
+    if (countInput) {
+      countInput.disabled = !e.target.checked;
+      if (!e.target.checked) countInput.value = '';
     }
-    });
+  });
 });
 
 function setupExamGenerator() {
-  const methodRadios = document.querySelectorAll('input[name="method"]');
-  const topicInputDiv = document.getElementById('topic-input');
-  const textInputDiv = document.getElementById('text-input');
-  const generateBtn = document.querySelector('.btn-primary');
+  const generateBtn = document.getElementById("generateExamBtn");
+  const textInputDiv = document.getElementById("text-input");
 
-  // Toggle between topic or text input
-    methodRadios.forEach(radio => {
-        radio.addEventListener('change', () => {
-            if (radio.value === 'topic' && radio.checked) {
-            topicInputDiv.classList.remove('hidden');
-            textInputDiv.classList.add('hidden');
-            } else if (radio.value === 'text' && radio.checked) {
-            textInputDiv.classList.remove('hidden');
-            topicInputDiv.classList.add('hidden');
-            }
-        });
-    });
+  if (!generateBtn) {
+    console.error("⚠️ Generate Exam button not found!");
+    return;
+  }
 
+  generateBtn.addEventListener("click", async () => {
+    const methodInput = document.querySelector('input[name="method"]:checked');
+    if (!methodInput) {
+      alert("Please select a generation method (Topic or Text).");
+      return;
+    }
 
-  // Handle Generate Exam
-  generateBtn.addEventListener('click', async () => {
-    const method = document.querySelector('input[name="method"]:checked').value;
-    const topicDropdown = document.getElementById('topicDropdown');
-    const selectedTopicId = topicDropdown.value;
-    const selectedTopicTitle = topicDropdown.options[topicDropdown.selectedIndex]?.text || '';
-    const text = textInputDiv.querySelector('textarea').value.trim();
-    const numberOfQuestions = document.querySelector('select').value;
+    const method = methodInput.value;
+    const selectedTopics = getSelectedTopics();
+    const textArea = textInputDiv?.querySelector("textarea");
+    const text = textArea ? textArea.value.trim() : "";
 
+    // ✅ Collect selected question types + counts
     const questionTypes = Array.from(
       document.querySelectorAll('input[name="questionTypes"]:checked')
-    ).map(cb => cb.value);
+    ).map(cb => {
+      const type = cb.value;
+      const countInput = document.getElementById(`count-${type}`);
+      const count = countInput ? parseInt(countInput.value) || 0 : 0;
+      return { type, count };
+    });
 
-    if ((method === 'topic' && !topic) || (method === 'text' && !text)) {
-      alert('Please enter a topic or text.');
+    // ✅ Validation
+    if (method === "topic" && selectedTopics.length === 0) {
+      alert("Please select at least one topic.");
       return;
     }
-
+    if (method === "text" && !text) {
+      alert("Please enter text content.");
+      return;
+    }
     if (questionTypes.length === 0) {
-      alert('Please select at least one question type.');
+      alert("Please select at least one question type.");
       return;
     }
 
+    // 🧭 Disable button + show spinner
     generateBtn.disabled = true;
     generateBtn.innerHTML = `<i data-lucide="loader" class="size-4 mr-2 animate-spin"></i> Generating...`;
 
-    // Get subject from localStorage or global variable
-    let selectedClass = JSON.parse(localStorage.getItem("eel_selected_class"));
+    // 📘 Get subject
+    const selectedClass = JSON.parse(localStorage.getItem("eel_selected_class"));
     let subject = selectedClass ? selectedClass.subject : "Unknown Subject";
+    subject = subject.split(" ").map(w => w[0].toUpperCase() + w.slice(1)).join(" ");
 
-    // Normalize subject name (capitalize like your sidebar)
-    subject = subject
-        .split(" ")
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(" ");
-
+    // ✅ Prepare data for backend
     const bodyData = {
       subject,
-      topic: selectedTopicTitle || 'Exam from Provided Text',
-      topic_id: selectedTopicId,
-      content: method === 'topic' ? selectedTopicTitle : text,
-      numberOfQuestions,
+      selectedTopics,
+      content: method === "topic" ? selectedTopics.join(", ") : text,
       questionTypes,
     };
 
     try {
-        const res = await fetch('/api/generate-exam', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(bodyData),
-        });
+      const res = await fetch("http://localhost:3000/api/generate-exam", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(bodyData),
+      });
 
-        const data = await res.json();
-        if (data.exam) {
-            // ✅ Save to backend
-            await fetch('/api/save-exam', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                subject,
-                title: topic || 'AI Generated Exam',
-                content: data.exam,
-                question_count: numberOfQuestions,
-                types: questionTypes.join(', '),
-            }),
-            });
+      const data = await res.json();
 
-            // ✅ Show preview after saving
-            showExamPreview(data.exam);
-            showNotification('✅ Exam successfully generated and saved!');
-        } else {
-            showNotification('Failed to generate exam.');
-        }
+      if (data.exam) {
+        // ❌ Removed auto-save here
+        // ✅ Show preview first (edit/save manually)
+        showExamPreview(data.exam, subject, selectedTopics, questionTypes);
+        showNotification("✅ Exam successfully generated! You can edit and save it now.");
+      } else {
+        showNotification("⚠️ Failed to generate exam.");
+      }
     } catch (err) {
-      console.error(err);
-      showNotification('Error generating exam.');
+      console.error("❌ Error generating exam:", err);
+      showNotification("Error generating exam.");
     } finally {
       generateBtn.disabled = false;
       generateBtn.innerHTML = `<i data-lucide="brain" class="size-4 mr-2"></i> Generate Exam with AI`;
@@ -269,103 +232,258 @@ function setupExamGenerator() {
   });
 }
 
-function showExamPreview(examText) {
-  const modal = document.createElement('div');
-  modal.className = 'fixed inset-0 bg-black/60 flex items-center justify-center z-50';
+// ✅ Show generated exam with Edit/Save logic
+function showExamPreview(examText, subject, selectedTopics, questionTypes) {
+  const container = document.getElementById("generatedExamContainer");
+  const content = document.getElementById("generatedExamContent");
+  const editBtn = document.getElementById("editExamBtn");
+  const saveBtn = document.getElementById("saveExamBtn");
 
-  modal.innerHTML = `
-    <div class="bg-white w-3/4 h-3/4 rounded-xl shadow-xl p-6 overflow-auto">
-      <h2 class="text-xl font-semibold mb-4">Generated Exam Preview</h2>
-      <pre class="whitespace-pre-wrap text-sm border p-4 rounded-lg bg-gray-50">${examText}</pre>
-      <div class="mt-4 flex justify-end gap-3">
-        <button id="closeModal" class="btn btn-outline border px-4 py-2 rounded-lg">Close</button>
-        <button id="downloadExam" class="btn btn-primary bg-indigo-600 text-white px-4 py-2 rounded-lg">Download as .txt</button>
+  if (!container || !content) {
+    console.error("❌ Exam preview container not found!");
+    return;
+  }
+
+  // ✅ Create formatted header and footer (fixed design)
+  const headerHTML = `
+    <div style="text-align:center; line-height:1.4; margin-bottom:1rem;">
+      <!-- 🏫 School Logo -->
+      <img src="../image/norzagaray-logo.png" 
+          alt="School Logo" 
+          style="width:90px; height:90px; object-fit:contain; margin-bottom:-0.5rem;">
+
+      <strong>Republic of the Philippines</strong><br>
+      Department of Education<br>
+      Region III – Central Luzon<br>
+      Schools Division of Bulacan<br>
+      <strong>NORZAGARAY NATIONAL HIGH SCHOOL</strong><br>
+      A. Villarama St., Poblacion, Norzagaray, Bulacan<br>
+      
+      <!-- Gulit / Horizontal Line -->
+      <hr style="width:100%; margin:-2.5rem auto; border-top:2px solid black;">
+
+      <!-- 🧾 Subject and Exam Title -->
+      <strong>${subject} – Examination</strong>
+
+      <div style="width: 100%; margin-bottom:-4rem; font-size:14px;">
+        Name: ______________________________________________________________________________________________________________________    Date: _______________________________ Score: ________<br>
+        Grade Level / Section: _____________________________________________________________________________________________________    Teacher: ____________________________________________
       </div>
     </div>
-  `;
-  document.body.appendChild(modal);
 
-  document.getElementById('closeModal').addEventListener('click', () => modal.remove());
-  document.getElementById('downloadExam').addEventListener('click', () => {
-    const blob = new Blob([examText], { type: 'text/plain' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = 'Generated_Exam.txt';
-    link.click();
-  });
+  `;
+
+  const footerHTML = `
+    <div style="margin-top:2rem; text-align:center; font-size:13px; color:#666;">
+      — End of Examination —
+    </div>
+  `;
+
+  // ✅ Combine header + AI-generated content + footer
+  const finalHTML = `
+    ${headerHTML}
+    <div id="exam-body" style="white-space:pre-wrap; text-align:justify; font-size:15px; line-height:1.6; padding-right: 4rem; padding-left: 4rem;">
+      ${examText}
+      ${footerHTML}
+    </div>
+
+  `;
+
+  // ✅ Use innerHTML (not textContent) to preserve formatting
+  container.classList.remove("hidden");
+  content.innerHTML = finalHTML;
+  container.scrollIntoView({ behavior: "smooth" });
+
+  // Default state
+  content.contentEditable = "false";
+  saveBtn.disabled = true;
+  saveBtn.classList.add("opacity-50", "cursor-not-allowed");
+
+  // ✏️ Edit button logic
+  editBtn.onclick = () => {
+    const examBody = document.getElementById("exam-body");
+    if (content.isContentEditable) {
+      examBody.contentEditable = "false";
+      editBtn.textContent = "✏️ Edit";
+      saveBtn.disabled = true;
+      saveBtn.classList.add("opacity-50", "cursor-not-allowed");
+      showNotification("✏️ Edit mode disabled.");
+    } else {
+      examBody.contentEditable = "true";
+      examBody.focus();
+      editBtn.textContent = "❌ Cancel Edit";
+      saveBtn.disabled = false;
+      saveBtn.classList.remove("opacity-50", "cursor-not-allowed");
+      showNotification("📝 Edit mode enabled — you can now modify the exam.");
+    }
+  };
+
+  // 💾 Save button logic
+  saveBtn.onclick = async () => {
+    const updatedContent = content.textContent.trim();
+
+    try {
+      const res = await fetch("http://localhost:3000/api/save-exam", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          subject,
+          title: selectedTopics.join(", ") || "AI Generated Exam",
+          content: updatedContent,
+          question_count: questionTypes.reduce((sum, q) => sum + q.count, 0),
+          types: questionTypes.map(q => `${q.type} (${q.count})`).join(", "),
+        }),
+      });
+
+      if (res.ok) {
+        showNotification("💾 Exam saved successfully!");
+        loadExams();
+
+        // ✅ Disable edit mode
+        content.contentEditable = "false";
+        editBtn.textContent = "✏️ Edit";
+        saveBtn.disabled = true;
+        saveBtn.classList.add("opacity-50", "cursor-not-allowed");
+
+        // ✅ Optional fade-out animation
+        container.style.transition = "opacity 0.5s ease";
+        container.style.opacity = "0";
+
+        setTimeout(() => {
+          // ✅ Fully hide and reset after fade-out
+          container.classList.add("hidden");
+          container.style.opacity = "1";
+          content.textContent = ""; // clear exam text
+        }, 500);
+      } else {
+        showNotification("⚠️ Failed to save exam.");
+      }
+    } catch (err) {
+      console.error("❌ Error saving exam:", err);
+      showNotification("Error saving exam.");
+    }
+  };
 }
 
+// ✅ Initialize
+document.addEventListener("DOMContentLoaded", () => {
+  loadLessonsAndTopics();
+  setupExamGenerator();
+  loadExams();
+});
 
 async function loadExams() {
-  const res = await fetch('/api/exams');
-  const exams = await res.json();
+  try {
+    const res = await fetch("http://localhost:3000/api/get-exams");
+    const data = await res.json();
+    const exams = data.exams;
 
-  const container = document.querySelector('.card-content .grid');
-  container.innerHTML = ''; // clear
+    const examListContainer = document.getElementById("exam-list");
+    examListContainer.innerHTML = ""; // Clear previous content
 
-  exams.forEach(exam => {
-    const div = document.createElement('div');
-    div.className = "p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors";
-    div.innerHTML = `
-      <div class="flex items-center justify-between mb-2">
-        <span class="px-2 py-1 text-xs rounded bg-primary/10 text-primary">${exam.subject}</span>
-        <i data-lucide="brain" class="size-4 text-primary"></i>
-      </div>
-      <h4 class="font-medium mb-1">${exam.title}</h4>
-      <p class="text-xs text-muted-foreground mb-3">${exam.question_count} questions • ${exam.types}</p>
-      <div class="flex gap-2">
-        <button class="btn btn-outline btn-sm flex-1" onclick="editExam(${exam.id})">
-          <i data-lucide="edit" class="size-3 mr-1"></i>Edit
-        </button>
-        <button class="btn btn-primary btn-sm flex-1" onclick="downloadExam('${exam.id}')">
-          <i data-lucide="download" class="size-3 mr-1"></i>Export
-        </button>
-      </div>
-    `;
-    container.appendChild(div);
-  });
+    // Grid styling for container
+    examListContainer.style.display = "grid";
+    examListContainer.style.gridTemplateColumns = "repeat(auto-fit, minmax(280px, 1fr))";
+    examListContainer.style.gap = "1.5rem";
 
-  lucide.createIcons();
+    exams.forEach(exam => {
+      const examCard = document.createElement("div");
+      examCard.dataset.id = exam.id; 
+      examCard.style.background = "rgba(99, 102, 241, 0.05)";
+      examCard.style.borderRadius = "12px";
+      examCard.style.boxShadow = "0 4px 12px rgba(0,0,0,0.1)";
+      examCard.style.padding = "1.5rem";
+      examCard.style.display = "flex";
+      examCard.style.flexDirection = "column";
+      examCard.style.justifyContent = "space-between";
+      examCard.style.transition = "transform 0.2s, box-shadow 0.2s";
+      examCard.onmouseover = () => {
+        examCard.style.transform = "translateY(-4px)";
+        examCard.style.boxShadow = "0 8px 20px rgba(0,0,0,0.15)";
+      };
+      examCard.onmouseout = () => {
+        examCard.style.transform = "translateY(0)";
+        examCard.style.boxShadow = "0 4px 12px rgba(0,0,0,0.1)";
+      };
+
+      examCard.innerHTML = `
+        <div>
+          <div style="height:4px; width:50px; background:#4f46e5; border-radius:2px; margin-bottom:0.5rem;"></div>
+          <h4 style="font-weight:700; font-size:1.1rem; margin-bottom:0.5rem; color:#111827;">${exam.subject}</h4>
+          <p style="font-size:0.9rem; color:#4b5563; margin-bottom:0.25rem;">${exam.title}</p>
+          <p style="font-size:0.75rem; color:#9ca3af;">Questions: <strong>${exam.question_count}</strong> | Created: <strong>${new Date(exam.created_at).toLocaleDateString()}</strong></p>
+        </div>
+
+        <div style="margin-top:1rem; display:flex; gap:0.5rem; flex-wrap:wrap;">
+          <button class="export-btn" style="flex:1; padding:0.5rem 1rem; background:#3b82f6; color:white; border:none; border-radius:6px; cursor:pointer; transition:0.2s;">Export Excel</button>
+          <button class="cache-btn" style="flex:1; padding:0.5rem 1rem; background:#10b981; color:white; border:none; border-radius:6px; cursor:pointer; transition:0.2s;">Move to Cache</button>
+        </div>
+      `;
+
+      examListContainer.appendChild(examCard);
+    });
+
+    // Event delegation for buttons
+    examListContainer.addEventListener("click", (e) => {
+      const card = e.target.closest("div[data-id]");
+      if (!card) return;
+      const examId = card.dataset.id;
+
+      if (e.target.classList.contains("export-btn")) {
+        exportExamExcel(examId);
+      } else if (e.target.classList.contains("cache-btn")) {
+        moveExamToCache(examId);
+      }
+    });
+
+  } catch (err) {
+    console.error("Failed to load exams:", err);
+  }
 }
 
-async function editExam(id) {
-  const res = await fetch(`/api/exams/${id}`);
-  const exam = await res.json();
+// ✅ Export Excel function (no modules, fully browser compatible)
+async function exportExamExcel(id) {
+  const res = await fetch(`http://localhost:3000/api/get-exam-content/${id}`);
+  const data = await res.json();
+  if (!data.success) return alert("Failed to fetch exam content.");
 
-  const modal = document.createElement('div');
-  modal.className = 'fixed inset-0 bg-black/60 flex items-center justify-center z-50';
-  modal.innerHTML = `
-    <div class="bg-white w-3/4 h-3/4 rounded-xl shadow-xl p-6 overflow-auto">
-      <h2 class="text-xl font-semibold mb-4">Edit Exam</h2>
-      <textarea id="examEditContent" class="w-full h-[70%] border rounded p-3 text-sm">${exam.content}</textarea>
-      <div class="mt-4 flex justify-end gap-3">
-        <button class="btn btn-outline" onclick="this.closest('.fixed').remove()">Cancel</button>
-        <button class="btn btn-primary" onclick="saveExam(${id})">Save</button>
-      </div>
-    </div>
-  `;
-  document.body.appendChild(modal);
+  const rows = data.content.split("\n").map(line => [line]); // each line in a row
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  XLSX.utils.book_append_sheet(wb, ws, "Exam");
+  XLSX.writeFile(wb, `exam-${id}.xlsx`);
 }
 
-async function saveExam(id) {
-  const newContent = document.getElementById('examEditContent').value;
-  await fetch(`/api/exams/${id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ content: newContent }),
-  });
-  alert('✅ Exam updated successfully!');
-  document.querySelector('.fixed').remove();
-  loadRecentExams();
+// ✅ Move exam to cache and show proper message
+function moveExamToCache(id) {
+  fetch(`http://localhost:3000/api/move-exam-to-cache/${id}`, { method: "POST" })
+    .then(async res => {
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+
+      if (data.success) {
+        showNotification(data.message || "Exam moved to cache successfully!","success");
+        loadExams(); // Refresh list
+      } else {
+        showNotification(data.message || "Failed to move exam.");
+      }
+    })
+    .catch(err => {
+      console.error("Error moving exam:", err);
+      showNotification("Something went wrong while moving the exam.");
+    });
 }
 
-async function exportExam(id) {
-  const res = await fetch(`/api/exams/${id}`);
-  const exam = await res.json();
+// Button handlers
+document.getElementById("exam-list").addEventListener("click", e => {
+  const id = e.target.dataset.id;
+  if (!id) return;
 
-  const blob = new Blob([exam.content], { type: 'text/plain' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = `${exam.title}.txt`;
-  link.click();
-}
+  if (e.target.classList.contains("export-btn")) {
+    exportExam(id);
+  } else if (e.target.classList.contains("edit-btn")) {
+    editExam(id);
+  } else if (e.target.classList.contains("cache-btn")) {
+    moveExamToCache(id);
+  }
+});

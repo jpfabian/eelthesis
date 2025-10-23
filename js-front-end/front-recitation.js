@@ -281,7 +281,6 @@ async function generateQuestions() {
     updateStartButton();
 }
 
-
 function mockGenerateQuestions(types, count) {
     const questions = [];
     let questionId = 1;
