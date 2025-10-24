@@ -1,19 +1,34 @@
 const express = require("express");
 const router = express.Router();
 const multer = require("multer");
-const path = require("path");
 const fs = require("fs");
+const { S3Client } = require("@aws-sdk/client-s3");
+const multerS3 = require("multer-s3");
+const path = require("path");
+const fetch = require("node-fetch");
+require("dotenv").config();
 
-const uploadsDir = path.join(process.cwd(), 'uploads', 'pronunciation');
-if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
-const storage = multer.diskStorage({
-  destination: uploadsDir,
-  filename: (req, file, cb) => {
-    cb(null, `${Date.now()}-${file.originalname}`);
-  }
+const s3 = new S3Client({
+  region: process.env.AWS_REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  },
 });
-const upload = multer({ storage });
+
+// Multer config using S3 storage
+const upload = multer({
+  storage: multerS3({
+    s3,
+    bucket: process.env.AWS_BUCKET_NAME,
+    key: (req, file, cb) => {
+      const filename = `pronunciation/${Date.now()}-${file.originalname}`;
+      cb(null, filename);
+    },
+  }),
+});
+
 
 // ================= CREATE PRONUNCIATION QUIZ =================
 router.post("/api/pronunciation-quizzes", async (req, res) => {
@@ -246,16 +261,19 @@ router.get("/api/pronunciation-attempts", async (req, res) => {
         pa.quiz_id,
         pa.start_time,
         pa.end_time,
-        pa.score,
-        pa.total_points,
         pa.status,
         pq.title,
         pq.difficulty,
         pq.lock_time,
-        pq.unlock_time
+        pq.unlock_time,
+        ROUND(AVG(ans.pronunciation_score), 2) AS average_accuracy  -- ✅ average score from answers
       FROM pronunciation_quiz_attempts pa
-      JOIN pronunciation_quizzes pq ON pa.quiz_id = pq.quiz_id
+      JOIN pronunciation_quizzes pq 
+        ON pa.quiz_id = pq.quiz_id
+      LEFT JOIN pronunciation_quiz_answers ans 
+        ON pa.attempt_id = ans.attempt_id
       WHERE pa.student_id = ?
+      GROUP BY pa.attempt_id
       ORDER BY pa.start_time DESC
       `,
       [student_id]
@@ -268,50 +286,83 @@ router.get("/api/pronunciation-attempts", async (req, res) => {
   }
 });
 
-// ================= AUDIO SUBMISSION ENDPOINT =================
 // ==================== Handle Pronunciation Quiz Submission ====================
-router.post('/api/pronunciation-submit', upload.any(), async (req, res) => {
+router.post("/api/pronunciation-submit", upload.any(), async (req, res) => {
   const pool = req.pool;
 
   try {
     const { student_id, quiz_id } = req.body;
     const files = req.files;
 
-    console.log("Received pronunciation submission:");
-    console.log("Student ID:", student_id);
-    console.log("Quiz ID:", quiz_id);
-    console.log("Uploaded files:", files.length);
-
     if (!files || files.length === 0) {
       return res.status(400).json({ success: false, message: "No audio files uploaded" });
     }
 
-    // ✅ Create quiz attempt
+    // 1️⃣ Fetch quiz difficulty
+    const [quizRows] = await pool.query(
+      "SELECT difficulty FROM pronunciation_quizzes WHERE quiz_id = ?",
+      [quiz_id]
+    );
+    if (!quizRows.length) {
+      return res.status(404).json({ success: false, message: "Quiz not found" });
+    }
+    const quizDifficulty = quizRows[0].difficulty;
+
+    // 2️⃣ Create a new quiz attempt
     const [attemptResult] = await pool.query(
-      `INSERT INTO pronunciation_quiz_attempts (student_id, quiz_id, status) 
-       VALUES (?, ?, 'submitted')`,
+      `INSERT INTO pronunciation_quiz_attempts 
+         (student_id, quiz_id, start_time, end_time, status)
+       VALUES (?, ?, NOW(), NOW(), 'completed')`,
       [student_id, quiz_id]
     );
-
     const attempt_id = attemptResult.insertId;
 
-    // ✅ Insert each audio answer
+    let totalAccuracy = 0;
+    let answerCount = 0;
+
+    // 3️⃣ Save each answer
     for (let i = 0; i < files.length; i++) {
       const question_id = req.body[`question_id_${i}`];
       const transcript = req.body[`answer_${i}`] || '';
       const file = files.find(f => f.fieldname === `audio_${i}`);
-      const filePath = `/uploads/pronunciation/${file.filename}`;
+      if (!file) continue;
+
+      const fileUrl = file.location || `/uploads/${file.filename}`;
+      let difficulty = req.body[`difficulty_${i}`];
+
+      // Use quiz difficulty if missing or invalid
+      if (!difficulty || !['beginner','intermediate','advanced'].includes(difficulty)) {
+        difficulty = quizDifficulty;
+      }
+
+      // Simulate fake pronunciation accuracy (70–100%)
+      const fakeAccuracy = Math.floor(70 + Math.random() * 30);
+      totalAccuracy += fakeAccuracy;
+      answerCount++;
 
       await pool.query(
-        `INSERT INTO pronunciation_quiz_answers 
-          (attempt_id, question_id, difficulty, student_audio, transcript) 
-         VALUES (?, ?, 'beginner', ?, ?)`,
-        [attempt_id, question_id, filePath, transcript]
+        `INSERT INTO pronunciation_quiz_answers
+          (attempt_id, question_id, difficulty, student_audio, transcript, pronunciation_score)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [attempt_id, question_id, difficulty, fileUrl, transcript, fakeAccuracy]
       );
     }
 
-    console.log(`✅ Pronunciation attempt ${attempt_id} saved successfully.`);
-    res.json({ success: true, message: "Pronunciation quiz submitted successfully." });
+    // 4️⃣ Compute overall accuracy
+    const avgAccuracy = (totalAccuracy / answerCount).toFixed(2);
+
+    await pool.query(
+      `UPDATE pronunciation_quiz_attempts
+         SET score = ?, pronunciation_score = ?, total_points = ?, end_time = NOW(), status = 'completed'
+       WHERE attempt_id = ?`,
+      [avgAccuracy, avgAccuracy, 100, attempt_id]
+    );
+
+    res.json({
+      success: true,
+      message: "Pronunciation quiz submitted successfully.",
+      accuracy: avgAccuracy,
+    });
 
   } catch (err) {
     console.error("❌ Pronunciation submission error:", err);
@@ -319,6 +370,93 @@ router.post('/api/pronunciation-submit', upload.any(), async (req, res) => {
   }
 });
 
+// backend: GET /api/pronunciation-review
+router.get("/api/pronunciation-review", async (req, res) => {
+  const pool = req.pool;
+  try {
+    const { student_id, quiz_id } = req.query;
+
+    // fetch quiz
+    const [quizRows] = await pool.query(
+      "SELECT * FROM pronunciation_quizzes WHERE quiz_id = ?",
+      [quiz_id]
+    );
+    const quiz = quizRows[0] || null;
+
+    // fetch answers and include correct pronunciation fields
+    const [answers] = await pool.query(
+      `
+      SELECT a.*,
+             CASE
+               WHEN a.difficulty = 'beginner' THEN b.word
+               WHEN a.difficulty = 'intermediate' THEN i.word
+               WHEN a.difficulty = 'advanced' THEN adv.sentence
+               ELSE ''
+             END AS question_text,
+             CASE
+               WHEN a.difficulty = 'beginner' THEN b.correct_pronunciation
+               WHEN a.difficulty = 'intermediate' THEN i.stressed_syllable
+               WHEN a.difficulty = 'advanced' THEN adv.reduced_form
+               ELSE ''
+             END AS correct_pronunciation
+      FROM pronunciation_quiz_answers a
+      JOIN pronunciation_quiz_attempts t ON a.attempt_id = t.attempt_id
+      LEFT JOIN pronunciation_beginner_questions b ON a.question_id = b.question_id
+      LEFT JOIN pronunciation_intermediate_questions i ON a.question_id = i.question_id
+      LEFT JOIN pronunciation_advanced_questions adv ON a.question_id = adv.question_id
+      WHERE t.student_id = ? AND t.quiz_id = ? AND t.status IN ('submitted','completed')
+      ORDER BY a.evaluated_at ASC
+      `,
+      [student_id, quiz_id]
+    );
+
+    res.json({ success: true, quiz, answers });
+  } catch (err) {
+    console.error("❌ Pronunciation review fetch error:", err);
+    res.status(500).json({ success: false, message: "Server error", error: err.message });
+  }
+});
+
+// GET /api/leaderboard?quiz_id=4
+router.get("/api/leaderboard", async (req, res) => {
+  const pool = req.pool;
+  const { quiz_id } = req.query;
+
+  if (!quiz_id) {
+    return res.status(400).json({ success: false, message: "Missing quiz_id" });
+  }
+
+  try {
+    // Fetch attempts with student info
+    const [rows] = await pool.query(
+      `SELECT a.attempt_id, a.student_id, a.score, a.status, a.start_time, a.end_time,
+              u.fname, u.lname
+      FROM pronunciation_quiz_attempts a
+      JOIN users u ON a.student_id = u.user_id
+      WHERE a.quiz_id = ?
+      ORDER BY a.score DESC, a.end_time ASC`,
+      [quiz_id]
+    );
+
+    // Map leaderboard
+    const leaderboard = rows.map((r, index) => ({
+      rank: index + 1,
+      student_id: r.student_id,
+      name: `${r.fname} ${r.lname}`,
+      score: r.score,
+      status: r.status,
+      start_time: r.start_time,  // <-- include start_time
+      end_time: r.end_time
+    }));
+
+    res.json({ success: true, leaderboard });
+  } catch (err) {
+    console.error("❌ Leaderboard fetch error:", err);
+    res.status(500).json({ success: false, message: "Server error", error: err.message });
+  }
+});
+
 module.exports = router;
+
 
 

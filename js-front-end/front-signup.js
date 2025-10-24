@@ -44,7 +44,7 @@ let selectedRole = null;
                 checkPasswordStrength(this.value);
             });
 
-            lucide.createIcons();
+            lucide.createIcons({ icons: lucide.icons });
         });
 
         function showRegistrationStep() {
@@ -187,7 +187,7 @@ let selectedRole = null;
                 passwordIcon.setAttribute('data-lucide', 'eye-off');
             }
             
-            lucide.createIcons();
+            lucide.createIcons({ icons: lucide.icons });
         }
 
         function showLoading() {

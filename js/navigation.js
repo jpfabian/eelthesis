@@ -86,7 +86,7 @@ function setupSidebar(user, currentPage) {
     ];
 
     // Build sidebar links
-    let classIdParam = user.role === 'teacher' && selectedClass ? `?class_id=${selectedClass.id}` : '';
+    let classIdParam = selectedClass ? `?class_id=${selectedClass.id}` : '';
     sidebarNav.innerHTML = pages.map(page => `
         <a href="${page.url}${classIdParam}" 
            class="nav-button btn btn-side-bar w-full justify-start gap-3 p-3 rounded-md text-left transition-all flex items-center ${currentPage === page.id ? 'active' : ''}">
@@ -121,7 +121,7 @@ function showNotification(message, type = 'info') {
     `;
 
     document.body.appendChild(notification);
-    lucide.createIcons();
+    lucide.createIcons({ icons: lucide.icons });
 
     // Auto remove after 5 seconds
     setTimeout(() => {
@@ -237,5 +237,5 @@ function hideLoading() {
     }
     
     // Reinitialize Lucide icons
-    setTimeout(() => lucide.createIcons(), 100);
+    setTimeout(() => lucide.createIcons({ icons: lucide.icons }), 100);
 }

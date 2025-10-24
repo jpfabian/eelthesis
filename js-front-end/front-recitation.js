@@ -14,61 +14,84 @@ let state = {
 };
 
 // Question Templates
+// Question Templates
 const questionTemplates = {
     'multiple-choice': [
-        { question: 'Which sentence is grammatically correct?', options: ['Each of the students have a book.', 'Each of the students has a book.', 'Each of the student have a book.', 'Each of the student has a book.'], answer: 'Each of the students has a book.' },
-        { question: 'Which of the following sentences uses the correct verb form?', options: ['She don’t like reading novels.', 'She doesn’t likes reading novels.', 'She doesn’t like reading novels.', 'She not like reading novels.'], answer: 'She doesn’t like reading novels.' },
-        { question: 'Which sentence is written in active voice?', options: ['The cake was baked by Maria.', 'Maria baked the cake.', 'The cake is being baked by Maria.', 'The cake will be baked by Maria.'], answer: 'Maria baked the cake.' },
-        { question: 'Which of the following is a complex sentence?', options: ['She opened the door and greeted her friend.', 'While I was studying, my phone rang.', 'The teacher gave homework.', 'I like apples and oranges.'], answer: 'While I was studying, my phone rang.' },
-        { question: 'Which sentence contains an error in subject-verb agreement?', options: ['Neither of the boys is absent.', 'The team are playing well.', 'Everyone loves ice cream.', 'Each student has a notebook.'], answer: 'The team are playing well.' },
+        { question: 'Which of the following sentences is grammatically correct?', options: ['Neither of them were ready.', 'Each student has completed their project.', 'Each student has completed his or her project.', 'Each students have completed the project.'], answer: 'Each student has completed his or her project.' },
+        { question: 'Which sentence uses the correct verb form?', options: ['She don’t understand the lesson.', 'She doesn’t understands the lesson.', 'She doesn’t understand the lesson.', 'She not understand the lesson.'], answer: 'She doesn’t understand the lesson.' },
+        { question: 'Which sentence is written in active voice?', options: ['The report was submitted by Anna.', 'Anna submitted the report.', 'The report is being submitted by Anna.', 'The report will be submitted by Anna.'], answer: 'Anna submitted the report.' },
+        { question: 'Which of the following is a complex sentence?', options: ['I studied, but I was still tired.', 'Although it was raining, we went to school.', 'We sang and danced all night.', 'The teacher smiled.'], answer: 'Although it was raining, we went to school.' },
+        { question: 'Which sentence contains an error in subject-verb agreement?', options: ['The list of items is on the desk.', 'The students in the class studies hard.', 'Neither of the answers is correct.', 'Everyone enjoys the activity.'], answer: 'The students in the class studies hard.' },
+        { question: 'Which sentence is in the future perfect tense?', options: ['She will finish the project tomorrow.', 'She will have finished the project by tomorrow.', 'She is finishing the project now.', 'She finished the project yesterday.'], answer: 'She will have finished the project by tomorrow.' },
+        { question: 'Which of the following sentences is punctuated correctly?', options: ['Its a bright sunny day.', 'It’s a bright, sunny day.', 'Its’ a bright sunny day.', 'Its a bright sunny, day.'], answer: 'It’s a bright, sunny day.' },
+        { question: 'Which sentence is an example of a conditional statement?', options: ['If I had known, I would have helped.', 'I knew about it.', 'She is helping now.', 'He helps every time.'], answer: 'If I had known, I would have helped.' },
+        { question: 'Which sentence expresses a request?', options: ['Close the door.', 'Could you please close the door?', 'You must close the door.', 'He closed the door.'], answer: 'Could you please close the door?' },
+        { question: 'Which sentence uses a modal verb correctly?', options: ['She can sings well.', 'She can sing well.', 'She can to sing well.', 'She can singing well.'], answer: 'She can sing well.' },
     ],
 
     'noun': [
-        { question: 'Identify the collective noun: "The committee decided to postpone the meeting."', answer: 'committee' },
-        { question: 'Which of the following is a proper noun?', options: ['river', 'teacher', 'Mount Fuji', 'country'], answer: 'Mount Fuji' },
-        { question: 'Find the abstract noun: "Her kindness touched everyone."', answer: 'kindness' },
-        { question: 'Identify the common noun in: "The artist painted a beautiful picture."', answer: 'artist, picture' },
-        { question: 'Which sentence contains a compound noun?', options: ['She enjoys swimming.', 'I bought a toothpaste.', 'The teacher smiled.', 'They play soccer.'], answer: 'I bought a toothpaste.' },
+        { question: 'Identify the collective noun in this sentence: "The faculty decided to organize a seminar."', answer: 'faculty' },
+        { question: 'Which of the following is a proper noun?', options: ['mountain', 'university', 'Mount Everest', 'river'], answer: 'Mount Everest' },
+        { question: 'Find the abstract noun in this sentence: "Honesty is the best policy."', answer: 'Honesty' },
+        { question: 'Identify the common noun in this sentence: "The scientist discovered a new element."', answer: 'scientist, element' },
+        { question: 'Which sentence contains a compound noun?', options: ['She loves cooking.', 'He bought a basketball.', 'The teacher explained.', 'They played football.'], answer: 'He bought a basketball.' },
+        { question: 'Which of the following is a material noun?', options: ['silver', 'truth', 'crowd', 'hope'], answer: 'silver' },
+        { question: 'Identify the proper noun: "Angela studies at Harvard University."', answer: 'Angela, Harvard University' },
+        { question: 'Choose the abstract noun: "Her courage inspired the team."', answer: 'courage' },
+        { question: 'Which is a collective noun?', options: ['jury', 'judge', 'lawyer', 'case'], answer: 'jury' },
+        { question: 'Find the compound noun: "He made a snowman in the yard."', answer: 'snowman' },
     ],
 
     'pronoun': [
-        { question: 'Choose the correct pronoun: "Each of the students must submit ___ own project."', answer: 'his or her' },
-        { question: 'Identify the correct pronoun use: "It was ___ who called last night."', options: ['me', 'I', 'mine', 'myself'], answer: 'I' },
-        { question: 'Select the reflexive pronoun: "He blamed ___ for the mistake."', answer: 'himself' },
-        { question: 'Which sentence uses a demonstrative pronoun?', options: ['She herself fixed the computer.', 'This is the best day ever!', 'Who is calling?', 'The teacher gave us homework.'], answer: 'This is the best day ever!' },
-        { question: 'Replace the noun with the correct pronoun: "The students said the students would help."', answer: 'They said they would help.' },
+        { question: 'Choose the correct pronoun: "Each of the members should bring ___ own copy of the report."', answer: 'his or her' },
+        { question: 'Identify the correct pronoun usage: "It was ___ who presented the findings."', options: ['me', 'I', 'mine', 'myself'], answer: 'I' },
+        { question: 'Select the reflexive pronoun: "She prepared the presentation all by ___."', answer: 'herself' },
+        { question: 'Which sentence uses a demonstrative pronoun?', options: ['Those are my favorite books.', 'She herself finished the project.', 'Who is knocking?', 'They completed the work.'], answer: 'Those are my favorite books.' },
+        { question: 'Replace the noun with the correct pronoun: "Maria said Maria would volunteer."', answer: 'She said she would volunteer.' },
+        { question: 'Choose the correct pronoun: "The company changed ___ policy last year."', answer: 'its' },
+        { question: 'Select the interrogative pronoun: "___ among you will lead the discussion?"', answer: 'Who' },
+        { question: 'Choose the correct relative pronoun: "The book ___ you lent me was interesting."', answer: 'that' },
+        { question: 'Identify the possessive pronoun: "That car is ours."', answer: 'ours' },
+        { question: 'Select the reflexive pronoun: "They challenged ___ to do better."', answer: 'themselves' },
     ],
 
     'past-tense': [
-        { question: 'Change to past tense: "She writes a letter every week."', answer: 'She wrote a letter every week.' },
-        { question: 'Choose the sentence in past perfect tense.', options: ['She had finished her work before the bell rang.', 'She finished her work before the bell rang.', 'She finishes her work before the bell rang.', 'She is finishing her work before the bell rang.'], answer: 'She had finished her work before the bell rang.' },
-        { question: 'Convert to past tense: "They are playing basketball."', answer: 'They were playing basketball.' },
-        { question: 'Which sentence is written in the correct past tense form?', options: ['He run to the store.', 'He ran to the store.', 'He running to the store.', 'He runs to the store.'], answer: 'He ran to the store.' },
-        { question: 'What is the past tense of "teach"?', answer: 'taught' },
+        { question: 'Change to past tense: "She writes research papers every semester."', answer: 'She wrote research papers every semester.' },
+        { question: 'Choose the sentence in past perfect tense.', options: ['She had completed the project before the deadline.', 'She completed the project before the deadline.', 'She completes the project before the deadline.', 'She is completing the project before the deadline.'], answer: 'She had completed the project before the deadline.' },
+        { question: 'Convert to past tense: "They are conducting a survey."', answer: 'They were conducting a survey.' },
+        { question: 'Which sentence is written in the correct past tense form?', options: ['He run to the classroom.', 'He ran to the classroom.', 'He running to the classroom.', 'He runs to the classroom.'], answer: 'He ran to the classroom.' },
+        { question: 'What is the past tense of "build"?', answer: 'built' },
+        { question: 'Change to past tense: "They go to the library every afternoon."', answer: 'They went to the library every afternoon.' },
+        { question: 'Choose the sentence in simple past tense.', options: ['She was writing an essay.', 'She wrote an essay.', 'She writes an essay.', 'She is writing an essay.'], answer: 'She wrote an essay.' },
+        { question: 'Convert to past tense: "He is preparing his report."', answer: 'He was preparing his report.' },
+        { question: 'What is the past tense of "think"?', answer: 'thought' },
+        { question: 'Choose the correct past tense form: "They ___ early for the meeting yesterday."', options: ['arrive', 'arrived', 'arriving', 'arrives'], answer: 'arrived' },
     ],
 
     'comprehension': [
-        { question: 'Liam studied late to pass the exam. Who studied late?', answer: 'Liam' },
-        { question: 'The storm destroyed several houses in the town. What destroyed the houses?', answer: 'storm' },
-        { question: 'Ella read a novel during her vacation. What did she read?', answer: 'novel' },
-        { question: 'The farmer planted rice in the field. What did the farmer plant?', answer: 'rice' },
-        { question: 'The students cleaned the classroom after class. What did they clean?', answer: 'classroom' },
+        { question: 'Maria stayed up late to finish her presentation. Who stayed up late?', answer: 'Maria' },
+        { question: 'The typhoon destroyed several buildings near the coast. What destroyed the buildings?', answer: 'typhoon' },
+        { question: 'Daniel read an article about climate change. What did he read?', answer: 'an article about climate change' },
+        { question: 'The farmers harvested rice before the storm arrived. What did the farmers harvest?', answer: 'rice' },
+        { question: 'The students cleaned the laboratory after the experiment. What did they clean?', answer: 'laboratory' },
+        { question: 'The teacher congratulated Jasmine for winning the contest. Who was congratulated?', answer: 'Jasmine' },
+        { question: 'The volunteers distributed relief goods to the victims. What did they distribute?', answer: 'relief goods' },
+        { question: 'The child cried because his toy was broken. Why did the child cry?', answer: 'His toy was broken' },
+        { question: 'The principal announced the results of the examination. Who announced the results?', answer: 'The principal' },
+        { question: 'Rafael donated books to the school library. What did Rafael donate?', answer: 'books' },
     ],
 
-    'vocabulary': [
-        { question: 'What is the synonym of "significant"?', options: ['Unimportant', 'Meaningful', 'Minor', 'Ordinary'], answer: 'Meaningful' },
-        { question: 'Choose the antonym of "abundant".', options: ['Plentiful', 'Scarce', 'Many', 'Sufficient'], answer: 'Scarce' },
-        { question: 'What does "articulate" mean?', options: ['To speak clearly', 'To draw', 'To write fast', 'To argue'], answer: 'To speak clearly' },
-        { question: 'Define "benevolent".', answer: 'Kind and generous' },
-        { question: 'What is the meaning of "vital"?', answer: 'Essential' },
-    ],
-
-    'spelling': [
-        { question: 'Correct the spelling: "recieve"', answer: 'receive' },
-        { question: 'Spell the word meaning "necessary or very important".', answer: 'essential' },
-        { question: 'Correct the spelling: "occurence"', answer: 'occurrence' },
-        { question: 'Spell the word for "something you achieve after effort".', answer: 'achievement' },
-        { question: 'Correct the spelling: "seperate"', answer: 'separate' },
+    'pronunciation': [
+        { question: 'Which word has a different vowel sound?', options: ['beat', 'heat', 'great', 'seat'], answer: 'great' },
+        { question: 'Choose the word that contains a silent letter.', options: ['psychology', 'biology', 'chemistry', 'physics'], answer: 'psychology' },
+        { question: 'Which word is pronounced differently?', options: ['cough', 'rough', 'though', 'tough'], answer: 'though' },
+        { question: 'Select the pair of words that are homophones.', options: ['pair – pear', 'cat – cut', 'sun – son', 'pen – pin'], answer: 'sun – son' },
+        { question: 'Which word has a silent “k”?', options: ['knock', 'kick', 'king', 'kind'], answer: 'knock' },
+        { question: 'Which word has a silent “b”?', options: ['climb', 'crab', 'grab', 'rub'], answer: 'climb' },
+        { question: 'Which of these words has a long /iː/ sound?', options: ['bit', 'beat', 'bet', 'bat'], answer: 'beat' },
+        { question: 'Which pair of words sound the same?', options: ['right – write', 'read – red', 'know – now', 'fit – feet'], answer: 'right – write' },
+        { question: 'Which word has a silent “w”?', options: ['wrist', 'wonder', 'window', 'wide'], answer: 'wrist' },
+        { question: 'Which word has a different final sound?', options: ['walked', 'talked', 'played', 'cooked'], answer: 'played' },
     ],
 };
 
@@ -206,7 +229,7 @@ function showFilePreview(file) {
     fileName.textContent = file.name;
     if(fileSize) fileSize.textContent = (file.size / 1024 / 1024).toFixed(2) + ' MB';
 
-    lucide.createIcons();
+    lucide.createIcons({ icons: lucide.icons });
 }
 
 function removeFile() {
@@ -280,6 +303,7 @@ async function generateQuestions() {
     showNotification('✅ Questions successfully generated!', 'success');
     updateStartButton();
 }
+
 
 function mockGenerateQuestions(types, count) {
     const questions = [];
@@ -364,7 +388,7 @@ function renderStudentSlider() {
         slider.appendChild(box);
     });
     
-    lucide.createIcons();
+    lucide.createIcons({ icons: lucide.icons });
 }
 
 function startSpinning() {
@@ -398,7 +422,7 @@ function toggleSpin(autoPick = false) {
 
         if (icon) icon.setAttribute('data-lucide', 'pause');
         if (btnText) btnText.textContent = 'Stop';
-        lucide.createIcons();
+        lucide.createIcons({ icons: lucide.icons });
 
         startSpinning();
 
@@ -451,7 +475,7 @@ function speedUpAndStop(availableStudents) {
 
             if (icon) icon.setAttribute('data-lucide', 'play');
             btnText.textContent = 'Play';
-            lucide.createIcons();
+            lucide.createIcons({ icons: lucide.icons });
             return;
         }
 
@@ -639,7 +663,7 @@ function showQuestionModal() {
         }
     }, 1000);
 
-    lucide.createIcons();
+    lucide.createIcons({ icons: lucide.icons });
 }
 
 function renderAnswerInput(question) {
@@ -780,8 +804,7 @@ function showResult(isCorrect, userAnswer, correctAnswer, autoContinue = true) {
     }
 
     if (continueBtn) continueBtn.style.display = 'block';
-    lucide.createIcons();
-
+    lucide.createIcons({ icons: lucide.icons });
     // Auto-continue after 5s if requested
     if (autoContinue) {
         state.autoContinueTimeout = setTimeout(() => {

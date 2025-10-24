@@ -229,7 +229,7 @@
                             `;
                         }).join('');
 
-                        lucide.createIcons();
+                        lucide.createIcons({ icons: lucide.icons });
                     } catch (err) {
                         avgList.innerHTML = `<p class="text-sm text-red-500">Failed to load scores.</p>`;
                     }
@@ -317,7 +317,7 @@
             });
 
 
-            lucide.createIcons();
+            lucide.createIcons({ icons: lucide.icons });
         } catch (err) {
             console.error('Error loading students:', err);
         }

@@ -521,8 +521,211 @@
             </div>
         </div>
     </div>
+    <!-- ============================================
+        🎯 QUIZ RESULT MODAL
+        ============================================ -->
+    <div id="quiz-result-modal" class="modal-quiz-overlay hidden">
+        <div class="result-card">
+            <button onclick="closeResultModal()" class="close-btn">&times;</button>
+            
+            <!-- Result Icon -->
+            <div class="result-icon-container">
+                <div id="result-icon" class="result-icon">🎯</div>
+            </div>
 
-    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+            <!-- Result Title -->
+            <h2 class="result-title">Quiz Completed!</h2>
+
+            <!-- Score Display -->
+            <div class="result-score-container">
+                <div class="result-score-circle">
+                    <svg class="result-progress-ring" width="200" height="200">
+                        <circle class="result-progress-ring-bg" cx="100" cy="100" r="90" />
+                        <circle id="result-progress-ring-fill" class="result-progress-ring-fill" cx="100" cy="100" r="90" />
+                    </svg>
+                    <div class="result-score-text">
+                        <span id="student-score" class="result-score-detail">17/20</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Feedback Message -->
+            <div id="feedback-container" class="feedback-container">
+                <div id="feedback-icon" class="feedback-icon">⭐</div>
+                <p id="feedback-message" class="feedback-message">Excellent work! You're doing great!</p>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="result-actions">
+                <button onclick="closeResultModal()" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.625rem 1.25rem; background: linear-gradient(135deg, #6366f1, #10b981); color: white; border: none; border-radius: 0.5rem; cursor: pointer;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="19" y1="12" x2="5" y2="12"></line>
+                        <polyline points="12 19 5 12 12 5"></polyline>
+                    </svg>
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================
+     🏆 LEADERBOARD MODAL
+     ============================================ -->
+    <div id="leaderboard-modal" class="modal-quiz-overlay hidden">
+        <div class="leaderboard-modal-card">
+            <button onclick="closeLeaderboardModal()" class="close-btn">&times;</button>
+
+            <!-- Header -->
+            <div class="leaderboard-header">
+                <div class="leaderboard-header-icon">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path>
+                        <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path>
+                        <path d="M4 22h16"></path>
+                        <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path>
+                        <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path>
+                        <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path>
+                    </svg>
+                </div>
+                <h2 class="leaderboard-modal-title">Quiz Leaderboard</h2>
+                <p class="leaderboard-subtitle" id="quiz-name">Communication Skills Assessment</p>
+            </div>
+
+            <!-- Top 3 Podium -->
+            <div class="podium-container">
+                <!-- 2nd Place -->
+                <div class="podium-card second-place">
+                    <div class="podium-medal">🥈</div>
+                    <div class="podium-avatar" style="background: linear-gradient(135deg, #9ca3af, #6b7280);"></div>
+                    <div class="podium-name"></div>
+                    <div class="podium-score"><span></span></div>
+                    <div class="podium-rank"></div>
+                </div>
+
+                <!-- 1st Place -->
+                <div class="podium-card first-place">
+                    <div class="podium-medal">🥇</div>
+                    <div class="podium-avatar" style="background: linear-gradient(135deg, #fbbf24, #f59e0b);"></div>
+                    <div class="podium-name"></div>
+                    <div class="podium-score"><span></span></div>
+                    <div class="podium-rank"></div>
+                </div>
+
+                <!-- 3rd Place -->
+                <div class="podium-card third-place">
+                    <div class="podium-medal">🥉</div>
+                    <div class="podium-avatar" style="background: linear-gradient(135deg, #fb923c, #ea580c);"></div>
+                    <div class="podium-name"></div>
+                    <div class="podium-score"><span></span></div>
+                    <div class="podium-rank"></div>
+                </div>
+            </div>
+
+            <!-- Leaderboard Table -->
+            <div class="leaderboard-table-container">
+                <div class="leaderboard-table-header">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    </svg>
+                    <span>All Rankings</span>
+                </div>
+                <div class="leaderboard-table-scroll">
+                    <table class="leaderboard-table">
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Student</th>
+                                <th>Score</th>
+                                <th>Time</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="leaderboard-body">
+                            <!-- Sample Data -->
+                            <tr class="leaderboard-table-row top-three">
+                                <td><span class="rank-badge rank-1">🥇</span></td>
+                                <td>
+                                    <div class="student-info">
+                                        <div class="student-avatar" style="background: linear-gradient(135deg, #fbbf24, #f59e0b);">EJ</div>
+                                        <span>Emma Johnson</span>
+                                    </div>
+                                </td>
+                                <td><span class="score-badge">95/100</span></td>
+                                <td><span class="time-badge">12:34</span></td>
+                                <td><span class="status-badge completed">✓ Completed</span></td>
+                            </tr>
+                            <tr class="leaderboard-table-row top-three">
+                                <td><span class="rank-badge rank-2">🥈</span></td>
+                                <td>
+                                    <div class="student-info">
+                                        <div class="student-avatar" style="background: linear-gradient(135deg, #9ca3af, #6b7280);">MC</div>
+                                        <span>Michael Chen</span>
+                                    </div>
+                                </td>
+                                <td><span class="score-badge">92/100</span></td>
+                                <td><span class="time-badge">14:22</span></td>
+                                <td><span class="status-badge completed">✓ Completed</span></td>
+                            </tr>
+                            <tr class="leaderboard-table-row top-three">
+                                <td><span class="rank-badge rank-3">🥉</span></td>
+                                <td>
+                                    <div class="student-info">
+                                        <div class="student-avatar" style="background: linear-gradient(135deg, #fb923c, #ea580c);">SR</div>
+                                        <span>Sophia Rodriguez</span>
+                                    </div>
+                                </td>
+                                <td><span class="score-badge">88/100</span></td>
+                                <td><span class="time-badge">13:45</span></td>
+                                <td><span class="status-badge completed">✓ Completed</span></td>
+                            </tr>
+                            <tr class="leaderboard-table-row">
+                                <td><span class="rank-badge">4</span></td>
+                                <td>
+                                    <div class="student-info">
+                                        <div class="student-avatar" style="background: linear-gradient(135deg, #6366f1, #10b981);">LW</div>
+                                        <span>Liam Wilson</span>
+                                    </div>
+                                </td>
+                                <td><span class="score-badge">85/100</span></td>
+                                <td><span class="time-badge">15:12</span></td>
+                                <td><span class="status-badge completed">✓ Completed</span></td>
+                            </tr>
+                            <tr class="leaderboard-table-row">
+                                <td><span class="rank-badge">5</span></td>
+                                <td>
+                                    <div class="student-info">
+                                        <div class="student-avatar" style="background: linear-gradient(135deg, #ec4899, #a855f7);">OM</div>
+                                        <span>Olivia Martinez</span>
+                                    </div>
+                                </td>
+                                <td><span class="score-badge">82/100</span></td>
+                                <td><span class="time-badge">16:08</span></td>
+                                <td><span class="status-badge completed">✓ Completed</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="leaderboard-modal-actions">
+                <button onclick="refreshLeaderboard()" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.625rem 1.25rem; background: linear-gradient(135deg, #6366f1, #10b981); color: white; border: none; border-radius: 0.5rem; cursor: pointer;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+                    </svg>
+                    Refresh
+                </button>
+                <button onclick="closeLeaderboardModal()" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.625rem 1.25rem; background: linear-gradient(135deg, #6366f1, #10b981); color: white; border: none; border-radius: 0.5rem; cursor: pointer;">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/lucide@latest"></script>
     <script src="js/auth.js"></script>
     <script src="js/navigation.js"></script>
     <script src="js-front-end/front-pronunciation.js"></script>

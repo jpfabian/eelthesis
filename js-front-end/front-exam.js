@@ -227,7 +227,7 @@ function setupExamGenerator() {
     } finally {
       generateBtn.disabled = false;
       generateBtn.innerHTML = `<i data-lucide="brain" class="size-4 mr-2"></i> Generate Exam with AI`;
-      lucide.createIcons();
+      lucide.createIcons({ icons: lucide.icons });
     }
   });
 }

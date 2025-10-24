@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const newUrl = window.location.origin + window.location.pathname;
         window.history.replaceState({}, document.title, newUrl);
     }
+    console.log("Class ID:", classId);
 });
 
 document.addEventListener('DOMContentLoaded', async function() {
@@ -879,7 +880,7 @@ async function submitQuiz() {
                     btn.innerHTML = `<i data-lucide="eye" class="size-3 mr-1"></i>Review Quiz`;
                     btn.disabled = false;
                     btn.classList.remove('opacity-50', 'cursor-not-allowed');
-                    lucide.createIcons();
+                    lucide.createIcons({ icons: lucide.icons });
                 }
             }
         } else {
@@ -979,7 +980,7 @@ document.getElementById('save-schedule-btn').addEventListener('click', () => {
                 button.innerHTML = `<i data-lucide="unlock" class="size-3 mr-1"></i>Unlocked`;
                 button.disabled = false;
                 button.classList.remove('opacity-50', 'cursor-not-allowed');
-                lucide.createIcons();
+                lucide.createIcons({ icons: lucide.icons });
             }
 
             loadQuizzes();
@@ -1229,7 +1230,7 @@ async function loadQuizzes() {
         builtInContainer.appendChild(intermediateContainer);
         builtInContainer.appendChild(advancedContainer);
 
-        lucide.createIcons();
+        lucide.createIcons({ icons: lucide.icons });
     } catch (err) {
         console.error('Error loading quizzes:', err);
     }
@@ -1252,7 +1253,7 @@ function handleLockUnlock(quizId, isLocked) {
                     button.innerHTML = `<i data-lucide="lock" class="size-3 mr-1"></i>Locked`;
                     button.disabled = false;
                     button.classList.remove('opacity-50', 'cursor-not-allowed');
-                    lucide.createIcons();
+                    lucide.createIcons({ icons: lucide.icons });
                     showNotification("🔒 Quiz locked successfully!", "success");
 
                     // Refresh quizzes to ensure state consistency
@@ -1296,65 +1297,68 @@ async function loadLeaderboard(quizId = null) {
         const res = await fetch(url);
         const data = await res.json();
 
-        if (!data.success || !Array.isArray(data.leaderboard)) {
-            throw new Error("Invalid leaderboard data");
-        }
-
-        if (data.leaderboard.length > 0) {
-            document.getElementById("quiz-title").textContent = `✨ ${data.leaderboard[0].quiz_title || "Quiz"}`;
-        }
-
         const tbody = document.getElementById("leaderboard-body");
         tbody.innerHTML = "";
 
-        const podiumFirst = document.querySelector(".podium-card.first-place");
-        const podiumSecond = document.querySelector(".podium-card.second-place");
-        const podiumThird = document.querySelector(".podium-card.third-place");
+        // Set quiz title
+        document.getElementById("quiz-title").textContent = 
+            (data.leaderboard && data.leaderboard.length > 0)
+                ? `✨ ${data.leaderboard[0].quiz_title || "Quiz"}`
+                : "✨ Quiz";
 
-        const gradients = ["#fbbf24,#f59e0b", "#9ca3af,#6b7280", "#fb923c,#ea580c", "#6366f1,#10b981", "#ec4899,#a855f7"];
+        // Podium cards
+        const podiums = [
+            document.querySelector(".podium-card.first-place"),
+            document.querySelector(".podium-card.second-place"),
+            document.querySelector(".podium-card.third-place")
+        ];
+        const gradients = ["#fbbf24,#f59e0b", "#9ca3af,#6b7280", "#fb923c,#ea580c"];
 
-        data.leaderboard.forEach((entry, index) => {
-            const initials = entry.student_name.split(" ").map(n => n[0]).join("").slice(0,2).toUpperCase();
-
-            // Podium
-            if (index === 0 && podiumFirst) {
-                podiumFirst.querySelector(".podium-avatar").textContent = initials;
-                podiumFirst.querySelector(".podium-avatar").style.background = `linear-gradient(135deg, ${gradients[0]})`;
-                podiumFirst.querySelector(".podium-name").textContent = entry.student_name;
-                podiumFirst.querySelector(".podium-score").innerHTML = `${entry.score}<span>pts</span>`;
-            } else if (index === 1 && podiumSecond) {
-                podiumSecond.querySelector(".podium-avatar").textContent = initials;
-                podiumSecond.querySelector(".podium-avatar").style.background = `linear-gradient(135deg, ${gradients[1]})`;
-                podiumSecond.querySelector(".podium-name").textContent = entry.student_name;
-                podiumSecond.querySelector(".podium-score").innerHTML = `${entry.score}<span>pts</span>`;
-            } else if (index === 2 && podiumThird) {
-                podiumThird.querySelector(".podium-avatar").textContent = initials;
-                podiumThird.querySelector(".podium-avatar").style.background = `linear-gradient(135deg, ${gradients[2]})`;
-                podiumThird.querySelector(".podium-name").textContent = entry.student_name;
-                podiumThird.querySelector(".podium-score").innerHTML = `${entry.score}<span>pts</span>`;
-            }
-
-            // Table rows
-            let rankBadge = index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : index + 1;
-            let rowClass = index < 3 ? "top-three" : "";
-            const avatarGradient = gradients[index % gradients.length];
-
-            const row = `
-                <tr class="leaderboard-table-row ${rowClass}">
-                    <td><span class="rank-badge ${index < 3 ? 'rank-' + (index+1) : ''}">${rankBadge}</span></td>
-                    <td>
-                        <div class="student-info">
-                            <div class="student-avatar" style="background: linear-gradient(135deg, ${avatarGradient});">${initials}</div>
-                            <span>${entry.student_name}</span>
-                        </div>
-                    </td>
-                    <td><span class="score-badge">${entry.score}/${entry.total_points}</span></td>
-                    <td><span class="time-badge">${entry.time_taken}</span></td>
-                    <td><span class="status-badge completed">✓ ${entry.status}</span></td>
-                </tr>
-            `;
-            tbody.insertAdjacentHTML("beforeend", row);
+        // Reset podiums first
+        podiums.forEach((podium, idx) => {
+            if (!podium) return;
+            podium.querySelector(".podium-avatar").textContent = "";
+            podium.querySelector(".podium-name").textContent = "—";
+            podium.querySelector(".podium-score").innerHTML = "-";
+            podium.querySelector(".podium-avatar").style.background = `linear-gradient(135deg, ${gradients[idx]})`;
         });
+
+        if (Array.isArray(data.leaderboard) && data.leaderboard.length > 0) {
+            data.leaderboard.forEach((entry, index) => {
+                const initials = entry.student_name.split(" ").map(n => n[0]).join("").slice(0,2).toUpperCase();
+
+                // Populate podium only for top 3 students
+                if (index < 3 && podiums[index]) {
+                    podiums[index].querySelector(".podium-avatar").textContent = initials;
+                    podiums[index].querySelector(".podium-name").textContent = entry.student_name;
+                    podiums[index].querySelector(".podium-score").innerHTML = `${entry.score}<span>pts</span>`;
+                }
+
+                // Table rows
+                const rankBadge = index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : index + 1;
+                const rowClass = index < 3 ? "top-three" : "";
+                const avatarGradient = gradients[index % gradients.length];
+
+                const row = `
+                    <tr class="leaderboard-table-row ${rowClass}">
+                        <td><span class="rank-badge ${index < 3 ? 'rank-' + (index+1) : ''}">${rankBadge}</span></td>
+                        <td>
+                            <div class="student-info">
+                                <div class="student-avatar" style="background: linear-gradient(135deg, ${avatarGradient});">${initials}</div>
+                                <span>${entry.student_name}</span>
+                            </div>
+                        </td>
+                        <td><span class="score-badge">${entry.score}/${entry.total_points}</span></td>
+                        <td><span class="time-badge">${entry.time_taken || "-"}</span></td>
+                        <td><span class="status-badge completed">✓ ${entry.status}</span></td>
+                    </tr>
+                `;
+                tbody.insertAdjacentHTML("beforeend", row);
+            });
+        } else {
+            // No students yet
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#999;">No students have taken this quiz yet</td></tr>`;
+        }
 
     } catch (err) {
         console.error("❌ Load leaderboard error:", err);

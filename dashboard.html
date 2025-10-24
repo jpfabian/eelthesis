@@ -435,7 +435,7 @@
     </div>
 
     <!-- Scripts -->
-    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
     <script src="js/auth.js"></script>
     <script src="js/navigation.js"></script>
     
@@ -452,6 +452,7 @@
                 const newUrl = window.location.origin + window.location.pathname;
                 window.history.replaceState({}, document.title, newUrl);
             }
+            console.log("Class ID:", classId);
         });
 
         function getCurrentUser() {
@@ -487,7 +488,7 @@
             setTimeout(() => {
                 document.getElementById('loading-screen').classList.add('hidden');
                 document.getElementById('main-app').classList.remove('hidden');
-                lucide.createIcons();
+                lucide.createIcons({ icons: lucide.icons });
             }, 500);
         });
 

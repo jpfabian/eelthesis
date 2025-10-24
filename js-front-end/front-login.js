@@ -5,9 +5,8 @@ function isAuthenticated() {
         }
 
         document.addEventListener('DOMContentLoaded', function() {
-            lucide.createIcons();
+            lucide.createIcons({ icons: lucide.icons });
             setupLoginForm();
-            populateSampleAccounts();
         });
 
         function logout() {
@@ -16,36 +15,9 @@ function isAuthenticated() {
             window.location.href = "login.html";
         }
 
-
-        function populateSampleAccounts() {
-            // Sample student at teacher accounts
-            const sampleAccounts = {
-                teacher: { email: "teacher@example.com", password: "123456" },
-                student: { email: "student@example.com", password: "123456" }
-            };
-
-            console.log("📌 Sample accounts ready:", sampleAccounts);
-
-            // Optional: pwede mo i-autofill agad para i-demo
-            document.getElementById('demo-teacher').addEventListener('click', () => {
-                document.getElementById('email').value = sampleAccounts.teacher.email;
-                document.getElementById('password').value = sampleAccounts.teacher.password;
-            });
-
-            document.getElementById('demo-student').addEventListener('click', () => {
-                document.getElementById('email').value = sampleAccounts.student.email;
-                document.getElementById('password').value = sampleAccounts.student.password;
-            });
-        }
-
-
         function setupLoginForm() {
             // Login form submission
             document.getElementById('login-form').addEventListener('submit', handleLogin);
-
-            // Demo buttons
-            document.getElementById('demo-teacher').addEventListener('click', () => handleDemo('teacher'));
-            document.getElementById('demo-student').addEventListener('click', () => handleDemo('student'));
         }
 
         function fillLoginForm(email, password) {
@@ -239,5 +211,5 @@ function isAuthenticated() {
 
             // Re-render single icon only
             passwordIcon.innerHTML = "";
-            lucide.createIcons();
+            lucide.createIcons({ icons: lucide.icons });
         }

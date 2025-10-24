@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const newUrl = window.location.origin + window.location.pathname;
         window.history.replaceState({}, document.title, newUrl);
     }
+    console.log("Class ID:", classId);
 });
 
 document.addEventListener('DOMContentLoaded', async function() {
@@ -165,8 +166,6 @@ async function loadCurriculum() {
                         </div>
                         <div class="lesson-footer hidden mt-3 space-y-2">
                             <button class="btn btn-outline w-full" onclick="viewLesson(${topic.topic_id}, '${topic.pdf_path}', '${topic.topic_title}'); event.stopPropagation();">View</button>
-                            <button class="btn btn-secondary w-full teacher-only" onclick="assignLesson(${topic.topic_id}); event.stopPropagation();">Lock/Unlock</button>
-                            <button class="btn btn-secondary w-full student-only hidden" onclick="startQuiz(${topic.topic_id}); event.stopPropagation();">Start Quiz</button>
                         </div>
                     </div>
                 `;
@@ -176,7 +175,7 @@ async function loadCurriculum() {
             container.innerHTML += lessonHTML;
         });
 
-        lucide.createIcons();
+        lucide.createIcons({ icons: lucide.icons });
 
         // Role check
         const user = JSON.parse(localStorage.getItem("eel_user"));
