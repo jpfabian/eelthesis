@@ -417,44 +417,63 @@ router.get("/api/pronunciation-review", async (req, res) => {
   }
 });
 
-// GET /api/leaderboard?quiz_id=4
 router.get("/api/leaderboard", async (req, res) => {
   const pool = req.pool;
-  const { quiz_id } = req.query;
+  const { quiz_id, class_id } = req.query;
 
   if (!quiz_id) {
     return res.status(400).json({ success: false, message: "Missing quiz_id" });
   }
 
   try {
-    // Fetch attempts with student info
-    const [rows] = await pool.query(
-      `SELECT a.attempt_id, a.student_id, a.score, a.status, a.start_time, a.end_time,
-              u.fname, u.lname
+    const params = [quiz_id, class_id || null, class_id || null];
+
+    const sql = `
+      SELECT a.attempt_id, a.student_id, a.score, a.status, a.start_time, a.end_time,
+             u.fname, u.lname
       FROM pronunciation_quiz_attempts a
       JOIN users u ON a.student_id = u.user_id
+      LEFT JOIN student_classes sc 
+             ON sc.student_id = a.student_id 
+             AND sc.status = 'accepted'
       WHERE a.quiz_id = ?
-      ORDER BY a.score DESC, a.end_time ASC`,
-      [quiz_id]
-    );
+        AND (? IS NULL OR sc.class_id = ?)
+      ORDER BY a.score DESC, a.end_time ASC
+    `;
 
-    // Map leaderboard
-    const leaderboard = rows.map((r, index) => ({
-      rank: index + 1,
-      student_id: r.student_id,
-      name: `${r.fname} ${r.lname}`,
-      score: r.score,
-      status: r.status,
-      start_time: r.start_time,  // <-- include start_time
-      end_time: r.end_time
-    }));
+    const [rows] = await pool.query(sql, params);
+
+    // Tie-aware ranking
+    let lastScore = null;
+    let rank = 0;
+    let skip = 0;
+    const leaderboard = rows.map((r, i) => {
+      if (r.score !== lastScore) {
+        rank = rank + 1 + skip;
+        skip = 0;
+        lastScore = r.score;
+      } else {
+        skip++;
+      }
+      return {
+        rank,
+        student_id: r.student_id,
+        name: `${r.fname} ${r.lname}`,
+        score: r.score,
+        status: r.status,
+        start_time: r.start_time,
+        end_time: r.end_time
+      };
+    });
 
     res.json({ success: true, leaderboard });
+
   } catch (err) {
     console.error("❌ Leaderboard fetch error:", err);
     res.status(500).json({ success: false, message: "Server error", error: err.message });
   }
 });
+
 
 module.exports = router;
 

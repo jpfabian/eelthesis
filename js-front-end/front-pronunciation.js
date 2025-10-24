@@ -1324,52 +1324,56 @@ function formatDuration(startTime, endTime) {
     return `${seconds}s`;
 }
 
-async function openLeaderboardModal(quizId) {
+async function openLeaderboardModal(quizId, classId) {
     const modal = document.getElementById("leaderboard-modal");
     const body = document.getElementById("leaderboard-body");
     const quizName = document.getElementById("quiz-name");
 
     try {
-        const res = await fetch(`http://localhost:3000/api/leaderboard?quiz_id=${quizId}`);
+        const res = await fetch(`http://localhost:3000/api/leaderboard?quiz_id=${quizId}${classId ? `&class_id=${classId}` : ''}`);
         const data = await res.json();
         if (!data.success) throw new Error(data.message || "Failed to load leaderboard");
 
         const leaderboard = data.leaderboard;
 
         quizName.textContent = `Quiz Leaderboard`;
-
         body.innerHTML = "";
 
-        // Podium container
+        // Podium
         const podiums = [
             modal.querySelector(".first-place"),
             modal.querySelector(".second-place"),
             modal.querySelector(".third-place")
         ];
 
-        podiums.forEach((podium, index) => {
-            const student = leaderboard[index];
-            if (student) {
-                const initials = student.name.split(" ").map(n=>n[0]).join("");
-                podium.querySelector(".podium-avatar").textContent = initials;
-                podium.querySelector(".podium-name").textContent = student.name;
-                podium.querySelector(".podium-score span").textContent = `${student.score}/100`;
-                podium.querySelector(".podium-rank").textContent = `#${student.rank}`;
-            } else {
-                podium.querySelector(".podium-avatar").textContent = "";
-                podium.querySelector(".podium-name").textContent = "—";
-                podium.querySelector(".podium-score span").textContent = "-";
-                podium.querySelector(".podium-rank").textContent = "";
-            }
+        // Clear podiums
+        podiums.forEach(podium => {
+            podium.querySelector(".podium-avatar").textContent = "";
+            podium.querySelector(".podium-name").textContent = "—";
+            podium.querySelector(".podium-score span").textContent = "-";
+            podium.querySelector(".podium-rank").textContent = "";
         });
 
-        // Populate table
+        // Clear table
+        body.innerHTML = "";
+
+        // Then fill in podiums from leaderboard
+        leaderboard.slice(0,3).forEach((student, index) => {
+            const podium = podiums[index];
+            const initials = student.name.trim().split(/\s+/).map(n=>n[0]).join("");
+            podium.querySelector(".podium-avatar").textContent = initials;
+            podium.querySelector(".podium-name").textContent = student.name;
+            podium.querySelector(".podium-score span").textContent = `${student.score}/100`;
+            podium.querySelector(".podium-rank").textContent = `#${student.rank}`;
+        });
+
+
+        // Table
         leaderboard.forEach(entry => {
             const row = document.createElement("tr");
             row.className = "leaderboard-table-row";
             if (entry.rank <= 3) row.classList.add("top-three");
 
-            // Use duration instead of end_time
             const duration = formatDuration(entry.start_time, entry.end_time);
 
             row.innerHTML = `
