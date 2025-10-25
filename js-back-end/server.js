@@ -13,6 +13,7 @@ const lessonRoutes = require("./lesson");
 const classgradeRoutes = require("./classgrade");
 const examGenerated = require("./exam");
 const recitation = require("./recitation");
+const path = require("path");
 
 // 1️⃣ Create Express app first
 const app = express();
