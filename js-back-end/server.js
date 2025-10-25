@@ -21,12 +21,10 @@ app.use(cors({ origin: ["http://localhost:3000", "http://127.0.0.1:5501"], crede
 app.use(bodyParser.json());
 
 // Serve front-end JS files
+app.use('/images', express.static(path.join(__dirname, '../images')));
 app.use('/css', express.static(path.join(__dirname, '../css')));
 app.use('/js', express.static(path.join(__dirname, '../js-front-end')));
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'index.html'));
-});
-
+app.use(express.static(path.join(__dirname, '../')));
 
 // 4️⃣ MySQL pool
 const pool = mysql.createPool({
