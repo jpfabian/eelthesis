@@ -3,7 +3,6 @@ const cors = require("cors");
 const bodyParser = require("body-parser");
 const mysql = require("mysql2/promise");
 const path = require("path");
-
 const loginRoutes = require("./login");
 const signupRoutes = require("./signup");
 const readingRoutes = require("./reading");
@@ -13,7 +12,6 @@ const lessonRoutes = require("./lesson");
 const classgradeRoutes = require("./classgrade");
 const examGenerated = require("./exam");
 const recitation = require("./recitation");
-const path = require("path");
 
 // 1️⃣ Create Express app first
 const app = express();
