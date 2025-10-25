@@ -21,6 +21,7 @@ app.use(cors({ origin: ["http://localhost:3000", "http://127.0.0.1:5501"], crede
 app.use(bodyParser.json());
 
 // Serve front-end JS files
+app.use('/css', express.static(path.join(__dirname, '../css')));
 app.use('/js', express.static(path.join(__dirname, '../js-front-end')));
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'index.html'));
