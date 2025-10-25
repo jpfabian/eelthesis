@@ -21,7 +21,7 @@ app.use(cors({ origin: ["http://localhost:3000", "http://127.0.0.1:5501"], crede
 app.use(bodyParser.json());
 
 // 3️⃣ Serve frontend static files
-const FRONTEND_PATH = '/root/eelthesis/js-front-end';
+const FRONTEND_PATH = path.join(__dirname, '..');
 app.use(express.static(FRONTEND_PATH));
 app.get('/', (req, res) => {
   res.sendFile(path.join(FRONTEND_PATH, 'index.html'));
