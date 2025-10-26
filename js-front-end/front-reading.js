@@ -1226,7 +1226,6 @@ async function loadLessonsAndTopics() {
   }
 }
 
-
 async function loadQuizzes() {
     try {
         const user = getCurrentUser();

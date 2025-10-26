@@ -113,13 +113,19 @@ Follow this format strictly. Do not add any explanations or instructions outside
 // ✅ SAVE EXAM — only when the user clicks Save
 router.post("/api/save-exam", async (req, res) => {
   const pool = req.pool;
-  const { subject, title, content, question_count, types } = req.body;
+  const { class_id, title, content, question_count, types, created_by } = req.body;
+
+  if (!created_by || !class_id) {
+    return res.status(400).json({ success: false, error: "Teacher ID and Class ID are required" });
+  }
 
   try {
     const [result] = await pool.query(
-      "INSERT INTO exams (subject, title, content, question_count, types, created_at) VALUES (?, ?, ?, ?, ?, NOW())",
-      [subject, title, content, question_count, JSON.stringify(types)]
+      `INSERT INTO exams (class_id, created_by, title, content, question_count, types, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, NOW())`,
+      [class_id, created_by, title, content, question_count, JSON.stringify(types)]
     );
+
     res.json({ success: true, id: result.insertId });
   } catch (err) {
     console.error(err);
@@ -185,17 +191,33 @@ router.get('/api/lessons-with-topics', async (req, res) => {
 
 // ✅ Get all exams
 router.get("/api/get-exams", async (req, res) => {
-  const pool = req.pool; // <--- use req.pool
+  const pool = req.pool;
+  const { class_id } = req.query; // optional filter
+
   try {
-    const [rows] = await pool.query(
-      "SELECT id, subject, title, question_count, created_at FROM exams ORDER BY created_at DESC"
-    );
+    let query = `
+      SELECT e.id, e.title, e.question_count, e.created_at,
+             e.class_id, c.name AS class_name, c.section AS class_section, c.subject AS subject_name
+      FROM exams e
+      JOIN classes c ON e.class_id = c.id
+    `;
+
+    const params = [];
+    if (class_id) {
+      query += " WHERE e.class_id = ?";
+      params.push(class_id);
+    }
+
+    query += " ORDER BY e.created_at DESC";
+
+    const [rows] = await pool.query(query, params);
     res.json({ success: true, exams: rows });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: "Failed to fetch exams" });
   }
 });
+
 
 // ✅ Get exam content by ID
 router.get("/api/get-exam-content/:id", async (req, res) => {
@@ -210,7 +232,6 @@ router.get("/api/get-exam-content/:id", async (req, res) => {
     res.status(500).json({ success: false, message: "Failed to fetch exam content" });
   }
 });
-
 
 router.post("/api/move-exam-to-cache/:id", async (req, res) => {
   const { id } = req.params;

@@ -7,6 +7,9 @@ const multerS3 = require("multer-s3");
 const path = require("path");
 const fetch = require("node-fetch");
 require("dotenv").config();
+const Groq = require("groq-sdk");
+
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 
 const s3 = new S3Client({
@@ -35,7 +38,7 @@ router.post("/api/pronunciation-quizzes", async (req, res) => {
   const pool = req.pool;
   try {
     const { title, difficulty, passage, questions, subject_id} = req.body;
-    const validSubjectId = subject_id || 1;
+    const validSubjectId = subject_id != null ? subject_id : 1;
 
     if (!title || !difficulty || !questions || questions.length === 0) {
       return res.status(400).json({ message: "All fields are required" });
@@ -472,6 +475,161 @@ router.get("/api/leaderboard", async (req, res) => {
     console.error("❌ Leaderboard fetch error:", err);
     res.status(500).json({ success: false, message: "Server error", error: err.message });
   }
+});
+
+router.get('/api/lessons-with-topics', async (req, res) => {
+  const pool = req.pool;
+  const classId = req.query.class_id;
+
+  if (!classId) {
+    return res.status(400).json({ error: 'Missing class_id' });
+  }
+
+  try {
+    // ✅ Step 1: Get the subject name from the class
+    const [classRows] = await pool.query('SELECT subject FROM classes WHERE id = ?', [classId]);
+    if (classRows.length === 0) {
+      return res.status(404).json({ error: 'Class not found' });
+    }
+
+    const subjectName = classRows[0].subject?.trim() || '';
+
+    // ✅ Step 2: Match the subject name to the corresponding subject_id
+    const subjectMapping = {
+      "Reading and Writing Skills": 1,
+      "Oral Communication in Context": 2,
+      "Creative Writing": 3,
+      "Creative Non-Fiction": 4,
+      "English for Academic and Professional Purposes": 5,
+    };
+
+    // Normalize for flexible matches
+    const normalized = subjectName.toLowerCase();
+    const subjectId =
+      normalized.includes("oral") ? 2 :
+      normalized.includes("reading") ? 1 :
+      normalized.includes("creative writing") ? 3 :
+      normalized.includes("creative non") ? 4 :
+      normalized.includes("academic") ? 5 :
+      subjectMapping[subjectName];
+
+    if (!subjectId) {
+      return res.status(404).json({ error: `No subject_id found for "${subjectName}"` });
+    }
+
+    // ✅ Step 3: Fetch lessons for that subject
+    const [lessons] = await pool.query(
+      'SELECT lesson_id, lesson_title FROM lessons WHERE subject_id = ? ORDER BY lesson_id',
+      [subjectId]
+    );
+
+    if (lessons.length === 0) {
+      return res.json([]);
+    }
+
+    // ✅ Step 4: Fetch topics for those lessons
+    const [topics] = await pool.query(
+      'SELECT topic_id, topic_title, lesson_id FROM topics WHERE lesson_id IN (?)',
+      [lessons.map(l => l.lesson_id)]
+    );
+
+    // ✅ Step 5: Combine lessons + topics
+    const data = lessons.map(lesson => ({
+      lesson_id: lesson.lesson_id,
+      lesson_title: lesson.lesson_title,
+      topics: topics.filter(t => t.lesson_id === lesson.lesson_id)
+    }));
+
+    res.json(data);
+  } catch (err) {
+    console.error('Error fetching lessons and topics:', err);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+router.post("/api/generate-pronunciation-quiz", async (req, res) => {
+  const pool = req.pool;
+  const { topic_id, difficulty, num_questions, additional_context } = req.body;
+
+  if (!topic_id || !difficulty || !num_questions) {
+    return res.status(400).json({ success: false, message: "Missing required fields" });
+  }
+
+  try {
+    const [topicRows] = await pool.query("SELECT topic_title FROM topics WHERE topic_id = ?", [topic_id]);
+    if (!topicRows.length) return res.status(404).json({ success: false, message: "Topic not found" });
+
+    const topicTitle = topicRows[0].topic_title;
+
+    // Build prompt based on difficulty
+    let instruction = "";
+    if (difficulty === "beginner") {
+      instruction = `Generate ${num_questions} beginner-level consonant cluster pronunciation words for high school students.
+Output plain text: one line per word in format "word: correct pronunciation (IPA)".
+No extra text.`;
+    } else if (difficulty === "intermediate") {
+      instruction = `Generate ${num_questions} intermediate-level word stress pronunciation words for high school students.
+Output plain text: one line per word in format "word: stressed syllables like ex-AM-ple".
+No extra text.`;
+    } else if (difficulty === "advanced") {
+      instruction = `Generate ${num_questions} advanced reduced/linked form pronunciation examples for high school students.
+Output plain text: one line per sentence in format "sentence with blank: reduced/linked pronunciation".
+No extra text.`;
+    }
+
+    if (additional_context) instruction += `\nAdditional context: ${additional_context}`;
+
+    const completion = await groq.chat.completions.create({
+      model: "llama-3.1-8b-instant",
+      messages: [
+        { role: "system", content: "You are an educational quiz generator that outputs clean plain text for pronunciation quizzes." },
+        { role: "user", content: instruction }
+      ],
+    });
+
+    const quizContent = completion.choices?.[0]?.message?.content || "";
+    if (!quizContent) return res.status(500).json({ success: false, message: "No quiz content returned" });
+
+    res.json({ success: true, quiz: quizContent });
+
+  } catch (err) {
+    console.error("Error generating pronunciation quiz:", err);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+router.post("/api/save-pronunciation-quiz", async (req, res) => {
+    const pool = req.pool;
+    const { teacher_id, subject_id, difficulty, passage, questions } = req.body;
+
+    if (!teacher_id || !subject_id || !difficulty || !questions?.length) {
+        return res.status(400).json({ success: false, message: "Missing required fields or no questions provided" });
+    }
+
+    try {
+        // Insert the main quiz
+        const [result] = await pool.query(
+            "INSERT INTO ai_quiz_pronunciation (teacher_id, subject_id, difficulty, passage) VALUES (?, ?, ?, ?)",
+            [teacher_id, subject_id, difficulty, passage]
+        );
+
+        const quizId = result.insertId;
+
+        // Insert all questions in parallel
+        await Promise.all(
+            questions.map(q =>
+                pool.query(
+                    "INSERT INTO ai_quiz_pronunciation_questions (quiz_id, word, answer) VALUES (?, ?, ?)",
+                    [quizId, q.word, q.answer]
+                )
+            )
+        );
+
+        res.json({ success: true, quiz_id: quizId });
+    } catch (err) {
+        console.error("Error saving AI quiz:", err);
+        res.status(500).json({ success: false, message: "Server error while saving quiz." });
+    }
 });
 
 

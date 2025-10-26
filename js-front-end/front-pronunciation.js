@@ -12,6 +12,10 @@ let recognition = null;
 let isRecording = false;
 let pronunciationReviewMode = false;
 
+function getSelectedSubjectId() {
+    const selectedClass = JSON.parse(localStorage.getItem("eel_selected_class"));
+    return selectedClass?.subject_id || 1; // default to 1 if not found
+}
 
 document.addEventListener('DOMContentLoaded', () => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -186,7 +190,6 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 
-
 function setupQuestionsByDifficulty(level) {
     const container = document.getElementById('questions-container');
     const addQuestionBtn = document.getElementById('add-question-btn');
@@ -323,21 +326,20 @@ async function savePronunciationQuiz() {
     const difficulty = document.getElementById('lesson-difficulty').value;
     const passage = document.getElementById('lesson-passage').value;
 
-    if (!title || !passage) {
+    // ✅ get subject_id from localStorage (eel_selected_class)
+    const selectedClass = JSON.parse(localStorage.getItem("eel_selected_class"));
+    const subject_id = selectedClass?.subject_id || 1; // default to 1 if not set
+
+    if (!title || !passage || !subject_id) {
         showNotification('Please fill in all required fields', 'warning');
         return;
     }
 
     const questions = Array.from(document.querySelectorAll('.question-item')).map(item => {
-        if (difficulty === 'beginner') {
+        if (difficulty === 'beginner' || difficulty === 'intermediate') {
             return {
                 word: item.querySelector('.word')?.value || '',
-                stressed_form: item.querySelector('.stressed')?.value || ''  // correct_pronunciation in DB
-            };
-        } else if (difficulty === 'intermediate') {
-            return {
-                word: item.querySelector('.word')?.value || '',
-                stressed_form: item.querySelector('.stressed')?.value || ''  // stressed_syllable in DB
+                stressed_form: item.querySelector('.stressed')?.value || ''
             };
         } else if (difficulty === 'advanced') {
             return {
@@ -346,8 +348,7 @@ async function savePronunciationQuiz() {
                 full_sentence: item.querySelector('.full-sentence')?.value || ''
             };
         }
-    });
-
+    }).filter(q => q); // remove undefined/null
 
     if (questions.length === 0) {
         showNotification('Please add at least one question', 'warning');
@@ -358,7 +359,7 @@ async function savePronunciationQuiz() {
         const res = await fetch('/api/pronunciation-quizzes', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ title, difficulty, passage, questions })
+            body: JSON.stringify({ title, difficulty, passage, questions, subject_id }) // ✅ send correct subject_id
         });
 
         const data = await res.json();
@@ -488,7 +489,6 @@ document.getElementById('save-schedule-btn').addEventListener('click', async () 
         showNotification("An error occurred while saving schedule.", "error");
     }
 });
-
 
 // Helper functions
 function formatDate(dateString) {
@@ -1423,18 +1423,156 @@ function formatDateTime(dateString) {
     });
 }
 
-async function generateWithAI() {
-    try {
-        openAIModal(); // Show modal first
+async function loadLessonsAndTopics() {
+  try {
+    const classId = localStorage.getItem("eel_selected_class_id");
+    if (!classId) return console.error("No class_id found in localStorage");
 
-        // TODO: Fetch AI-generated content using your API
-        // Example:
-        // const response = await fetch('/api/generate-quiz', { method: 'POST', body: JSON.stringify({...}) });
-        // const data = await response.json();
-        // renderGeneratedQuiz(data);
-    } catch (err) {
-        console.error('Error generating AI quiz:', err);
+    const topicSelect = document.getElementById('ai-topic');
+    if (!topicSelect) return console.error("Element with id 'ai-topic' not found in DOM");
+
+    topicSelect.innerHTML = '<option>Loading...</option>';
+
+    const res = await fetch(`/api/lessons-with-topics?class_id=${classId}`);
+    const data = await res.json();
+
+    if (!Array.isArray(data)) {
+      console.error("Invalid data format:", data);
+      topicSelect.innerHTML = '<option>Error loading topics</option>';
+      return;
     }
+
+    if (data.length === 0) {
+      topicSelect.innerHTML = '<option>No topics found</option>';
+      return;
+    }
+
+    // ✅ Build optgroups for lessons
+    topicSelect.innerHTML = '<option value="">Select a topic</option>';
+    data.forEach(lesson => {
+      const optgroup = document.createElement('optgroup');
+      optgroup.label = lesson.lesson_title;
+
+      lesson.topics.forEach(topic => {
+        const option = document.createElement('option');
+        option.value = topic.topic_id;
+        option.textContent = topic.topic_title;
+        optgroup.appendChild(option);
+      });
+
+      topicSelect.appendChild(optgroup);
+    });
+  } catch (err) {
+    console.error('Error loading lessons and topics:', err);
+    const topicSelect = document.getElementById('ai-topic');
+    if (topicSelect) topicSelect.innerHTML = '<option>Error loading topics</option>';
+  }
+}
+
+async function generatePronunciationQuiz() {
+  const topicId = document.getElementById('ai-topic').value;
+  const difficulty = document.getElementById('ai-difficulty').value;
+  const numQuestions = parseInt(document.getElementById('ai-num-questions').value) || 5;
+  const additionalContext = document.getElementById('ai-context').value;
+
+  if (!topicId) {
+    alert('Please select a topic first.');
+    return;
+  }
+
+  const btn = document.getElementById('ai-generate-btn');
+  btn.disabled = true;
+  btn.innerHTML = "⏳ Generating...";
+
+  try {
+    const res = await fetch("/api/generate-pronunciation-quiz", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ topic_id: topicId, difficulty, num_questions: numQuestions, additional_context: additionalContext })
+    });
+
+    const data = await res.json();
+    console.log("AI Response:", data);
+
+    if (!data.success) throw new Error(data.message || "Generation failed");
+
+    // Show generated section
+    document.getElementById("ai-generated-section").classList.remove("hidden");
+
+    const container = document.getElementById("ai-questions-container");
+    container.innerHTML = "";
+
+    // Expect plain text: each line = Word : Pronunciation
+    const lines = data.quiz.split("\n").map(l => l.trim()).filter(l => l);
+    lines.forEach((line, i) => {
+      const [word, answer] = line.split(":").map(s => s.trim());
+
+      const div = document.createElement("div");
+      div.className = "question-item";
+      div.style = "background:#f9f9ff;border:1px solid rgba(147,51,234,0.1);padding:1rem;border-radius:0.5rem;margin-bottom:1rem;";
+
+      div.innerHTML = `
+        <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom:0.75rem;">
+          <h4 style="font-weight:600;">Word ${i + 1}</h4>
+          <button type="button" onclick="this.closest('.question-item').remove()" 
+            style="color:#4f46e5;font-weight:500;border:1px solid rgba(79,70,229,0.2);
+                   background:rgba(79,70,229,0.05);padding:0.4rem 1rem;border-radius:0.4rem;cursor:pointer;">
+            Remove
+          </button>
+        </div>
+        <input type="text" class="form-input" placeholder="Word" value="${word || ''}" style="margin-bottom:0.75rem;">
+        <input type="text" class="form-input" placeholder="Correct Pronunciation" value="${answer || ''}">
+      `;
+
+      container.appendChild(div);
+    });
+
+    document.getElementById("ai-save-btn").disabled = false;
+    document.getElementById("ai-save-btn").style.opacity = 1;
+
+  } catch (err) {
+    console.error("Error generating quiz:", err);
+    alert("Error generating quiz. Please check console.");
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = "✨ Generate Quiz with AI";
+  }
+}
+
+
+async function savePronunciationQuiz() {
+    const titleEl = document.getElementById("ai-topic"); // using topic as title
+    const subjectIdEl = document.getElementById("ai-topic"); // same select for subject_id?
+    const difficultyEl = document.getElementById("ai-difficulty");
+    const passageEl = document.getElementById("ai-generated-passage");
+
+    if (!titleEl || !subjectIdEl || !difficultyEl || !passageEl) {
+        console.error("One or more required fields are missing in the HTML.");
+        return;
+    }
+
+    const title = titleEl.value; // could also get selected text: titleEl.selectedOptions[0].text
+    const subject_id = subjectIdEl.value; // assuming your backend expects a subject ID
+    const difficulty = difficultyEl.value;
+    const passage = passageEl.value;
+
+    const questionItems = document.querySelectorAll(".question-item");
+    const questions = Array.from(questionItems).map(q => ({
+        word: q.querySelector('input[placeholder="Word"]').value,
+        answer: q.querySelector('input[placeholder="Correct Pronunciation"]').value
+    }));
+
+    const teacher_id = window.currentUserId;  
+
+    const res = await fetch("/api/save-pronunciation-quiz", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, teacher_id, subject_id, difficulty, passage, questions })
+    });
+
+    const data = await res.json();
+    if (data.success) alert("Quiz saved! ID: " + data.quiz_id);
+    else alert("Error saving quiz: " + data.message);
 }
 
 
@@ -1442,18 +1580,21 @@ async function generateWithAI() {
 function openAIModal() {
     const modal = document.getElementById('ai-quiz-generator-modal');
     if (!modal) return console.error('AI Quiz Generator modal not found!');
-    
-    modal.classList.remove('hidden');   // Show the modal
+
+    modal.classList.remove('hidden');
     modal.style.opacity = 0;
-    
-    // Optional: simple fade-in
+
     let op = 0;
     const fadeIn = setInterval(() => {
         if (op >= 1) clearInterval(fadeIn);
         modal.style.opacity = op;
         op += 0.1;
     }, 30);
+
+    // ✅ Load lessons & topics
+    loadLessonsAndTopics();
 }
+
 
 // Close AI Quiz Generator Modal
 function closeAIModal() {

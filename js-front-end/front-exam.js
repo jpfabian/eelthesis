@@ -318,49 +318,66 @@ function showExamPreview(examText, subject, selectedTopics, questionTypes) {
     }
   };
 
-  // 💾 Save button logic
   saveBtn.onclick = async () => {
     const updatedContent = content.textContent.trim();
+
+    // ✅ Get current teacher ID
+    const currentUser = JSON.parse(localStorage.getItem("eel_user") || "{}");
+    const currentTeacherId = currentUser.user_id;
+
+    if (!currentTeacherId) {
+      showNotification("⚠️ User not logged in. Cannot save exam.", "error");
+      return;
+    }
+
+    // ✅ Get currently selected class from localStorage
+    const selectedClass = JSON.parse(localStorage.getItem("eel_selected_class") || "{}");
+    const classId = selectedClass?.id;
+    if (!classId) {
+      showNotification("⚠️ Please select a class/section before saving.", "error");
+      return;
+    }
 
     try {
       const res = await fetch("/api/save-exam", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          subject,
+          class_id: classId, // ✅ now defined
           title: selectedTopics.join(", ") || "AI Generated Exam",
           content: updatedContent,
           question_count: questionTypes.reduce((sum, q) => sum + q.count, 0),
           types: questionTypes.map(q => `${q.type} (${q.count})`).join(", "),
+          created_by: currentTeacherId
         }),
       });
 
-      if (res.ok) {
+      const result = await res.json();
+
+      if (res.ok && result.success) {
         showNotification("💾 Exam saved successfully!");
         loadExams();
 
-        // ✅ Disable edit mode
+        // Disable edit mode
         content.contentEditable = "false";
         editBtn.textContent = "✏️ Edit";
         saveBtn.disabled = true;
         saveBtn.classList.add("opacity-50", "cursor-not-allowed");
 
-        // ✅ Optional fade-out animation
         container.style.transition = "opacity 0.5s ease";
         container.style.opacity = "0";
 
         setTimeout(() => {
-          // ✅ Fully hide and reset after fade-out
           container.classList.add("hidden");
           container.style.opacity = "1";
-          content.textContent = ""; // clear exam text
+          content.textContent = "";
         }, 500);
       } else {
-        showNotification("⚠️ Failed to save exam.");
+        showNotification(result.error || "⚠️ Failed to save exam.", "error");
       }
     } catch (err) {
       console.error("❌ Error saving exam:", err);
-      showNotification("Error saving exam.");
+      showNotification("Error saving exam.", "error");
     }
   };
 }
@@ -374,7 +391,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
 async function loadExams() {
   try {
-    const res = await fetch("/api/get-exams");
+    const selectedClass = JSON.parse(localStorage.getItem("eel_selected_class") || "{}");
+    const classId = selectedClass.id;
+
+    const res = await fetch(`/api/get-exams?class_id=${classId}`);
     const data = await res.json();
     const exams = data.exams;
 
@@ -409,9 +429,15 @@ async function loadExams() {
       examCard.innerHTML = `
         <div>
           <div style="height:4px; width:50px; background:#4f46e5; border-radius:2px; margin-bottom:0.5rem;"></div>
-          <h4 style="font-weight:700; font-size:1.1rem; margin-bottom:0.5rem; color:#111827;">${exam.subject}</h4>
+          <h4 style="font-weight:700; font-size:1.1rem; margin-bottom:0.5rem; color:#111827;">
+            ${capitalizeWords(exam.subject_name)}
+          </h4>
           <p style="font-size:0.9rem; color:#4b5563; margin-bottom:0.25rem;">${exam.title}</p>
-          <p style="font-size:0.75rem; color:#9ca3af;">Questions: <strong>${exam.question_count}</strong> | Created: <strong>${new Date(exam.created_at).toLocaleDateString()}</strong></p>
+          <p style="font-size:0.75rem; color:#9ca3af;">
+            Class: <strong>${exam.class_name} - ${exam.class_section}</strong> |
+            Questions: <strong>${exam.question_count}</strong> |
+            Created: <strong>${new Date(exam.created_at).toLocaleDateString()}</strong>
+          </p>
         </div>
 
         <div style="margin-top:1rem; display:flex; gap:0.5rem; flex-wrap:wrap;">
@@ -439,6 +465,10 @@ async function loadExams() {
   } catch (err) {
     console.error("Failed to load exams:", err);
   }
+}
+
+function capitalizeWords(str) {
+  return str.replace(/\b\w/g, char => char.toUpperCase());
 }
 
 // ✅ Export Excel function (no modules, fully browser compatible)
