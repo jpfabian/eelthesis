@@ -65,24 +65,24 @@ function setupSidebar(user, currentPage) {
     }
 
     const pages = user.role === 'admin' ? [
-        { id: 'dashboard', label: 'Dashboard', icon: 'layout-dashboard', url: 'admin-dashboard.html' },
+        //{ id: 'dashboard', label: 'Dashboard', icon: 'layout-dashboard', url: 'admin-dashboard.html' },
         { id: 'account-verification', label: 'Account Verification', icon: 'check-circle', url: 'account-verification.html' },
         { id: 'settings', label: 'Settings', icon: 'settings', url: 'settings.html' }
     ] : user.role === 'teacher' ? [
-        { id: 'dashboard', label: 'Dashboard', icon: 'layout-dashboard', url: 'dashboard.html' },
+        //{ id: 'dashboard', label: 'Dashboard', icon: 'layout-dashboard', url: 'dashboard.html' },
         { id: 'lessons', label: 'Subject Lessons', icon: 'library', url: 'lessons.html' },
         { id: 'reading-lessons', label: 'Reading Activity', icon: 'book-open', url: 'reading-lessons.html' },
         { id: 'pronunciation-lessons', label: 'Pronunciation Activity', icon: 'mic', url: 'pronunciation-lessons.html' },
         { id: 'recitation', label: 'Recitation', icon: 'brain', url: 'recitation.html' },
         { id: 'exam-generator', label: 'Exam Generator', icon: 'pen-tool', url: 'exam-generator.html' },
         { id: 'student-progress', label: 'Student Progress', icon: 'users', url: 'student-progress.html' },
-        { id: 'settings', label: 'Settings', icon: 'settings', url: 'settings.html' }
+        //{ id: 'settings', label: 'Settings', icon: 'settings', url: 'settings.html' }
     ] : [
-        { id: 'dashboard', label: 'Dashboard', icon: 'layout-dashboard', url: 'dashboard.html' },
+        //{ id: 'dashboard', label: 'Dashboard', icon: 'layout-dashboard', url: 'dashboard.html' },
         { id: 'lessons', label: 'Subject Lessons', icon: 'library', url: 'lessons.html' },
         { id: 'reading-lessons', label: 'Reading Activity', icon: 'book-open', url: 'reading-lessons.html' },
         { id: 'pronunciation-lessons', label: 'Pronunciation Activity', icon: 'mic', url: 'pronunciation-lessons.html' },
-        { id: 'settings', label: 'Settings', icon: 'settings', url: 'settings.html' }
+        //{ id: 'settings', label: 'Settings', icon: 'settings', url: 'settings.html' }
     ];
 
     // Build sidebar links
@@ -136,7 +136,7 @@ function getCurrentPageId() {
     const filename = path.split('/').pop().split('?')[0].replace('.html', '');
 
     const pageMap = {
-        'dashboard': 'dashboard',
+        //'dashboard': 'dashboard',
         'lessons': 'lessons',
         'reading-lessons': 'reading-lessons',
         'pronunciation-lessons': 'pronunciation-lessons',

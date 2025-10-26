@@ -28,7 +28,7 @@ async function loadClasses() {
 
             div.addEventListener("click", () => {
                 localStorage.setItem("eel_selected_class", JSON.stringify(cls));
-                window.location.href = "dashboard.html";
+                window.location.href = "lessons.html";
             });
 
             container.appendChild(div);
@@ -157,7 +157,7 @@ async function joinClass() {
 
 function selectClass(cls) {
     localStorage.setItem("eel_selected_class", JSON.stringify(cls));
-    window.location.href = "dashboard.html";
+    window.location.href = "lessons.html";
 }
 
 function openClassModal() {
