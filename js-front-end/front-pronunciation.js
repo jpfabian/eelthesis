@@ -355,7 +355,7 @@ async function savePronunciationQuiz() {
     }
 
     try {
-        const res = await fetch('http://localhost:3000/api/pronunciation-quizzes', {
+        const res = await fetch('/api/pronunciation-quizzes', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ title, difficulty, passage, questions })
@@ -401,7 +401,7 @@ function openScheduleModal(quizId) {
         const retakeOption = document.getElementById('retake-option').value;
 
         try {
-            const res = await fetch(`http://localhost:3000/api/pronunciation-quizzes/${quizId}/schedule`, {
+            const res = await fetch(`/api/pronunciation-quizzes/${quizId}/schedule`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -470,7 +470,7 @@ document.getElementById('save-schedule-btn').addEventListener('click', () => {
             .map(opt => opt.value);
         }
 
-    fetch(`http://localhost:3000/api/pronunciation-quizzes/${quizId}/schedule`, {
+    fetch(`/api/pronunciation-quizzes/${quizId}/schedule`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -521,7 +521,7 @@ function formatDateTime(dateString) {
 
 async function lockPronunciationQuiz(quizId) {
     try {
-        const res = await fetch(`http://localhost:3000/api/lock-pronunciation-quiz/${quizId}`, {
+        const res = await fetch(`/api/lock-pronunciation-quiz/${quizId}`, {
             method: "PUT",
         });
         const data = await res.json();
@@ -560,14 +560,14 @@ async function loadPronunciationQuizzes(user) {
         }
 
         // ✅ Fetch pronunciation quizzes
-        const res = await fetch(`http://localhost:3000/api/pronunciation-quizzes?subject_id=${subjectId}`);
+        const res = await fetch(`/api/pronunciation-quizzes?subject_id=${subjectId}`);
         const quizzes = await res.json();
 
         // ✅ Fetch student attempts (if user is a student)
         let studentAttempts = [];
         if (user.role === "student") {
             try {
-                const attemptRes = await fetch(`http://localhost:3000/api/pronunciation-attempts?student_id=${user.user_id}`);
+                const attemptRes = await fetch(`/api/pronunciation-attempts?student_id=${user.user_id}`);
                 const attemptData = await attemptRes.json();
                 studentAttempts = attemptData.success ? attemptData.attempts : [];
             } catch (attemptErr) {
@@ -735,7 +735,7 @@ async function loadPronunciationQuizzes(user) {
 // ============================================
 async function openPronunciationModal(quizId) {
     try {
-        const res = await fetch(`http://localhost:3000/api/pronunciation-quizzes/${quizId}`);
+        const res = await fetch(`/api/pronunciation-quizzes/${quizId}`);
         if (!res.ok) return showNotification("Failed to fetch quiz", "error");
         const quiz = await res.json();
 
@@ -1026,7 +1026,7 @@ async function handleRecordingComplete(blob) {
         formData.append("audio", blob, "speech.webm");
         formData.append("expectedText", expectedText);
 
-        const res = await fetch("http://localhost:3000/api/pronunciation-check", {
+        const res = await fetch("/api/pronunciation-check", {
             method: "POST",
             body: formData
         });
@@ -1048,7 +1048,7 @@ async function checkPronunciation(audioBlob, expectedText) {
     formData.append("expectedText", expectedText);
 
     try {
-        const res = await fetch("http://localhost:3000/api/pronunciation-check", {
+        const res = await fetch("/api/pronunciation-check", {
             method: "POST",
             body: formData
         });
@@ -1154,7 +1154,7 @@ async function submitPronunciationQuiz() {
   formData.append('quiz_id', pronunciationQuizData.quiz_id);
 
   try {
-    const res = await fetch('http://localhost:3000/api/pronunciation-submit', {
+    const res = await fetch('/api/pronunciation-submit', {
       method: 'POST',
       body: formData
     });
@@ -1235,7 +1235,7 @@ async function openPronunciationReview(quizId, studentId) {
   }
 
   try {
-    const res = await fetch(`http://localhost:3000/api/pronunciation-review?student_id=${studentId}&quiz_id=${quizId}`);
+    const res = await fetch(`/api/pronunciation-review?student_id=${studentId}&quiz_id=${quizId}`);
     const data = await res.json();
 
     if (!data.success || !data.answers || data.answers.length === 0) {
@@ -1330,7 +1330,7 @@ async function openLeaderboardModal(quizId, classId) {
     const quizName = document.getElementById("quiz-name");
 
     try {
-        const res = await fetch(`http://localhost:3000/api/leaderboard?quiz_id=${quizId}${classId ? `&class_id=${classId}` : ''}`);
+        const res = await fetch(`/api/leaderboard?quiz_id=${quizId}${classId ? `&class_id=${classId}` : ''}`);
         const data = await res.json();
         if (!data.success) throw new Error(data.message || "Failed to load leaderboard");
 

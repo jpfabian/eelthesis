@@ -119,7 +119,7 @@ function toggleLesson(element) {
 
 async function loadCurriculum() {
     try {
-        const res = await fetch("http://localhost:3000/curriculum");
+        const res = await fetch("/curriculum");
         if (!res.ok) throw new Error("Network response was not ok");
         const data = await res.json();
         console.log("Curriculum data:", data);
