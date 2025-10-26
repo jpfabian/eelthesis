@@ -1485,7 +1485,7 @@ async function generatePronunciationQuiz() {
   btn.innerHTML = "⏳ Generating...";
 
   try {
-    const res = await fetch("/api/generate-pronunciation-quizzes", {
+    const res = await fetch("/api/generate-pronunciation-quizz", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ topic_id: topicId, difficulty, num_questions: numQuestions, additional_context: additionalContext })
