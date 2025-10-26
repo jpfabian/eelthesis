@@ -1020,29 +1020,128 @@ function importText() {
     input.click();
 }
 
-async function generateWithAI() {
-    try {
-        openAIModal(); // Show modal first
+async function generateAIQuiz() {
+  const topicId = document.getElementById('ai-topic').value;
+  const difficulty = document.getElementById('ai-difficulty').value;
+  const numQuestions = document.getElementById('ai-num-questions').value;
+  const additionalContext = document.getElementById('ai-context').value;
 
-        // TODO: Fetch AI-generated content using your API
-        // Example:
-        // const response = await fetch('/api/generate-quiz', { method: 'POST', body: JSON.stringify({...}) });
-        // const data = await response.json();
-        // renderGeneratedQuiz(data);
-    } catch (err) {
-        console.error('Error generating AI quiz:', err);
-    }
+  if (!topicId) {
+    alert('Please select a topic first.');
+    return;
+  }
+
+  const btn = document.getElementById('ai-generate-btn');
+  btn.disabled = true;
+  btn.innerHTML = "⏳ Generating...";
+
+  try {
+    const res = await fetch("http://localhost:3000/api/generate-quiz", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        topic_id: topicId,
+        difficulty,
+        num_questions: numQuestions,
+        additional_context: additionalContext
+      })
+    });
+
+    const data = await res.json();
+    console.log("AI Response:", data);
+
+    if (!data.success) throw new Error(data.message || "Generation failed");
+
+    // Show generated section
+    document.getElementById("ai-generated-section").classList.remove("hidden");
+
+    // Extract passage by taking everything before the first "Question"
+    const passageMatch = data.quiz.match(/^(.*?)(?=Question\s*1[:.])/s);
+    const passagePart = passageMatch ? passageMatch[1].trim() : "";
+    document.getElementById("ai-generated-passage").value = passagePart;
+
+    // Split questions by "Question X:"
+    const questionParts = data.quiz.split(/Question\s*\d+[:.]/).slice(1); // slice(1) removes the passage part
+
+    const container = document.getElementById("ai-questions-container");
+    container.innerHTML = "";
+
+    questionParts.forEach((q, i) => {
+        // Split the AI response into lines
+        const lines = q.trim().split("\n").map(l => l.trim()).filter(l => l);
+
+        // Extract question text
+        const questionText = lines[0] || "";
+
+        // Extract choices
+        const choices = {};
+        lines.forEach(line => {
+            const match = line.match(/^([A-D])\)\s*(.*)/);
+            if (match) choices[match[1]] = match[2];
+        });
+
+        // Extract correct answer
+        const correctMatch = lines.find(l => l.toLowerCase().startsWith("correct answer"));
+        let correctOption = "";
+        if (correctMatch) {
+            const match = correctMatch.match(/([A-D])\)/);
+            if (match) correctOption = match[1];
+        }
+
+        // Build question card
+        const div = document.createElement("div");
+        div.className = "question-item";
+        div.style = "background:#f9f9ff;border:1px solid rgba(147,51,234,0.1);padding:1rem;border-radius:0.5rem;margin-bottom:1rem;";
+
+        div.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom:0.75rem;">
+                <h4 style="font-weight:600;">Question ${i + 1}</h4>
+                <button type="button" onclick="this.closest('.question-item').remove()" 
+                    style="color:#4f46e5;font-weight:500;border:1px solid rgba(79,70,229,0.2);
+                        background:rgba(79,70,229,0.05);padding:0.4rem 1rem;border-radius:0.4rem;cursor:pointer;">
+                    Remove
+                </button>
+            </div>
+
+            <input type="text" class="form-input" placeholder="Enter question" value="${questionText}" style="margin-bottom:1rem;">
+
+            <div class="space-y-2">
+            ${["A","B","C","D"].map(letter => `
+                <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.5rem;">
+                    <input type="radio" name="correct-${i}" ${correctOption === letter ? "checked" : ""} style="width:1rem;height:1rem;accent-color:#6366f1;">
+                    <input type="text" class="form-input" placeholder="Option ${letter}" value="${choices[letter] || `Option ${letter}`}" style="flex:1;padding:0.5rem;">
+                </div>
+            `).join("")}
+            </div>
+        `;
+
+        container.appendChild(div);
+    });
+
+    // Enable Save button
+    document.getElementById("ai-save-btn").disabled = false;
+    document.getElementById("ai-save-btn").style.opacity = 1;
+
+  } catch (err) {
+    console.error("Error generating quiz:", err);
+    showNotification("Error generating quiz. Please try again.");
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = "✨ Generate Quiz with AI";
+  }
 }
 
-// Open AI Quiz Generator Modal
-function openAIModal() {
+function openAIModal(subjectId) {
     const modal = document.getElementById('ai-quiz-generator-modal');
     if (!modal) return console.error('AI Quiz Generator modal not found!');
-    
-    modal.classList.remove('hidden');   // Show the modal
+
+    modal.classList.remove('hidden');
     modal.style.opacity = 0;
     
-    // Optional: simple fade-in
+    // Load topics for this subject
+    loadLessonsAndTopics();
+
+    // Fade-in animation
     let op = 0;
     const fadeIn = setInterval(() => {
         if (op >= 1) clearInterval(fadeIn);
@@ -1063,6 +1162,53 @@ function closeAIModal() {
 document.addEventListener('DOMContentLoaded', function() {
     addQuestion();
 });
+
+async function loadLessonsAndTopics() {
+  try {
+    const classId = localStorage.getItem("eel_selected_class_id");
+    if (!classId) return console.error("No class_id found in localStorage");
+
+    const topicSelect = document.getElementById('ai-topic');
+    if (!topicSelect) return console.error("Element with id 'ai-topic' not found in DOM");
+
+    topicSelect.innerHTML = '<option>Loading...</option>';
+
+    const res = await fetch(`http://localhost:3000/api/lessons-with-topics?class_id=${classId}`);
+    const data = await res.json();
+
+    if (!Array.isArray(data)) {
+      console.error("Invalid data format:", data);
+      topicSelect.innerHTML = '<option>Error loading topics</option>';
+      return;
+    }
+
+    if (data.length === 0) {
+      topicSelect.innerHTML = '<option>No topics found</option>';
+      return;
+    }
+
+    // ✅ Build optgroups for lessons
+    topicSelect.innerHTML = '<option value="">Select a topic</option>';
+    data.forEach(lesson => {
+      const optgroup = document.createElement('optgroup');
+      optgroup.label = lesson.lesson_title;
+
+      lesson.topics.forEach(topic => {
+        const option = document.createElement('option');
+        option.value = topic.topic_id;
+        option.textContent = topic.topic_title;
+        optgroup.appendChild(option);
+      });
+
+      topicSelect.appendChild(optgroup);
+    });
+  } catch (err) {
+    console.error('Error loading lessons and topics:', err);
+    const topicSelect = document.getElementById('ai-topic');
+    if (topicSelect) topicSelect.innerHTML = '<option>Error loading topics</option>';
+  }
+}
+
 
 async function loadQuizzes() {
     try {

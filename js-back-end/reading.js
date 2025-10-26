@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 require("dotenv").config();
 const Groq = require("groq-sdk");
+
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 // ================= CREATE QUIZ =================
@@ -667,5 +668,135 @@ router.get("/api/reading-quiz-leaderboard", async (req, res) => {
   }
 });
 
+router.get('/api/lessons-with-topics', async (req, res) => {
+  const pool = req.pool;
+  const classId = req.query.class_id;
+
+  if (!classId) {
+    return res.status(400).json({ error: 'Missing class_id' });
+  }
+
+  try {
+    // ✅ Step 1: Get the subject name from the class
+    const [classRows] = await pool.query('SELECT subject FROM classes WHERE id = ?', [classId]);
+    if (classRows.length === 0) {
+      return res.status(404).json({ error: 'Class not found' });
+    }
+
+    const subjectName = classRows[0].subject?.trim() || '';
+
+    // ✅ Step 2: Match the subject name to the corresponding subject_id
+    const subjectMapping = {
+      "Reading and Writing Skills": 1,
+      "Oral Communication in Context": 2,
+      "Creative Writing": 3,
+      "Creative Non-Fiction": 4,
+      "English for Academic and Professional Purposes": 5,
+    };
+
+    // Normalize for flexible matches
+    const normalized = subjectName.toLowerCase();
+    const subjectId =
+      normalized.includes("oral") ? 2 :
+      normalized.includes("reading") ? 1 :
+      normalized.includes("creative writing") ? 3 :
+      normalized.includes("creative non") ? 4 :
+      normalized.includes("academic") ? 5 :
+      subjectMapping[subjectName];
+
+    if (!subjectId) {
+      return res.status(404).json({ error: `No subject_id found for "${subjectName}"` });
+    }
+
+    // ✅ Step 3: Fetch lessons for that subject
+    const [lessons] = await pool.query(
+      'SELECT lesson_id, lesson_title FROM lessons WHERE subject_id = ? ORDER BY lesson_id',
+      [subjectId]
+    );
+
+    if (lessons.length === 0) {
+      return res.json([]);
+    }
+
+    // ✅ Step 4: Fetch topics for those lessons
+    const [topics] = await pool.query(
+      'SELECT topic_id, topic_title, lesson_id FROM topics WHERE lesson_id IN (?)',
+      [lessons.map(l => l.lesson_id)]
+    );
+
+    // ✅ Step 5: Combine lessons + topics
+    const data = lessons.map(lesson => ({
+      lesson_id: lesson.lesson_id,
+      lesson_title: lesson.lesson_title,
+      topics: topics.filter(t => t.lesson_id === lesson.lesson_id)
+    }));
+
+    res.json(data);
+  } catch (err) {
+    console.error('Error fetching lessons and topics:', err);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+function buildQuizPrompt(topicTitle, quizType, difficulty, numQuestions, additionalContext) {
+  let instruction = "";
+
+  if (quizType === "multiple-choice" || difficulty === "beginner") {
+    instruction = `Generate ${numQuestions} multiple-choice questions about "${topicTitle}". Each question should have 4 options and indicate the correct answer.`;
+  } else if (quizType === "fill-in-the-blank" || difficulty === "intermediate") {
+    instruction = `Generate ${numQuestions} fill-in-the-blank questions about "${topicTitle}". Specify the correct answer for each blank.`;
+  } else if (quizType === "essay" || difficulty === "advanced") {
+    instruction = `Generate ${numQuestions} essay-type questions about "${topicTitle}".`;
+  }
+
+  if (additionalContext) {
+    instruction += `\nAdditional context: ${additionalContext}`;
+  }
+
+  return instruction;
+}
+
+// 🚀 POST /api/generate-quiz
+router.post("/api/generate-quiz", async (req, res) => {
+  const pool = req.pool;
+  const { topic_id, quiz_type, difficulty, num_questions, additional_context } = req.body;
+
+  if (!topic_id || !difficulty || !num_questions) {
+    return res.status(400).json({ success: false, message: "Missing required fields" });
+  }
+
+  try {
+    // ✅ Get topic title
+    const [topicRows] = await pool.query("SELECT topic_title FROM topics WHERE topic_id = ?", [topic_id]);
+    if (topicRows.length === 0) {
+      return res.status(404).json({ success: false, message: "Topic not found" });
+    }
+
+    const topicTitle = topicRows[0].topic_title;
+
+    // ✅ Build the AI prompt
+    const instruction = buildQuizPrompt(topicTitle, quiz_type, difficulty, num_questions, additional_context);
+
+    // ✅ Call Groq API (replace max_output_tokens with max_tokens)
+    const completion = await groq.chat.completions.create({
+      model: "llama-3.1-8b-instant",
+      messages: [
+        { role: "system", content: "You are an educational quiz generator that outputs clean and clear text." },
+        { role: "user", content: instruction }
+      ],
+    });
+
+    const quizContent = completion.choices?.[0]?.message?.content || "";
+
+    if (!quizContent) {
+      return res.status(500).json({ success: false, message: "No quiz content returned" });
+    }
+
+    res.json({ success: true, quiz: quizContent });
+  } catch (err) {
+    console.error("Error in /api/generate-quiz:", err);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+});
 
 module.exports = router;
