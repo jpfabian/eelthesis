@@ -500,8 +500,6 @@ document.getElementById('save-schedule-btn').addEventListener('click', () => {
 // Utility functions - Local time version
 function formatDateTime(dateStr) {
     if (!dateStr) return 'N/A';
-    
-    // Split "YYYY-MM-DD HH:mm:ss"
     const [datePart, timePart] = dateStr.split(' ');
     const [year, month, day] = datePart.split('-').map(Number);
     const [hour, minute, second] = timePart.split(':').map(Number);
@@ -610,8 +608,10 @@ async function loadPronunciationQuizzes(user) {
         // ✅ Loop through quizzes
         quizzes.forEach(quiz => {
             const now = new Date();
-            const unlockTime = quiz.unlock_time ? new Date(quiz.unlock_time.replace(" ", "T")) : null;
-            const lockTime = quiz.lock_time ? new Date(quiz.lock_time.replace(" ", "T")) : null;
+
+            // Parse unlock/lock times as local
+            const unlockTime = quiz.unlock_time ? parseLocalDateTime(quiz.unlock_time) : null;
+            const lockTime = quiz.lock_time ? parseLocalDateTime(quiz.lock_time) : null;
 
             const backendLocked = Number(quiz.is_locked) === 1;
             const notYetUnlocked = unlockTime && now < unlockTime;
@@ -628,8 +628,7 @@ async function loadPronunciationQuizzes(user) {
                     </button>
                     <button 
                         class="btn btn-primary flex-1"
-                        onclick="${isLocked ? `openScheduleModal(${quiz.quiz_id})` : `lockPronunciationQuiz(${quiz.quiz_id})`}"
-                    >
+                        onclick="${isLocked ? `openScheduleModal(${quiz.quiz_id})` : `lockPronunciationQuiz(${quiz.quiz_id})`}">
                         <i data-lucide="${isLocked ? "unlock" : "lock"}" class="size-3 mr-1"></i>
                         ${isLocked ? "Unlock" : "Lock"}
                     </button>
@@ -662,15 +661,13 @@ async function loadPronunciationQuizzes(user) {
                     <button 
                         class="btn btn-primary flex-1 ${btnDisabled ? "opacity-50 cursor-not-allowed" : ""}" 
                         ${btnDisabled ? "disabled" : ""}
-                        onclick="event.stopPropagation(); ${!btnDisabled ? openAction : ""}"
-                    >
+                        onclick="event.stopPropagation(); ${!btnDisabled ? openAction : ""}">
                         <i data-lucide="${btnIcon}" class="size-3 mr-1"></i>
                         ${btnText}
                     </button>
                     <button 
                         class="btn btn-outline flex-1"
-                        onclick="event.stopPropagation(); openLeaderboardModal(${quiz.quiz_id})"
-                    >
+                        onclick="event.stopPropagation(); openLeaderboardModal(${quiz.quiz_id})">
                         <i data-lucide="bar-chart-3" class="size-3 mr-1"></i>
                         Leaderboard
                     </button>
@@ -707,8 +704,8 @@ async function loadPronunciationQuizzes(user) {
 
                     <div class="hidden mt-4 border-t pt-3 quiz-details space-y-3">
                         <div class="flex flex-col text-xs text-muted-foreground gap-1">
-                            <span>Start: ${quiz.unlock_time ? formatDateTime(quiz.unlock_time) : "Not set"}</span>
-                            <span>Deadline: ${quiz.lock_time ? formatDateTime(quiz.lock_time) : "Not set"}</span>
+                            <span>Start: ${quiz.unlock_time ? formatDateTimeLocal(quiz.unlock_time) : "Not set"}</span>
+                            <span>Deadline: ${quiz.lock_time ? formatDateTimeLocal(quiz.lock_time) : "Not set"}</span>
                         </div>
                         <div class="flex gap-2">${actionButtons}</div>
                     </div>
@@ -742,6 +739,16 @@ async function loadPronunciationQuizzes(user) {
         const container = document.getElementById("lessons-grid");
         container.innerHTML = '<p class="text-center text-red-500">Failed to load quizzes.</p>';
     }
+}
+
+// -------------------------
+// Helper to parse MySQL DATETIME as local
+function parseLocalDateTime(dateStr) {
+    if (!dateStr) return null;
+    const [datePart, timePart] = dateStr.split(' ');
+    const [year, month, day] = datePart.split('-').map(Number);
+    const [hour, minute, second] = timePart.split(':').map(Number);
+    return new Date(year, month - 1, day, hour, minute, second);
 }
 
 // ============================================
