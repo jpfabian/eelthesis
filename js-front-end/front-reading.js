@@ -925,8 +925,8 @@ function closeScheduleModal() {
 document.getElementById('save-schedule-btn').addEventListener('click', () => {
     if (!currentLessonId) return;
 
-    const unlockTime = document.getElementById('modal-unlock-time').value;
-    const lockTime = document.getElementById('modal-lock-time').value;
+    const unlockTime = document.getElementById('modal-unlock-time').value; // RAW string
+    const lockTime = document.getElementById('modal-lock-time').value;     // RAW string
     const timeLimit = parseInt(document.getElementById('modal-time-limit').value, 10);
 
     // Check inputs
@@ -940,8 +940,8 @@ document.getElementById('save-schedule-btn').addEventListener('click', () => {
         return;
     }
 
-    // ✅ Validate using local datetime string comparison
-    const nowStr = new Date().toISOString().slice(0,16);
+    // Validate past datetime using string comparison
+    const nowStr = new Date().toISOString().slice(0,16); // current local datetime
     if (unlockTime <= nowStr || lockTime <= nowStr) {
         showNotification("Unlock and lock times cannot be in the past", "warning");
         return;
@@ -954,7 +954,7 @@ document.getElementById('save-schedule-btn').addEventListener('click', () => {
             .map(opt => opt.value);
     }
 
-    // ✅ Send original datetime-local string to backend
+    // ✅ Send RAW input strings directly to backend
     fetch(`/api/reading-quizzes/${currentLessonId}/schedule`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -991,25 +991,6 @@ document.getElementById('save-schedule-btn').addEventListener('click', () => {
         showNotification("An error occurred while saving schedule.", "error");
     });
 });
-
-function toUTC(datetimeLocal) {
-    const [date, time] = datetimeLocal.split('T');
-    const [year, month, day] = date.split('-').map(Number);
-    const [hour, minute] = time.split(':').map(Number);
-    const dt = new Date(year, month-1, day, hour, minute);
-    return dt.toISOString(); // UTC
-}
-
-function toLocal(isoString) {
-    const dt = new Date(isoString);
-    const y = dt.getFullYear();
-    const m = String(dt.getMonth()+1).padStart(2,'0');
-    const d = String(dt.getDate()).padStart(2,'0');
-    const h = String(dt.getHours()).padStart(2,'0');
-    const min = String(dt.getMinutes()).padStart(2,'0');
-    return `${y}-${m}-${d}T${h}:${min}`;
-}
-
 
 const retakeSelect = document.getElementById('retake-option');
 const specificContainer = document.getElementById('specific-students-container');
