@@ -895,16 +895,42 @@ async function submitQuiz() {
 //for teacher schedule modal
 let currentLessonId = null;
 
-function openScheduleModal(lessonId) {
+function openScheduleModal(lessonId, quizData) {
     currentLessonId = lessonId;
     const modal = document.getElementById('schedule-modal');
     modal.classList.remove('hidden');
+
+    // Populate unlock/lock times from DB
+    document.getElementById('modal-unlock-time').value = dbTimeToLocal(quizData.unlock_time);
+    document.getElementById('modal-lock-time').value = dbTimeToLocal(quizData.lock_time);
 
     // Prevent selecting past datetime
     const now = new Date();
     const formattedNow = now.toISOString().slice(0,16); // YYYY-MM-DDTHH:mm
     document.getElementById('modal-unlock-time').min = formattedNow;
     document.getElementById('modal-lock-time').min = formattedNow;
+
+    // Populate other fields if needed
+    document.getElementById('modal-time-limit').value = quizData.time_limit || '';
+    document.getElementById('retake-option').value = quizData.retake_option || 'all';
+
+    if (quizData.retake_option === 'specific') {
+        const container = document.getElementById('specific-students-container');
+        container.classList.remove('hidden');
+        const select = document.getElementById('specific-students');
+        const allowed = quizData.allowed_students || [];
+        Array.from(select.options).forEach(opt => {
+            opt.selected = allowed.includes(opt.value);
+        });
+    }
+}
+
+// Converts "YYYY-MM-DD HH:mm:ss" from DB to "YYYY-MM-DDTHH:mm" for datetime-local input
+function dbTimeToLocal(datetimeStr) {
+    if (!datetimeStr) return '';
+    const [date, time] = datetimeStr.split(' ');
+    const hhmm = time.slice(0,5); // get "HH:mm"
+    return `${date}T${hhmm}`;
 }
 
 function closeScheduleModal() {
