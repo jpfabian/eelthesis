@@ -992,6 +992,25 @@ document.getElementById('save-schedule-btn').addEventListener('click', () => {
     });
 });
 
+function toUTC(datetimeLocal) {
+    const [date, time] = datetimeLocal.split('T');
+    const [year, month, day] = date.split('-').map(Number);
+    const [hour, minute] = time.split(':').map(Number);
+    const dt = new Date(year, month-1, day, hour, minute);
+    return dt.toISOString(); // UTC
+}
+
+function toLocal(isoString) {
+    const dt = new Date(isoString);
+    const y = dt.getFullYear();
+    const m = String(dt.getMonth()+1).padStart(2,'0');
+    const d = String(dt.getDate()).padStart(2,'0');
+    const h = String(dt.getHours()).padStart(2,'0');
+    const min = String(dt.getMinutes()).padStart(2,'0');
+    return `${y}-${m}-${d}T${h}:${min}`;
+}
+
+
 const retakeSelect = document.getElementById('retake-option');
 const specificContainer = document.getElementById('specific-students-container');
 
