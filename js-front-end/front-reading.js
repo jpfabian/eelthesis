@@ -1233,37 +1233,25 @@ async function loadLessonsAndTopics() {
 }
 
 
-// =================== HELPER FUNCTIONS ===================
-
-// Parse MySQL DATETIME as local Date object (no timezone shift)
-function parseDbDateTimeAsLocal(dbDateTime) {
-    if (!dbDateTime) return null;
-    const [date, time] = dbDateTime.split(' '); // "YYYY-MM-DD" & "HH:mm:ss"
-    const [year, month, day] = date.split('-').map(Number);
-    const [hour, minute] = time.split(':').map(Number);
-    return new Date(year, month - 1, day, hour, minute); // treated as local
-}
-
-// Format MySQL DATETIME for display (YYYY-MM-DD HH:mm)
-function formatDateTimeLocal(dbDateTime) {
-    if (!dbDateTime) return 'N/A';
-    const [date, time] = dbDateTime.split(' ');
-    return `${date} ${time.slice(0,5)}`; // show only HH:mm
-}
-
-// =================== LOAD QUIZZES ===================
 async function loadQuizzes() {
     try {
         const user = getCurrentUser();
         const now = new Date();
 
+        // ✅ Get selected class and subject_id
         const selectedClass = JSON.parse(localStorage.getItem("eel_selected_class"));
         const subjectId = selectedClass?.subject_id;
-        if (!subjectId) return;
 
+        if (!subjectId) {
+            console.warn("⚠️ No subject_id found in selected class.");
+            return;
+        }
+
+        // ✅ Fetch quizzes
         const res = await fetch(`/api/reading-quizzes?subject_id=${subjectId}`);
         const quizzes = await res.json();
 
+        // ✅ Fetch student attempts (if not teacher)
         let studentAttempts = [];
         if (user.role !== 'teacher') {
             const attemptsRes = await fetch(`/api/reading-quiz-attempts?student_id=${user.user_id}`);
@@ -1275,6 +1263,7 @@ async function loadQuizzes() {
         builtInContainer.innerHTML = '';
         createdContainer.innerHTML = '';
 
+        // ✅ Difficulty containers
         const beginnerContainer = document.createElement('div');
         const intermediateContainer = document.createElement('div');
         const advancedContainer = document.createElement('div');
@@ -1283,11 +1272,14 @@ async function loadQuizzes() {
         intermediateContainer.innerHTML = `<h2 class="card-title text-center px-2 py-1 text-lg rounded-lg bg-secondary/10 text-secondary">Intermediate</h2>`;
         advancedContainer.innerHTML = `<h2 class="card-title text-center px-2 py-1 text-lg rounded-lg bg-secondary/10 text-secondary">Advanced</h2>`;
 
-        let beginnerCount = 1, intermediateCount = 1, advancedCount = 1;
+        // ✅ Counters for numbering per difficulty
+        let beginnerCount = 1;
+        let intermediateCount = 1;
+        let advancedCount = 1;
 
         quizzes.forEach(quiz => {
-            const start = quiz.unlock_time ? parseDbDateTimeAsLocal(quiz.unlock_time) : null;
-            const end = quiz.lock_time ? parseDbDateTimeAsLocal(quiz.lock_time) : null;
+            const start = quiz.unlock_time ? new Date(quiz.unlock_time) : null;
+            const end = quiz.lock_time ? new Date(quiz.lock_time) : null;
 
             let isLocked = true;
             if (start && end) {
@@ -1305,6 +1297,7 @@ async function loadQuizzes() {
 
             let actionButtons = '';
 
+            // ✅ Teacher buttons
             if (user.role === 'teacher') {
                 actionButtons = `
                 <button class="btn btn-outline flex-1" onclick="event.stopPropagation(); openLeaderboardModal(${quiz.quiz_id})">
@@ -1318,9 +1311,14 @@ async function loadQuizzes() {
                     <i data-lucide="${isLocked ? 'unlock' : 'lock'}" class="size-3 mr-1"></i>
                     ${isLocked ? 'Unlocked' : 'Locked'}
                 </button>`;
-            } else {
+            } 
+            // ✅ Student buttons
+            else {
                 const studentAttempt = studentAttempts.find(a => a.quiz_id === quiz.quiz_id);
-                let btnText = "Start Quiz", btnIcon = "play", btnDisabled = isLocked;
+
+                let btnText = "Start Quiz";
+                let btnIcon = "play";
+                let btnDisabled = isLocked;
 
                 if (studentAttempt) {
                     if (studentAttempt.status === "completed") {
@@ -1350,11 +1348,13 @@ async function loadQuizzes() {
                 </button>`;
             }
 
+            // ✅ Determine the number for this quiz
             let quizNumber;
             if (quiz.difficulty === 'beginner') quizNumber = beginnerCount++;
             else if (quiz.difficulty === 'intermediate') quizNumber = intermediateCount++;
             else if (quiz.difficulty === 'advanced') quizNumber = advancedCount++;
 
+            // ✅ Card HTML with number
             card.innerHTML = `
                 <div class="p-4 rounded-lg border border-border cursor-pointer">
                     <div class="flex items-center justify-between">
@@ -1376,8 +1376,8 @@ async function loadQuizzes() {
 
                     <div class="card-details hidden mt-4 border-t pt-3 quiz-details space-y-3">
                         <div class="flex flex-col text-xs text-muted-foreground gap-1">
-                            <span>Start: ${quiz.unlock_time ? formatDateTimeLocal(quiz.unlock_time) : 'N/A'}</span>
-                            <span>Deadline: ${quiz.lock_time ? formatDateTimeLocal(quiz.lock_time) : 'N/A'}</span>
+                            <span>Start: ${quiz.unlock_time ? formatDateTime(quiz.unlock_time) : 'N/A'}</span>
+                            <span>Deadline: ${quiz.lock_time ? formatDateTime(quiz.lock_time) : 'N/A'}</span>
                         </div>
                         <div class="flex gap-2">
                             ${actionButtons}
@@ -1388,11 +1388,13 @@ async function loadQuizzes() {
 
             card.addEventListener('click', () => toggleQuizCard(card));
 
+            // ✅ Append card to correct container
             if (quiz.difficulty === 'beginner') beginnerContainer.appendChild(card);
             else if (quiz.difficulty === 'intermediate') intermediateContainer.appendChild(card);
             else if (quiz.difficulty === 'advanced') advancedContainer.appendChild(card);
         });
 
+        // ✅ Add containers to page
         builtInContainer.appendChild(beginnerContainer);
         builtInContainer.appendChild(intermediateContainer);
         builtInContainer.appendChild(advancedContainer);
