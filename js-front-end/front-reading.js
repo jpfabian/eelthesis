@@ -293,7 +293,7 @@ async function saveLesson() {
     }
 
     try {
-        const res = await fetch('/api/reading-quizzes', {
+        const res = await fetch('http://localhost:3000/api/reading-quizzes', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
@@ -356,7 +356,7 @@ async function openQuizModal(lessonId) {
 
     try {
         // 1️⃣ Fetch the quiz
-        const resQuiz = await fetch(`/api/reading-quizzes/${lessonId}`);
+        const resQuiz = await fetch(`http://localhost:3000/api/reading-quizzes/${lessonId}`);
         const quiz = await resQuiz.json();
 
         const now = new Date();
@@ -377,7 +377,7 @@ async function openQuizModal(lessonId) {
         const user = JSON.parse(localStorage.getItem('eel_user'));
 
         // 2️⃣ Check for previous attempts
-        const attemptRes = await fetch(`/api/reading-quiz-attempts?quiz_id=${lessonId}&student_id=${user.user_id}`);
+        const attemptRes = await fetch(`http://localhost:3000/api/reading-quiz-attempts?quiz_id=${lessonId}&student_id=${user.user_id}`);
         const attempts = await attemptRes.json();
         const existingAttempt = attempts.find(a => Number(a.quiz_id) === Number(lessonId));
 
@@ -387,7 +387,7 @@ async function openQuizModal(lessonId) {
             readonly = existingAttempt.status === 'completed';
         } else {
             // 🆕 Create new attempt for this quiz only
-            const newAttemptRes = await fetch("/api/reading-quiz-attempts", {
+            const newAttemptRes = await fetch("http://localhost:3000/api/reading-quiz-attempts", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ student_id: user.user_id, quiz_id: lessonId })
@@ -426,7 +426,7 @@ async function openQuizModal(lessonId) {
 
         // 4️⃣ Fetch student's answers if readonly
         if (readonly) {
-            const resAnswers = await fetch(`/api/reading-quiz-attempts/${attemptId}/answers`);
+            const resAnswers = await fetch(`http://localhost:3000/api/reading-quiz-attempts/${attemptId}/answers`);
             const attemptAnswers = await resAnswers.json();
 
             quiz.questions.forEach(q => {
@@ -847,7 +847,7 @@ async function submitQuiz() {
 
     try {
         // 🧩 Save answers AND time taken
-        const saveRes = await fetch(`/api/reading-quiz-answers`, {
+        const saveRes = await fetch(`http://localhost:3000/api/reading-quiz-answers`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ attempt_id: attemptId, answers, timeTakenSeconds })
@@ -857,7 +857,7 @@ async function submitQuiz() {
         if (!saveData.success) return showNotification("Failed to save answers.", "error");
 
         // 🧾 Submit attempt
-        const submitRes = await fetch(`/api/reading-quiz-attempts/${attemptId}/submit`, { 
+        const submitRes = await fetch(`http://localhost:3000/api/reading-quiz-attempts/${attemptId}/submit`, { 
             method: "PATCH" 
         });
         const submitData = await submitRes.json();
@@ -921,6 +921,7 @@ function closeScheduleModal() {
     document.getElementById('specific-students-container').classList.add('hidden');
 }
 
+
 document.getElementById('save-schedule-btn').addEventListener('click', () => {
     if (!currentLessonId) return;
 
@@ -955,7 +956,7 @@ document.getElementById('save-schedule-btn').addEventListener('click', () => {
             .map(opt => opt.value);
     }
 
-    fetch(`/api/reading-quizzes/${currentLessonId}/schedule`, {
+    fetch(`http://localhost:3000/api/reading-quizzes/${currentLessonId}/schedule`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -1035,7 +1036,7 @@ async function generateAIQuiz() {
   btn.innerHTML = "⏳ Generating...";
 
   try {
-    const res = await fetch("/api/generate-quiz", {
+    const res = await fetch("http://localhost:3000/api/generate-quiz", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -1172,7 +1173,7 @@ async function loadLessonsAndTopics() {
 
     topicSelect.innerHTML = '<option>Loading...</option>';
 
-    const res = await fetch(`/api/lessons-with-topics?class_id=${classId}`);
+    const res = await fetch(`http://localhost:3000/api/lessons-with-topics?class_id=${classId}`);
     const data = await res.json();
 
     if (!Array.isArray(data)) {
@@ -1224,13 +1225,13 @@ async function loadQuizzes() {
         }
 
         // ✅ Fetch quizzes
-        const res = await fetch(`/api/reading-quizzes?subject_id=${subjectId}`);
+        const res = await fetch(`http://localhost:3000/api/reading-quizzes?subject_id=${subjectId}`);
         const quizzes = await res.json();
 
         // ✅ Fetch student attempts (if not teacher)
         let studentAttempts = [];
         if (user.role !== 'teacher') {
-            const attemptsRes = await fetch(`/api/reading-quiz-attempts?student_id=${user.user_id}`);
+            const attemptsRes = await fetch(`http://localhost:3000/api/reading-quiz-attempts?student_id=${user.user_id}`);
             studentAttempts = await attemptsRes.json();
         }
 
@@ -1390,7 +1391,7 @@ function handleLockUnlock(quizId, isLocked) {
         openScheduleModal(quizId);
     } else {
         // 🔒 Lock immediately
-        fetch(`/api/lock-quiz/${quizId}`, { method: "PUT" })
+        fetch(`http://localhost:3000/api/lock-quiz/${quizId}`, { method: "PUT" })
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
@@ -1436,7 +1437,7 @@ async function loadLeaderboard(quizId = null) {
     try {
         if (quizId !== null) currentQuizId = quizId;
 
-        let url = "/api/reading-quiz-leaderboard";
+        let url = "http://localhost:3000/api/reading-quiz-leaderboard";
         if (currentQuizId) url += `?quiz_id=${currentQuizId}`;
 
         const res = await fetch(url);
@@ -1620,37 +1621,26 @@ function toggleQuizCard(card) {
     });
 }
 
-// Utility functions - Local time version
-function formatDateTime(dateStr) {
-    if (!dateStr) return 'N/A';
-    
-    // Split "YYYY-MM-DD HH:mm:ss"
-    const [datePart, timePart] = dateStr.split(' ');
-    const [year, month, day] = datePart.split('-').map(Number);
-    const [hour, minute, second] = timePart.split(':').map(Number);
-
-    // Month is 0-based in JS
-    const localDate = new Date(year, month - 1, day, hour, minute, second);
-    
-    return localDate.toLocaleString([], { 
-        year: 'numeric', 
-        month: 'short', 
-        day: 'numeric', 
-        hour: '2-digit', 
-        minute: '2-digit' 
+// Utility functions
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-PH', { // 'en-PH' para sa English, Philippine format
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        timeZone: 'Asia/Manila'
     });
 }
 
-function formatDate(dateStr) {
-    if (!dateStr) return 'N/A';
-
-    const [datePart] = dateStr.split(' '); // ignore time
-    const [year, month, day] = datePart.split('-').map(Number);
-    const localDate = new Date(year, month - 1, day);
-
-    return localDate.toLocaleDateString('en-US', { 
-        month: 'short', 
-        day: 'numeric', 
-        year: 'numeric' 
+function formatDateTime(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleString('en-PH', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+        timeZone: 'Asia/Manila'
     });
 }

@@ -49,7 +49,7 @@ async function loadLessonsAndTopics() {
     const classId = localStorage.getItem("eel_selected_class_id");
     if (!classId) return console.error("No class_id found in localStorage");
 
-    const res = await fetch(`/api/lessons-with-topics?class_id=${classId}`);
+    const res = await fetch(`http://localhost:3000/api/lessons-with-topics?class_id=${classId}`);
     const data = await res.json();
 
     if (!Array.isArray(data)) {
@@ -205,7 +205,7 @@ function setupExamGenerator() {
     };
 
     try {
-      const res = await fetch("/api/generate-exam", {
+      const res = await fetch("http://localhost:3000/api/generate-exam", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(bodyData),
@@ -323,7 +323,7 @@ function showExamPreview(examText, subject, selectedTopics, questionTypes) {
     const updatedContent = content.textContent.trim();
 
     try {
-      const res = await fetch("/api/save-exam", {
+      const res = await fetch("http://localhost:3000/api/save-exam", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -374,7 +374,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 async function loadExams() {
   try {
-    const res = await fetch("/api/get-exams");
+    const res = await fetch("http://localhost:3000/api/get-exams");
     const data = await res.json();
     const exams = data.exams;
 
@@ -443,7 +443,7 @@ async function loadExams() {
 
 // ✅ Export Excel function (no modules, fully browser compatible)
 async function exportExamExcel(id) {
-  const res = await fetch(`/api/get-exam-content/${id}`);
+  const res = await fetch(`http://localhost:3000/api/get-exam-content/${id}`);
   const data = await res.json();
   if (!data.success) return alert("Failed to fetch exam content.");
 
@@ -456,7 +456,7 @@ async function exportExamExcel(id) {
 
 // ✅ Move exam to cache and show proper message
 function moveExamToCache(id) {
-  fetch(`/api/move-exam-to-cache/${id}`, { method: "POST" })
+  fetch(`http://localhost:3000/api/move-exam-to-cache/${id}`, { method: "POST" })
     .then(async res => {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();

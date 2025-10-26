@@ -355,7 +355,7 @@ async function savePronunciationQuiz() {
     }
 
     try {
-        const res = await fetch('/api/pronunciation-quizzes', {
+        const res = await fetch('http://localhost:3000/api/pronunciation-quizzes', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ title, difficulty, passage, questions })
@@ -401,7 +401,7 @@ function openScheduleModal(quizId) {
         const retakeOption = document.getElementById('retake-option').value;
 
         try {
-            const res = await fetch(`/api/pronunciation-quizzes/${quizId}/schedule`, {
+            const res = await fetch(`http://localhost:3000/api/pronunciation-quizzes/${quizId}/schedule`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -470,7 +470,7 @@ document.getElementById('save-schedule-btn').addEventListener('click', () => {
             .map(opt => opt.value);
         }
 
-    fetch(`/api/pronunciation-quizzes/${quizId}/schedule`, {
+    fetch(`http://localhost:3000/api/pronunciation-quizzes/${quizId}/schedule`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -497,43 +497,31 @@ document.getElementById('save-schedule-btn').addEventListener('click', () => {
     });
 });
 
-// Utility functions - Local time version
-function formatDateTime(dateStr) {
-    if (!dateStr) return 'N/A';
-    const [datePart, timePart] = dateStr.split(' ');
-    const [year, month, day] = datePart.split('-').map(Number);
-    const [hour, minute, second] = timePart.split(':').map(Number);
-
-    // Month is 0-based in JS
-    const localDate = new Date(year, month - 1, day, hour, minute, second);
-    
-    return localDate.toLocaleString([], { 
-        year: 'numeric', 
-        month: 'short', 
-        day: 'numeric', 
-        hour: '2-digit', 
-        minute: '2-digit' 
+// Helper functions
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
     });
 }
 
-function formatDate(dateStr) {
-    if (!dateStr) return 'N/A';
-
-    const [datePart] = dateStr.split(' '); // ignore time
-    const [year, month, day] = datePart.split('-').map(Number);
-    const localDate = new Date(year, month - 1, day);
-
-    return localDate.toLocaleDateString('en-US', { 
-        month: 'short', 
-        day: 'numeric', 
-        year: 'numeric' 
+function formatDateTime(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
     });
 }
-
 
 async function lockPronunciationQuiz(quizId) {
     try {
-        const res = await fetch(`/api/lock-pronunciation-quiz/${quizId}`, {
+        const res = await fetch(`http://localhost:3000/api/lock-pronunciation-quiz/${quizId}`, {
             method: "PUT",
         });
         const data = await res.json();
@@ -572,14 +560,14 @@ async function loadPronunciationQuizzes(user) {
         }
 
         // ✅ Fetch pronunciation quizzes
-        const res = await fetch(`/api/pronunciation-quizzes?subject_id=${subjectId}`);
+        const res = await fetch(`http://localhost:3000/api/pronunciation-quizzes?subject_id=${subjectId}`);
         const quizzes = await res.json();
 
         // ✅ Fetch student attempts (if user is a student)
         let studentAttempts = [];
         if (user.role === "student") {
             try {
-                const attemptRes = await fetch(`/api/pronunciation-attempts?student_id=${user.user_id}`);
+                const attemptRes = await fetch(`http://localhost:3000/api/pronunciation-attempts?student_id=${user.user_id}`);
                 const attemptData = await attemptRes.json();
                 studentAttempts = attemptData.success ? attemptData.attempts : [];
             } catch (attemptErr) {
@@ -608,10 +596,8 @@ async function loadPronunciationQuizzes(user) {
         // ✅ Loop through quizzes
         quizzes.forEach(quiz => {
             const now = new Date();
-
-            // Parse unlock/lock times as local
-            const unlockTime = quiz.unlock_time ? parseLocalDateTime(quiz.unlock_time) : null;
-            const lockTime = quiz.lock_time ? parseLocalDateTime(quiz.lock_time) : null;
+            const unlockTime = quiz.unlock_time ? new Date(quiz.unlock_time.replace(" ", "T")) : null;
+            const lockTime = quiz.lock_time ? new Date(quiz.lock_time.replace(" ", "T")) : null;
 
             const backendLocked = Number(quiz.is_locked) === 1;
             const notYetUnlocked = unlockTime && now < unlockTime;
@@ -628,7 +614,8 @@ async function loadPronunciationQuizzes(user) {
                     </button>
                     <button 
                         class="btn btn-primary flex-1"
-                        onclick="${isLocked ? `openScheduleModal(${quiz.quiz_id})` : `lockPronunciationQuiz(${quiz.quiz_id})`}">
+                        onclick="${isLocked ? `openScheduleModal(${quiz.quiz_id})` : `lockPronunciationQuiz(${quiz.quiz_id})`}"
+                    >
                         <i data-lucide="${isLocked ? "unlock" : "lock"}" class="size-3 mr-1"></i>
                         ${isLocked ? "Unlock" : "Lock"}
                     </button>
@@ -661,13 +648,15 @@ async function loadPronunciationQuizzes(user) {
                     <button 
                         class="btn btn-primary flex-1 ${btnDisabled ? "opacity-50 cursor-not-allowed" : ""}" 
                         ${btnDisabled ? "disabled" : ""}
-                        onclick="event.stopPropagation(); ${!btnDisabled ? openAction : ""}">
+                        onclick="event.stopPropagation(); ${!btnDisabled ? openAction : ""}"
+                    >
                         <i data-lucide="${btnIcon}" class="size-3 mr-1"></i>
                         ${btnText}
                     </button>
                     <button 
                         class="btn btn-outline flex-1"
-                        onclick="event.stopPropagation(); openLeaderboardModal(${quiz.quiz_id})">
+                        onclick="event.stopPropagation(); openLeaderboardModal(${quiz.quiz_id})"
+                    >
                         <i data-lucide="bar-chart-3" class="size-3 mr-1"></i>
                         Leaderboard
                     </button>
@@ -704,8 +693,8 @@ async function loadPronunciationQuizzes(user) {
 
                     <div class="hidden mt-4 border-t pt-3 quiz-details space-y-3">
                         <div class="flex flex-col text-xs text-muted-foreground gap-1">
-                            <span>Start: ${quiz.unlock_time ? formatDateTimeLocal(quiz.unlock_time) : "Not set"}</span>
-                            <span>Deadline: ${quiz.lock_time ? formatDateTimeLocal(quiz.lock_time) : "Not set"}</span>
+                            <span>Start: ${quiz.unlock_time ? formatDateTime(quiz.unlock_time) : "Not set"}</span>
+                            <span>Deadline: ${quiz.lock_time ? formatDateTime(quiz.lock_time) : "Not set"}</span>
                         </div>
                         <div class="flex gap-2">${actionButtons}</div>
                     </div>
@@ -741,22 +730,12 @@ async function loadPronunciationQuizzes(user) {
     }
 }
 
-// -------------------------
-// Helper to parse MySQL DATETIME as local
-function parseLocalDateTime(dateStr) {
-    if (!dateStr) return null;
-    const [datePart, timePart] = dateStr.split(' ');
-    const [year, month, day] = datePart.split('-').map(Number);
-    const [hour, minute, second] = timePart.split(':').map(Number);
-    return new Date(year, month - 1, day, hour, minute, second);
-}
-
 // ============================================
 // TAKE QUIZ MODAL
 // ============================================
 async function openPronunciationModal(quizId) {
     try {
-        const res = await fetch(`/api/pronunciation-quizzes/${quizId}`);
+        const res = await fetch(`http://localhost:3000/api/pronunciation-quizzes/${quizId}`);
         if (!res.ok) return showNotification("Failed to fetch quiz", "error");
         const quiz = await res.json();
 
@@ -1047,7 +1026,7 @@ async function handleRecordingComplete(blob) {
         formData.append("audio", blob, "speech.webm");
         formData.append("expectedText", expectedText);
 
-        const res = await fetch("/api/pronunciation-check", {
+        const res = await fetch("http://localhost:3000/api/pronunciation-check", {
             method: "POST",
             body: formData
         });
@@ -1069,7 +1048,7 @@ async function checkPronunciation(audioBlob, expectedText) {
     formData.append("expectedText", expectedText);
 
     try {
-        const res = await fetch("/api/pronunciation-check", {
+        const res = await fetch("http://localhost:3000/api/pronunciation-check", {
             method: "POST",
             body: formData
         });
@@ -1175,7 +1154,7 @@ async function submitPronunciationQuiz() {
   formData.append('quiz_id', pronunciationQuizData.quiz_id);
 
   try {
-    const res = await fetch('/api/pronunciation-submit', {
+    const res = await fetch('http://localhost:3000/api/pronunciation-submit', {
       method: 'POST',
       body: formData
     });
@@ -1256,7 +1235,7 @@ async function openPronunciationReview(quizId, studentId) {
   }
 
   try {
-    const res = await fetch(`/api/pronunciation-review?student_id=${studentId}&quiz_id=${quizId}`);
+    const res = await fetch(`http://localhost:3000/api/pronunciation-review?student_id=${studentId}&quiz_id=${quizId}`);
     const data = await res.json();
 
     if (!data.success || !data.answers || data.answers.length === 0) {
@@ -1351,7 +1330,7 @@ async function openLeaderboardModal(quizId, classId) {
     const quizName = document.getElementById("quiz-name");
 
     try {
-        const res = await fetch(`/api/leaderboard?quiz_id=${quizId}${classId ? `&class_id=${classId}` : ''}`);
+        const res = await fetch(`http://localhost:3000/api/leaderboard?quiz_id=${quizId}${classId ? `&class_id=${classId}` : ''}`);
         const data = await res.json();
         if (!data.success) throw new Error(data.message || "Failed to load leaderboard");
 
@@ -1427,6 +1406,29 @@ async function openLeaderboardModal(quizId, classId) {
 // ============================================
 // UTILITY FUNCTIONS
 // ============================================
+
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-PH', { // 'en-PH' para sa English, Philippine format
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        timeZone: 'Asia/Manila'
+    });
+}
+
+function formatDateTime(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleString('en-PH', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+        timeZone: 'Asia/Manila'
+    });
+}
 
 async function generateWithAI() {
     try {
