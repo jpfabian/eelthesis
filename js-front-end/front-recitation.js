@@ -132,7 +132,7 @@ document.addEventListener('DOMContentLoaded', () => {
 async function loadClassStudents(classId) {
     try {
         console.log("Loading students for class:", classId);
-        const res = await fetch(`http://localhost:3000/api/class/${classId}/students`);
+        const res = await fetch(`/api/class/${classId}/students`);
         const data = await res.json();
 
         // data itself is an array already ✅

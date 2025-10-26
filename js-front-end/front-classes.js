@@ -15,7 +15,7 @@ async function loadClasses() {
     }
 
     try {
-        const res = await fetch(`http://localhost:3000${endpoint}`);
+        const res = await fetch(`${endpoint}`);
         const classes = await res.json();
 
         const container = document.getElementById("classes-container");
@@ -137,7 +137,7 @@ async function joinClass() {
     if (!classCode) return showNotification("Please enter a class code.");
 
     try {
-        const res = await fetch("http://localhost:3000/api/join-class", {
+        const res = await fetch("/api/join-class", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ student_id: user.user_id, class_code: classCode })
@@ -190,7 +190,7 @@ async function saveClass() {
     }
 
     try {
-        const response = await fetch("http://localhost:3000/api/classes", {
+        const response = await fetch("/api/classes", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -220,7 +220,7 @@ async function loadTeacherClasses() {
     if (!user || user.role !== "teacher") return;
 
     try {
-        const response = await fetch(`http://localhost:3000/api/classes/${user.user_id}`);
+        const response = await fetch(`/api/classes/${user.user_id}`);
         const classes = await response.json();
 
         const grid = document.getElementById('teacher-classes-grid');
@@ -271,7 +271,7 @@ async function loadStudentClasses() {
     if (!user || user.role !== "student") return;
 
     try {
-        const response = await fetch(`http://localhost:3000/api/student-classes/${user.user_id}`);
+        const response = await fetch(`/api/student-classes/${user.user_id}`);
         const classes = await response.json();
 
         const grid = document.getElementById('student-classes-grid');
