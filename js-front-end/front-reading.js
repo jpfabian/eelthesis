@@ -27,14 +27,13 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         // Set tab text based on role
         tabCreated.textContent = currentUser.role === 'teacher' ? 'Created by me' : 'Created by teacher';
-        teacherControls?.classList.add('hidden'); // hide by default
-
+        
         // Show main app
         document.getElementById('loading-screen').classList.add('hidden');
         document.getElementById('main-app').classList.remove('hidden');
 
-        // Default tab: always Built-in lessons
-        await showCourseTab();
+        // Default tab: always show Built-in lessons
+        showCourseTab();
 
         // Back button
         document.getElementById("back-class-btn")?.addEventListener("click", () => {
@@ -46,10 +45,8 @@ document.addEventListener('DOMContentLoaded', async function() {
         tabCreated?.addEventListener('click', () => showCreatedTab());
 
         async function showCourseTab() {
-            // Show built-in lessons
-            document.getElementById('created-lessons-grid').classList.remove('hidden');
-            // Hide created lessons & teacher controls
-            document.getElementById('lessons-grid').classList.add('hidden');
+            document.getElementById('lessons-grid').classList.remove('hidden');
+            document.getElementById('created-lessons-grid').classList.add('hidden');
             teacherControls?.classList.add('hidden');
 
             tabCourse.classList.add('btn-primary');
@@ -57,32 +54,30 @@ document.addEventListener('DOMContentLoaded', async function() {
             tabCreated.classList.remove('btn-primary');
             tabCreated.classList.add('btn-outline');
 
-            // Load quizzes for Built-in
-            await loadQuizzes(currentUser, 'teacher'); // built-in teacher quizzes
+            await loadQuizzes(currentUser);
         }
 
         async function showCreatedTab() {
-            // Show created lessons
-            document.getElementById('created-lessons-grid').classList.add('hidden');
-            // Hide built-in lessons
-            document.getElementById('lessons-grid').classList.remove('hidden');
+            document.getElementById('created-lessons-grid').classList.remove('hidden');
+            document.getElementById('lessons-grid').classList.add('hidden');
 
             if (currentUser.role === 'teacher') {
-                teacherControls?.classList.remove('hidden'); // teacher can see create buttons
-                await loadQuizzes(currentUser, 'me'); // teacher sees their own quizzes
+                teacherControls?.classList.remove('hidden');
             } else {
-                teacherControls?.classList.add('hidden'); // student sees nothing
-                document.getElementById('created-lessons-grid').innerHTML = ''; // student sees empty
+                teacherControls?.classList.add('hidden');
             }
 
             tabCreated.classList.add('btn-primary');
             tabCreated.classList.remove('btn-outline');
             tabCourse.classList.remove('btn-primary');
             tabCourse.classList.add('btn-outline');
+            
+            await loadQuizzesTeacher(currentUser);
         }
 
     } catch (error) {
         console.error('Error initializing page:', error);
+        alert('Please log in first');
         window.location.href = 'login.html';
     }
 });
@@ -246,6 +241,12 @@ function getSelectedSubjectId() {
 }
 
 async function saveLesson() {
+    const user = getCurrentUser();
+    if (!user || user.role !== 'teacher') {
+        showNotification('You are not authorized', 'error');
+        return;
+    }
+
     const title = document.getElementById('lesson-title').value;
     const difficulty = document.getElementById('lesson-difficulty').value;
     const passage = document.getElementById('lesson-passage').value;
@@ -256,36 +257,35 @@ async function saveLesson() {
     }
 
     const questions = Array.from(document.querySelectorAll('.question-item')).map(item => {
-    const questionText = item.querySelector('.question-text')?.value || '';
-    let question_type = 'mcq'; // default to beginner MCQ
+        const questionText = item.querySelector('.question-text')?.value || '';
+        let question_type = 'mcq'; // default
 
-    const optionsElements = item.querySelectorAll('.option');
-    const options = Array.from(optionsElements).map(input => input.value);
-    const correctAnswer = parseInt(item.querySelector('.correct-answer')?.value);
+        const optionsElements = item.querySelectorAll('.option');
+        const options = Array.from(optionsElements).map(input => input.value);
+        const correctAnswer = parseInt(item.querySelector('.correct-answer')?.value);
 
-    const difficulty = document.getElementById('lesson-difficulty').value;
-    if (difficulty === 'beginner') question_type = 'mcq';
-    else if (difficulty === 'intermediate') question_type = 'fill_blank';
-    else if (difficulty === 'advanced') question_type = 'essay';
+        if (difficulty === 'beginner') question_type = 'mcq';
+        else if (difficulty === 'intermediate') question_type = 'fill_blank';
+        else if (difficulty === 'advanced') question_type = 'essay';
 
-    let questionData = { question_text: questionText, question_type };
+        let questionData = { question_text: questionText, question_type };
 
-    if (question_type === 'mcq') {
-        questionData.options = options.map((text, i) => ({
-            option_text: text,
-            is_correct: i === correctAnswer
-        }));
-    } else if (question_type === 'fill_blank') {
-        const blanks = Array.from(item.querySelectorAll('#answer-keys input')).map((input, index) => ({
-            blank_number: index + 1,
-            answer_text: input.value
-        }));
-        questionData.blanks = blanks;
-    }
-    // essay: no extra fields
+        if (question_type === 'mcq') {
+            questionData.options = options.map((text, i) => ({
+                option_text: text,
+                is_correct: i === correctAnswer
+            }));
+        } else if (question_type === 'fill_blank') {
+            const blanks = Array.from(item.querySelectorAll('#answer-keys input')).map((input, index) => ({
+                blank_number: index + 1,
+                answer_text: input.value
+            }));
+            questionData.blanks = blanks;
+        }
+        // essay: no extra fields
 
-    return questionData;
-});
+        return questionData;
+    });
 
     if (questions.length === 0) {
         showNotification('Please add at least one question', 'warning');
@@ -293,14 +293,15 @@ async function saveLesson() {
     }
 
     try {
-        const res = await fetch('/api/reading-quizzes', {
+        const res = await fetch('/api/teacher/reading-quizzes', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
                 title, 
                 difficulty, 
                 passage, 
-                subject_id: getSelectedSubjectId(), // ✅ include subject_id
+                subject_id: getSelectedSubjectId(), 
+                user_id: user.user_id, // ✅ include user_id here
                 questions 
             })
         });
@@ -1226,9 +1227,10 @@ async function loadLessonsAndTopics() {
   }
 }
 
-async function loadQuizzes() {
+async function loadQuizzes(user = getCurrentUser()) {
     try {
-        const user = getCurrentUser();
+        if (!user) return;
+
         const now = new Date();
 
         // ✅ Get selected class and subject_id
@@ -1240,23 +1242,22 @@ async function loadQuizzes() {
             return;
         }
 
-        // ✅ Fetch quizzes
+        // ✅ Fetch quizzes for the selected subject
         const res = await fetch(`/api/reading-quizzes?subject_id=${subjectId}`);
+        if (!res.ok) throw new Error("Failed to fetch quizzes");
         const quizzes = await res.json();
 
-        // ✅ Fetch student attempts (if not teacher)
+        // ✅ Fetch student attempts if user is student
         let studentAttempts = [];
         if (user.role !== 'teacher') {
             const attemptsRes = await fetch(`/api/reading-quiz-attempts?student_id=${user.user_id}`);
             studentAttempts = await attemptsRes.json();
         }
 
-        const createdContainer = document.getElementById('lessons-grid');
-        const builtInContainer = document.getElementById('created-lessons-grid');
-        builtInContainer.innerHTML = '';
-        createdContainer.innerHTML = '';
+        const lessonsContainer = document.getElementById('lessons-grid');
+        lessonsContainer.innerHTML = ''; // clear previous content
 
-        // ✅ Difficulty containers
+        // ✅ Create difficulty containers
         const beginnerContainer = document.createElement('div');
         const intermediateContainer = document.createElement('div');
         const advancedContainer = document.createElement('div');
@@ -1265,19 +1266,13 @@ async function loadQuizzes() {
         intermediateContainer.innerHTML = `<h2 class="card-title text-center px-2 py-1 text-lg rounded-lg bg-secondary/10 text-secondary">Intermediate</h2>`;
         advancedContainer.innerHTML = `<h2 class="card-title text-center px-2 py-1 text-lg rounded-lg bg-secondary/10 text-secondary">Advanced</h2>`;
 
-        // ✅ Counters for numbering per difficulty
-        let beginnerCount = 1;
-        let intermediateCount = 1;
-        let advancedCount = 1;
+        // ✅ Counters for numbering
+        let beginnerCount = 1, intermediateCount = 1, advancedCount = 1;
 
         quizzes.forEach(quiz => {
             const start = quiz.unlock_time ? new Date(quiz.unlock_time) : null;
             const end = quiz.lock_time ? new Date(quiz.lock_time) : null;
-
-            let isLocked = true;
-            if (start && end) {
-                isLocked = !(now >= start && now <= end);
-            }
+            let isLocked = start && end ? !(now >= start && now <= end) : false;
 
             const card = document.createElement('div');
             card.className = 'card group cursor-pointer hover:shadow-lg transition-all duration-300 hover:-translate-y-1';
@@ -1290,64 +1285,159 @@ async function loadQuizzes() {
 
             let actionButtons = '';
 
-            // ✅ Teacher buttons
             if (user.role === 'teacher') {
+                // ✅ Teacher buttons
                 actionButtons = `
-                <button class="btn btn-outline flex-1" onclick="event.stopPropagation(); openLeaderboardModal(${quiz.quiz_id})">
-                    <i data-lucide="bar-chart-3" class="size-3 mr-1"></i>Leaderboard
-                </button>
-                <button 
-                    id="lock-btn-${quiz.quiz_id}"
-                    class="btn btn-primary flex-1"
-                    onclick="handleLockUnlock(${quiz.quiz_id}, ${isLocked}); event.stopPropagation()"
-                >
-                    <i data-lucide="${isLocked ? 'unlock' : 'lock'}" class="size-3 mr-1"></i>
-                    ${isLocked ? 'Unlocked' : 'Locked'}
-                </button>`;
-            } 
-            // ✅ Student buttons
-            else {
-                const studentAttempt = studentAttempts.find(a => a.quiz_id === quiz.quiz_id);
+                    <button class="btn btn-outline flex-1" onclick="event.stopPropagation(); openLeaderboardModal(${quiz.quiz_id})">
+                        <i data-lucide="bar-chart-3" class="size-3 mr-1"></i>Leaderboard
+                    </button>
+                    <button id="lock-btn-${quiz.quiz_id}" class="btn btn-primary flex-1" onclick="handleLockUnlock(${quiz.quiz_id}, ${isLocked}); event.stopPropagation()">
+                        <i data-lucide="${isLocked ? 'unlock' : 'lock'}" class="size-3 mr-1"></i>
+                        ${isLocked ? 'Unlocked' : 'Locked'}
+                    </button>
+                `;
+            } else {
+                // ✅ Student buttons
+                const attempt = studentAttempts.find(a => a.quiz_id === quiz.quiz_id);
+                let btnText = 'Start Quiz', btnIcon = 'play', btnDisabled = isLocked;
 
-                let btnText = "Start Quiz";
-                let btnIcon = "play";
-                let btnDisabled = isLocked;
-
-                if (studentAttempt) {
-                    if (studentAttempt.status === "completed") {
-                        btnText = "Review Quiz";
-                        btnIcon = "eye";
-                        btnDisabled = false;
-                    } else if (studentAttempt.status === "in_progress") {
-                        btnText = "Continue Quiz";
-                        btnIcon = "play";
-                        btnDisabled = false;
+                if (attempt) {
+                    if (attempt.status === 'completed') {
+                        btnText = 'Review Quiz'; btnIcon = 'eye'; btnDisabled = false;
+                    } else if (attempt.status === 'in_progress') {
+                        btnText = 'Continue Quiz'; btnIcon = 'play'; btnDisabled = false;
                     }
                 }
 
                 actionButtons = `
-                <button 
-                    class="btn btn-primary flex-1 ${btnDisabled ? 'opacity-50 cursor-not-allowed' : ''}" 
-                    ${btnDisabled ? 'disabled' : ''}
-                    onclick="event.stopPropagation(); ${btnDisabled ? '' : `openQuizModal(${quiz.quiz_id})`}">
-                    <i data-lucide="${btnIcon}" class="size-3 mr-1"></i>
-                    ${btnText}
-                </button>
-                <button 
-                    class="btn btn-outline flex-1"
-                    onclick="event.stopPropagation(); openLeaderboardModal(${quiz.quiz_id})">
-                    <i data-lucide="bar-chart-3" class="size-3 mr-1"></i>
-                    Leaderboard
-                </button>`;
+                    <button class="btn btn-primary flex-1 ${btnDisabled ? 'opacity-50 cursor-not-allowed' : ''}" 
+                            ${btnDisabled ? 'disabled' : ''} 
+                            onclick="event.stopPropagation(); ${btnDisabled ? '' : `openQuizModal(${quiz.quiz_id})`}">
+                        <i data-lucide="${btnIcon}" class="size-3 mr-1"></i>
+                        ${btnText}
+                    </button>
+                    <button class="btn btn-outline flex-1" onclick="event.stopPropagation(); openLeaderboardModal(${quiz.quiz_id})">
+                        <i data-lucide="bar-chart-3" class="size-3 mr-1"></i>
+                        Leaderboard
+                    </button>
+                `;
             }
 
-            // ✅ Determine the number for this quiz
+            // ✅ Determine quiz number
             let quizNumber;
             if (quiz.difficulty === 'beginner') quizNumber = beginnerCount++;
             else if (quiz.difficulty === 'intermediate') quizNumber = intermediateCount++;
-            else if (quiz.difficulty === 'advanced') quizNumber = advancedCount++;
+            else quizNumber = advancedCount++;
 
-            // ✅ Card HTML with number
+            card.innerHTML = `
+                <div class="p-4 rounded-lg border border-border cursor-pointer">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="font-semibold text-lg text-primary">
+                                ${quizNumber}. ${quiz.title}
+                            </h3>
+                            <p class="text-sm text-muted-foreground italic">
+                                ${quiz.passage ? quiz.passage.substring(0, 100) + '...' : 'No description available.'}
+                            </p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="px-2 py-1 text-xs rounded ${difficultyColors[quiz.difficulty]} capitalize">
+                                ${quiz.difficulty}
+                            </span>
+                            <i data-lucide="book-open" class="size-5 text-primary"></i>
+                        </div>
+                    </div>
+                    <div class="card-details hidden mt-4 border-t pt-3 quiz-details space-y-3">
+                        <div class="flex flex-col text-xs text-muted-foreground gap-1">
+                            <span>Start: ${quiz.unlock_time ? formatDateTime(quiz.unlock_time) : 'N/A'}</span>
+                            <span>Deadline: ${quiz.lock_time ? formatDateTime(quiz.lock_time) : 'N/A'}</span>
+                        </div>
+                        <div class="flex gap-2">${actionButtons}</div>
+                    </div>
+                </div>
+            `;
+
+            card.addEventListener('click', () => toggleQuizCard(card));
+
+            // ✅ Append to the correct container
+            if (quiz.difficulty === 'beginner') beginnerContainer.appendChild(card);
+            else if (quiz.difficulty === 'intermediate') intermediateContainer.appendChild(card);
+            else advancedContainer.appendChild(card);
+        });
+
+        // ✅ Append all difficulty sections to lessons-grid
+        lessonsContainer.appendChild(beginnerContainer);
+        lessonsContainer.appendChild(intermediateContainer);
+        lessonsContainer.appendChild(advancedContainer);
+
+        lucide.createIcons({ icons: lucide.icons });
+
+    } catch (err) {
+        console.error('Error loading quizzes:', err);
+    }
+}
+
+async function loadQuizzesTeacher() {
+    try {
+        const user = getCurrentUser();
+        if (!user || user.role !== 'teacher') return;
+
+        const now = new Date();
+
+        // ✅ Fetch teacher's quizzes
+        const res = await fetch(`/api/teacher/reading-quizzes?user_id=${user.user_id}`);
+        if (!res.ok) throw new Error('Failed to fetch teacher quizzes');
+
+        const quizzes = await res.json();
+
+        const container = document.getElementById('created-lessons-grid');
+        container.innerHTML = '';
+        container.className = 'space-y-6';
+
+        // ✅ Difficulty containers
+        const beginnerContainer = document.createElement('div');
+        const intermediateContainer = document.createElement('div');
+        const advancedContainer = document.createElement('div');
+
+        beginnerContainer.innerHTML = `<h2 class="card-title text-center px-2 py-1 text-lg rounded-lg bg-secondary/10 text-secondary">Beginner</h2>`;
+        intermediateContainer.innerHTML = `<h2 class="card-title text-center px-2 py-1 text-lg rounded-lg bg-secondary/10 text-secondary">Intermediate</h2>`;
+        advancedContainer.innerHTML = `<h2 class="card-title text-center px-2 py-1 text-lg rounded-lg bg-secondary/10 text-secondary">Advanced</h2>`;
+
+        // ✅ Counters for numbering per difficulty
+        let beginnerCount = 1, intermediateCount = 1, advancedCount = 1;
+
+        quizzes.forEach(quiz => {
+            const start = quiz.unlock_time ? new Date(quiz.unlock_time) : null;
+            const end = quiz.lock_time ? new Date(quiz.lock_time) : null;
+            let isLocked = start && end ? !(now >= start && now <= end) : false;
+
+            const card = document.createElement('div');
+            card.className = 'card group cursor-pointer hover:shadow-lg transition-all duration-300 hover:-translate-y-1';
+
+            const difficultyColors = {
+                beginner: 'bg-secondary/10 text-secondary',
+                intermediate: 'bg-secondary/10 text-secondary',
+                advanced: 'bg-secondary/10 text-secondary'
+            };
+
+            // ✅ Teacher buttons: lock/unlock + leaderboard
+            const actionButtons = `
+                <button class="btn btn-outline flex-1" onclick="event.stopPropagation(); openLeaderboardModal(${quiz.quiz_id})">
+                    <i data-lucide="bar-chart-3" class="size-3 mr-1"></i>Leaderboard
+                </button>
+                <button id="lock-btn-${quiz.quiz_id}" class="btn btn-primary flex-1" onclick="handleLockUnlock(${quiz.quiz_id}, ${isLocked}); event.stopPropagation()">
+                    <i data-lucide="${isLocked ? 'unlock' : 'lock'}" class="size-3 mr-1"></i>
+                    ${isLocked ? 'Unlocked' : 'Locked'}
+                </button>
+            `;
+
+            // ✅ Determine quiz number
+            let quizNumber;
+            if (quiz.difficulty === 'beginner') quizNumber = beginnerCount++;
+            else if (quiz.difficulty === 'intermediate') quizNumber = intermediateCount++;
+            else quizNumber = advancedCount++;
+
+            // ✅ Card HTML
             card.innerHTML = `
                 <div class="p-4 rounded-lg border border-border cursor-pointer">
                     <div class="flex items-center justify-between">
@@ -1372,32 +1462,32 @@ async function loadQuizzes() {
                             <span>Start: ${quiz.unlock_time ? formatDateTime(quiz.unlock_time) : 'N/A'}</span>
                             <span>Deadline: ${quiz.lock_time ? formatDateTime(quiz.lock_time) : 'N/A'}</span>
                         </div>
-                        <div class="flex gap-2">
-                            ${actionButtons}
-                        </div>
+                        <div class="flex gap-2">${actionButtons}</div>
                     </div>
                 </div>
             `;
 
             card.addEventListener('click', () => toggleQuizCard(card));
 
-            // ✅ Append card to correct container
+            // ✅ Append to the correct difficulty container
             if (quiz.difficulty === 'beginner') beginnerContainer.appendChild(card);
             else if (quiz.difficulty === 'intermediate') intermediateContainer.appendChild(card);
-            else if (quiz.difficulty === 'advanced') advancedContainer.appendChild(card);
+            else advancedContainer.appendChild(card);
         });
 
-        // ✅ Add containers to page
-        builtInContainer.appendChild(beginnerContainer);
-        builtInContainer.appendChild(intermediateContainer);
-        builtInContainer.appendChild(advancedContainer);
+        // ✅ Append all difficulty sections to created-lessons-grid
+        container.appendChild(beginnerContainer);
+        container.appendChild(intermediateContainer);
+        container.appendChild(advancedContainer);
 
         lucide.createIcons({ icons: lucide.icons });
+
     } catch (err) {
-        console.error('Error loading quizzes:', err);
+        console.error('Error loading teacher quizzes:', err);
+        const container = document.getElementById('created-lessons-grid');
+        container.innerHTML = '<p class="text-center text-red-500">Failed to load your quizzes.</p>';
     }
 }
-
 
 function handleLockUnlock(quizId, isLocked) {
     const button = document.getElementById(`lock-btn-${quizId}`);

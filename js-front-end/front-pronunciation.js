@@ -88,6 +88,8 @@ document.addEventListener('DOMContentLoaded', async function() {
             tabCreated.classList.remove('btn-outline');
             tabCourse.classList.remove('btn-primary');
             tabCourse.classList.add('btn-outline');
+            
+            await loadPronunciationQuizzesTeacher(currentUser);
         }
 
     } catch (error) {
@@ -356,10 +358,14 @@ async function savePronunciationQuiz() {
     }
 
     try {
+
+            // ✅ Get current teacher ID
+        const currentUser = JSON.parse(localStorage.getItem("eel_user") || "{}");
+        const currentTeacherId = currentUser.user_id;
         const res = await fetch('/api/pronunciation-quizzes', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ title, difficulty, passage, questions, subject_id }) // ✅ send correct subject_id
+            body: JSON.stringify({ title, difficulty, passage, questions, subject_id, user_id: currentTeacherId }) // ✅ send correct subject_id
         });
 
         const data = await res.json();
@@ -722,6 +728,123 @@ async function loadPronunciationQuizzes(user) {
         container.innerHTML = '<p class="text-center text-red-500">Failed to load quizzes.</p>';
     }
 }
+
+async function loadPronunciationQuizzesTeacher(user) {
+    try {
+        if (!user || user.role !== "teacher") return;
+
+        // ✅ Fetch teacher's quizzes
+        const res = await fetch(`/api/teacher/pronunciation-quizzes?user_id=${user.user_id}`);
+        const quizzes = await res.json();
+
+        const container = document.getElementById("created-lessons-grid");
+        container.innerHTML = "";
+        container.className = "space-y-6";
+
+        // ✅ Difficulty sections
+        const beginnerContainer = document.createElement("div");
+        const intermediateContainer = document.createElement("div");
+        const advancedContainer = document.createElement("div");
+
+        beginnerContainer.innerHTML = `<h2 class="card-title text-center px-2 py-1 text-lg rounded-lg bg-secondary/10 text-secondary">Beginner</h2>`;
+        intermediateContainer.innerHTML = `<h2 class="card-title text-center px-2 py-1 text-lg rounded-lg bg-secondary/10 text-secondary">Intermediate</h2>`;
+        advancedContainer.innerHTML = `<h2 class="card-title text-center px-2 py-1 text-lg rounded-lg bg-secondary/10 text-secondary">Advanced</h2>`;
+
+        // ✅ Counters for numbering
+        let beginnerCount = 1;
+        let intermediateCount = 1;
+        let advancedCount = 1;
+
+        quizzes.forEach(quiz => {
+            const now = new Date();
+            const unlockTime = quiz.unlock_time ? new Date(quiz.unlock_time.replace(" ", "T")) : null;
+            const lockTime = quiz.lock_time ? new Date(quiz.lock_time.replace(" ", "T")) : null;
+
+            const backendLocked = Number(quiz.is_locked) === 1;
+            const notYetUnlocked = unlockTime && now < unlockTime;
+            const alreadyClosed = lockTime && now > lockTime;
+            const isLocked = backendLocked || notYetUnlocked || alreadyClosed;
+
+            // ✅ Teacher action buttons
+            const actionButtons = `
+                <button class="btn btn-outline flex-1" onclick="openLeaderboardModal(${quiz.quiz_id})">
+                    <i data-lucide="bar-chart-3" class="size-3 mr-1"></i>Leaderboard
+                </button>
+                <button 
+                    class="btn btn-primary flex-1"
+                    onclick="${isLocked ? `openScheduleModal(${quiz.quiz_id})` : `lockPronunciationQuiz(${quiz.quiz_id})`}">
+                    <i data-lucide="${isLocked ? "unlock" : "lock"}" class="size-3 mr-1"></i>
+                    ${isLocked ? "Unlock" : "Lock"}
+                </button>
+            `;
+
+            // ✅ Determine numbering
+            let quizNumber;
+            if (quiz.difficulty === "beginner") quizNumber = beginnerCount++;
+            else if (quiz.difficulty === "intermediate") quizNumber = intermediateCount++;
+            else if (quiz.difficulty === "advanced") quizNumber = advancedCount++;
+
+            // ✅ Quiz card
+            const quizCard = document.createElement("div");
+            quizCard.className = "card group cursor-pointer hover:shadow-lg transition-all duration-300 hover:-translate-y-1";
+            quizCard.innerHTML = `
+                <div class="p-4 rounded-lg border border-border cursor-pointer">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="font-semibold text-lg text-primary">
+                                ${quizNumber}. ${quiz.title}
+                            </h3>
+                            <p class="text-sm text-muted-foreground italic">
+                                ${quiz.passage ? quiz.passage.substring(0, 100) + "..." : "No description available."}
+                            </p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="px-2 py-1 text-xs rounded bg-secondary/10 text-secondary capitalize">
+                                ${quiz.difficulty}
+                            </span>
+                            <i data-lucide="book-open" class="size-5 text-primary"></i>
+                        </div>
+                    </div>
+
+                    <div class="hidden mt-4 border-t pt-3 quiz-details space-y-3">
+                        <div class="flex flex-col text-xs text-muted-foreground gap-1">
+                            <span>Start: ${quiz.unlock_time ? formatDateTime(quiz.unlock_time) : "Not set"}</span>
+                            <span>Deadline: ${quiz.lock_time ? formatDateTime(quiz.lock_time) : "Not set"}</span>
+                        </div>
+                        <div class="flex gap-2">${actionButtons}</div>
+                    </div>
+                </div>
+            `;
+
+            // ✅ Toggle details
+            quizCard.addEventListener("click", () => {
+                const details = quizCard.querySelector(".quiz-details");
+                const allCards = container.querySelectorAll(".quiz-details");
+                allCards.forEach(d => { if (d !== details) d.classList.add("hidden"); });
+                details.classList.toggle("hidden");
+                lucide.createIcons({ icons: lucide.icons });
+            });
+
+            // ✅ Append to corresponding difficulty
+            if (quiz.difficulty === "beginner") beginnerContainer.appendChild(quizCard);
+            else if (quiz.difficulty === "intermediate") intermediateContainer.appendChild(quizCard);
+            else if (quiz.difficulty === "advanced") advancedContainer.appendChild(quizCard);
+        });
+
+        // ✅ Append all difficulty sections
+        container.appendChild(beginnerContainer);
+        container.appendChild(intermediateContainer);
+        container.appendChild(advancedContainer);
+
+        lucide.createIcons({ icons: lucide.icons });
+
+    } catch (err) {
+        console.error("Error loading teacher quizzes:", err);
+        const container = document.getElementById("created-lessons-grid");
+        container.innerHTML = '<p class="text-center text-red-500">Failed to load your quizzes.</p>';
+    }
+}
+
 
 // ============================================
 // TAKE QUIZ MODAL
@@ -1540,7 +1663,7 @@ async function generatePronunciationQuiz() {
 }
 
 
-async function savePronunciationQuiz() {
+async function saveAIPronunciationQuiz() {
     const titleEl = document.getElementById("ai-topic"); // using topic as title
     const subjectIdEl = document.getElementById("ai-topic"); // same select for subject_id?
     const difficultyEl = document.getElementById("ai-difficulty");

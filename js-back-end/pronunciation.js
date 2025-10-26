@@ -37,17 +37,19 @@ const upload = multer({
 router.post("/api/pronunciation-quizzes", async (req, res) => {
   const pool = req.pool;
   try {
-    const { title, difficulty, passage, questions, subject_id} = req.body;
+    const { title, difficulty, passage, questions, subject_id, user_id } = req.body;
     const validSubjectId = subject_id != null ? subject_id : 1;
 
-    if (!title || !difficulty || !questions || questions.length === 0) {
-      return res.status(400).json({ message: "All fields are required" });
+    if (!title || !difficulty || !questions || questions.length === 0 || !user_id) {
+      return res.status(400).json({ message: "All fields including user_id are required" });
     }
 
-    // Insert quiz record
+    // Insert quiz record into teacher_pronunciation_quizzes
     const [quizResult] = await pool.execute(
-      "INSERT INTO pronunciation_quizzes (subject_id, title, difficulty, passage) VALUES (?, ?, ?, ?)",
-      [validSubjectId, title, difficulty, passage]
+      `INSERT INTO teacher_pronunciation_quizzes 
+        (subject_id, user_id, title, difficulty, passage) 
+       VALUES (?, ?, ?, ?, ?)`,
+      [validSubjectId, user_id, title, difficulty, passage]
     );
     const quizId = quizResult.insertId;
 
@@ -55,27 +57,33 @@ router.post("/api/pronunciation-quizzes", async (req, res) => {
     if (difficulty === "beginner") {
       for (const q of questions) {
         await pool.execute(
-          `INSERT INTO pronunciation_beginner_questions (quiz_id, word, correct_pronunciation) VALUES (?, ?, ?)`,
+          `INSERT INTO teacher_pronunciation_beginner_questions 
+            (quiz_id, word, correct_pronunciation) 
+           VALUES (?, ?, ?)`,
           [quizId, q.word, q.stressed_form]
         );
       }
     } else if (difficulty === "intermediate") {
       for (const q of questions) {
         await pool.execute(
-          `INSERT INTO pronunciation_intermediate_questions (quiz_id, word, stressed_syllable) VALUES (?, ?, ?)`,
+          `INSERT INTO teacher_pronunciation_intermediate_questions 
+            (quiz_id, word, stressed_syllable) 
+           VALUES (?, ?, ?)`,
           [quizId, q.word, q.stressed_form]
         );
       }
     } else if (difficulty === "advanced") {
       for (const q of questions) {
         await pool.execute(
-          `INSERT INTO pronunciation_advanced_questions (quiz_id, sentence, reduced_form, full_sentence) VALUES (?, ?, ?, ?)`,
+          `INSERT INTO teacher_pronunciation_advanced_questions 
+            (quiz_id, sentence, reduced_form, full_sentence) 
+           VALUES (?, ?, ?, ?)`,
           [quizId, q.sentence, q.reduced_form, q.full_sentence]
         );
       }
     }
 
-    res.json({ message: "Pronunciation quiz created successfully", quizId });
+    res.json({ message: "Teacher pronunciation quiz created successfully", quizId });
   } catch (err) {
     console.error("Error creating quiz:", err);
     res.status(500).json({ message: "Server error" });
@@ -189,6 +197,34 @@ router.get("/api/pronunciation-quizzes/:id", async (req, res) => {
     res.json(quiz);
   } catch (err) {
     console.error("❌ Get single quiz error:", err);
+    res.status(500).json({ success: false, message: "Database error" });
+  }
+});
+
+// ================= GET TEACHER'S PRONUNCIATION QUIZZES =================
+router.get("/api/teacher/pronunciation-quizzes", async (req, res) => {
+  const pool = req.pool;
+  const userId = req.query.user_id;
+
+  if (!userId) {
+    return res.status(400).json({ success: false, message: "user_id is required" });
+  }
+
+  try {
+    const [quizzes] = await pool.query(
+      `SELECT q.*, s.subject_name AS subject_name
+      FROM teacher_pronunciation_quizzes q
+      JOIN subjects s ON q.subject_id = s.subject_id
+      WHERE q.user_id = ?
+      ORDER BY q.created_at DESC`,
+      [userId]
+    );
+
+    quizzes.forEach(q => q.is_locked = false); // default
+
+    res.json(quizzes);
+  } catch (err) {
+    console.error("❌ Get teacher quizzes error:", err);
     res.status(500).json({ success: false, message: "Database error" });
   }
 });

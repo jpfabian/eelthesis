@@ -5,70 +5,83 @@ const Groq = require("groq-sdk");
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-// ================= CREATE QUIZ =================
-router.post("/api/reading-quizzes", async (req, res) => {
-  const pool = req.pool;
-  const { title, difficulty, passage, questions, subject_id } = req.body; // ✅ include subject_id from frontend
+// ================= CREATE TEACHER READING QUIZ =================
+router.post("/api/teacher/reading-quizzes", async (req, res) => {
+    const pool = req.pool;
+    const { title, difficulty, passage, questions, subject_id, user_id } = req.body; // user_id from frontend
 
-  let conn;
-  try {
-    conn = await pool.getConnection();
-    await conn.beginTransaction();
-
-    // ✅ Use provided subject_id, default to 1 (Reading and Writing Skills)
-    const validSubjectId = subject_id || 1;
-
-    // Insert quiz
-    const [quizResult] = await conn.query(
-      "INSERT INTO reading_quizzes (subject_id, title, difficulty, passage) VALUES (?, ?, ?, ?)",
-      [validSubjectId, title, difficulty, passage]
-    );
-    const quizId = quizResult.insertId;
-
-    // Insert each question
-    for (let i = 0; i < questions.length; i++) {
-      const q = questions[i];
-      const [qResult] = await conn.query(
-        "INSERT INTO reading_questions (quiz_id, question_text, question_type, position) VALUES (?, ?, ?, ?)",
-        [quizId, q.question_text, q.question_type, i + 1]
-      );
-
-      const questionId = qResult.insertId;
-
-      // Multiple Choice
-      if (q.question_type === "mcq") {
-        for (let j = 0; j < q.options.length; j++) {
-          const opt = q.options[j];
-          await conn.query(
-            "INSERT INTO reading_mcq_options (question_id, option_text, is_correct, position) VALUES (?, ?, ?, ?)",
-            [questionId, opt.option_text, opt.is_correct ? 1 : 0, j + 1]
-          );
-        }
-      }
-
-      // Fill in the Blanks
-      else if (q.question_type === "fill_blank") {
-        for (let b = 0; b < q.blanks.length; b++) {
-          const blank = q.blanks[b];
-          await conn.query(
-            "INSERT INTO reading_fill_blanks (question_id, blank_number, answer_text) VALUES (?, ?, ?)",
-            [questionId, blank.blank_number, blank.answer_text]
-          );
-        }
-      }
-
-      // Essay type — no extra inserts needed
+    if (!user_id) {
+        return res.status(400).json({ success: false, message: "user_id is required" });
     }
 
-    await conn.commit();
-    res.json({ success: true, message: "Quiz created successfully", quizId });
-  } catch (err) {
-    if (conn) await conn.rollback();
-    console.error("❌ Create quiz error:", err);
-    res.status(500).json({ success: false, message: "Database error" });
-  } finally {
-    if (conn) conn.release();
-  }
+    let conn;
+    try {
+        conn = await pool.getConnection();
+        await conn.beginTransaction();
+
+        // Insert quiz
+        const [quizResult] = await conn.query(
+            "INSERT INTO teacher_reading_quizzes (subject_id, user_id, title, difficulty, passage) VALUES (?, ?, ?, ?, ?)",
+            [subject_id, user_id, title, difficulty, passage]
+        );
+        const quizId = quizResult.insertId;
+
+        // Insert questions
+        for (let i = 0; i < questions.length; i++) {
+            const q = questions[i];
+
+            if (difficulty === "beginner" && q.question_type === "mcq") {
+                // Beginner MCQ
+                const [qResult] = await conn.query(
+                    "INSERT INTO teacher_reading_beginner_questions (quiz_id, question_text) VALUES (?, ?)",
+                    [quizId, q.question_text]
+                );
+                const questionId = qResult.insertId;
+
+                // Insert options
+                for (let j = 0; j < q.options.length; j++) {
+                    const opt = q.options[j];
+                    await conn.query(
+                        "INSERT INTO teacher_reading_mcq_options (question_id, option_text, is_correct, position) VALUES (?, ?, ?, ?)",
+                        [questionId, opt.option_text, opt.is_correct ? 1 : 0, j + 1]
+                    );
+                }
+            } 
+            else if (difficulty === "intermediate" && q.question_type === "fill_blank") {
+                // Intermediate Fill-in-the-blank
+                const [qResult] = await conn.query(
+                    "INSERT INTO teacher_reading_intermediate_questions (quiz_id, question_text) VALUES (?, ?)",
+                    [quizId, q.question_text]
+                );
+                const questionId = qResult.insertId;
+
+                // Insert blanks
+                for (let b = 0; b < q.blanks.length; b++) {
+                    const blank = q.blanks[b];
+                    await conn.query(
+                        "INSERT INTO teacher_reading_fill_blanks (question_id, blank_number, answer_text, points) VALUES (?, ?, ?, ?)",
+                        [questionId, blank.blank_number, blank.answer_text, blank.points || 1.0]
+                    );
+                }
+            } 
+            else if (difficulty === "advanced" && q.question_type === "essay") {
+                // Advanced Essay
+                await conn.query(
+                    "INSERT INTO teacher_reading_advanced_questions (quiz_id, question_text, points) VALUES (?, ?, ?)",
+                    [quizId, q.question_text, q.points || 1.0]
+                );
+            }
+        }
+
+        await conn.commit();
+        res.json({ success: true, message: "Teacher reading quiz created successfully", quizId });
+    } catch (err) {
+        if (conn) await conn.rollback();
+        console.error("❌ Create teacher reading quiz error:", err);
+        res.status(500).json({ success: false, message: "Database error" });
+    } finally {
+        if (conn) conn.release();
+    }
 });
 
 
@@ -114,6 +127,49 @@ router.get("/api/reading-quizzes", async (req, res) => {
     res.json(quizzes);
   } catch (err) {
     console.error("❌ Get quizzes error:", err);
+    res.status(500).json({ error: "Database error" });
+  }
+});
+
+// ================= TEACHER READING QUIZZES =================
+router.get("/api/teacher/reading-quizzes", async (req, res) => {
+  const pool = req.pool;
+  const userId = req.query.user_id;        // Teacher's user_id
+  const subjectId = req.query.subject_id;  // Optional filter by subject
+
+  try {
+    if (!userId) {
+      return res.status(400).json({ error: "Teacher user_id is required" });
+    }
+
+    let query = "SELECT * FROM teacher_reading_quizzes WHERE user_id = ?";
+    const params = [userId];
+
+    if (subjectId) {
+      query += " AND subject_id = ?";
+      params.push(subjectId);
+    }
+
+    const [quizzes] = await pool.query(query, params);
+
+    // Optionally, you can include question counts per difficulty
+    for (const quiz of quizzes) {
+      let questionTable;
+      if (quiz.difficulty === 'beginner') questionTable = 'teacher_reading_beginner_questions';
+      else if (quiz.difficulty === 'intermediate') questionTable = 'teacher_reading_intermediate_questions';
+      else questionTable = 'teacher_reading_advanced_questions';
+
+      const [questions] = await pool.query(
+        `SELECT COUNT(*) AS question_count FROM ${questionTable} WHERE quiz_id = ?`,
+        [quiz.quiz_id]
+      );
+
+      quiz.question_count = questions[0].question_count;
+    }
+
+    res.json(quizzes);
+  } catch (err) {
+    console.error("❌ Get teacher quizzes error:", err);
     res.status(500).json({ error: "Database error" });
   }
 });
