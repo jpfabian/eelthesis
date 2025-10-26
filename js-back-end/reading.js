@@ -123,9 +123,14 @@ router.get("/api/reading-quizzes", async (req, res) => {
 router.patch("/api/reading-quizzes/:id/schedule", async (req, res) => {
   const pool = req.pool;
   const { id } = req.params;
-  const { unlock_time, lock_time, time_limit, retake_option, allowed_students } = req.body;
+  let { unlock_time, lock_time, time_limit, retake_option, allowed_students } = req.body;
 
   try {
+    // Convert "YYYY-MM-DDTHH:mm" to "YYYY-MM-DD HH:mm:00" for MySQL
+    const formatForMySQL = dt => dt.replace('T', ' ') + ':00';
+    unlock_time = formatForMySQL(unlock_time);
+    lock_time = formatForMySQL(lock_time);
+
     await pool.query(
       `UPDATE reading_quizzes
        SET unlock_time = ?, lock_time = ?, status = 'active', is_locked = 0,
