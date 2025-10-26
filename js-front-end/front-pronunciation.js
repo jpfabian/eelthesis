@@ -497,27 +497,41 @@ document.getElementById('save-schedule-btn').addEventListener('click', () => {
     });
 });
 
-// Helper functions
-function formatDate(dateString) {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
+// Utility functions - Local time version
+function formatDateTime(dateStr) {
+    if (!dateStr) return 'N/A';
+    
+    // Split "YYYY-MM-DD HH:mm:ss"
+    const [datePart, timePart] = dateStr.split(' ');
+    const [year, month, day] = datePart.split('-').map(Number);
+    const [hour, minute, second] = timePart.split(':').map(Number);
+
+    // Month is 0-based in JS
+    const localDate = new Date(year, month - 1, day, hour, minute, second);
+    
+    return localDate.toLocaleString([], { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric', 
+        hour: '2-digit', 
+        minute: '2-digit' 
     });
 }
 
-function formatDateTime(dateString) {
-    const date = new Date(dateString);
-    return date.toLocaleString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true
+function formatDate(dateStr) {
+    if (!dateStr) return 'N/A';
+
+    const [datePart] = dateStr.split(' '); // ignore time
+    const [year, month, day] = datePart.split('-').map(Number);
+    const localDate = new Date(year, month - 1, day);
+
+    return localDate.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric', 
+        year: 'numeric' 
     });
 }
+
 
 async function lockPronunciationQuiz(quizId) {
     try {
@@ -1406,27 +1420,6 @@ async function openLeaderboardModal(quizId, classId) {
 // ============================================
 // UTILITY FUNCTIONS
 // ============================================
-
-function formatDate(dateString) {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-    });
-}
-
-function formatDateTime(dateString) {
-    const date = new Date(dateString);
-    return date.toLocaleString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true
-    });
-}
 
 async function generateWithAI() {
     try {

@@ -895,42 +895,16 @@ async function submitQuiz() {
 //for teacher schedule modal
 let currentLessonId = null;
 
-function openScheduleModal(lessonId, quizData) {
+function openScheduleModal(lessonId) {
     currentLessonId = lessonId;
     const modal = document.getElementById('schedule-modal');
     modal.classList.remove('hidden');
-
-    // Populate unlock/lock times from DB
-    document.getElementById('modal-unlock-time').value = dbTimeToLocal(quizData.unlock_time);
-    document.getElementById('modal-lock-time').value = dbTimeToLocal(quizData.lock_time);
 
     // Prevent selecting past datetime
     const now = new Date();
     const formattedNow = now.toISOString().slice(0,16); // YYYY-MM-DDTHH:mm
     document.getElementById('modal-unlock-time').min = formattedNow;
     document.getElementById('modal-lock-time').min = formattedNow;
-
-    // Populate other fields if needed
-    document.getElementById('modal-time-limit').value = quizData.time_limit || '';
-    document.getElementById('retake-option').value = quizData.retake_option || 'all';
-
-    if (quizData.retake_option === 'specific') {
-        const container = document.getElementById('specific-students-container');
-        container.classList.remove('hidden');
-        const select = document.getElementById('specific-students');
-        const allowed = quizData.allowed_students || [];
-        Array.from(select.options).forEach(opt => {
-            opt.selected = allowed.includes(opt.value);
-        });
-    }
-}
-
-// Converts "YYYY-MM-DD HH:mm:ss" from DB to "YYYY-MM-DDTHH:mm" for datetime-local input
-function dbTimeToLocal(datetimeStr) {
-    if (!datetimeStr) return '';
-    const [date, time] = datetimeStr.split(' ');
-    const hhmm = time.slice(0,5); // get "HH:mm"
-    return `${date}T${hhmm}`;
 }
 
 function closeScheduleModal() {
@@ -947,12 +921,11 @@ function closeScheduleModal() {
     document.getElementById('specific-students-container').classList.add('hidden');
 }
 
-
 document.getElementById('save-schedule-btn').addEventListener('click', () => {
     if (!currentLessonId) return;
 
-    const unlockTime = document.getElementById('modal-unlock-time').value; // RAW string
-    const lockTime = document.getElementById('modal-lock-time').value;     // RAW string
+    const unlockTime = document.getElementById('modal-unlock-time').value;
+    const lockTime = document.getElementById('modal-lock-time').value;
     const timeLimit = parseInt(document.getElementById('modal-time-limit').value, 10);
 
     // Check inputs
@@ -961,14 +934,16 @@ document.getElementById('save-schedule-btn').addEventListener('click', () => {
         return;
     }
 
+    // Validate time limit
     if (isNaN(timeLimit) || timeLimit <= 0) {
         showNotification("Please set a valid time limit in minutes", "warning");
         return;
     }
 
-    // Validate past datetime using string comparison
-    const nowStr = new Date().toISOString().slice(0,16); // current local datetime
-    if (unlockTime <= nowStr || lockTime <= nowStr) {
+    // Prevent past datetime
+    const unlockTimeValue = new Date(unlockTime);
+    const lockTimeValue = new Date(lockTime);
+    if (unlockTimeValue <= new Date() || lockTimeValue <= new Date()) {
         showNotification("Unlock and lock times cannot be in the past", "warning");
         return;
     }
@@ -980,7 +955,6 @@ document.getElementById('save-schedule-btn').addEventListener('click', () => {
             .map(opt => opt.value);
     }
 
-    // ✅ Send RAW input strings directly to backend
     fetch(`/api/reading-quizzes/${currentLessonId}/schedule`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -990,7 +964,7 @@ document.getElementById('save-schedule-btn').addEventListener('click', () => {
             status: 'scheduled',
             retake_option: retakeOption,
             allowed_students: allowedStudents,
-            time_limit: timeLimit
+            time_limit: timeLimit // 🆕 include time limit
         })
     })
     .then(res => res.json())
@@ -999,6 +973,7 @@ document.getElementById('save-schedule-btn').addEventListener('click', () => {
             showNotification("Quiz schedule saved!", "success");
             closeScheduleModal();
 
+            // ✅ Update unlock button immediately
             const button = document.getElementById(`lock-btn-${currentLessonId}`);
             if (button) {
                 button.innerHTML = `<i data-lucide="unlock" class="size-3 mr-1"></i>Unlocked`;
@@ -1012,6 +987,7 @@ document.getElementById('save-schedule-btn').addEventListener('click', () => {
             showNotification("Failed to save schedule: " + data.message, "error");
         }
     })
+
     .catch(err => {
         console.error(err);
         showNotification("An error occurred while saving schedule.", "error");
@@ -1405,6 +1381,7 @@ async function loadQuizzes() {
     }
 }
 
+
 function handleLockUnlock(quizId, isLocked) {
     const button = document.getElementById(`lock-btn-${quizId}`);
 
@@ -1643,14 +1620,37 @@ function toggleQuizCard(card) {
     });
 }
 
-// Utility functions
+// Utility functions - Local time version
 function formatDateTime(dateStr) {
     if (!dateStr) return 'N/A';
-    const d = new Date(dateStr.replace(' ', 'T'));
-    return d.toLocaleString([], { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    
+    // Split "YYYY-MM-DD HH:mm:ss"
+    const [datePart, timePart] = dateStr.split(' ');
+    const [year, month, day] = datePart.split('-').map(Number);
+    const [hour, minute, second] = timePart.split(':').map(Number);
+
+    // Month is 0-based in JS
+    const localDate = new Date(year, month - 1, day, hour, minute, second);
+    
+    return localDate.toLocaleString([], { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric', 
+        hour: '2-digit', 
+        minute: '2-digit' 
+    });
 }
 
 function formatDate(dateStr) {
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    if (!dateStr) return 'N/A';
+
+    const [datePart] = dateStr.split(' '); // ignore time
+    const [year, month, day] = datePart.split('-').map(Number);
+    const localDate = new Date(year, month - 1, day);
+
+    return localDate.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric', 
+        year: 'numeric' 
+    });
 }
