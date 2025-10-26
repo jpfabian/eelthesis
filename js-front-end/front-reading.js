@@ -895,14 +895,32 @@ async function submitQuiz() {
 //for teacher schedule modal
 let currentLessonId = null;
 
+function getPHDateTimeLocal() {
+    const now = new Date();
+    const offset = 8 * 60 + now.getTimezoneOffset(); // +08:00 in minutes
+    return new Date(now.getTime() + offset * 60000).toISOString().slice(0,16);
+}
+
+// Convert input to ISO string with +08:00
+function toPHISOString(input) {
+    if (!input) return null;
+    return new Date(input + "+08:00").toISOString();
+}
+
 function openScheduleModal(lessonId) {
     currentLessonId = lessonId;
     const modal = document.getElementById('schedule-modal');
     modal.classList.remove('hidden');
 
-    // Prevent selecting past datetime
-    const now = new Date();
-    const formattedNow = now.toISOString().slice(0,16); // YYYY-MM-DDTHH:mm
+    // Clear inputs
+    document.getElementById('modal-unlock-time').value = '';
+    document.getElementById('modal-lock-time').value = '';
+    document.getElementById('modal-time-limit').value = '';
+    document.getElementById('retake-option').value = 'all';
+    document.getElementById('specific-students-container').classList.add('hidden');
+
+    // Set min datetime to PH now
+    const formattedNow = getPHDateTimeLocal();
     document.getElementById('modal-unlock-time').min = formattedNow;
     document.getElementById('modal-lock-time').min = formattedNow;
 }
@@ -912,22 +930,22 @@ function closeScheduleModal() {
     modal.classList.add('hidden');
     currentLessonId = null;
 
-    // Clear all modal inputs
+    // Clear inputs
     document.getElementById('modal-unlock-time').value = '';
     document.getElementById('modal-lock-time').value = '';
     document.getElementById('modal-time-limit').value = '';
-    document.getElementById('retake-option').value = 'all'; // default option
-    document.getElementById('specific-students').selectedIndex = -1; // clear selection
+    document.getElementById('retake-option').value = 'all';
+    document.getElementById('specific-students').selectedIndex = -1;
     document.getElementById('specific-students-container').classList.add('hidden');
 }
 
-
-document.getElementById('save-schedule-btn').addEventListener('click', () => {
+document.getElementById('save-schedule-btn').addEventListener('click', async () => {
     if (!currentLessonId) return;
 
     const unlockTime = document.getElementById('modal-unlock-time').value;
-    const lockTime = document.getElementById('modal-lock-time').value;
-    const timeLimit = parseInt(document.getElementById('modal-time-limit').value, 10);
+    const lockTime   = document.getElementById('modal-lock-time').value;
+    const timeLimit  = parseInt(document.getElementById('modal-time-limit').value, 10);
+    const retakeOption = document.getElementById('retake-option').value;
 
     // Check inputs
     if (!unlockTime || !lockTime) {
@@ -935,46 +953,47 @@ document.getElementById('save-schedule-btn').addEventListener('click', () => {
         return;
     }
 
-    // Validate time limit
     if (isNaN(timeLimit) || timeLimit <= 0) {
         showNotification("Please set a valid time limit in minutes", "warning");
         return;
     }
 
-    // Prevent past datetime
-    const unlockTimeValue = new Date(unlockTime);
-    const lockTimeValue = new Date(lockTime);
-    if (unlockTimeValue <= new Date() || lockTimeValue <= new Date()) {
+    // Convert to PH timezone for validation
+    const unlockTimeValue = new Date(unlockTime + "+08:00");
+    const lockTimeValue   = new Date(lockTime + "+08:00");
+    const nowPH = new Date(new Date().getTime() + (8 * 60 + new Date().getTimezoneOffset()) * 60000);
+
+    if (unlockTimeValue <= nowPH || lockTimeValue <= nowPH) {
         showNotification("Unlock and lock times cannot be in the past", "warning");
         return;
     }
 
-    const retakeOption = document.getElementById('retake-option').value;
     let allowedStudents = [];
     if (retakeOption === 'specific') {
         allowedStudents = Array.from(document.getElementById('specific-students').selectedOptions)
             .map(opt => opt.value);
     }
 
-    fetch(`/api/reading-quizzes/${currentLessonId}/schedule`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-            unlock_time: unlockTime, 
-            lock_time: lockTime, 
-            status: 'scheduled',
-            retake_option: retakeOption,
-            allowed_students: allowedStudents,
-            time_limit: timeLimit // 🆕 include time limit
-        })
-    })
-    .then(res => res.json())
-    .then(data => {
+    try {
+        const res = await fetch(`/api/reading-quizzes/${currentLessonId}/schedule`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                unlock_time: toPHISOString(unlockTime),
+                lock_time: toPHISOString(lockTime),
+                status: 'scheduled',
+                retake_option: retakeOption,
+                allowed_students: allowedStudents,
+                time_limit: timeLimit
+            })
+        });
+
+        const data = await res.json();
         if (data.success) {
-            showNotification("Quiz schedule saved!", "success");
+            showNotification("✅ Quiz schedule saved!", "success");
             closeScheduleModal();
 
-            // ✅ Update unlock button immediately
+            // Update unlock button immediately
             const button = document.getElementById(`lock-btn-${currentLessonId}`);
             if (button) {
                 button.innerHTML = `<i data-lucide="unlock" class="size-3 mr-1"></i>Unlocked`;
@@ -985,14 +1004,12 @@ document.getElementById('save-schedule-btn').addEventListener('click', () => {
 
             loadQuizzes();
         } else {
-            showNotification("Failed to save schedule: " + data.message, "error");
+            showNotification("❌ Failed to save schedule: " + data.message, "error");
         }
-    })
-
-    .catch(err => {
+    } catch (err) {
         console.error(err);
-        showNotification("An error occurred while saving schedule.", "error");
-    });
+        showNotification("⚠️ An error occurred while saving schedule.", "error");
+    }
 });
 
 const retakeSelect = document.getElementById('retake-option');

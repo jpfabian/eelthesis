@@ -378,57 +378,41 @@ async function savePronunciationQuiz() {
     }
 }
 
-function openScheduleModal(quizId) {
-    const modal = document.getElementById('schedule-modal');
-    const saveBtn = document.getElementById('save-schedule-btn');
+let currentLessonId = null;
 
-    // 🧹 Clear all input fields before showing the modal
+// Convert input to ISO string with +08:00
+function toPHISOString(input) {
+    if (!input) return null;
+    return new Date(input + "+08:00").toISOString();
+}
+
+// Set min datetime in PH timezone for inputs
+function getPHDateTimeLocal() {
+    const now = new Date();
+    const offset = 8 * 60 + now.getTimezoneOffset(); // +08:00 in minutes
+    return new Date(now.getTime() + offset * 60000).toISOString().slice(0,16);
+}
+
+function openScheduleModal(quizId) {
+    currentLessonId = quizId;
+    const modal = document.getElementById('schedule-modal');
+    modal.classList.remove('hidden');
+
+    // Clear inputs
     document.getElementById('modal-unlock-time').value = '';
     document.getElementById('modal-lock-time').value = '';
     document.getElementById('modal-time-limit').value = '';
-    document.getElementById('retake-option').value = 'none';
-
-    // Also hide specific-student container when modal reopens
+    document.getElementById('retake-option').value = 'all';
+    document.getElementById('specific-students').selectedIndex = -1;
     document.getElementById('specific-students-container').classList.add('hidden');
 
-    // 🟢 Show modal
-    modal.classList.remove('hidden');
+    // Set min datetime
+    const minDate = getPHDateTimeLocal();
+    document.getElementById('modal-unlock-time').min = minDate;
+    document.getElementById('modal-lock-time').min = minDate;
 
-    saveBtn.onclick = async () => {
-        const unlockTime = document.getElementById('modal-unlock-time').value;
-        const lockTime = document.getElementById('modal-lock-time').value;
-        const timeLimit = document.getElementById('modal-time-limit').value;
-        const retakeOption = document.getElementById('retake-option').value;
-
-        try {
-            const res = await fetch(`/api/pronunciation-quizzes/${quizId}/schedule`, {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    unlock_time: unlockTime,
-                    lock_time: lockTime,
-                    time_limit: timeLimit,
-                    retake_option: retakeOption
-                })
-            });
-
-            const data = await res.json();
-            if (data.success) {
-                showNotification("✅ Pronunciation quiz schedule saved!", "success");
-
-                // ✅ Hide modal after success
-                modal.classList.add('hidden');
-
-                // ✅ Reload quizzes to reflect the new schedule
-                await loadPronunciationQuizzes(getCurrentUser());
-            } else {
-                showNotification("❌ Failed to save schedule.", "error");
-            }
-        } catch (err) {
-            console.error("Failed to save schedule:", err);
-            showNotification("⚠️ Error saving schedule.", "error");
-        }
-    };
+    // Store quizId in modal dataset for reference
+    modal.dataset.quizId = quizId;
 }
 
 function closeScheduleModal() {
@@ -436,66 +420,75 @@ function closeScheduleModal() {
     modal.classList.add('hidden');
     currentLessonId = null;
 
-    // Clear all modal inputs
+    // Clear inputs
     document.getElementById('modal-unlock-time').value = '';
     document.getElementById('modal-lock-time').value = '';
-    document.getElementById('retake-option').value = 'all'; // default option
-    document.getElementById('specific-students').selectedIndex = -1; // clear selection
+    document.getElementById('modal-time-limit').value = '';
+    document.getElementById('retake-option').value = 'all';
+    document.getElementById('specific-students').selectedIndex = -1;
     document.getElementById('specific-students-container').classList.add('hidden');
 }
 
+// Show/hide specific students
 document.getElementById('retake-option').addEventListener('change', (e) => {
     const container = document.getElementById('specific-students-container');
     container.classList.toggle('hidden', e.target.value !== 'specific');
 });
 
-document.getElementById('save-schedule-btn').addEventListener('click', () => {
+// Single save handler
+document.getElementById('save-schedule-btn').addEventListener('click', async () => {
     const modal = document.getElementById('schedule-modal');
     const quizId = modal.dataset.quizId;
-        if (!quizId) return;
+    if (!quizId) return;
 
-        const unlock_time = document.getElementById('modal-unlock-time').value;
-        const lock_time = document.getElementById('modal-lock-time').value;
-        const time_limit = document.getElementById('modal-time-limit').value || null;
-        
-        if (!unlock_time || !lock_time) {
-            showNotification("Please select both unlock and lock times", "warning");
-            return;
-        }
+    let unlockTime = document.getElementById('modal-unlock-time').value;
+    let lockTime   = document.getElementById('modal-lock-time').value;
+    const timeLimit = document.getElementById('modal-time-limit').value || null;
 
-        const retake_option = document.getElementById('retake-option').value;
-        let allowed_students = [];
-        if (retake_option === 'specific') {
-            allowed_students = Array.from(document.getElementById('specific-students').selectedOptions)
+    if (!unlockTime || !lockTime) {
+        showNotification("Please select both unlock and lock times", "warning");
+        return;
+    }
+
+    const retakeOption = document.getElementById('retake-option').value;
+    let allowedStudents = [];
+    if (retakeOption === 'specific') {
+        allowedStudents = Array.from(document.getElementById('specific-students').selectedOptions)
             .map(opt => opt.value);
-        }
+    }
 
-    fetch(`/api/pronunciation-quizzes/${quizId}/schedule`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-        unlock_time,
-        lock_time,
-        status: 'scheduled',
-        retake_option,
-        allowed_students,
-        time_limit
-        })
-    })
-    .then(res => res.json())
-    .then(data => {
+    // Convert to PH timezone before sending
+    unlockTime = toPHISOString(unlockTime);
+    lockTime   = toPHISOString(lockTime);
+
+    try {
+        const res = await fetch(`/api/pronunciation-quizzes/${quizId}/schedule`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                unlock_time: unlockTime,
+                lock_time: lockTime,
+                status: 'scheduled',
+                retake_option: retakeOption,
+                allowed_students: allowedStudents,
+                time_limit: timeLimit
+            })
+        });
+
+        const data = await res.json();
         showNotification(data.success ? "Quiz schedule saved!" : "Failed to save schedule: " + data.message,
                         data.success ? "success" : "error");
+
         if (data.success) {
-        closeScheduleModal();
-        loadPronunciationQuizzes(currentUser);
+            closeScheduleModal();
+            loadPronunciationQuizzes(getCurrentUser());
         }
-    })
-    .catch(err => {
+    } catch (err) {
         console.error(err);
         showNotification("An error occurred while saving schedule.", "error");
-    });
+    }
 });
+
 
 // Helper functions
 function formatDate(dateString) {
