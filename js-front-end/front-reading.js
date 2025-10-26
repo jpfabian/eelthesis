@@ -293,7 +293,7 @@ async function saveLesson() {
     }
 
     try {
-        const res = await fetch(' /api/reading-quizzes', {
+        const res = await fetch('/api/reading-quizzes', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
@@ -356,7 +356,7 @@ async function openQuizModal(lessonId) {
 
     try {
         // 1️⃣ Fetch the quiz
-        const resQuiz = await fetch(` /api/reading-quizzes/${lessonId}`);
+        const resQuiz = await fetch(`/api/reading-quizzes/${lessonId}`);
         const quiz = await resQuiz.json();
 
         const now = new Date();
@@ -377,7 +377,7 @@ async function openQuizModal(lessonId) {
         const user = JSON.parse(localStorage.getItem('eel_user'));
 
         // 2️⃣ Check for previous attempts
-        const attemptRes = await fetch(` /api/reading-quiz-attempts?quiz_id=${lessonId}&student_id=${user.user_id}`);
+        const attemptRes = await fetch(`/api/reading-quiz-attempts?quiz_id=${lessonId}&student_id=${user.user_id}`);
         const attempts = await attemptRes.json();
         const existingAttempt = attempts.find(a => Number(a.quiz_id) === Number(lessonId));
 
@@ -935,16 +935,14 @@ document.getElementById('save-schedule-btn').addEventListener('click', () => {
         return;
     }
 
-    // Validate time limit
     if (isNaN(timeLimit) || timeLimit <= 0) {
         showNotification("Please set a valid time limit in minutes", "warning");
         return;
     }
 
-    // Prevent past datetime
-    const unlockTimeValue = new Date(unlockTime);
-    const lockTimeValue = new Date(lockTime);
-    if (unlockTimeValue <= new Date() || lockTimeValue <= new Date()) {
+    // ✅ Validate using local datetime string comparison
+    const nowStr = new Date().toISOString().slice(0,16);
+    if (unlockTime <= nowStr || lockTime <= nowStr) {
         showNotification("Unlock and lock times cannot be in the past", "warning");
         return;
     }
@@ -956,6 +954,7 @@ document.getElementById('save-schedule-btn').addEventListener('click', () => {
             .map(opt => opt.value);
     }
 
+    // ✅ Send original datetime-local string to backend
     fetch(`/api/reading-quizzes/${currentLessonId}/schedule`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -965,7 +964,7 @@ document.getElementById('save-schedule-btn').addEventListener('click', () => {
             status: 'scheduled',
             retake_option: retakeOption,
             allowed_students: allowedStudents,
-            time_limit: timeLimit // 🆕 include time limit
+            time_limit: timeLimit
         })
     })
     .then(res => res.json())
@@ -974,7 +973,6 @@ document.getElementById('save-schedule-btn').addEventListener('click', () => {
             showNotification("Quiz schedule saved!", "success");
             closeScheduleModal();
 
-            // ✅ Update unlock button immediately
             const button = document.getElementById(`lock-btn-${currentLessonId}`);
             if (button) {
                 button.innerHTML = `<i data-lucide="unlock" class="size-3 mr-1"></i>Unlocked`;
@@ -988,7 +986,6 @@ document.getElementById('save-schedule-btn').addEventListener('click', () => {
             showNotification("Failed to save schedule: " + data.message, "error");
         }
     })
-
     .catch(err => {
         console.error(err);
         showNotification("An error occurred while saving schedule.", "error");
@@ -1173,7 +1170,7 @@ async function loadLessonsAndTopics() {
 
     topicSelect.innerHTML = '<option>Loading...</option>';
 
-    const res = await fetch(` /api/lessons-with-topics?class_id=${classId}`);
+    const res = await fetch(`/api/lessons-with-topics?class_id=${classId}`);
     const data = await res.json();
 
     if (!Array.isArray(data)) {
@@ -1225,13 +1222,13 @@ async function loadQuizzes() {
         }
 
         // ✅ Fetch quizzes
-        const res = await fetch(` /api/reading-quizzes?subject_id=${subjectId}`);
+        const res = await fetch(`/api/reading-quizzes?subject_id=${subjectId}`);
         const quizzes = await res.json();
 
         // ✅ Fetch student attempts (if not teacher)
         let studentAttempts = [];
         if (user.role !== 'teacher') {
-            const attemptsRes = await fetch(` /api/reading-quiz-attempts?student_id=${user.user_id}`);
+            const attemptsRes = await fetch(`/api/reading-quiz-attempts?student_id=${user.user_id}`);
             studentAttempts = await attemptsRes.json();
         }
 
@@ -1391,7 +1388,7 @@ function handleLockUnlock(quizId, isLocked) {
         openScheduleModal(quizId);
     } else {
         // 🔒 Lock immediately
-        fetch(` /api/lock-quiz/${quizId}`, { method: "PUT" })
+        fetch(`/api/lock-quiz/${quizId}`, { method: "PUT" })
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
@@ -1437,7 +1434,7 @@ async function loadLeaderboard(quizId = null) {
     try {
         if (quizId !== null) currentQuizId = quizId;
 
-        let url = " /api/reading-quiz-leaderboard";
+        let url = "/api/reading-quiz-leaderboard";
         if (currentQuizId) url += `?quiz_id=${currentQuizId}`;
 
         const res = await fetch(url);
