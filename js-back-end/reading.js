@@ -3,12 +3,28 @@ const router = express.Router();
 require("dotenv").config();
 const Groq = require("groq-sdk");
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+let groq = null;
+try {
+  const key = String(process.env.GROQ_API_KEY || "").trim();
+  if (key) groq = new Groq({ apiKey: key });
+} catch (e) {
+  groq = null;
+}
+
+function requireGroq(res) {
+  if (groq) return groq;
+  res.status(500).json({
+    success: false,
+    message: "AI service is not configured. Set GROQ_API_KEY in your environment."
+  });
+  return null;
+}
 
 // ================= CREATE TEACHER READING QUIZ =================
 router.post("/api/teacher/reading-quizzes", async (req, res) => {
     const pool = req.pool;
     const { title, difficulty, passage, questions, subject_id, user_id } = req.body; // user_id from frontend
+    const effectiveDifficulty = difficulty || "beginner";
 
     if (!user_id) {
         return res.status(400).json({ success: false, message: "user_id is required" });
@@ -19,10 +35,10 @@ router.post("/api/teacher/reading-quizzes", async (req, res) => {
         conn = await pool.getConnection();
         await conn.beginTransaction();
 
-        // Insert quiz
+        // Insert quiz (difficulty defaults to beginner for AI-generated quizzes)
         const [quizResult] = await conn.query(
             "INSERT INTO teacher_reading_quizzes (subject_id, user_id, title, difficulty, passage) VALUES (?, ?, ?, ?, ?)",
-            [subject_id, user_id, title, difficulty, passage]
+            [subject_id, user_id, title, effectiveDifficulty, passage]
         );
         const quizId = quizResult.insertId;
 
@@ -30,7 +46,7 @@ router.post("/api/teacher/reading-quizzes", async (req, res) => {
         for (let i = 0; i < questions.length; i++) {
             const q = questions[i];
 
-            if (difficulty === "beginner" && q.question_type === "mcq") {
+            if (effectiveDifficulty === "beginner" && q.question_type === "mcq") {
                 // Beginner MCQ
                 const [qResult] = await conn.query(
                     "INSERT INTO teacher_reading_beginner_questions (quiz_id, question_text) VALUES (?, ?)",
@@ -47,7 +63,7 @@ router.post("/api/teacher/reading-quizzes", async (req, res) => {
                     );
                 }
             } 
-            else if (difficulty === "intermediate" && q.question_type === "fill_blank") {
+            else if (effectiveDifficulty === "intermediate" && q.question_type === "fill_blank") {
                 // Intermediate Fill-in-the-blank
                 const [qResult] = await conn.query(
                     "INSERT INTO teacher_reading_intermediate_questions (quiz_id, question_text) VALUES (?, ?)",
@@ -64,7 +80,7 @@ router.post("/api/teacher/reading-quizzes", async (req, res) => {
                     );
                 }
             } 
-            else if (difficulty === "advanced" && q.question_type === "essay") {
+            else if (effectiveDifficulty === "advanced" && q.question_type === "essay") {
                 // Advanced Essay
                 await conn.query(
                     "INSERT INTO teacher_reading_advanced_questions (quiz_id, question_text, points) VALUES (?, ?, ?)",
@@ -101,9 +117,40 @@ router.get("/api/reading-quizzes", async (req, res) => {
       params.push(subjectId);
     }
 
+    // Prefer track order if present
+    query += " ORDER BY quiz_number ASC, created_at ASC";
+
     const [quizzes] = await pool.query(query, params);
 
-    if (studentId) {
+    // New flow: subject-based progression locking (1..20)
+    // Only applied when both student_id and subject_id are provided.
+    if (studentId && subjectId) {
+      const [[progress]] = await pool.query(
+        `SELECT unlocked_quiz_number
+         FROM reading_student_progress
+         WHERE student_id = ? AND subject_id = ?`,
+        [studentId, subjectId]
+      );
+
+      const unlockedQuizNumber = Math.max(1, Number(progress?.unlocked_quiz_number || 1));
+
+      // Ensure a progress row exists (idempotent)
+      await pool.query(
+        `INSERT INTO reading_student_progress (student_id, subject_id, unlocked_quiz_number)
+         VALUES (?, ?, 1)
+         ON DUPLICATE KEY UPDATE unlocked_quiz_number = unlocked_quiz_number`,
+        [studentId, subjectId]
+      );
+
+      quizzes.forEach(q => {
+        const qn = Number(q.quiz_number || 1);
+        const isFirst = qn === 1;
+        // Quiz #1 is always available; others depend on status + progression
+        q.is_locked = (!isFirst && (q.status !== "active")) || (!isFirst && (qn > unlockedQuizNumber));
+        q.unlocked_quiz_number = unlockedQuizNumber;
+      });
+    } else if (studentId) {
+      // Back-compat: keep schedule-based lock logic when subject_id isn't provided
       const [attempts] = await pool.query(
         "SELECT * FROM reading_quiz_attempts WHERE student_id = ?",
         [studentId]
@@ -132,22 +179,27 @@ router.get("/api/reading-quizzes", async (req, res) => {
 });
 
 // ================= TEACHER READING QUIZZES =================
+// GET ?user_id=X → teacher's own quizzes (teacher view)
+// GET ?subject_id=X → all teacher quizzes for that subject (student "Created by teacher" view)
 router.get("/api/teacher/reading-quizzes", async (req, res) => {
   const pool = req.pool;
-  const userId = req.query.user_id;        // Teacher's user_id
-  const subjectId = req.query.subject_id;  // Optional filter by subject
+  const userId = req.query.user_id;
+  const subjectId = req.query.subject_id;
 
   try {
-    if (!userId) {
-      return res.status(400).json({ error: "Teacher user_id is required" });
-    }
-
-    let query = "SELECT * FROM teacher_reading_quizzes WHERE user_id = ?";
-    const params = [userId];
-
-    if (subjectId) {
-      query += " AND subject_id = ?";
-      params.push(subjectId);
+    let query, params;
+    if (userId) {
+      query = "SELECT * FROM teacher_reading_quizzes WHERE user_id = ?";
+      params = [userId];
+      if (subjectId) {
+        query += " AND subject_id = ?";
+        params.push(subjectId);
+      }
+    } else if (subjectId) {
+      query = "SELECT * FROM teacher_reading_quizzes WHERE subject_id = ?";
+      params = [subjectId];
+    } else {
+      return res.status(400).json({ error: "Provide user_id (teacher) or subject_id (student view)" });
     }
 
     const [quizzes] = await pool.query(query, params);
@@ -174,6 +226,95 @@ router.get("/api/teacher/reading-quizzes", async (req, res) => {
   }
 });
 
+// ================= GET SINGLE TEACHER QUIZ (for students to take) =================
+router.get("/api/teacher/reading-quizzes/:id", async (req, res) => {
+  const pool = req.pool;
+  const quizId = req.params.id;
+  try {
+    const [[quiz]] = await pool.query("SELECT * FROM teacher_reading_quizzes WHERE quiz_id = ?", [quizId]);
+    if (!quiz) return res.status(404).json({ error: "Quiz not found" });
+
+    let questionTable;
+    if (quiz.difficulty === "beginner") questionTable = "teacher_reading_beginner_questions";
+    else if (quiz.difficulty === "intermediate") questionTable = "teacher_reading_intermediate_questions";
+    else if (quiz.difficulty === "advanced") questionTable = "teacher_reading_advanced_questions";
+    else questionTable = "teacher_reading_beginner_questions";
+
+    const [rows] = await pool.query(`SELECT * FROM ${questionTable} WHERE quiz_id = ? ORDER BY question_id ASC`, [quizId]);
+    const questions = [];
+
+    for (const q of rows) {
+      const question = { question_id: q.question_id, question_text: q.question_text || "", question_type: "mcq", options: [], blanks: [] };
+      if (quiz.difficulty === "beginner") {
+        const [opts] = await pool.query(
+          "SELECT option_id, option_text, is_correct FROM teacher_reading_mcq_options WHERE question_id = ? ORDER BY position ASC",
+          [q.question_id]
+        );
+        question.options = opts.map((o) => ({ option_id: o.option_id, option_text: o.option_text, is_correct: !!o.is_correct }));
+      } else if (quiz.difficulty === "intermediate") {
+        question.question_type = "fill_blank";
+        const [blanks] = await pool.query(
+          "SELECT blank_id, blank_number, answer_text FROM teacher_reading_fill_blanks WHERE question_id = ? ORDER BY blank_number ASC",
+          [q.question_id]
+        );
+        question.blanks = blanks.map((b) => ({ blank_id: b.blank_id, blank_number: b.blank_number, answer_text: b.answer_text, correct_answer: b.answer_text }));
+      } else if (quiz.difficulty === "advanced") {
+        question.question_type = "essay";
+        question.points = q.points;
+      }
+      questions.push(question);
+    }
+
+    res.json({
+      quiz_id: quiz.quiz_id,
+      title: quiz.title,
+      passage: quiz.passage || "",
+      difficulty: quiz.difficulty,
+      unlock_time: quiz.unlock_time,
+      lock_time: quiz.lock_time,
+      time_limit: quiz.time_limit,
+      questions
+    });
+  } catch (err) {
+    console.error("❌ Get single teacher quiz error:", err);
+    res.status(500).json({ error: "Database error" });
+  }
+});
+
+// ================= TEACHER QUIZ SCHEDULE (unlock/lock date & time) =================
+router.patch("/api/teacher/reading-quizzes/:id/schedule", async (req, res) => {
+  const pool = req.pool;
+  const { id } = req.params;
+  let { unlock_time, lock_time, time_limit } = req.body;
+
+  const toMySqlDateTime = (value) => {
+    if (!value) return null;
+    const s = String(value).trim();
+    if (/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}(:\d{2})?$/.test(s)) return s.length >= 19 ? s.slice(0, 19) : s.slice(0, 16) + ":00";
+    const d = new Date(value);
+    if (!Number.isNaN(d.getTime())) return d.toISOString().slice(0, 19).replace("T", " ");
+    if (typeof value === "string" && value.includes("T") && value.length === 16) return value.replace("T", " ") + ":00";
+    return value;
+  };
+
+  try {
+    unlock_time = toMySqlDateTime(unlock_time);
+    lock_time = toMySqlDateTime(lock_time);
+    if (time_limit != null) time_limit = parseInt(time_limit, 10) || null;
+
+    await pool.query(
+      `UPDATE teacher_reading_quizzes
+       SET unlock_time = ?, lock_time = ?, time_limit = ?
+       WHERE quiz_id = ?`,
+      [unlock_time, lock_time, time_limit, id]
+    );
+
+    res.json({ success: true, message: "Unlock & lock schedule saved" });
+  } catch (err) {
+    console.error("❌ Teacher schedule update error:", err);
+    res.status(500).json({ success: false, message: "Database error" });
+  }
+});
 
 // ================= SCHEDULE / UNLOCK QUIZ =================
 router.patch("/api/reading-quizzes/:id/schedule", async (req, res) => {
@@ -182,10 +323,25 @@ router.patch("/api/reading-quizzes/:id/schedule", async (req, res) => {
   let { unlock_time, lock_time, time_limit, retake_option, allowed_students } = req.body;
 
   try {
-    // Convert "YYYY-MM-DDTHH:mm" to "YYYY-MM-DD HH:mm:00" for MySQL
-    const formatForMySQL = dt => dt.replace('T', ' ') + ':00';
-    unlock_time = formatForMySQL(unlock_time);
-    lock_time = formatForMySQL(lock_time);
+    // Accept either:
+    // - "YYYY-MM-DDTHH:mm" (datetime-local)
+    // - ISO string like "2026-02-06T12:34:56.000Z"
+    // Normalize to MySQL DATETIME "YYYY-MM-DD HH:mm:ss"
+    const toMySqlDateTime = (value) => {
+      if (!value) return null;
+      const d = new Date(value);
+      if (!Number.isNaN(d.getTime())) {
+        return d.toISOString().slice(0, 19).replace("T", " ");
+      }
+      // Fallback for raw datetime-local strings
+      if (typeof value === "string" && value.includes("T") && value.length === 16) {
+        return value.replace("T", " ") + ":00";
+      }
+      return value;
+    };
+
+    unlock_time = toMySqlDateTime(unlock_time);
+    lock_time = toMySqlDateTime(lock_time);
 
     await pool.query(
       `UPDATE reading_quizzes
@@ -308,44 +464,52 @@ router.post("/api/reading-quiz-attempts", async (req, res) => {
   const { student_id, quiz_id } = req.body;
 
   try {
-    // Check if there's already an attempt (in-progress or completed)
-    const [existingAttempts] = await pool.query(
-      `SELECT * FROM reading_quiz_attempts 
-      WHERE student_id = ? AND quiz_id = ?`,
-      [student_id, quiz_id]
-    );
-
-    if (existingAttempts.length > 0) {
-        const attempt = existingAttempts[0];
-
-        if (attempt.status === 'completed') {
-            // Already completed → return readonly attempt
-            return res.json({
-                attempt_id: attempt.attempt_id,
-                start_time: attempt.start_time,
-                end_time: attempt.end_time,
-                status: 'completed',
-                readonly: true
-            });
-        } else {
-            // In-progress → return that attempt
-            return res.json({
-                attempt_id: attempt.attempt_id,
-                start_time: attempt.start_time,
-                end_time: attempt.end_time,
-                status: 'in_progress',
-                readonly: false
-            });
-        }
-    }
-
-    // If no existing attempt, create new
+    // Get quiz meta (used for time_limit + retakes)
     const [[quiz]] = await pool.query(
-      "SELECT time_limit FROM reading_quizzes WHERE quiz_id = ?",
+      "SELECT time_limit, retake_option FROM reading_quizzes WHERE quiz_id = ?",
       [quiz_id]
     );
     if (!quiz) return res.status(404).json({ error: "Quiz not found" });
 
+    // If there's an in-progress attempt, reuse it (prevent duplicates)
+    const [[inProgress]] = await pool.query(
+      `SELECT * FROM reading_quiz_attempts
+       WHERE student_id = ? AND quiz_id = ? AND status = 'in_progress'
+       ORDER BY attempt_id DESC
+       LIMIT 1`,
+      [student_id, quiz_id]
+    );
+
+    if (inProgress) {
+      return res.json({
+        attempt_id: inProgress.attempt_id,
+        start_time: inProgress.start_time,
+        end_time: inProgress.end_time,
+        status: 'in_progress',
+        readonly: false
+      });
+    }
+
+    // If a completed attempt exists, allow retake unless retake_option === 'none'
+    const [[latestCompleted]] = await pool.query(
+      `SELECT * FROM reading_quiz_attempts
+       WHERE student_id = ? AND quiz_id = ? AND status = 'completed'
+       ORDER BY attempt_id DESC
+       LIMIT 1`,
+      [student_id, quiz_id]
+    );
+
+    if (latestCompleted && (quiz.retake_option === 'none')) {
+      return res.json({
+        attempt_id: latestCompleted.attempt_id,
+        start_time: latestCompleted.start_time,
+        end_time: latestCompleted.end_time,
+        status: 'completed',
+        readonly: true
+      });
+    }
+
+    // Create a new attempt (first try or retake)
     const startTime = new Date();
     const endTime = quiz.time_limit
       ? new Date(startTime.getTime() + quiz.time_limit * 60000)
@@ -560,7 +724,51 @@ router.patch("/api/reading-quiz-attempts/:id/submit", async (req, res) => {
       WHERE attempt_id = ?
     `, [totalScore, totalPoints, endTime, attemptId]);
 
-    res.json({ success: true, totalScore, totalPoints, timeTakenSeconds });
+    // 4️⃣ Unlock next quiz in the subject track if passed
+    let unlockedNext = false;
+    let unlocked_quiz_number = null;
+    const percentScore = totalPoints > 0 ? (Number(totalScore) / Number(totalPoints)) * 100 : 0;
+
+    try {
+      const [[meta]] = await pool.query(
+        `SELECT a.student_id, q.subject_id, q.quiz_number, q.passing_score
+         FROM reading_quiz_attempts a
+         JOIN reading_quizzes q ON a.quiz_id = q.quiz_id
+         WHERE a.attempt_id = ?`,
+        [attemptId]
+      );
+
+      if (meta?.student_id && meta?.subject_id) {
+        const quizNumber = Number(meta.quiz_number || 1);
+        const passing = Number(meta.passing_score ?? 70);
+
+        // If passing_score <= 0, unlock next on completion (no minimum score).
+        if (passing <= 0 || percentScore >= passing) {
+          const next = Math.max(2, quizNumber + 1);
+          await pool.query(
+            `INSERT INTO reading_student_progress (student_id, subject_id, unlocked_quiz_number)
+             VALUES (?, ?, ?)
+             ON DUPLICATE KEY UPDATE
+               unlocked_quiz_number = GREATEST(unlocked_quiz_number, VALUES(unlocked_quiz_number))`,
+            [meta.student_id, meta.subject_id, next]
+          );
+
+          const [[p]] = await pool.query(
+            `SELECT unlocked_quiz_number
+             FROM reading_student_progress
+             WHERE student_id = ? AND subject_id = ?`,
+            [meta.student_id, meta.subject_id]
+          );
+
+          unlocked_quiz_number = Number(p?.unlocked_quiz_number || next);
+          unlockedNext = true;
+        }
+      }
+    } catch (e) {
+      console.warn("⚠️ Unlock progression skipped:", e?.message || e);
+    }
+
+    res.json({ success: true, totalScore, totalPoints, percentScore, timeTakenSeconds, unlockedNext, unlocked_quiz_number });
 
   } catch (err) {
     console.error("❌ Error submitting quiz:", err);
@@ -631,7 +839,8 @@ router.get("/api/reading-quiz-attempts/:attemptId/answers", async (req, res) => 
     try {
         // 1️⃣ Fetch all answers for this attempt
         const [answers] = await pool.query(`
-            SELECT answer_id, question_id, question_type, student_answer
+            SELECT answer_id, question_id, question_type, student_answer,
+                   is_correct, points_earned, ai_score, ai_feedback
             FROM reading_quiz_answers
             WHERE attempt_id = ?
         `, [attemptId]);
@@ -669,42 +878,274 @@ router.get("/api/reading-quiz-attempts/:attemptId/answers", async (req, res) => 
     }
 });
 
+// ================= TEACHER: LIST ATTEMPTS FOR A QUIZ (OPTIONAL CLASS FILTER) =================
+router.get("/api/teacher/reading-attempts", async (req, res) => {
+  const pool = req.pool;
+  const quizId = req.query.quiz_id ? Number(req.query.quiz_id) : null;
+  const classId = req.query.class_id ? Number(req.query.class_id) : null;
+
+  if (!quizId) return res.status(400).json({ success: false, error: "quiz_id is required" });
+
+  try {
+    // If class_id is provided, restrict to students who joined that class
+    // (include pending/accepted/rejected — teacher still needs to review submissions).
+    // If class_id is null, return all attempts for the quiz (no class filter, no duplicates).
+    const params = [classId || null, quizId, classId || null];
+    const [rows] = await pool.query(
+      `
+      SELECT 
+        a.attempt_id,
+        a.student_id,
+        CONCAT(u.fname, ' ', u.lname) AS student_name,
+        a.score,
+        a.total_points,
+        a.status,
+        a.start_time,
+        a.end_time,
+        sc.status AS class_status
+      FROM reading_quiz_attempts a
+      JOIN users u ON a.student_id = u.user_id
+      LEFT JOIN student_classes sc
+        ON sc.student_id = a.student_id
+        AND sc.class_id = ?
+      WHERE a.quiz_id = ?
+        AND (? IS NULL OR sc.class_id IS NOT NULL)
+      ORDER BY a.end_time DESC, a.attempt_id DESC
+      `,
+      params
+    );
+
+    res.json({ success: true, attempts: rows });
+  } catch (err) {
+    console.error("❌ Teacher reading attempts error:", err);
+    res.status(500).json({ success: false, error: "Database error" });
+  }
+});
+
+// ================= TEACHER: OVERRIDE GRADING FOR AN ATTEMPT =================
+router.patch("/api/teacher/reading-attempts/:attemptId/override", async (req, res) => {
+  const pool = req.pool;
+  const attemptId = Number(req.params.attemptId);
+  const teacherId = req.body.teacher_id ? Number(req.body.teacher_id) : null;
+  const answers = Array.isArray(req.body.answers) ? req.body.answers : [];
+  const blanks = Array.isArray(req.body.blanks) ? req.body.blanks : [];
+
+  if (!attemptId) return res.status(400).json({ success: false, error: "Invalid attemptId" });
+
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    await conn.beginTransaction();
+
+    // Update question-level answers (MCQ/essay)
+    for (const a of answers) {
+      if (!a || !a.answer_id) continue;
+      const isCorrect = a.is_correct == null ? null : (a.is_correct ? 1 : 0);
+      // Points are auto-calculated. Teacher only flips correct/wrong.
+      // If is_correct is provided and the question is MCQ, award full question points when correct, else 0.
+      let pointsEarned = null;
+      if (isCorrect != null) {
+        const [[meta]] = await conn.query(
+          `
+          SELECT a.question_type, q.points
+          FROM reading_quiz_answers a
+          JOIN reading_questions q ON q.question_id = a.question_id
+          WHERE a.answer_id = ? AND a.attempt_id = ?
+          `,
+          [a.answer_id, attemptId]
+        );
+        if (meta?.question_type === "mcq") {
+          const questionPoints = Number(meta?.points || 1);
+          pointsEarned = isCorrect ? questionPoints : 0;
+        }
+      }
+
+      await conn.query(
+        `UPDATE reading_quiz_answers
+         SET is_correct = COALESCE(?, is_correct),
+             points_earned = COALESCE(?, points_earned),
+             teacher_override = 1,
+             teacher_id = ?,
+             teacher_updated_at = NOW()
+         WHERE answer_id = ? AND attempt_id = ?`,
+        [isCorrect, pointsEarned, teacherId, a.answer_id, attemptId]
+      );
+    }
+
+    // Update blank-level grading (for fill blanks)
+    for (const b of blanks) {
+      if (!b || !b.student_blank_id) continue;
+      const isCorrect = b.is_correct == null ? null : (b.is_correct ? 1 : 0);
+      // Points are auto-calculated per blank. If is_correct is provided, award full blank points when correct, else 0.
+      let pointsEarned = null;
+      if (isCorrect != null) {
+        const [[bp]] = await conn.query(
+          `
+          SELECT f.points
+          FROM reading_quiz_blanks b
+          JOIN reading_fill_blanks f ON f.blank_id = b.blank_id
+          WHERE b.student_blank_id = ?
+          `,
+          [b.student_blank_id]
+        );
+        const blankPoints = Number(bp?.points || 1);
+        pointsEarned = isCorrect ? blankPoints : 0;
+      }
+
+      await conn.query(
+        `UPDATE reading_quiz_blanks
+         SET is_correct = COALESCE(?, is_correct),
+             points_earned = COALESCE(?, points_earned),
+             teacher_override = 1,
+             teacher_id = ?,
+             teacher_updated_at = NOW()
+         WHERE student_blank_id = ?`,
+        [isCorrect, pointsEarned, teacherId, b.student_blank_id]
+      );
+    }
+
+    // Recompute totals after override
+    const [[totals]] = await conn.query(
+      `
+      SELECT
+        (
+          (SELECT COALESCE(SUM(COALESCE(a.points_earned, 0)), 0)
+           FROM reading_quiz_answers a
+           WHERE a.attempt_id = ? AND a.question_type IN ('mcq','essay'))
+          +
+          (SELECT COALESCE(SUM(COALESCE(b.points_earned, 0)), 0)
+           FROM reading_quiz_blanks b
+           JOIN reading_quiz_answers a2 ON a2.answer_id = b.answer_id
+           WHERE a2.attempt_id = ?)
+        ) AS totalScore,
+        (
+          (SELECT COALESCE(SUM(COALESCE(q.points, 0)), 0)
+           FROM reading_quiz_answers a
+           JOIN reading_questions q ON q.question_id = a.question_id
+           WHERE a.attempt_id = ? AND a.question_type IN ('mcq','essay'))
+          +
+          (SELECT COALESCE(SUM(COALESCE(f.points, 0)), 0)
+           FROM reading_quiz_blanks b
+           JOIN reading_fill_blanks f ON f.blank_id = b.blank_id
+           JOIN reading_quiz_answers a2 ON a2.answer_id = b.answer_id
+           WHERE a2.attempt_id = ?)
+        ) AS totalPoints
+      `,
+      [attemptId, attemptId, attemptId, attemptId]
+    );
+
+    await conn.query(
+      `UPDATE reading_quiz_attempts
+       SET score = ?, total_points = ?
+       WHERE attempt_id = ?`,
+      [Number(totals?.totalScore || 0), Number(totals?.totalPoints || 0), attemptId]
+    );
+
+    // Unlock next quiz if override makes the student pass (or passing_score <= 0)
+    let unlockedNext = false;
+    let unlocked_quiz_number = null;
+    const percentScore = Number(totals?.totalPoints || 0) > 0
+      ? (Number(totals?.totalScore || 0) / Number(totals?.totalPoints || 0)) * 100
+      : 0;
+
+    const [[meta]] = await conn.query(
+      `SELECT a.student_id, q.subject_id, q.quiz_number, q.passing_score
+       FROM reading_quiz_attempts a
+       JOIN reading_quizzes q ON q.quiz_id = a.quiz_id
+       WHERE a.attempt_id = ?`,
+      [attemptId]
+    );
+
+    if (meta?.student_id && meta?.subject_id) {
+      const quizNumber = Number(meta.quiz_number || 1);
+      const passing = Number(meta.passing_score ?? 70);
+      if (passing <= 0 || percentScore >= passing) {
+        const next = Math.max(2, quizNumber + 1);
+        await conn.query(
+          `INSERT INTO reading_student_progress (student_id, subject_id, unlocked_quiz_number)
+           VALUES (?, ?, ?)
+           ON DUPLICATE KEY UPDATE
+             unlocked_quiz_number = GREATEST(unlocked_quiz_number, VALUES(unlocked_quiz_number))`,
+          [meta.student_id, meta.subject_id, next]
+        );
+        const [[p]] = await conn.query(
+          `SELECT unlocked_quiz_number
+           FROM reading_student_progress
+           WHERE student_id = ? AND subject_id = ?`,
+          [meta.student_id, meta.subject_id]
+        );
+        unlocked_quiz_number = Number(p?.unlocked_quiz_number || next);
+        unlockedNext = true;
+      }
+    }
+
+    await conn.commit();
+
+    res.json({
+      success: true,
+      totalScore: Number(totals?.totalScore || 0),
+      totalPoints: Number(totals?.totalPoints || 0),
+      percentScore,
+      unlockedNext,
+      unlocked_quiz_number
+    });
+  } catch (err) {
+    if (conn) await conn.rollback();
+    console.error("❌ Teacher override error:", err);
+    res.status(500).json({ success: false, error: "Failed to save override" });
+  } finally {
+    if (conn) conn.release();
+  }
+});
+
 // ============================
 // 🏆 Leaderboard Endpoint
 // ============================
 router.get("/api/reading-quiz-leaderboard", async (req, res) => {
   const pool = req.pool;
   const quizId = req.query.quiz_id ? Number(req.query.quiz_id) : null;
+  const isTeacherQuiz = String(req.query.teacher_quiz || "").toLowerCase() === "1" || req.query.teacher_quiz === "true";
 
   if (!quizId) return res.status(400).json({ success: false, error: "quiz_id is required" });
 
   try {
-    // Get quiz title
-    const [quizRows] = await pool.query(
-      "SELECT title FROM reading_quizzes WHERE quiz_id = ?",
-      [quizId]
-    );
-    const quizTitle = quizRows[0]?.title || "Quiz";
+    let quizTitle = "Quiz";
+    let rows = [];
 
-    // Get leaderboard
-    let sql = `
-      SELECT 
-        u.user_id,
-        CONCAT(u.fname, ' ', u.lname) AS student_name,
-        a.quiz_id,
-        a.score,
-        a.total_points,
-        a.status,
-        a.start_time,
-        a.end_time,
-        TIMESTAMPDIFF(SECOND, a.start_time, a.end_time) AS time_taken_seconds
-      FROM reading_quiz_attempts a
-      JOIN users u ON a.student_id = u.user_id
-      WHERE a.status = 'completed' AND a.quiz_id = ?
-      ORDER BY a.score DESC, TIMESTAMPDIFF(SECOND, a.start_time, a.end_time) ASC, a.end_time ASC
-      LIMIT 20
-    `;
-    const [rows] = await pool.query(sql, [quizId]);
+    if (isTeacherQuiz) {
+      const [quizRows] = await pool.query(
+        "SELECT title FROM teacher_reading_quizzes WHERE quiz_id = ?",
+        [quizId]
+      );
+      quizTitle = quizRows[0]?.title || "Quiz";
+      // Teacher quiz attempts not stored yet; return empty leaderboard
+    } else {
+      const [quizRows] = await pool.query(
+        "SELECT title FROM reading_quizzes WHERE quiz_id = ?",
+        [quizId]
+      );
+      quizTitle = quizRows[0]?.title || "Quiz";
+
+      const sql = `
+        SELECT 
+          u.user_id,
+          CONCAT(u.fname, ' ', u.lname) AS student_name,
+          a.quiz_id,
+          a.score,
+          a.total_points,
+          a.status,
+          a.start_time,
+          a.end_time,
+          TIMESTAMPDIFF(SECOND, a.start_time, a.end_time) AS time_taken_seconds
+        FROM reading_quiz_attempts a
+        JOIN users u ON a.student_id = u.user_id
+        WHERE a.status = 'completed' AND a.quiz_id = ?
+        ORDER BY a.score DESC, TIMESTAMPDIFF(SECOND, a.start_time, a.end_time) ASC, a.end_time ASC
+        LIMIT 20
+      `;
+      const [r] = await pool.query(sql, [quizId]);
+      rows = r;
+    }
 
     const formatted = rows.map(r => {
       let seconds = Math.max(0, r.time_taken_seconds);
@@ -799,19 +1240,78 @@ router.get('/api/lessons-with-topics', async (req, res) => {
   }
 });
 
-function buildQuizPrompt(topicTitle, quizType, difficulty, numQuestions, additionalContext) {
-  let instruction = "";
+const TOS_LEVEL_DESCRIPTIONS = {
+  remembering: "Remembering (recall facts, terms, list, define, identify)",
+  understanding: "Understanding (explain, summarize, interpret, classify)",
+  applying: "Applying (use in new situation, implement, execute)",
+  analyzing: "Analyzing (break down, compare, contrast, infer)",
+  evaluating: "Evaluating (justify, critique, judge, argue)",
+  creating: "Creating (design, produce, construct, formulate)"
+};
 
-  if (quizType === "multiple-choice" || difficulty === "beginner") {
-    instruction = `Generate ${numQuestions} multiple-choice questions about "${topicTitle}". Each question should have 4 options and indicate the correct answer.`;
-  } else if (quizType === "fill-in-the-blank" || difficulty === "intermediate") {
-    instruction = `Generate ${numQuestions} fill-in-the-blank questions about "${topicTitle}". Specify the correct answer for each blank.`;
-  } else if (quizType === "essay" || difficulty === "advanced") {
-    instruction = `Generate ${numQuestions} essay-type questions about "${topicTitle}".`;
+function buildQuizPromptFromCounts(topicTitle, questionCounts, difficulty, additionalContext, tos_levels) {
+  const counts = questionCounts && typeof questionCounts === "object" ? questionCounts : {};
+  const mc = Math.max(0, parseInt(counts["multiple-choice"], 10) || 0);
+  const tf = Math.max(0, parseInt(counts["true-false"], 10) || 0);
+  const id = Math.max(0, parseInt(counts["identification"], 10) || 0);
+  const parts = [];
+  if (mc > 0) {
+    parts.push(`${mc} multiple-choice question(s). For each: write the question, then exactly 4 lines: A) ... B) ... C) ... D) ... then a new line: "Correct answer: A)" or B) or C) or D).`);
+  }
+  if (tf > 0) {
+    parts.push(`${tf} true-or-false question(s). For each: write the statement (one line), then on the next line write exactly either "Correct answer: True)" or "Correct answer: False)" (nothing else on that line).`);
+  }
+  if (id > 0) {
+    parts.push(`${id} identification (short-answer) question(s). For each: write the question (e.g. "What is the capital of France?"), then on the next line write "Correct answer: " followed by the exact answer. The correct answer must be only one word or two words (e.g. "Correct answer: Paris" or "Correct answer: New York"). No long phrases.`);
+  }
+  const total = mc + tf + id;
+  if (total === 0 || parts.length === 0) {
+    return buildQuizPrompt(topicTitle, ["multiple-choice"], difficulty, 5, additionalContext);
+  }
+  let instruction = `Generate a quiz about "${topicTitle}" with EXACTLY these numbers of questions (no more, no less):\n\n`;
+  instruction += parts.map((p, i) => `${i + 1}. ${p}`).join("\n\n");
+  instruction += `\n\nCRITICAL: The total number of questions must be exactly ${total}. Output exactly ${mc} multiple-choice, exactly ${tf} true-or-false, and exactly ${id} identification. Do not add extra questions or mix formats. Use the exact formats above so answers can be parsed.\n\nIMPORTANT format: Start the first question with exactly "Question 1:" (or "1.") on its own line. Then "Question 2:", "Question 3:", etc. for each following question. You may add a short intro/passage before "Question 1:" but every question must begin with "Question N:" or "N." so they can be parsed.`;
+  if (tos_levels && Array.isArray(tos_levels) && tos_levels.length > 0) {
+    const labels = tos_levels
+      .filter((level) => TOS_LEVEL_DESCRIPTIONS[level])
+      .map((level) => TOS_LEVEL_DESCRIPTIONS[level]);
+    if (labels.length > 0) {
+      instruction += `\n\nTABLE OF SPECIFICATION (cognitive levels): Distribute the ${total} questions evenly across these Bloom's taxonomy levels: ${labels.join("; ")}. Label each question in the output with its level in parentheses, e.g. "Question 1: (Remembering) ...".`;
+    }
+  }
+  if (additionalContext) {
+    instruction += `\n\nAdditional context: ${additionalContext}`;
+  }
+  return instruction;
+}
+
+function buildQuizPrompt(topicTitle, quizTypes, difficulty, numQuestions, additionalContext) {
+  const types = Array.isArray(quizTypes) && quizTypes.length > 0 ? quizTypes : ["multiple-choice"];
+  const total = Math.max(1, parseInt(numQuestions, 10) || 5);
+  const perType = Math.max(1, Math.floor(total / types.length));
+  const remainder = total - perType * types.length;
+
+  const parts = [];
+  let idx = 0;
+  for (const t of types) {
+    const n = perType + (idx < remainder ? 1 : 0);
+    if (n <= 0) continue;
+    idx++;
+    if (t === "multiple-choice") {
+      parts.push(`${n} multiple-choice question(s). For each: write the question, then exactly 4 lines: A) ... B) ... C) ... D) ... then a new line: "Correct answer: A)" or B) or C) or D).`);
+    } else if (t === "true-false") {
+      parts.push(`${n} true-or-false question(s). For each: write the statement (one line), then on the next line write exactly either "Correct answer: True)" or "Correct answer: False)" (nothing else on that line).`);
+    } else if (t === "identification") {
+      parts.push(`${n} identification (short-answer) question(s). For each: write the question (e.g. "What is the capital of France?"), then on the next line write "Correct answer: " followed by the exact answer. The correct answer must be only one word or two words (e.g. "Correct answer: Paris" or "Correct answer: New York"). No long phrases.`);
+    }
   }
 
+  let instruction = `Generate a total of ${total} quiz questions about "${topicTitle}". Include the following (use the exact formats so answers can be parsed):\n\n`;
+  instruction += parts.map((p, i) => `${i + 1}. ${p}`).join("\n\n");
+  instruction += `\n\nIMPORTANT format: Start the first question with exactly "Question 1:" (or "1.") on its own line. Then "Question 2:", "Question 3:", etc. for each following question. You may add a short intro/passage before "Question 1:" but every question must begin with "Question N:" or "N." so they can be parsed.`;
+
   if (additionalContext) {
-    instruction += `\nAdditional context: ${additionalContext}`;
+    instruction += `\n\nAdditional context: ${additionalContext}`;
   }
 
   return instruction;
@@ -820,14 +1320,24 @@ function buildQuizPrompt(topicTitle, quizType, difficulty, numQuestions, additio
 // 🚀 POST /api/generate-quiz
 router.post("/api/generate-quiz", async (req, res) => {
   const pool = req.pool;
-  const { topic_id, quiz_type, difficulty, num_questions, additional_context } = req.body;
+  const body = req.body || {};
+  const topic_id = body.topic_id != null ? String(body.topic_id).trim() : "";
+  const quiz_type = body.quiz_type;
+  const quiz_types = body.quiz_types;
+  const question_counts = body.question_counts;
+  const difficulty = body.difficulty;
+  const num_questions = body.num_questions;
+  const additional_context = body.additional_context;
+  const difficultyForPrompt = difficulty || "beginner";
 
-  if (!topic_id || !difficulty || !num_questions) {
-    return res.status(400).json({ success: false, message: "Missing required fields" });
+  if (!topic_id) {
+    return res.status(400).json({ success: false, message: "Please select a topic in Step 1." });
   }
 
   try {
-    // ✅ Get topic title
+    const client = requireGroq(res);
+    if (!client) return;
+
     const [topicRows] = await pool.query("SELECT topic_title FROM topics WHERE topic_id = ?", [topic_id]);
     if (topicRows.length === 0) {
       return res.status(404).json({ success: false, message: "Topic not found" });
@@ -835,11 +1345,18 @@ router.post("/api/generate-quiz", async (req, res) => {
 
     const topicTitle = topicRows[0].topic_title;
 
-    // ✅ Build the AI prompt
-    const instruction = buildQuizPrompt(topicTitle, quiz_type, difficulty, num_questions, additional_context);
+    const tos_levels = body.tos_levels;
+    let instruction;
+    if (question_counts && typeof question_counts === "object" && (question_counts["multiple-choice"] > 0 || question_counts["true-false"] > 0 || question_counts["identification"] > 0)) {
+      instruction = buildQuizPromptFromCounts(topicTitle, question_counts, difficultyForPrompt, additional_context, tos_levels);
+    } else {
+      const types = Array.isArray(quiz_types) && quiz_types.length > 0 ? quiz_types : (quiz_type ? [quiz_type] : ["multiple-choice"]);
+      const numQuestions = Math.max(1, parseInt(num_questions, 10) || 5);
+      instruction = buildQuizPrompt(topicTitle, types, difficultyForPrompt, numQuestions, additional_context);
+    }
 
     // ✅ Call Groq API (replace max_output_tokens with max_tokens)
-    const completion = await groq.chat.completions.create({
+    const completion = await client.chat.completions.create({
       model: "llama-3.1-8b-instant",
       messages: [
         { role: "system", content: "You are an educational quiz generator that outputs clean and clear text." },

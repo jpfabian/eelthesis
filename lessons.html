@@ -6,8 +6,9 @@
     <title>Lessons - EEL</title>
     <link rel="stylesheet" href="css/styles.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.1/lucide.min.css" rel="stylesheet">
+    <script src="js/theme.js"></script>
 </head>
-<body>
+<body class="lessons-page">
     <!-- Loading Screen -->
     <div id="loading-screen" class="loading-screen">
         <div class="loading-content">
@@ -50,16 +51,340 @@
         <!-- Main Content -->
         <main id="main-content" class="flex-1 overflow-auto">
             <div class="p-6 space-y-6">
-                <div>
-                    <h2 class="text-2xl font-semibold mb-2">Lessons</h2>
-                    <p class="text-muted-foreground">Lessons for your students</p>
+                <header class="page-header">
+                    <div class="page-header-icon" aria-hidden="true">
+                        <i data-lucide="file-text" class="size-8"></i>
+                    </div>
+                    <div>
+                        <h1 class="page-header-title">Lessons</h1>
+                        <p id="lessons-subtitle" class="page-header-subtitle">Browse lesson topics and open the PDF, or manage AI-generated quizzes.</p>
+                    </div>
+                </header>
+
+                <!-- Tabs: Lesson topics (PPT) | AI-generated quizzes -->
+                <div class="lessons-tabs-wrap" id="lessons-tabs-wrap">
+                    <div class="lessons-tabs" role="tablist">
+                        <button type="button" id="lessons-tab-ppt" class="lessons-tab-btn btn btn-primary" role="tab" aria-selected="true" onclick="switchLessonsView('ppt')">
+                            <i data-lucide="file-text" class="size-4 mr-2"></i>
+                            Lesson topics
+                        </button>
+                        <button type="button" id="lessons-tab-quizzes" class="lessons-tab-btn btn btn-outline hidden" role="tab" aria-selected="false" onclick="switchLessonsView('quizzes')">
+                            <i data-lucide="brain" class="size-4 mr-2"></i>
+                            Quizzes
+                        </button>
+                    </div>
                 </div>
-                <div class="card group card-content w-[600px] space-y-8 right-card mx-auto gap-6">
-                    <div id="subject-name" class="text-xl font-semibold mt-3"></div>
-                    <div id="lessons-container" class="max-h-80 overflow-y-auto"></div>
+
+                <!-- PPT / Lesson topics container (shown by default) -->
+                <div id="lessons-ppt-container" class="lessons-view-container" data-lessons-view="ppt">
+                    <div class="card lessons-shell lessons-ppt-card mx-auto">
+                        <div class="lessons-shell__top">
+                            <div class="lessons-shell__subject">
+                                <div class="text-sm text-muted-foreground">Subject</div>
+                                <div id="subject-name" class="text-xl font-semibold">—</div>
+                            </div>
+                            <div class="lessons-shell__search">
+                                <label class="form-label" for="lesson-search">Search topics</label>
+                                <div class="lessons-search-row">
+                                    <i data-lucide="search" class="size-4 text-muted-foreground"></i>
+                                    <input id="lesson-search" class="form-input" type="text" placeholder="Type a keyword (e.g., grammar, thesis, pronunciation)" />
+                                </div>
+                            </div>
+                        </div>
+                        <div id="lessons-empty" class="lessons-empty hidden">
+                            <div class="lessons-empty__icon">
+                                <i data-lucide="inbox" class="size-5"></i>
+                            </div>
+                            <div>
+                                <div class="font-medium">No matching topics</div>
+                                <div class="text-sm text-muted-foreground">Try a different keyword or clear the search.</div>
+                            </div>
+                        </div>
+                        <div id="lessons-container" class="lessons-list" aria-live="polite"></div>
+                    </div>
+                </div>
+
+                <!-- AI-generated quizzes container (hidden by default) -->
+                <div id="lessons-quizzes-container" class="lessons-view-container hidden" data-lessons-view="quizzes">
+                    <div class="card lessons-ai-quiz-card mx-auto" id="lessons-ai-quiz-section" data-view="grid">
+                        <div class="lessons-ai-quiz-card__header">
+                            <div>
+                                <h3 class="lessons-ai-quiz-card__title">AI-generated quizzes</h3>
+                                <p id="lessons-ai-quiz-subtitle" class="lessons-ai-quiz-card__subtitle text-muted-foreground">Quizzes you created. Set schedule and view leaderboard here.</p>
+                            </div>
+                            <div class="lessons-ai-quiz-card__header-actions">
+                                <div class="lessons-ai-quiz-view-toggle" role="group" aria-label="View mode">
+                                    <button type="button" id="lessons-ai-quiz-view-grid" class="btn btn-outline btn-sm">
+                                        <i data-lucide="layout-grid" class="size-4"></i>
+                                        Grid
+                                    </button>
+                                    <button type="button" id="lessons-ai-quiz-view-list" class="btn btn-outline btn-sm">
+                                        <i data-lucide="list" class="size-4"></i>
+                                        List
+                                    </button>
+                                </div>
+                                <button type="button" class="btn btn-primary teacher-only" onclick="openAIModalLesson()">
+                                    <i data-lucide="brain" class="size-4 mr-2"></i>
+                                    AI Generate Quiz
+                                </button>
+                            </div>
+                        </div>
+                        <div id="lessons-ai-quiz-list" class="lessons-ai-quiz-list" aria-live="polite">
+                            <!-- Filled by JS -->
+                        </div>
+                    </div>
                 </div>
             </div>
         </main>
+    </div>
+
+    <!-- ============================================
+     ✨ AI Quiz Generator Modal
+     ============================================ -->
+    <div id="ai-quiz-generator-modal" class="modal-overlay hidden">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 class="modal-title">
+                    <i data-lucide="sparkles" class="size-6"></i>
+                    AI Quiz Generator
+                </h3>
+                <button class="close-btn" onclick="closeAIModalLesson()" aria-label="Close">
+                    <i data-lucide="x" class="size-5"></i>
+                </button>
+            </div>
+            <div class="modal-content space-y-5">
+                <section class="ai-modal-section">
+                    <h4 class="ai-modal-section-title">
+                        <i data-lucide="settings" class="size-5"></i>
+                        Step 1 — Quiz configuration
+                    </h4>
+                    <div class="space-y-2">
+                        <label class="form-label" for="ai-topic">Topic</label>
+                        <select id="ai-topic" class="form-input">
+                            <option value="">Select a topic</option>
+                        </select>
+                    </div>
+                    <div class="ai-quiz-types-quantity-wrap">
+                        <h4 class="ai-quiz-types-quantity-title">Question Types &amp; Quantity</h4>
+                        <div class="ai-quiz-types-quantity" role="group" aria-label="Question types and quantity">
+                            <label class="ai-quiz-type-qty-row">
+                                <input type="checkbox" name="ai-quiz-type" class="ai-quiz-type-cb" value="multiple-choice">
+                                <span class="ai-quiz-type-qty-label">Multiple Choice</span>
+                                <input type="number" id="ai-qty-multiple-choice" class="ai-quiz-type-qty-input" value="0" min="0" max="20" aria-label="Multiple choice questions">
+                                <span class="ai-quiz-type-qty-unit">questions</span>
+                            </label>
+                            <label class="ai-quiz-type-qty-row">
+                                <input type="checkbox" name="ai-quiz-type" class="ai-quiz-type-cb" value="true-false">
+                                <span class="ai-quiz-type-qty-label">True/False</span>
+                                <input type="number" id="ai-qty-true-false" class="ai-quiz-type-qty-input" value="0" min="0" max="20" aria-label="True/False questions">
+                                <span class="ai-quiz-type-qty-unit">questions</span>
+                            </label>
+                            <label class="ai-quiz-type-qty-row">
+                                <input type="checkbox" name="ai-quiz-type" class="ai-quiz-type-cb" value="identification">
+                                <span class="ai-quiz-type-qty-label">Identification</span>
+                                <input type="number" id="ai-qty-identification" class="ai-quiz-type-qty-input" value="0" min="0" max="20" aria-label="Identification questions">
+                                <span class="ai-quiz-type-qty-unit">questions</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="ai-tos-wrap">
+                        <h4 class="ai-tos-title">Table of Specification (TOS) — Cognitive levels</h4>
+                        <p class="ai-tos-hint">Check the levels to include; questions will be distributed evenly across selected levels.</p>
+                        <div class="ai-tos-checkboxes" role="group" aria-label="Cognitive levels">
+                            <label class="ai-tos-cb-label">
+                                <input type="checkbox" name="ai-tos-level" class="ai-tos-cb" value="remembering">
+                                <span class="ai-tos-cb-text">Remembering</span>
+                            </label>
+                            <label class="ai-tos-cb-label">
+                                <input type="checkbox" name="ai-tos-level" class="ai-tos-cb" value="understanding">
+                                <span class="ai-tos-cb-text">Understanding</span>
+                            </label>
+                            <label class="ai-tos-cb-label">
+                                <input type="checkbox" name="ai-tos-level" class="ai-tos-cb" value="applying">
+                                <span class="ai-tos-cb-text">Applying</span>
+                            </label>
+                            <label class="ai-tos-cb-label">
+                                <input type="checkbox" name="ai-tos-level" class="ai-tos-cb" value="analyzing">
+                                <span class="ai-tos-cb-text">Analyzing</span>
+                            </label>
+                            <label class="ai-tos-cb-label">
+                                <input type="checkbox" name="ai-tos-level" class="ai-tos-cb" value="evaluating">
+                                <span class="ai-tos-cb-text">Evaluating</span>
+                            </label>
+                            <label class="ai-tos-cb-label">
+                                <input type="checkbox" name="ai-tos-level" class="ai-tos-cb" value="creating">
+                                <span class="ai-tos-cb-text">Creating</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="space-y-2">
+                        <label class="form-label" for="ai-context">Additional instructions (optional)</label>
+                        <textarea id="ai-context" class="form-textarea" rows="3" placeholder="e.g. Focus on examples, include idioms..."></textarea>
+                    </div>
+                    <button type="button" id="ai-generate-btn" class="ai-modal-generate-btn" onclick="generateAIQuizLesson()">
+                        <i data-lucide="sparkles" class="size-5"></i>
+                        Generate quiz with AI
+                    </button>
+                </section>
+                <section id="ai-generated-section" class="hidden space-y-5">
+                    <div class="ai-generated-header">
+                        <h4 class="ai-generated-title">
+                            <i data-lucide="file-text" class="size-5"></i>
+                            Step 2 — Review & edit
+                        </h4>
+                        <button type="button" class="ai-modal-regenerate-btn" onclick="generateAIQuizLesson()">
+                            <i data-lucide="refresh-cw" class="size-4"></i>
+                            Regenerate
+                        </button>
+                    </div>
+                    <div class="space-y-2">
+                        <label class="form-label" for="ai-generated-passage">Reading passage</label>
+                        <textarea id="ai-generated-passage" class="form-textarea" rows="6" placeholder="Generated passage will appear here..."></textarea>
+                    </div>
+                    <div class="space-y-2">
+                        <label class="form-label">Comprehension questions</label>
+                        <div id="ai-questions-container" class="space-y-4"></div>
+                    </div>
+                </section>
+                <div class="ai-modal-tips">
+                    <p>💡 <strong>Tip:</strong> Choose a topic and click Generate. You can edit the passage and questions before saving. The more specific your instructions, the better the result.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" onclick="closeAIModalLesson()">Cancel</button>
+                <button type="button" id="ai-save-btn" onclick="saveAIQuizLesson()" disabled>
+                    <i data-lucide="save" class="size-4"></i>
+                    Save quiz
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Schedule modal for AI quiz (lessons page) -->
+    <div id="lesson-schedule-modal" class="modal-overlay hidden">
+        <div class="modal-card schedule-modal-card" id="schedule-modal">
+            <div class="schedule-modal-header">
+                <div class="schedule-modal-header-inner">
+                    <span class="schedule-modal-icon" aria-hidden="true"><i data-lucide="calendar-clock" class="size-6"></i></span>
+                    <div>
+                        <h3 class="schedule-modal-title">Set quiz schedule</h3>
+                        <p class="schedule-modal-subtitle">When can students take this quiz?</p>
+                    </div>
+                </div>
+                <button type="button" class="schedule-modal-close" onclick="closeScheduleModalLesson()" aria-label="Close"><i data-lucide="x" class="size-5"></i></button>
+            </div>
+            <div class="schedule-modal-content">
+                <div class="schedule-modal-section">
+                    <h4 class="schedule-modal-section-title"><i data-lucide="unlock" class="size-4"></i> Unlock</h4>
+                    <p class="schedule-modal-hint">Earliest date and time students can start the quiz.</p>
+                    <label class="schedule-modal-label" for="lesson-modal-unlock-time">Unlock date & time</label>
+                    <input type="datetime-local" id="lesson-modal-unlock-time" class="schedule-modal-input">
+                </div>
+                <div class="schedule-modal-connector" aria-hidden="true"></div>
+                <div class="schedule-modal-section">
+                    <h4 class="schedule-modal-section-title"><i data-lucide="clock" class="size-4"></i> Time limit</h4>
+                    <p class="schedule-modal-hint">Minutes allowed per attempt.</p>
+                    <label class="schedule-modal-label" for="lesson-modal-time-limit">Minutes</label>
+                    <input type="number" id="lesson-modal-time-limit" class="schedule-modal-input schedule-modal-input-narrow" min="1" placeholder="15">
+                </div>
+                <div class="schedule-modal-connector" aria-hidden="true"></div>
+                <div class="schedule-modal-section">
+                    <h4 class="schedule-modal-section-title"><i data-lucide="lock" class="size-4"></i> Lock (deadline)</h4>
+                    <p class="schedule-modal-hint">After this time the quiz is no longer available.</p>
+                    <label class="schedule-modal-label" for="lesson-modal-lock-time">Lock date & time</label>
+                    <input type="datetime-local" id="lesson-modal-lock-time" class="schedule-modal-input">
+                </div>
+                <div class="schedule-modal-tip" role="status">
+                    <i data-lucide="info" class="size-4 schedule-modal-tip-icon"></i>
+                    <p>Unlock and lock define the availability window. Time limit applies per attempt.</p>
+                </div>
+            </div>
+            <div class="schedule-modal-footer">
+                <button type="button" class="schedule-modal-btn schedule-modal-btn-cancel" onclick="closeScheduleModalLesson()">Cancel</button>
+                <button type="button" id="lesson-save-schedule-btn" class="schedule-modal-btn schedule-modal-btn-save"><i data-lucide="check" class="size-4"></i> Save schedule</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaderboard modal (lessons page) — same design as pronunciation-lessons -->
+    <div id="lesson-leaderboard-modal" class="modal-quiz-overlay hidden">
+        <div class="leaderboard-modal-card">
+            <button onclick="closeLeaderboardModalLesson()" class="close-btn" aria-label="Close">&times;</button>
+
+            <div class="leaderboard-header">
+                <div class="leaderboard-header-icon">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path>
+                        <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path>
+                        <path d="M4 22h16"></path>
+                        <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path>
+                        <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path>
+                        <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path>
+                    </svg>
+                </div>
+                <h2 class="leaderboard-modal-title">Quiz Leaderboard</h2>
+                <p class="leaderboard-subtitle" id="lesson-quiz-name">—</p>
+            </div>
+
+            <!-- Top 3 Podium -->
+            <div class="podium-container">
+                <div class="podium-card second-place">
+                    <div class="podium-medal">🥈</div>
+                    <div class="podium-avatar" style="background: linear-gradient(135deg, #9ca3af, #6b7280);"></div>
+                    <div class="podium-name"></div>
+                    <div class="podium-score"><span></span></div>
+                    <div class="podium-rank"></div>
+                </div>
+                <div class="podium-card first-place">
+                    <div class="podium-medal">🥇</div>
+                    <div class="podium-avatar" style="background: linear-gradient(135deg, #fbbf24, #f59e0b);"></div>
+                    <div class="podium-name"></div>
+                    <div class="podium-score"><span></span></div>
+                    <div class="podium-rank"></div>
+                </div>
+                <div class="podium-card third-place">
+                    <div class="podium-medal">🥉</div>
+                    <div class="podium-avatar" style="background: linear-gradient(135deg, #fb923c, #ea580c);"></div>
+                    <div class="podium-name"></div>
+                    <div class="podium-score"><span></span></div>
+                    <div class="podium-rank"></div>
+                </div>
+            </div>
+
+            <div class="leaderboard-table-container">
+                <div class="leaderboard-table-header">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    </svg>
+                    <span>All Rankings</span>
+                </div>
+                <div class="leaderboard-table-scroll">
+                    <table class="leaderboard-table">
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Student</th>
+                                <th>Score</th>
+                                <th>Time</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="lesson-leaderboard-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="leaderboard-modal-actions">
+                <button type="button" onclick="refreshLeaderboardLesson()" class="leaderboard-action-btn">
+                    <i data-lucide="refresh-cw" class="size-4"></i>
+                    Refresh
+                </button>
+                <button type="button" onclick="closeLeaderboardModalLesson()" class="leaderboard-action-btn">Close</button>
+            </div>
+        </div>
     </div>
 
     <!-- ============================================
@@ -79,7 +404,7 @@
 
             <div class="modal-content">
                 <!-- Embed PDF will update dynamically -->
-                <embed id="lesson-pdf" src="" type="application/pdf" width="100%" height="600px" style="border-radius: 0.5rem; border: 1px solid var(--border);" />
+                <embed id="lesson-pdf" class="lesson-viewer" src="" type="application/pdf" />
                 
             </div>
 

@@ -49,7 +49,7 @@ async function loadLessonsAndTopics() {
     const classId = localStorage.getItem("eel_selected_class_id");
     if (!classId) return console.error("No class_id found in localStorage");
 
-    const res = await fetch(`/api/lessons-with-topics?class_id=${classId}`);
+    const res = await fetch(`http://localhost:3000/api/lessons-with-topics?class_id=${classId}`);
     const data = await res.json();
 
     if (!Array.isArray(data)) {
@@ -64,29 +64,22 @@ async function loadLessonsAndTopics() {
       // Lesson header
       const lessonHeader = document.createElement('div');
       lessonHeader.textContent = lesson.lesson_title;
-      lessonHeader.style.fontWeight = 'bold';
-      lessonHeader.style.cursor = 'pointer';
-      lessonHeader.style.padding = '0.5rem';
-      lessonHeader.style.borderBottom = '1px solid #ccc';
-      lessonHeader.style.backgroundColor = '#e0e7ff';
-      lessonHeader.classList.add('lesson-header');
+      lessonHeader.classList.add('exam-topic-lesson-header');
 
       // Topics container
       const topicsDiv = document.createElement('div');
       topicsDiv.style.display = 'none';
-      topicsDiv.style.padding = '0.5rem 1rem';
-      topicsDiv.style.backgroundColor = 'rgba(99, 102, 241, 0.05)';
+      topicsDiv.classList.add('exam-topic-topics');
 
       lesson.topics.forEach(topic => {
         const label = document.createElement('label');
-        label.style.display = 'block';
-        label.style.marginBottom = '0.25rem';
+        label.classList.add('exam-topic-option');
 
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         checkbox.value = topic.topic_id;
         checkbox.name = 'topics';
-        checkbox.style.marginRight = '0.5rem';
+        checkbox.classList.add('exam-topic-checkbox');
 
         label.appendChild(checkbox);
         label.appendChild(document.createTextNode(topic.topic_title));
@@ -154,7 +147,9 @@ function setupExamGenerator() {
   generateBtn.addEventListener("click", async () => {
     const methodInput = document.querySelector('input[name="method"]:checked');
     if (!methodInput) {
-      alert("Please select a generation method (Topic or Text).");
+      if (typeof Swal !== "undefined") {
+        Swal.fire({ icon: "warning", title: "No method selected", text: "Please select a generation method (Topic or Text).", confirmButtonColor: "#3085d6" });
+      } else alert("Please select a generation method (Topic or Text).");
       return;
     }
 
@@ -175,15 +170,28 @@ function setupExamGenerator() {
 
     // ✅ Validation
     if (method === "topic" && selectedTopics.length === 0) {
-      alert("Please select at least one topic.");
+      if (typeof Swal !== "undefined") {
+        Swal.fire({
+          icon: "warning",
+          title: "No topic selected",
+          text: "Please select at least one topic to generate the exam.",
+          confirmButtonColor: "#3085d6"
+        });
+      } else {
+        alert("Please select at least one topic.");
+      }
       return;
     }
     if (method === "text" && !text) {
-      alert("Please enter text content.");
+      if (typeof Swal !== "undefined") {
+        Swal.fire({ icon: "warning", title: "No content", text: "Please enter text content to generate the exam.", confirmButtonColor: "#3085d6" });
+      } else alert("Please enter text content.");
       return;
     }
     if (questionTypes.length === 0) {
-      alert("Please select at least one question type.");
+      if (typeof Swal !== "undefined") {
+        Swal.fire({ icon: "warning", title: "No question type selected", text: "Please select at least one question type and quantity.", confirmButtonColor: "#3085d6" });
+      } else alert("Please select at least one question type.");
       return;
     }
 
@@ -205,7 +213,7 @@ function setupExamGenerator() {
     };
 
     try {
-      const res = await fetch("/api/generate-exam", {
+      const res = await fetch("http://localhost:3000/api/generate-exam", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(bodyData),
@@ -244,49 +252,49 @@ function showExamPreview(examText, subject, selectedTopics, questionTypes) {
     return;
   }
 
-  // ✅ Create formatted header and footer (fixed design)
+  // ✅ Professional exam document – paper-style, export-ready layout
   const headerHTML = `
-    <div style="text-align:center; line-height:1.4; margin-bottom:1rem;">
-      <!-- 🏫 School Logo -->
-      <img src="../image/norzagaray-logo.png" 
-          alt="School Logo" 
-          style="width:90px; height:90px; object-fit:contain; margin-bottom:-0.5rem;">
-
-      <strong>Republic of the Philippines</strong><br>
-      Department of Education<br>
-      Region III – Central Luzon<br>
-      Schools Division of Bulacan<br>
-      <strong>NORZAGARAY NATIONAL HIGH SCHOOL</strong><br>
-      A. Villarama St., Poblacion, Norzagaray, Bulacan<br>
-      
-      <!-- Gulit / Horizontal Line -->
-      <hr style="width:100%; margin:-2.5rem auto; border-top:2px solid black;">
-
-      <!-- 🧾 Subject and Exam Title -->
-      <strong>${subject} – Examination</strong>
-
-      <div style="width: 100%; margin-bottom:-4rem; font-size:14px;">
-        Name: ______________________________________________________________________________________________________________________    Date: _______________________________ Score: ________<br>
-        Grade Level / Section: _____________________________________________________________________________________________________    Teacher: ____________________________________________
+    <header class="exam-doc-header">
+      <div class="exam-doc-logo">
+        <img src="../image/norzagaray-logo.png" alt="School Logo" class="exam-doc-logo-img">
       </div>
-    </div>
-
+      <p class="exam-doc-agency">Republic of the Philippines<br>Department of Education<br>Region III – Central Luzon<br>Schools Division of Bulacan</p>
+      <p class="exam-doc-school">NORZAGARAY NATIONAL HIGH SCHOOL</p>
+      <p class="exam-doc-address">A. Villarama St., Poblacion, Norzagaray, Bulacan</p>
+      <hr class="exam-doc-rule">
+      <h1 class="exam-doc-title">${subject} – Examination</h1>
+      <div class="exam-doc-meta">
+        <div class="exam-doc-meta-row">
+          <span class="exam-doc-meta-label">Name:</span>
+          <span class="exam-doc-meta-line"></span>
+          <span class="exam-doc-meta-label">Date:</span>
+          <span class="exam-doc-meta-line exam-doc-meta-short"></span>
+          <span class="exam-doc-meta-label">Score:</span>
+          <span class="exam-doc-meta-line exam-doc-meta-score"></span>
+        </div>
+        <div class="exam-doc-meta-row">
+          <span class="exam-doc-meta-label">Grade Level / Section:</span>
+          <span class="exam-doc-meta-line"></span>
+          <span class="exam-doc-meta-label">Teacher:</span>
+          <span class="exam-doc-meta-line exam-doc-meta-short"></span>
+        </div>
+      </div>
+    </header>
   `;
 
   const footerHTML = `
-    <div style="margin-top:2rem; text-align:center; font-size:13px; color:#666;">
-      — End of Examination —
-    </div>
+    <footer class="exam-doc-footer">
+      <hr class="exam-doc-rule exam-doc-rule-footer">
+      <p class="exam-doc-footer-text">— End of Examination —</p>
+    </footer>
   `;
 
-  // ✅ Combine header + AI-generated content + footer
   const finalHTML = `
-    ${headerHTML}
-    <div id="exam-body" style="white-space:pre-wrap; text-align:justify; font-size:15px; line-height:1.6; padding-right: 4rem; padding-left: 4rem;">
-      ${examText}
+    <article class="exam-document">
+      ${headerHTML}
+      <div id="exam-body" class="exam-doc-body">${examText}</div>
       ${footerHTML}
-    </div>
-
+    </article>
   `;
 
   // ✅ Use innerHTML (not textContent) to preserve formatting
@@ -339,7 +347,7 @@ function showExamPreview(examText, subject, selectedTopics, questionTypes) {
     }
 
     try {
-      const res = await fetch("/api/save-exam", {
+      const res = await fetch("http://localhost:3000/api/save-exam", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -394,70 +402,52 @@ async function loadExams() {
     const selectedClass = JSON.parse(localStorage.getItem("eel_selected_class") || "{}");
     const classId = selectedClass.id;
 
-    const res = await fetch(`/api/get-exams?class_id=${classId}`);
+    const res = await fetch(`http://localhost:3000/api/get-exams?class_id=${classId}`);
     const data = await res.json();
     const exams = data.exams;
 
     const examListContainer = document.getElementById("exam-list");
-    examListContainer.innerHTML = ""; // Clear previous content
+    examListContainer.innerHTML = "";
 
-    // Grid styling for container
-    examListContainer.style.display = "grid";
-    examListContainer.style.gridTemplateColumns = "repeat(auto-fit, minmax(280px, 1fr))";
-    examListContainer.style.gap = "1.5rem";
+    if (!exams || exams.length === 0) {
+      examListContainer.innerHTML = '<p class="empty-state">No exams yet. Generate an exam above and save it to see it here.</p>';
+      return;
+    }
 
     exams.forEach(exam => {
       const examCard = document.createElement("div");
-      examCard.dataset.id = exam.id; 
-      examCard.style.background = "rgba(99, 102, 241, 0.05)";
-      examCard.style.borderRadius = "12px";
-      examCard.style.boxShadow = "0 4px 12px rgba(0,0,0,0.1)";
-      examCard.style.padding = "1.5rem";
-      examCard.style.display = "flex";
-      examCard.style.flexDirection = "column";
-      examCard.style.justifyContent = "space-between";
-      examCard.style.transition = "transform 0.2s, box-shadow 0.2s";
-      examCard.onmouseover = () => {
-        examCard.style.transform = "translateY(-4px)";
-        examCard.style.boxShadow = "0 8px 20px rgba(0,0,0,0.15)";
-      };
-      examCard.onmouseout = () => {
-        examCard.style.transform = "translateY(0)";
-        examCard.style.boxShadow = "0 4px 12px rgba(0,0,0,0.1)";
-      };
+      examCard.dataset.id = exam.id;
+      examCard.className = "exam-list-card";
 
       examCard.innerHTML = `
-        <div>
-          <div style="height:4px; width:50px; background:#4f46e5; border-radius:2px; margin-bottom:0.5rem;"></div>
-          <h4 style="font-weight:700; font-size:1.1rem; margin-bottom:0.5rem; color:#111827;">
-            ${capitalizeWords(exam.subject_name)}
-          </h4>
-          <p style="font-size:0.9rem; color:#4b5563; margin-bottom:0.25rem;">${exam.title}</p>
-          <p style="font-size:0.75rem; color:#9ca3af;">
-            Class: <strong>${exam.class_name} - ${exam.class_section}</strong> |
-            Questions: <strong>${exam.question_count}</strong> |
-            Created: <strong>${new Date(exam.created_at).toLocaleDateString()}</strong>
+        <div class="exam-list-card-top">
+          <span class="exam-list-card-badge">${capitalizeWords(exam.subject_name)}</span>
+          <h4 class="exam-list-card-title">${exam.title || 'Untitled Exam'}</h4>
+          <p class="exam-list-card-meta">
+            <span>Class: <strong>${exam.class_name} – ${exam.class_section}</strong></span>
+            <span>Questions: <strong>${exam.question_count}</strong></span>
+            <span>Created: <strong>${new Date(exam.created_at).toLocaleDateString()}</strong></span>
           </p>
         </div>
-
-        <div style="margin-top:1rem; display:flex; gap:0.5rem; flex-wrap:wrap;">
-          <button class="export-btn" style="flex:1; padding:0.5rem 1rem; background:#3b82f6; color:white; border:none; border-radius:6px; cursor:pointer; transition:0.2s;">Export Excel</button>
-          <button class="cache-btn" style="flex:1; padding:0.5rem 1rem; background:#10b981; color:white; border:none; border-radius:6px; cursor:pointer; transition:0.2s;">Move to Cache</button>
+        <div class="exam-list-card-actions">
+          <button type="button" class="export-btn exam-list-export-btn" title="Export to Excel"><i data-lucide="download" class="size-4"></i> Export</button>
+          <button type="button" class="cache-btn exam-list-cache-btn" title="Move to cache"><i data-lucide="archive" class="size-4"></i> Move to Cache</button>
         </div>
       `;
 
       examListContainer.appendChild(examCard);
     });
 
-    // Event delegation for buttons
+    lucide.createIcons({ icons: lucide.icons });
+
+    // Event delegation for buttons (click on button or icon inside)
     examListContainer.addEventListener("click", (e) => {
       const card = e.target.closest("div[data-id]");
       if (!card) return;
       const examId = card.dataset.id;
-
-      if (e.target.classList.contains("export-btn")) {
+      if (e.target.closest(".export-btn")) {
         exportExamExcel(examId);
-      } else if (e.target.classList.contains("cache-btn")) {
+      } else if (e.target.closest(".cache-btn")) {
         moveExamToCache(examId);
       }
     });
@@ -473,7 +463,7 @@ function capitalizeWords(str) {
 
 // ✅ Export Excel function (no modules, fully browser compatible)
 async function exportExamExcel(id) {
-  const res = await fetch(`/api/get-exam-content/${id}`);
+  const res = await fetch(`http://localhost:3000/api/get-exam-content/${id}`);
   const data = await res.json();
   if (!data.success) return alert("Failed to fetch exam content.");
 
@@ -486,7 +476,7 @@ async function exportExamExcel(id) {
 
 // ✅ Move exam to cache and show proper message
 function moveExamToCache(id) {
-  fetch(`/api/move-exam-to-cache/${id}`, { method: "POST" })
+  fetch(`http://localhost:3000/api/move-exam-to-cache/${id}`, { method: "POST" })
     .then(async res => {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();

@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Verification - EEL</title>
+  <link rel="stylesheet" href="css/styles.css" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.1/lucide.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="js/theme.js"></script>
+</head>
+<body class="auth-page admin-dashboard-page">
+  <div class="signup-screen admin-dashboard-screen">
+    <div class="admin-dashboard-container">
+      <!-- Page header -->
+      <header class="admin-dashboard-header">
+        <div class="admin-dashboard-header-inner">
+          <div class="admin-dashboard-brand">
+            <span class="admin-dashboard-icon" aria-hidden="true"><i data-lucide="shield-check" class="size-8"></i></span>
+            <div>
+              <h1 class="admin-dashboard-title">Account Verification</h1>
+              <p class="admin-dashboard-subtitle">Approve, reject, or manage teacher and student accounts.</p>
+            </div>
+          </div>
+          <div class="admin-dashboard-header-actions">
+            <button type="button" class="btn btn-outline" id="admin-refresh-btn" title="Reload users">
+              <i data-lucide="refresh-ccw" class="size-4"></i>
+              Refresh
+            </button>
+            <button type="button" class="btn btn-primary" id="admin-logout-btn" title="Sign out">
+              <i data-lucide="log-out" class="size-4"></i>
+              Logout
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <!-- Toolbar: view toggle + search + status filter -->
+      <div class="admin-dashboard-toolbar admin-dashboard-toolbar-global">
+        <div class="admin-dashboard-view-toggle" role="group" aria-label="Show section">
+          <button type="button" class="btn admin-dashboard-view-btn active" id="admin-view-teacher" data-view="teacher" aria-pressed="true">
+            <i data-lucide="graduation-cap" class="size-4"></i>
+            Teacher
+          </button>
+          <button type="button" class="btn admin-dashboard-view-btn" id="admin-view-student" data-view="student" aria-pressed="false">
+            <i data-lucide="users" class="size-4"></i>
+            Student
+          </button>
+        </div>
+        <div class="admin-dashboard-search-wrap">
+          <i data-lucide="search" class="admin-dashboard-search-icon" aria-hidden="true"></i>
+          <input id="admin-search" class="form-input admin-dashboard-search" type="search" placeholder="Search by name or email…" aria-label="Search users" />
+        </div>
+        <div class="admin-dashboard-filters">
+          <select id="admin-status-filter" class="form-input admin-dashboard-select" aria-label="Filter by status">
+            <option value="all" selected>All statuses</option>
+            <option value="pending">Pending</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+          </select>
+        </div>
+        <span id="admin-count" class="admin-dashboard-count" aria-live="polite"></span>
+      </div>
+
+      <!-- Teachers section -->
+      <section id="admin-teachers-section" class="admin-dashboard-card admin-dashboard-section" aria-labelledby="admin-teachers-heading">
+        <h2 id="admin-teachers-heading" class="admin-dashboard-section-title">
+          <i data-lucide="graduation-cap" class="size-5"></i>
+          Teachers
+          <span id="admin-teachers-count" class="admin-dashboard-section-count" aria-live="polite"></span>
+        </h2>
+        <div class="admin-dashboard-table-wrap">
+          <table class="admin-dashboard-table" role="grid" aria-label="Teachers list">
+            <thead>
+              <tr>
+                <th scope="col">User</th>
+                <th scope="col">Email</th>
+                <th scope="col">Status</th>
+                <th scope="col">Created</th>
+                <th scope="col" class="admin-dashboard-th-actions">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="admin-teachers-body">
+              <tr>
+                <td colspan="5" class="admin-dashboard-empty">Loading…</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <footer class="admin-dashboard-pagination">
+          <button type="button" class="btn btn-outline btn-sm" id="admin-teachers-prev" aria-label="Previous teachers page">
+            <i data-lucide="chevron-left" class="size-4"></i>
+            Previous
+          </button>
+          <span id="admin-teachers-page-info" class="admin-dashboard-page-info" aria-live="polite"></span>
+          <button type="button" class="btn btn-outline btn-sm" id="admin-teachers-next" aria-label="Next teachers page">
+            Next
+            <i data-lucide="chevron-right" class="size-4"></i>
+          </button>
+        </footer>
+      </section>
+
+      <!-- Students section -->
+      <section id="admin-students-section" class="admin-dashboard-card admin-dashboard-section admin-dashboard-section-hidden" aria-labelledby="admin-students-heading">
+        <h2 id="admin-students-heading" class="admin-dashboard-section-title">
+          <i data-lucide="users" class="size-5"></i>
+          Students
+          <span id="admin-students-count" class="admin-dashboard-section-count" aria-live="polite"></span>
+        </h2>
+        <div class="admin-dashboard-table-wrap">
+          <table class="admin-dashboard-table" role="grid" aria-label="Students list">
+            <thead>
+              <tr>
+                <th scope="col">User</th>
+                <th scope="col">Email</th>
+                <th scope="col">Status</th>
+                <th scope="col">Created</th>
+                <th scope="col" class="admin-dashboard-th-actions">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="admin-students-body">
+              <tr>
+                <td colspan="5" class="admin-dashboard-empty">Loading…</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <footer class="admin-dashboard-pagination">
+          <button type="button" class="btn btn-outline btn-sm" id="admin-students-prev" aria-label="Previous students page">
+            <i data-lucide="chevron-left" class="size-4"></i>
+            Previous
+          </button>
+          <span id="admin-students-page-info" class="admin-dashboard-page-info" aria-live="polite"></span>
+          <button type="button" class="btn btn-outline btn-sm" id="admin-students-next" aria-label="Next students page">
+            Next
+            <i data-lucide="chevron-right" class="size-4"></i>
+          </button>
+        </footer>
+      </section>
+
+      <!-- Footer hint -->
+      <p class="admin-dashboard-footer-hint">
+        <i data-lucide="info" class="size-4" aria-hidden="true"></i>
+        Default admin: <strong>admin</strong> / <strong>admin123</strong>
+      </p>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="js-front-end/front-admin.js"></script>
+</body>
+</html>
+

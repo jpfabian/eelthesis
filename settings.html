@@ -6,8 +6,9 @@
     <title>Settings - EEL</title>
     <link rel="stylesheet" href="css/styles.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.1/lucide.min.css" rel="stylesheet">
+    <script src="js/theme.js"></script>
 </head>
-<body>
+<body class="settings-page">
     <!-- Loading Screen -->
     <div id="loading-screen" class="loading-screen">
         <div class="loading-content">
@@ -50,41 +51,57 @@
         <!-- Main Content -->
         <main id="main-content" class="flex-1 overflow-auto">
             <div class="p-6 space-y-6">
-                <div>
-                    <h2 class="text-2xl font-semibold mb-2">Settings</h2>
-                    <p class="text-muted-foreground">Manage your account preferences and application settings</p>
-                </div>
+                <header class="page-header">
+                    <div class="page-header-icon" aria-hidden="true">
+                        <i data-lucide="settings" class="size-8"></i>
+                    </div>
+                    <div>
+                        <h1 class="page-header-title">Settings</h1>
+                        <p class="page-header-subtitle">Manage your account preferences and application settings.</p>
+                    </div>
+                </header>
 
-                <div class="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-1 gap-6">
                     <div class="card group cursor-pointer hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
                     <div class="card-header">
                         <h3 class="card-title">Profile Information</h3>
                         <p class="card-description">Update your personal information and profile details</p>
                     </div>
-                    <div class="card-content space-y-4">
-                        <div class="flex items-center gap-6">
-                            <div class="w-24 h-24 rounded-full bg-primary/20 flex items-center justify-center">
+                    <div class="card-content space-y-6">
+                        <!-- Avatar at top (circle) -->
+                        <div class="profile-avatar-top">
+                            <div class="profile-avatar-container profile-avatar-circle" id="profile-avatar-container">
+                                <img id="profile-avatar-img" class="profile-avatar-img hidden" alt="Profile" />
                                 <span class="text-2xl font-bold text-primary" id="profile-initials">JD</span>
                             </div>
-                            <div class="flex-1 space-y-4">
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div class="space-y-2">
-                                        <label class="form-label">First Name</label>
-                                        <input type="text" id="first-name" class="form-input" value="">
-                                    </div>
-                                    <div class="space-y-2">
-                                        <label class="form-label">Last Name</label>
-                                        <input type="text" id="last-name" class="form-input" value="">
-                                    </div>
+                            <div class="profile-avatar-actions flex flex-wrap gap-2 justify-center mt-3">
+                                <label class="btn btn-outline btn-sm cursor-pointer mb-0">
+                                    <i data-lucide="upload" class="size-4 mr-1"></i>
+                                    Change avatar
+                                    <input type="file" id="profile-avatar-input" accept="image/*" class="hidden" />
+                                </label>
+                                <button type="button" id="profile-avatar-remove" class="btn btn-outline btn-sm hidden">Remove</button>
+                            </div>
+                        </div>
+                        <!-- Form fields below -->
+                        <div class="space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="space-y-2">
+                                    <label class="form-label">First Name</label>
+                                    <input type="text" id="first-name" class="form-input" value="">
                                 </div>
                                 <div class="space-y-2">
-                                    <label class="form-label">Email Address</label>
-                                    <input type="email" id="email" class="form-input" value="">
+                                    <label class="form-label">Last Name</label>
+                                    <input type="text" id="last-name" class="form-input" value="">
                                 </div>
-                                <div class="space-y-2" id="teacher-bio" style="display: none;">
-                                    <label class="form-label">Bio</label>
-                                    <textarea id="bio" class="form-textarea" rows="3" placeholder="Tell your students about yourself..."></textarea>
-                                </div>
+                            </div>
+                            <div class="space-y-2">
+                                <label class="form-label">Email Address</label>
+                                <input type="email" id="email" class="form-input" value="">
+                            </div>
+                            <div class="space-y-2" id="teacher-bio" style="display: none;">
+                                <label class="form-label">Bio</label>
+                                <textarea id="bio" class="form-textarea" rows="3" placeholder="Tell your students about yourself..."></textarea>
                             </div>
                         </div>
                         <div class="flex justify-end">
@@ -95,147 +112,8 @@
                         </div>
                     </div>
                 </div>
-
-                <!-- Learning Preferences (Student Only) -->
-                <div class="card" id="learning-preferences" style="display: none;">
-                    <div class="card-header">
-                        <h3 class="card-title">Learning Preferences</h3>
-                        <p class="card-description">Customize your learning experience</p>
-                    </div>
-                    <div class="card-content space-y-4">
-                        <div class="space-y-2">
-                            <label class="form-label">Preferred Difficulty Level</label>
-                            <select id="difficulty-level" class="form-input">
-                                <option value="beginner">Beginner</option>
-                                <option value="intermediate" selected>Intermediate</option>
-                                <option value="advanced">Advanced</option>
-                                <option value="adaptive">Adaptive (Recommended)</option>
-                            </select>
-                        </div>
-                        
-                        <div class="space-y-2">
-                            <label class="form-label">Daily Learning Goal</label>
-                            <select id="daily-goal" class="form-input">
-                                <option value="15">15 minutes per day</option>
-                                <option value="30" selected>30 minutes per day</option>
-                                <option value="45">45 minutes per day</option>
-                                <option value="60">1 hour per day</option>
-                            </select>
-                        </div>
-
-                        <div class="space-y-3">
-                            <label class="form-label">Learning Focus Areas</label>
-                            <div class="grid grid-cols-2 gap-3">
-                                <label class="flex items-center gap-2">
-                                    <input type="checkbox" id="focus-reading" checked>
-                                    <span>Reading Comprehension</span>
-                                </label>
-                                <label class="flex items-center gap-2">
-                                    <input type="checkbox" id="focus-pronunciation" checked>
-                                    <span>Pronunciation</span>
-                                </label>
-                                <label class="flex items-center gap-2">
-                                    <input type="checkbox" id="focus-spelling">
-                                    <span>Spelling</span>
-                                </label>
-                                <label class="flex items-center gap-2">
-                                    <input type="checkbox" id="focus-grammar" checked>
-                                    <span>Grammar</span>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <!-- Class Management (Teacher Only) -->
-                <div class="card" id="class-management" style="display: none;">
-                    <div class="card-header">
-                        <h3 class="card-title">Class Management</h3>
-                        <p class="card-description">Manage your classes and teaching preferences</p>
-                    </div>
-                    <div class="card-content space-y-4">
-                        <div class="space-y-2">
-                            <label class="form-label">Default Assignment Duration</label>
-                            <select id="assignment-duration" class="form-input">
-                                <option value="3">3 days</option>
-                                <option value="7" selected>1 week</option>
-                                <option value="14">2 weeks</option>
-                                <option value="30">1 month</option>
-                            </select>
-                        </div>
-
-                        <div class="space-y-2">
-                            <label class="form-label">Auto-grading Settings</label>
-                            <select id="auto-grading" class="form-input">
-                                <option value="immediate" selected>Immediate feedback</option>
-                                <option value="delayed">Delayed feedback (24h)</option>
-                                <option value="manual">Manual grading only</option>
-                            </select>
-                        </div>
-
-                        <div class="space-y-3">
-                            <label class="form-label">Notification Preferences</label>
-                            <div class="space-y-2">
-                                <label class="flex items-center gap-2">
-                                    <input type="checkbox" id="notify-submissions" checked>
-                                    <span>Student submission notifications</span>
-                                </label>
-                                <label class="flex items-center gap-2">
-                                    <input type="checkbox" id="notify-overdue" checked>
-                                    <span>Overdue assignment alerts</span>
-                                </label>
-                                <label class="flex items-center gap-2">
-                                    <input type="checkbox" id="notify-progress">
-                                    <span>Weekly progress reports</span>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </div>
-            <div class="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div class="card group cursor-pointer hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
-                    <div class="card-header">
-                        <h3 class="card-title">Notifications</h3>
-                        <p class="card-description">Control how and when you receive notifications</p>
-                    </div>
-                    <div class="card-content space-y-4">
-                        <div class="space-y-3">
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <h4 class="font-medium">Email Notifications</h4>
-                                    <p class="text-sm text-muted-foreground">Receive notifications via email</p>
-                                </div>
-                                <label class="switch">
-                                    <input type="checkbox" id="email-notifications" checked>
-                                    <span class="slider"></span>
-                                </label>
-                            </div>
-
-                            <div class="flex items-center justify-between">
-                                <div>
-                                    <h4 class="font-medium">Push Notifications</h4>
-                                    <p class="text-sm text-muted-foreground">Receive browser notifications</p>
-                                </div>
-                                <label class="switch">
-                                    <input type="checkbox" id="push-notifications">
-                                    <span class="slider"></span>
-                                </label>
-                            </div>
-
-                            <div class="flex items-center justify-between" id="reminder-notifications">
-                                <div>
-                                    <h4 class="font-medium">Study Reminders</h4>
-                                    <p class="text-sm text-muted-foreground">Daily learning reminders</p>
-                                </div>
-                                <label class="switch">
-                                    <input type="checkbox" id="study-reminders" checked>
-                                    <span class="slider"></span>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
+            <div class="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-1 gap-6">
                 <!-- Privacy & Security -->
                 <div class="card">
                     <div class="card-header">
@@ -271,42 +149,14 @@
                                 <i data-lucide="key" class="size-4 mr-2"></i>
                                 Change Password
                             </button>
+                            <button type="button" class="btn btn-outline" onclick="replayTutorial()">
+                                <i data-lucide="play-circle" class="size-4 mr-2"></i>
+                                Replay tutorial
+                            </button>
                         </div>
                     </div>
                 </div>
             </div>
-
-                <!-- Data Management -->
-                <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title">Data Management</h3>
-                        <p class="card-description">Export or delete your account data</p>
-                    </div>
-                    <div class="card-content">
-                        <div class="flex flex-wrap gap-3">
-                            <button class="btn btn-outline" onclick="exportData()">
-                                <i data-lucide="download" class="size-4 mr-2"></i>
-                                Export Data
-                            </button>
-                            <button class="btn btn-outline" onclick="clearCache()">
-                                <i data-lucide="refresh-cw" class="size-4 mr-2"></i>
-                                Clear Cache
-                            </button>
-                            <button class="btn btn-destructive" onclick="deleteAccount()">
-                                <i data-lucide="trash" class="size-4 mr-2"></i>
-                                Delete Account
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Save Changes Button -->
-                <div class="flex justify-end">
-                    <button class="btn btn-primary" onclick="saveAllSettings()">
-                        <i data-lucide="save" class="size-4 mr-2"></i>
-                        Save All Changes
-                    </button>
-                </div>
             </div>
         </main>
     </div>
@@ -347,31 +197,29 @@
     </div>
 
     <!-- Scripts -->
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/navigation.js"></script>
     
     <script>
+        const API_BASE = 'http://localhost:3000/api';
+
         document.addEventListener('DOMContentLoaded', async function() {
             try {
                 const user = await initializePage();
 
                 if (!user) {
-                    // no user → send to login
                     window.location.href = 'login.html';
                     return;
                 }
 
-                // Set global variable
                 window.currentUser = user;
-
-                // Setup role-based UI
                 setupRoleBasedSettings(user);
 
-                // Only initialize charts if teacher
-                if (user.role === 'teacher') {
-                    initializeCharts();
-                }
+                await loadProfileIntoForm(user);
+                applySavedPreferences();
+                applyProfileAvatar();
+                setupAvatarChange();
 
                 hideLoading();
 
@@ -384,92 +232,166 @@
         const backBtn = document.getElementById('back-class-btn');
         if (backBtn) backBtn.addEventListener('click', () => window.location.href = 'classes.html');
 
+        const AVATAR_STORAGE_KEY = 'eel_avatar_url';
+
+        function applyProfileAvatar() {
+            const url = localStorage.getItem(AVATAR_STORAGE_KEY);
+            const img = document.getElementById('profile-avatar-img');
+            const initials = document.getElementById('profile-initials');
+            const removeBtn = document.getElementById('profile-avatar-remove');
+            if (!img || !initials) return;
+            if (url) {
+                img.src = url;
+                img.classList.remove('hidden');
+                initials.classList.add('hidden');
+                if (removeBtn) removeBtn.classList.remove('hidden');
+            } else {
+                img.removeAttribute('src');
+                img.classList.add('hidden');
+                initials.classList.remove('hidden');
+                if (removeBtn) removeBtn.classList.add('hidden');
+            }
+        }
+
+        function setupAvatarChange() {
+            const input = document.getElementById('profile-avatar-input');
+            const removeBtn = document.getElementById('profile-avatar-remove');
+            if (!input) return;
+            input.addEventListener('change', function() {
+                const file = this.files && this.files[0];
+                if (!file || !file.type.startsWith('image/')) return;
+                const reader = new FileReader();
+                reader.onload = function() {
+                    const dataUrl = reader.result;
+                    try {
+                        localStorage.setItem(AVATAR_STORAGE_KEY, dataUrl);
+                        applyProfileAvatar();
+                        if (typeof showNotification === 'function') showNotification('Avatar updated. It will appear in the sidebar on other pages.', 'success');
+                    } catch (e) {
+                        if (e.name === 'QuotaExceededError' && typeof showNotification === 'function')
+                            showNotification('Image too large. Try a smaller file.', 'error');
+                    }
+                };
+                reader.readAsDataURL(file);
+                this.value = '';
+            });
+            if (removeBtn) {
+                removeBtn.addEventListener('click', function() {
+                    localStorage.removeItem(AVATAR_STORAGE_KEY);
+                    applyProfileAvatar();
+                    if (typeof showNotification === 'function') showNotification('Avatar removed.', 'success');
+                });
+            }
+        }
+
         function setupRoleBasedSettings(user) {
-            const initials = user.name?.split(' ').map(n => n[0]).join('') ?? 'U';
+            const name = user.name || [user.fname, user.lname].filter(Boolean).join(' ').trim();
+            const initials = name ? name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'U';
             const profileInitials = document.getElementById('profile-initials');
-            if (profileInitials) profileInitials.textContent = initials;
+            if (profileInitials) profileInitials.textContent = initials || 'U';
 
             if (user.role === 'teacher') {
                 document.getElementById('teacher-bio')?.style.setProperty('display', 'block');
-                document.getElementById('class-management')?.style.setProperty('display', 'block');
-                document.getElementById('learning-preferences')?.style.setProperty('display', 'none');
-                document.getElementById('reminder-notifications')?.style.setProperty('display', 'none');
                 document.getElementById('profile-visibility-desc').textContent = 'Make your profile visible to students';
             } else {
                 document.getElementById('teacher-bio')?.style.setProperty('display', 'none');
-                document.getElementById('class-management')?.style.setProperty('display', 'none');
-                document.getElementById('learning-preferences')?.style.setProperty('display', 'block');
-                document.getElementById('reminder-notifications')?.style.setProperty('display', 'block');
                 document.getElementById('profile-visibility-desc').textContent = 'Make your profile visible to other students';
             }
         }
 
-        function saveProfile() {
-            const firstName = document.getElementById('first-name').value;
-            const lastName = document.getElementById('last-name').value;
-            const email = document.getElementById('email').value;
+        function applySavedPreferences() {
+            try {
+                const s = JSON.parse(localStorage.getItem('eel_settings') || '{}');
+                if (s.privacy) {
+                    const el = (id) => document.getElementById(id);
+                    if (el('profile-visibility')) el('profile-visibility').checked = !!s.privacy.profileVisibility;
+                    if (el('analytics')) el('analytics').checked = !!s.privacy.analytics;
+                }
+            } catch (e) {
+                console.warn('Could not apply saved preferences:', e);
+            }
+        }
+
+        async function loadProfileIntoForm(user) {
+            const fn = document.getElementById('first-name');
+            const ln = document.getElementById('last-name');
+            const em = document.getElementById('email');
+            if (!fn || !ln || !em) return;
+            fn.value = user.fname ?? '';
+            ln.value = user.lname ?? '';
+            em.value = user.email ?? '';
+            if (user.user_id) {
+                try {
+                    const res = await fetch(`${API_BASE}/users/me?user_id=${encodeURIComponent(user.user_id)}`);
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data?.user) {
+                            fn.value = data.user.fname ?? fn.value;
+                            ln.value = data.user.lname ?? ln.value;
+                            em.value = data.user.email ?? em.value;
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Could not fetch profile:', e);
+                }
+            }
+        }
+
+        async function saveProfile() {
+            const firstName = document.getElementById('first-name').value.trim();
+            const lastName = document.getElementById('last-name').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const user = window.currentUser;
 
             if (!firstName || !lastName || !email) {
-                showNotification('Please fill in all required fields', 'warning');
+                if (typeof showNotification === 'function') showNotification('Please fill in all required fields', 'warning');
                 return;
             }
-
-            // Here you would typically send the data to your backend
-            showNotification('Profile updated successfully!', 'success');
+            if (!user?.user_id) {
+                if (typeof showNotification === 'function') showNotification('Session expired. Please log in again.', 'error');
+                return;
+            }
+            try {
+                const res = await fetch(`${API_BASE}/users/me`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: user.user_id, fname: firstName, lname: lastName, email })
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) {
+                    if (typeof showNotification === 'function') showNotification(data?.error || 'Failed to update profile', 'error');
+                    return;
+                }
+                const u = JSON.parse(localStorage.getItem('eel_user') || '{}');
+                u.fname = firstName;
+                u.lname = lastName;
+                u.email = email;
+                localStorage.setItem('eel_user', JSON.stringify(u));
+                window.currentUser = u;
+                if (typeof showNotification === 'function') showNotification('Profile updated successfully!', 'success');
+            } catch (err) {
+                console.error(err);
+                if (typeof showNotification === 'function') showNotification('Could not update profile. Try again.', 'error');
+            }
         }
 
         function saveAllSettings() {
-            // Collect all settings
             const settings = {
                 profile: {
-                    firstName: document.getElementById('first-name').value,
-                    lastName: document.getElementById('last-name').value,
-                    email: document.getElementById('email').value,
+                    firstName: document.getElementById('first-name')?.value,
+                    lastName: document.getElementById('last-name')?.value,
+                    email: document.getElementById('email')?.value,
                     bio: document.getElementById('bio')?.value
                 },
-                notifications: {
-                    email: document.getElementById('email-notifications').checked,
-                    push: document.getElementById('push-notifications').checked,
-                    studyReminders: document.getElementById('study-reminders')?.checked
-                },
-                appearance: {
-                    theme: document.getElementById('theme').value,
-                    language: document.getElementById('language').value,
-                    fontSize: document.getElementById('font-size').value
-                },
                 privacy: {
-                    profileVisibility: document.getElementById('profile-visibility').checked,
-                    analytics: document.getElementById('analytics').checked
+                    profileVisibility: document.getElementById('profile-visibility')?.checked,
+                    analytics: document.getElementById('analytics')?.checked
                 }
             };
-
-            // Add role-specific settings
-            if (currentUser.role === 'student') {
-                settings.learning = {
-                    difficultyLevel: document.getElementById('difficulty-level').value,
-                    dailyGoal: document.getElementById('daily-goal').value,
-                    focusAreas: {
-                        reading: document.getElementById('focus-reading').checked,
-                        pronunciation: document.getElementById('focus-pronunciation').checked,
-                        spelling: document.getElementById('focus-spelling').checked,
-                        grammar: document.getElementById('focus-grammar').checked
-                    }
-                };
-            } else {
-                settings.teaching = {
-                    assignmentDuration: document.getElementById('assignment-duration').value,
-                    autoGrading: document.getElementById('auto-grading').value,
-                    notifications: {
-                        submissions: document.getElementById('notify-submissions').checked,
-                        overdue: document.getElementById('notify-overdue').checked,
-                        progress: document.getElementById('notify-progress').checked
-                    }
-                };
-            }
-
-            // Here you would typically send the settings to your backend
-            console.log('Saving settings:', settings);
-            showNotification('All settings saved successfully!', 'success');
+            localStorage.setItem('eel_settings', JSON.stringify(settings));
+            saveProfile().then(() => {
+                if (typeof showNotification === 'function') showNotification('All settings saved successfully!', 'success');
+            });
         }
 
         function changePassword() {
@@ -484,46 +406,94 @@
             document.getElementById('confirm-password').value = '';
         }
 
-        function updatePassword() {
+        async function updatePassword() {
             const currentPassword = document.getElementById('current-password').value;
             const newPassword = document.getElementById('new-password').value;
             const confirmPassword = document.getElementById('confirm-password').value;
+            const user = window.currentUser;
 
             if (!currentPassword || !newPassword || !confirmPassword) {
-                showNotification('Please fill in all password fields', 'warning');
+                if (typeof showNotification === 'function') showNotification('Please fill in all password fields', 'warning');
                 return;
             }
-
             if (newPassword !== confirmPassword) {
-                showNotification('New passwords do not match', 'error');
+                if (typeof showNotification === 'function') showNotification('New passwords do not match', 'error');
                 return;
             }
-
             if (newPassword.length < 8) {
-                showNotification('Password must be at least 8 characters long', 'warning');
+                if (typeof showNotification === 'function') showNotification('Password must be at least 8 characters long', 'warning');
                 return;
             }
-
-            // Here you would typically validate and update the password
-            showNotification('Password updated successfully!', 'success');
-            closePasswordModal();
+            if (!user?.user_id) {
+                if (typeof showNotification === 'function') showNotification('Session expired. Please log in again.', 'error');
+                return;
+            }
+            try {
+                const res = await fetch(`${API_BASE}/auth/change-password`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: user.user_id,
+                        current_password: currentPassword,
+                        new_password: newPassword
+                    })
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) {
+                    if (typeof showNotification === 'function') showNotification(data?.error || 'Failed to update password', 'error');
+                    return;
+                }
+                closePasswordModal();
+                if (typeof showNotification === 'function') showNotification('Password updated successfully!', 'success');
+            } catch (err) {
+                console.error(err);
+                if (typeof showNotification === 'function') showNotification('Could not update password. Try again.', 'error');
+            }
         }
 
         function exportData() {
-            showNotification('Preparing data export...', 'info');
-            // Here you would implement data export functionality
+            if (typeof showNotification === 'function') showNotification('Preparing data export...', 'info');
+            const user = window.currentUser || {};
+            const settings = (function() {
+                try { return JSON.parse(localStorage.getItem('eel_settings') || '{}'); } catch { return {}; }
+            })();
+            const payload = {
+                exportedAt: new Date().toISOString(),
+                profile: {
+                    user_id: user.user_id,
+                    fname: user.fname,
+                    lname: user.lname,
+                    email: user.email,
+                    role: user.role
+                },
+                preferences: settings
+            };
+            const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'EEL-MyData-' + (new Date().toISOString().slice(0, 10)) + '.json';
+            a.click();
+            URL.revokeObjectURL(a.href);
+            if (typeof showNotification === 'function') showNotification('Data exported.', 'success');
         }
 
         function clearCache() {
-            showNotification('Cache cleared successfully!', 'success');
-            // Here you would implement cache clearing
+            const keep = ['eel_user', 'eel_token'];
+            const keys = [];
+            for (let i = 0; i < localStorage.length; i++) keys.push(localStorage.key(i));
+            keys.forEach(k => { if (k && !keep.includes(k)) localStorage.removeItem(k); });
+            if (typeof showNotification === 'function') showNotification('Cache cleared. You remain logged in.', 'success');
+        }
+
+        function replayTutorial() {
+            localStorage.removeItem('eel_tutorial_done');
+            window.location.href = 'classes.html';
         }
 
         function deleteAccount() {
             if (confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
                 if (confirm('This will permanently delete all your data. Are you absolutely sure?')) {
-                    showNotification('Account deletion initiated. You will receive an email confirmation.', 'warning');
-                    // Here you would implement account deletion
+                    if (typeof showNotification === 'function') showNotification('Account deletion is not available in-app. Contact your administrator.', 'warning');
                 }
             }
         }

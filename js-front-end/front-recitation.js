@@ -1,7 +1,7 @@
 let state = {
-    uploadedFile: null,
-    questionTypes: ['multiple-choice'],
-    questionCount: 10,
+    selectedTopicId: null,
+    questionTypes: [],
+    questionCount: 0,
     questions: [],
     students: [],
     currentQuestionIndex: 0,
@@ -13,87 +13,48 @@ let state = {
     intervalId: null
 };
 
-// Question Templates
-// Question Templates
-const questionTemplates = {
-    'multiple-choice': [
-        { question: 'Which of the following sentences is grammatically correct?', options: ['Neither of them were ready.', 'Each student has completed their project.', 'Each student has completed his or her project.', 'Each students have completed the project.'], answer: 'Each student has completed his or her project.' },
-        { question: 'Which sentence uses the correct verb form?', options: ['She don’t understand the lesson.', 'She doesn’t understands the lesson.', 'She doesn’t understand the lesson.', 'She not understand the lesson.'], answer: 'She doesn’t understand the lesson.' },
-        { question: 'Which sentence is written in active voice?', options: ['The report was submitted by Anna.', 'Anna submitted the report.', 'The report is being submitted by Anna.', 'The report will be submitted by Anna.'], answer: 'Anna submitted the report.' },
-        { question: 'Which of the following is a complex sentence?', options: ['I studied, but I was still tired.', 'Although it was raining, we went to school.', 'We sang and danced all night.', 'The teacher smiled.'], answer: 'Although it was raining, we went to school.' },
-        { question: 'Which sentence contains an error in subject-verb agreement?', options: ['The list of items is on the desk.', 'The students in the class studies hard.', 'Neither of the answers is correct.', 'Everyone enjoys the activity.'], answer: 'The students in the class studies hard.' },
-        { question: 'Which sentence is in the future perfect tense?', options: ['She will finish the project tomorrow.', 'She will have finished the project by tomorrow.', 'She is finishing the project now.', 'She finished the project yesterday.'], answer: 'She will have finished the project by tomorrow.' },
-        { question: 'Which of the following sentences is punctuated correctly?', options: ['Its a bright sunny day.', 'It’s a bright, sunny day.', 'Its’ a bright sunny day.', 'Its a bright sunny, day.'], answer: 'It’s a bright, sunny day.' },
-        { question: 'Which sentence is an example of a conditional statement?', options: ['If I had known, I would have helped.', 'I knew about it.', 'She is helping now.', 'He helps every time.'], answer: 'If I had known, I would have helped.' },
-        { question: 'Which sentence expresses a request?', options: ['Close the door.', 'Could you please close the door?', 'You must close the door.', 'He closed the door.'], answer: 'Could you please close the door?' },
-        { question: 'Which sentence uses a modal verb correctly?', options: ['She can sings well.', 'She can sing well.', 'She can to sing well.', 'She can singing well.'], answer: 'She can sing well.' },
-    ],
-
-    'noun': [
-        { question: 'Identify the collective noun in this sentence: "The faculty decided to organize a seminar."', answer: 'faculty' },
-        { question: 'Which of the following is a proper noun?', options: ['mountain', 'university', 'Mount Everest', 'river'], answer: 'Mount Everest' },
-        { question: 'Find the abstract noun in this sentence: "Honesty is the best policy."', answer: 'Honesty' },
-        { question: 'Identify the common noun in this sentence: "The scientist discovered a new element."', answer: 'scientist, element' },
-        { question: 'Which sentence contains a compound noun?', options: ['She loves cooking.', 'He bought a basketball.', 'The teacher explained.', 'They played football.'], answer: 'He bought a basketball.' },
-        { question: 'Which of the following is a material noun?', options: ['silver', 'truth', 'crowd', 'hope'], answer: 'silver' },
-        { question: 'Identify the proper noun: "Angela studies at Harvard University."', answer: 'Angela, Harvard University' },
-        { question: 'Choose the abstract noun: "Her courage inspired the team."', answer: 'courage' },
-        { question: 'Which is a collective noun?', options: ['jury', 'judge', 'lawyer', 'case'], answer: 'jury' },
-        { question: 'Find the compound noun: "He made a snowman in the yard."', answer: 'snowman' },
-    ],
-
-    'pronoun': [
-        { question: 'Choose the correct pronoun: "Each of the members should bring ___ own copy of the report."', answer: 'his or her' },
-        { question: 'Identify the correct pronoun usage: "It was ___ who presented the findings."', options: ['me', 'I', 'mine', 'myself'], answer: 'I' },
-        { question: 'Select the reflexive pronoun: "She prepared the presentation all by ___."', answer: 'herself' },
-        { question: 'Which sentence uses a demonstrative pronoun?', options: ['Those are my favorite books.', 'She herself finished the project.', 'Who is knocking?', 'They completed the work.'], answer: 'Those are my favorite books.' },
-        { question: 'Replace the noun with the correct pronoun: "Maria said Maria would volunteer."', answer: 'She said she would volunteer.' },
-        { question: 'Choose the correct pronoun: "The company changed ___ policy last year."', answer: 'its' },
-        { question: 'Select the interrogative pronoun: "___ among you will lead the discussion?"', answer: 'Who' },
-        { question: 'Choose the correct relative pronoun: "The book ___ you lent me was interesting."', answer: 'that' },
-        { question: 'Identify the possessive pronoun: "That car is ours."', answer: 'ours' },
-        { question: 'Select the reflexive pronoun: "They challenged ___ to do better."', answer: 'themselves' },
-    ],
-
-    'past-tense': [
-        { question: 'Change to past tense: "She writes research papers every semester."', answer: 'She wrote research papers every semester.' },
-        { question: 'Choose the sentence in past perfect tense.', options: ['She had completed the project before the deadline.', 'She completed the project before the deadline.', 'She completes the project before the deadline.', 'She is completing the project before the deadline.'], answer: 'She had completed the project before the deadline.' },
-        { question: 'Convert to past tense: "They are conducting a survey."', answer: 'They were conducting a survey.' },
-        { question: 'Which sentence is written in the correct past tense form?', options: ['He run to the classroom.', 'He ran to the classroom.', 'He running to the classroom.', 'He runs to the classroom.'], answer: 'He ran to the classroom.' },
-        { question: 'What is the past tense of "build"?', answer: 'built' },
-        { question: 'Change to past tense: "They go to the library every afternoon."', answer: 'They went to the library every afternoon.' },
-        { question: 'Choose the sentence in simple past tense.', options: ['She was writing an essay.', 'She wrote an essay.', 'She writes an essay.', 'She is writing an essay.'], answer: 'She wrote an essay.' },
-        { question: 'Convert to past tense: "He is preparing his report."', answer: 'He was preparing his report.' },
-        { question: 'What is the past tense of "think"?', answer: 'thought' },
-        { question: 'Choose the correct past tense form: "They ___ early for the meeting yesterday."', options: ['arrive', 'arrived', 'arriving', 'arrives'], answer: 'arrived' },
-    ],
-
-    'comprehension': [
-        { question: 'Maria stayed up late to finish her presentation. Who stayed up late?', answer: 'Maria' },
-        { question: 'The typhoon destroyed several buildings near the coast. What destroyed the buildings?', answer: 'typhoon' },
-        { question: 'Daniel read an article about climate change. What did he read?', answer: 'an article about climate change' },
-        { question: 'The farmers harvested rice before the storm arrived. What did the farmers harvest?', answer: 'rice' },
-        { question: 'The students cleaned the laboratory after the experiment. What did they clean?', answer: 'laboratory' },
-        { question: 'The teacher congratulated Jasmine for winning the contest. Who was congratulated?', answer: 'Jasmine' },
-        { question: 'The volunteers distributed relief goods to the victims. What did they distribute?', answer: 'relief goods' },
-        { question: 'The child cried because his toy was broken. Why did the child cry?', answer: 'His toy was broken' },
-        { question: 'The principal announced the results of the examination. Who announced the results?', answer: 'The principal' },
-        { question: 'Rafael donated books to the school library. What did Rafael donate?', answer: 'books' },
-    ],
-
-    'pronunciation': [
-        { question: 'Which word has a different vowel sound?', options: ['beat', 'heat', 'great', 'seat'], answer: 'great' },
-        { question: 'Choose the word that contains a silent letter.', options: ['psychology', 'biology', 'chemistry', 'physics'], answer: 'psychology' },
-        { question: 'Which word is pronounced differently?', options: ['cough', 'rough', 'though', 'tough'], answer: 'though' },
-        { question: 'Select the pair of words that are homophones.', options: ['pair – pear', 'cat – cut', 'sun – son', 'pen – pin'], answer: 'sun – son' },
-        { question: 'Which word has a silent “k”?', options: ['knock', 'kick', 'king', 'kind'], answer: 'knock' },
-        { question: 'Which word has a silent “b”?', options: ['climb', 'crab', 'grab', 'rub'], answer: 'climb' },
-        { question: 'Which of these words has a long /iː/ sound?', options: ['bit', 'beat', 'bet', 'bat'], answer: 'beat' },
-        { question: 'Which pair of words sound the same?', options: ['right – write', 'read – red', 'know – now', 'fit – feet'], answer: 'right – write' },
-        { question: 'Which word has a silent “w”?', options: ['wrist', 'wonder', 'window', 'wide'], answer: 'wrist' },
-        { question: 'Which word has a different final sound?', options: ['walked', 'talked', 'played', 'cooked'], answer: 'played' },
-    ],
+// Same pattern as lessons.html AI quiz: types and quantity per type
+const RECITATION_QUESTION_TYPES = ['multiple-choice', 'true-false', 'identification'];
+const RECITATION_QTY_IDS = {
+    'multiple-choice': 'recitation-qty-multiple-choice',
+    'true-false': 'recitation-qty-true-false',
+    'identification': 'recitation-qty-identification'
 };
+
+function getRecitationQuestionCounts() {
+    const counts = {};
+    RECITATION_QUESTION_TYPES.forEach(type => {
+        const el = document.getElementById(RECITATION_QTY_IDS[type]);
+        const n = el ? Math.max(0, Math.min(20, parseInt(el.value, 10) || 0)) : 0;
+        counts[type] = n;
+    });
+    return counts;
+}
+
+function getSelectedRecitationTypes() {
+    const counts = getRecitationQuestionCounts();
+    return RECITATION_QUESTION_TYPES.filter(t => counts[t] > 0);
+}
+
+function initRecitationTypeQuantities() {
+    if (window._recitationTypeQuantitiesInit) return;
+    window._recitationTypeQuantitiesInit = true;
+    RECITATION_QUESTION_TYPES.forEach(type => {
+        const input = document.getElementById(RECITATION_QTY_IDS[type]);
+        const cb = document.querySelector('.recitation-type-cb[value="' + type + '"]');
+        if (!cb || !input) return;
+        cb.addEventListener('change', () => {
+            if (cb.checked) input.value = Math.max(1, parseInt(input.value, 10) || 0);
+            else input.value = '0';
+            updateGenerateButton();
+        });
+        input.addEventListener('input', () => {
+            const n = parseInt(input.value, 10) || 0;
+            cb.checked = n > 0;
+            updateGenerateButton();
+        });
+    });
+}
 
 document.addEventListener('DOMContentLoaded', () => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -115,10 +76,53 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (selectedClassId) {
         loadClassStudents(selectedClassId);
+        loadRecitationTopics();
     } else {
         console.warn("No class ID found in URL or localStorage.");
     }
 });
+
+async function loadRecitationTopics() {
+    try {
+        const classId = localStorage.getItem("eel_selected_class_id") || (() => {
+            const c = JSON.parse(localStorage.getItem("eel_selected_class") || "{}");
+            return c && c.class_id ? c.class_id : "";
+        })();
+        const topicSelect = document.getElementById("recitation-topic");
+        if (!topicSelect) return;
+        if (!classId) {
+            topicSelect.innerHTML = "<option value=''>Select a class first</option>";
+            return;
+        }
+        topicSelect.innerHTML = "<option value=''>Loading...</option>";
+        const res = await fetch(`http://localhost:3000/api/lessons-with-topics?class_id=${classId}`);
+        const data = await res.json();
+        if (!Array.isArray(data)) {
+            topicSelect.innerHTML = "<option value=''>Error loading topics</option>";
+            return;
+        }
+        if (data.length === 0) {
+            topicSelect.innerHTML = "<option value=''>No topics found</option>";
+            return;
+        }
+        topicSelect.innerHTML = "<option value=''>Select a topic</option>";
+        data.forEach(function (lesson) {
+            const optgroup = document.createElement("optgroup");
+            optgroup.label = lesson.lesson_title;
+            (lesson.topics || []).forEach(function (topic) {
+                const option = document.createElement("option");
+                option.value = topic.topic_id;
+                option.textContent = topic.topic_title;
+                optgroup.appendChild(option);
+            });
+            topicSelect.appendChild(optgroup);
+        });
+    } catch (err) {
+        console.error("loadRecitationTopics:", err);
+        const topicSelect = document.getElementById("recitation-topic");
+        if (topicSelect) topicSelect.innerHTML = "<option value=''>Error loading topics</option>";
+    }
+}
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -132,16 +136,21 @@ document.addEventListener('DOMContentLoaded', () => {
 async function loadClassStudents(classId) {
     try {
         console.log("Loading students for class:", classId);
-        const res = await fetch(`/api/class/${classId}/students`);
+        const res = await fetch(`http://localhost:3000/api/recitation/class/${classId}/students`);
         const data = await res.json();
 
-        // data itself is an array already ✅
+        // data itself is an array already ✅ (API may send { id, name, answered } or { student_id, student_fname, student_lname })
         if (Array.isArray(data) && data.length > 0) {
-            state.students = data.map(s => ({
-                id: s.student_id,
-                name: `${s.student_fname} ${s.student_lname}`,
-                answered: false
-            }));
+            state.students = data.map(s => {
+                const name = (s.name != null && String(s.name).trim() !== '')
+                    ? String(s.name).trim()
+                    : `${s.student_fname || ''} ${s.student_lname || ''}`.trim();
+                return {
+                    id: s.id != null ? s.id : s.student_id,
+                    name: name || 'Student',
+                    answered: s.answered === true
+                };
+            });
 
             console.log("Loaded students:", state.students);
 
@@ -149,6 +158,9 @@ async function loadClassStudents(classId) {
             renderStudentSlider();
             updateQuestionProgress();
         } else {
+            state.students = [];
+            renderStudentSlider();
+            updateQuestionProgress();
             console.warn('No students found for this class.');
         }
     } catch (err) {
@@ -157,114 +169,28 @@ async function loadClassStudents(classId) {
 }
 
 function setupEventListeners() {
-    // File upload
-    const fileInput = document.getElementById('file-upload');
-    const uploadArea = document.getElementById('upload-area');
-    
-    fileInput.addEventListener('change', handleFileSelect);
-    
-    // Drag and drop
-    uploadArea.addEventListener('dragover', handleDragOver);
-    uploadArea.addEventListener('dragleave', handleDragLeave);
-    uploadArea.addEventListener('drop', handleDrop);
-    
-    // Question types
-    const questionTypeCheckboxes = document.querySelectorAll('.question-type');
-    questionTypeCheckboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', handleQuestionTypeChange);
-    });
-    
-    // Question count
-    const questionCountSelect = document.getElementById('question-count');
-    questionCountSelect.addEventListener('change', (e) => {
-        state.questionCount = parseInt(e.target.value);
-    });
+    const topicSelect = document.getElementById('recitation-topic');
+    if (topicSelect) {
+        topicSelect.addEventListener('change', function () {
+            const val = (topicSelect.value || '').trim();
+            state.selectedTopicId = val || null;
+            updateGenerateButton();
+        });
+    }
 
-    // Generate Questions button
+    initRecitationTypeQuantities();
+
     const generateBtn = document.getElementById('generate-questions');
-    generateBtn.addEventListener('click', generateQuestions);
-}
-
-function handleFileSelect(e) {
-    const file = e.target.files[0];
-    if (file) {
-        state.uploadedFile = file;
-        showFilePreview(file);
-        updateGenerateButton();
-    }
-}
-
-function handleDragOver(e) {
-    e.preventDefault();
-    e.currentTarget.style.borderColor = 'var(--violet-600)';
-    e.currentTarget.style.backgroundColor = 'rgba(124, 58, 237, 0.05)';
-}
-
-function handleDragLeave(e) {
-    e.currentTarget.style.borderColor = '';
-    e.currentTarget.style.backgroundColor = '';
-}
-
-function handleDrop(e) {
-    e.preventDefault();
-    e.currentTarget.style.borderColor = '';
-    e.currentTarget.style.backgroundColor = '';
-    
-    const file = e.dataTransfer.files[0];
-    if (file) {
-        state.uploadedFile = file;
-        showFilePreview(file);
-        updateGenerateButton();
-    }
-}
-
-function showFilePreview(file) {
-    const uploadArea = document.getElementById('upload-area');
-    const filePreview = document.getElementById('file-preview');
-    const fileName = document.getElementById('file-name');
-    const fileSize = document.getElementById('file-size');
-
-    uploadArea.classList.add('hidden');       // hide upload area
-    filePreview.classList.remove('hidden');   // show preview
-    fileName.textContent = file.name;
-    if(fileSize) fileSize.textContent = (file.size / 1024 / 1024).toFixed(2) + ' MB';
-
-    lucide.createIcons({ icons: lucide.icons });
-}
-
-function removeFile() {
-    const uploadArea = document.getElementById('upload-area');
-    const filePreview = document.getElementById('file-preview');
-    const fileInput = document.getElementById('file-upload'); // <--- add this
-
-    state.uploadedFile = null;
-    state.questions = [];
-
-    // Reset file input
-    fileInput.value = '';  // <-- important!
-
-    uploadArea.classList.remove('hidden');   // show upload area
-    filePreview.classList.add('hidden');     // hide preview
-
-    updateGenerateButton();
-    updateStartButton();
-}
-
-function handleQuestionTypeChange(e) {
-    const type = e.target.dataset.type;
-    if (e.target.checked) {
-        if (!state.questionTypes.includes(type)) {
-            state.questionTypes.push(type);
-        }
-    } else {
-        state.questionTypes = state.questionTypes.filter(t => t !== type);
-    }
-    updateGenerateButton();
+    if (generateBtn) generateBtn.addEventListener('click', generateQuestions);
 }
 
 function updateGenerateButton() {
     const btn = document.getElementById('generate-questions');
-    btn.disabled = !state.uploadedFile || state.questionTypes.length === 0;
+    if (!btn) return;
+    const topicId = state.selectedTopicId;
+    const counts = getRecitationQuestionCounts();
+    const total = RECITATION_QUESTION_TYPES.reduce((sum, t) => sum + (counts[t] || 0), 0);
+    btn.disabled = !topicId || total < 1;
 }
 
 function updateStartButton() {
@@ -276,57 +202,67 @@ async function generateQuestions() {
     const btn = document.getElementById('generate-questions');
     if (!btn) return;
 
-    const icon = btn.querySelector('i');
-    
-    btn.disabled = true;
-    if (icon) icon.classList.add('spinner');
-    
-    // Optional: safely set text
-    btn.textContent = 'Generating...';
+    const topicId = state.selectedTopicId;
+    const questionCounts = getRecitationQuestionCounts();
+    const questionTypes = getSelectedRecitationTypes();
+    const totalQuestions = RECITATION_QUESTION_TYPES.reduce((sum, t) => sum + (questionCounts[t] || 0), 0);
 
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Generate questions
-    state.questions = mockGenerateQuestions(state.questionTypes, state.questionCount);
-    
-    // Update UI
-    if (icon) icon.classList.remove('spinner');
-    btn.textContent = 'Generate Questions';
-    btn.disabled = false;
-    
-    const questionsGenerated = document.getElementById('questions-generated');
-    if (questionsGenerated) questionsGenerated.style.display = 'block';
-    
-    const questionCountText = document.getElementById('question-count-text');
-    if (questionCountText) questionCountText.textContent = state.questions.length;
-
-    showNotification('✅ Questions successfully generated!', 'success');
-    updateStartButton();
-}
-
-
-function mockGenerateQuestions(types, count) {
-    const questions = [];
-    let questionId = 1;
-    
-    while (questions.length < count) {
-        for (const type of types) {
-            if (questions.length >= count) break;
-            
-            const templates = questionTemplates[type];
-            const template = templates[Math.floor(Math.random() * templates.length)];
-            
-            questions.push({
-            id: `q${questionId++}`,
-            type,
-            question: template.question,
-            options: template.options || null,
-            correctAnswer: template.answer || template.correctAnswer || ''
-            });
-        }
+    if (!topicId) {
+        showNotification('Please select a topic first.', 'error');
+        return;
     }
-    
-    return questions.slice(0, count);
+    if (questionTypes.length === 0 || totalQuestions < 1) {
+        showNotification('Set at least one question type with quantity greater than 0.', 'warning');
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<i data-lucide="brain" class="size-4 spinner"></i> Generating...';
+    if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
+
+    try {
+        const res = await fetch('http://localhost:3000/api/generate-recitation-questions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                topic_id: topicId,
+                question_types: questionTypes,
+                question_count: totalQuestions
+            })
+        });
+        const text = await res.text();
+        if (!res.ok && (text.startsWith('<!') || text.startsWith('<'))) {
+            throw new Error('Recitation API not found (404). Start the backend from js-back-end: npm start');
+        }
+        let data;
+        try {
+            data = text ? JSON.parse(text) : {};
+        } catch (_) {
+            throw new Error(res.ok ? 'Invalid response from server' : 'Recitation API not found. Start the backend from js-back-end: npm start');
+        }
+
+        if (!res.ok || !data.success || !Array.isArray(data.questions)) {
+            throw new Error(data.message || data.error || 'Failed to generate questions');
+        }
+
+        state.questions = data.questions;
+
+        const questionsGenerated = document.getElementById('questions-generated');
+        if (questionsGenerated) questionsGenerated.classList.remove('hidden');
+
+        const questionCountText = document.getElementById('question-count-text');
+        if (questionCountText) questionCountText.textContent = state.questions.length;
+
+        showNotification('Questions successfully generated!', 'success');
+    } catch (err) {
+        console.error('generateQuestions:', err);
+        showNotification(err.message || 'Could not generate questions. Check server and GROQ API key.', 'error');
+    } finally {
+        btn.innerHTML = '<i data-lucide="brain" class="size-4"></i> Generate questions';
+        btn.disabled = false;
+        if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
+        updateStartButton();
+    }
 }
 
 function startSession() {
@@ -347,6 +283,8 @@ function startSession() {
 
     updateQuestionProgress();
     renderStudentSlider();
+    // Position slider after modal is visible and laid out
+    setTimeout(updateSliderPosition, 80);
 }
 
 
@@ -355,8 +293,11 @@ function backToSetup() {
     const picker = document.getElementById('student-picker');
 
     if (setup && picker) {
-        picker.classList.add('hidden');       // hide modal
-        setup.classList.remove('hidden');     // show setup section
+        picker.classList.add('hidden');
+        setup.classList.remove('hidden');
+        setup.classList.add('active');
+        const questionsGenerated = document.getElementById('questions-generated');
+        if (questionsGenerated) questionsGenerated.classList.add('hidden');
     }
 }
 
@@ -369,26 +310,53 @@ function updateQuestionProgress() {
     document.getElementById('students-remaining').textContent = availableStudents.length;
 }
 
+function escapeHtmlRecitation(s) {
+    if (s == null) return '';
+    return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function getInitials(name) {
+    if (!name || typeof name !== 'string') return '?';
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return '?';
+}
+
 function renderStudentSlider() {
     const slider = document.getElementById('student-slider');
     const availableStudents = state.students.filter(s => !s.answered);
-    
+    if (!slider) return;
+
     slider.innerHTML = '';
     
     // Triple the students for continuous sliding effect
     const studentsToRender = [...availableStudents, ...availableStudents, ...availableStudents];
     
-    studentsToRender.forEach((student, idx) => {
-    const box = document.createElement('div');
-    box.className = 'student-box';
+    studentsToRender.forEach((student) => {
+        const box = document.createElement('div');
+        box.className = 'student-box';
+        const initials = getInitials(student.name);
+        const avatarHtml = student.avatarUrl
+            ? `<img class="recitation-student-avatar-img" src="${escapeHtmlRecitation(student.avatarUrl)}" alt="">`
+            : `<span class="recitation-student-avatar-initials" aria-hidden="true">${escapeHtmlRecitation(initials)}</span>`;
         box.innerHTML = `
-            <i data-lucide="user" class="student-icon"></i>
-            <span class="student-name">${student.name}</span>
+            <div class="recitation-student-avatar">${avatarHtml}</div>
+            <span class="student-name">${escapeHtmlRecitation(student.name)}</span>
         `;
         slider.appendChild(box);
     });
-    
-    lucide.createIcons({ icons: lucide.icons });
+
+    // Set initial position after layout (no animation). Animation runs when user clicks Play.
+    requestAnimationFrame(() => {
+        updateSliderPosition({ animate: false });
+        setTimeout(() => updateSliderPosition({ animate: false }), 60);
+    });
 }
 
 function startSpinning() {
@@ -502,13 +470,29 @@ function onPlayButtonClick() {
 }
 
 
-const slider = document.getElementById('student-slider');
-slider.style.transition = 'transform 0.3s ease-out'; // smooth transition
+function getSliderGapPx(slider) {
+    const gap = slider && window.getComputedStyle(slider).gap;
+    if (!gap) return 10;
+    const num = parseFloat(gap);
+    if (gap.includes('rem')) return num * 16;
+    if (gap.includes('px')) return num;
+    return num || 10;
+}
 
-function updateSliderPosition() {
+function parsePaddingPx(el, side) {
+    if (!el) return 0;
+    const val = window.getComputedStyle(el)['padding' + (side === 'left' ? 'Left' : 'Right')];
+    if (!val) return 0;
+    const num = parseFloat(val);
+    if (val.includes('rem')) return num * 16;
+    return num;
+}
+
+function updateSliderPosition(opts) {
+    opts = opts || {};
     const slider = document.getElementById('student-slider');
     const boxes = document.querySelectorAll('.student-box');
-    const container = document.querySelector('.slider-container');
+    const container = slider ? slider.closest('.recitation-slider-wrap') || slider.closest('.recitation-slider-container') || slider.closest('.slider-container') : null;
 
     if (!slider || boxes.length === 0 || !container) return;
 
@@ -517,16 +501,27 @@ function updateSliderPosition() {
 
     if (totalStudents === 0) return;
 
-    const boxWidth = boxes[0].offsetWidth + 16; // box width + gap
+    const gapPx = getSliderGapPx(slider);
+    const boxWidth = boxes[0].offsetWidth + gapPx;
     const containerWidth = container.offsetWidth;
 
-    // Center on the middle copy of triple-rendered students
+    // If container not yet laid out (e.g. modal just opened), retry shortly
+    if (containerWidth <= 0 && !opts.retried) {
+        setTimeout(() => updateSliderPosition({ retried: true }), 80);
+        return;
+    }
+
+    const paddingLeft = parsePaddingPx(slider, 'left');
+
+    // Center the middle copy's current student in the viewport
     const middleIndex = state.currentSlideIndex + totalStudents;
+    const boxCenter = paddingLeft + middleIndex * boxWidth - boxWidth / 2;
+    const offset = Math.round(boxCenter - containerWidth / 2);
 
-    const offset = middleIndex * boxWidth - (containerWidth / 2 - boxWidth / 2);
-
-    slider.style.transform = `translateX(-${offset}px)`;
-    slider.style.transitionDuration = `${state.spinSpeed}ms`;
+    const useTransition = opts.animate !== false && state.isSpinning;
+    const duration = useTransition ? 220 : 0;
+    slider.style.transition = `transform ${duration}ms cubic-bezier(0.25, 1, 0.5, 1)`;
+    slider.style.transform = `translate3d(-${offset}px, 0, 0)`;
 }
 
 
@@ -576,6 +571,10 @@ function showQuestionModal() {
         questionTypeEl.textContent = typeName;
     }
     if (questionTextEl) questionTextEl.textContent = currentQuestion.question;
+    const qNumEl = document.getElementById('modal-question-num');
+    const qTotalEl = document.getElementById('modal-total-questions');
+    if (qNumEl) qNumEl.textContent = String(state.currentQuestionIndex + 1);
+    if (qTotalEl) qTotalEl.textContent = String(state.questions.length);
 
     // render inputs fresh
     renderAnswerInput(currentQuestion);
@@ -590,29 +589,14 @@ function showQuestionModal() {
     if (modalActions) modalActions.style.display = 'flex';
     if (continueBtn) continueBtn.style.display = 'none';
 
-    // Add timer display if needed
-    if (!timerEl) {
-        const timerDisplay = document.createElement('div');
-        timerDisplay.id = 'question-timer';
-        timerDisplay.style.cssText = `
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: #ef4444;
-            background: #fff1f2;
-            border: 2px solid #fecaca;
-            border-radius: 8px;
-            padding: 0.3rem 0.8rem;
-            display: inline-block;
-            margin-left: 1rem;
-            transition: all 0.15s ease;
-        `;
-        // append to header (safe guard)
-        const header = modal.querySelector('.modal-header');
-        if (header) header.appendChild(timerDisplay);
+    // Timer lives in content area (below header); ensure it's in the right place
+    const contentArea = modal.querySelector('.recitation-question-content');
+    const timerDisplay = document.getElementById('question-timer');
+    if (timerDisplay && contentArea && !contentArea.contains(timerDisplay)) {
+        contentArea.insertBefore(timerDisplay, contentArea.firstChild);
     }
 
     // Start countdown
-    const timerDisplay = document.getElementById('question-timer');
     timerDisplay.textContent = `⏰ ${timeLeft}s left`;
     timerDisplay.style.color = '#ef4444';
     timerDisplay.style.background = '#fff1f2';
@@ -666,37 +650,47 @@ function showQuestionModal() {
     lucide.createIcons({ icons: lucide.icons });
 }
 
+function escapeForAttr(s) {
+    if (s == null) return '';
+    return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+}
+
 function renderAnswerInput(question) {
     const container = document.getElementById('answer-input-container');
+    if (!container) return;
     container.innerHTML = '';
 
-    if (question.options) {
-        // Multiple choice
+    if (question.options && question.options.length > 0) {
         const radioGroup = document.createElement('div');
         radioGroup.className = 'radio-group';
         radioGroup.style.display = 'flex';
-        radioGroup.style.flexDirection = 'column'; // vertical
-        radioGroup.style.gap = '0.75rem';          // spacing between options
+        radioGroup.style.flexDirection = 'column';
+        radioGroup.style.gap = '0.75rem';
         radioGroup.style.marginTop = '0.5rem';
 
-        question.options.forEach((option, idx) => {
+        const optionsList = question.options.map(opt => {
+            if (opt == null) return '';
+            if (typeof opt === 'string') return opt.trim();
+            if (typeof opt === 'object' && (opt.text != null || opt.value != null || opt.label != null)) return String(opt.text ?? opt.value ?? opt.label ?? '').trim();
+            return String(opt).trim();
+        }).filter(Boolean);
+
+        optionsList.forEach(function (optionText, idx) {
             const label = document.createElement('label');
             label.className = 'radio-label';
             label.style.display = 'flex';
             label.style.alignItems = 'center';
             label.style.padding = '0.5rem 0.75rem';
-            label.style.border = '1px solid #ddd';
+            label.style.border = '1px solid var(--border)';
             label.style.borderRadius = '0.5rem';
             label.style.cursor = 'pointer';
             label.style.transition = 'all 0.2s ease';
-            label.onmouseover = () => label.style.backgroundColor = 'rgba(236, 72, 153, 0.05)';
-            label.onmouseleave = () => label.style.backgroundColor = 'transparent';
-
-            label.innerHTML = `
-                <input type="radio" name="answer" value="${option}" id="option-${idx}" style="margin-right: 0.5rem;">
-                <span>${option}</span>
-            `;
-
+            var optVal = escapeForAttr(optionText);
+            label.innerHTML = '<input type="radio" name="answer" value="' + optVal + '" id="option-' + idx + '" style="margin-right: 0.5rem;"><span>' + escapeForAttr(optionText) + '</span>';
             radioGroup.appendChild(label);
         });
 
@@ -752,9 +746,10 @@ function submitAnswer() {
         state.autoContinueTimeout = null;
     }
 
-    // compare with correctAnswer (normalize)
-    const correct = (currentQuestion.correctAnswer || '').toString();
-    const isCorrect = userAnswer.toLowerCase().trim() === correct.toLowerCase().trim();
+    // compare with correctAnswer (normalize: trim and case-insensitive)
+    const correct = (currentQuestion.correctAnswer || '').toString().trim();
+    const normalizedUser = userAnswer.trim();
+    const isCorrect = normalizedUser.toLowerCase() === correct.toLowerCase();
 
     // show result and allow auto-continue if desired
     showResult(isCorrect, userAnswer, correct);
@@ -781,24 +776,36 @@ function showResult(isCorrect, userAnswer, correctAnswer, autoContinue = true) {
     if (!resultSection || !resultContent) return;
 
     resultSection.style.display = 'block';
-    resultSection.className = 'result-section ' + (isCorrect ? 'result-correct' : 'result-incorrect');
+    resultSection.className = 'result-section recitation-result-section ' + (isCorrect ? 'result-correct' : 'result-incorrect');
+
+    function escapeHtml(s) {
+        if (s == null) return '';
+        return String(s)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    const safeUser = escapeHtml(userAnswer);
+    const safeCorrect = escapeHtml(correctAnswer);
 
     if (isCorrect) {
         resultContent.innerHTML = `
-            <div style="display:flex;align-items:center;gap:1rem;background:linear-gradient(135deg,#dcfce7,#bbf7d0);border:2px solid #22c55e;padding:1rem;border-radius:12px;">
-                <div style="font-size:2rem">✅</div>
-                <div><h4 style="margin:0;color:#15803d">Correct!</h4><p style="margin:0;color:#166534">Great job! 🎉</p></div>
+            <span class="result-icon" aria-hidden="true">✅</span>
+            <div class="result-body">
+                <h4>Correct!</h4>
+                <p>Great job! 🎉</p>
             </div>
         `;
     } else {
         resultContent.innerHTML = `
-            <div style="display:flex;align-items:flex-start;gap:1rem;background:linear-gradient(135deg,#fee2e2,#fecaca);border:2px solid #ef4444;padding:1rem;border-radius:12px;">
-                <div style="font-size:2rem">❌</div>
-                <div>
-                    <h4 style="margin:0;color:#b91c1c">Incorrect</h4>
-                    <p style="margin:4px 0;color:#1e293b">💡 <strong>Correct answer:</strong> <span style="color:#065f46">${correctAnswer}</span></p>
-                    <p style="margin:2px 0;color:#475569">📝 <strong>Your answer:</strong> <span style="color:#b91c1c">${userAnswer}</span></p>
-                </div>
+            <span class="result-icon" aria-hidden="true">❌</span>
+            <div class="result-body">
+                <h4>Incorrect</h4>
+                <p>💡 <strong>Correct answer:</strong> <span class="correct-answer">${safeCorrect}</span></p>
+                <p>📝 <strong>Your answer:</strong> <span class="your-answer">${safeUser}</span></p>
             </div>
         `;
     }

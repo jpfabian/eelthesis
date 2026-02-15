@@ -2,12 +2,30 @@ const express = require("express");
 const router = express.Router();
 require("dotenv").config();
 const Groq = require("groq-sdk");
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+let groq = null;
+try {
+  const key = String(process.env.GROQ_API_KEY || "").trim();
+  if (key) groq = new Groq({ apiKey: key });
+} catch (e) {
+  groq = null;
+}
+
+function requireGroq(res) {
+  if (groq) return groq;
+  res.status(500).json({
+    success: false,
+    message: "AI service is not configured. Set GROQ_API_KEY in your environment."
+  });
+  return null;
+}
 
 router.post("/api/generate-exam", async (req, res) => {
   const { subject, selectedTopics, questionTypes } = req.body;
 
   try {
+    const client = requireGroq(res);
+    if (!client) return;
+
     const topicsList = selectedTopics.join(", ");
 
     // Build a clear text for each question type with counts
@@ -56,12 +74,22 @@ ${Array.from({ length: getCount("essay") }, (_, i) => `      ${i + 1}. ...`).joi
       `);
     }
 
+    // Answer key: only list sections we actually requested
+    const sectionLetters = [];
+    if (getCount("multiple-choice") > 0) sectionLetters.push("I");
+    if (getCount("true-false") > 0) sectionLetters.push("II");
+    if (getCount("identification") > 0) sectionLetters.push("III");
+    if (getCount("essay") > 0) sectionLetters.push("IV");
+    const answerKeySections = sectionLetters.length ? sectionLetters.join(", ") : "—";
+
     // Build final prompt
     const prompt = `
 You are a professional teacher creating a formal printed exam for Senior High School students.
 
 🧠 Your task: Generate a complete exam that exactly follows the layout and formatting below. 
 The layout, indentation, and spacing must be EXACTLY as shown — do not add or remove any lines.
+
+CRITICAL: Include ONLY the sections that appear in the layout below. Do NOT add any section that is not in the layout. For example: if the layout does NOT contain "IV. ESSAY", you must NOT include an Essay section. If it does NOT contain "III. IDENTIFICATION", do NOT include Identification. Only generate the sections that are explicitly listed in the layout.
 
 Do NOT include any explanations or notes outside the exam itself.
 Do NOT include any exam title, subject name, school info, or date at the top of the exam.
@@ -70,27 +98,29 @@ Do NOT include any subject not related in english.
 All questions must be based on the following topic(s):
 ${topicsList}
 
-Include the following question types and quantities:
+Include the following question types and quantities (only these):
 ${questionTypeDetails}
 
 Each question must:
 - Strictly match the given topic(s)
 - Be grammatically correct and clearly written
 - Follow the numbering and indentation pattern
-- Contain at least 2–3 sub-questions for Essay-type items
+- For Essay-type items only: contain at least 2–3 sub-questions
 
-If a section is not selected, skip it entirely.
+For IDENTIFICATION: Do NOT use letter options (a, b, c, d). Each item is short-answer only.
+
+Generate ONLY the sections that appear in the layout below. Do not add Essay, Identification, True or False, or Multiple Choice if that section is not in the layout.
 
 ${sections.join("\n")}
 
 🗝️ ANSWER KEY
-      Provide the correct answers per section (I, II, III, IV).
+      Provide the correct answers per section (${answerKeySections}) only.
 
 Follow this format strictly. Do not add any explanations or instructions outside the exam.
 `;
 
     // Call Groq
-    const response = await groq.chat.completions.create({
+    const response = await client.chat.completions.create({
       model: "llama-3.1-8b-instant",
       messages: [
         {
@@ -101,7 +131,24 @@ Follow this format strictly. Do not add any explanations or instructions outside
       ]
     });
 
-    const examText = response.choices[0]?.message?.content || "No exam generated.";
+    let examText = response.choices[0]?.message?.content || "No exam generated.";
+
+    // Strip any section that was NOT in the selected Question Types (checkboxes)
+    // Remove from bottom to top (IV → III → II → I) so positions stay correct
+    const sectionBoundary = "(?=\\n\\s*[IVX]+\\s*\\.|\\n[\\s\\S]*?ANSWER KEY|$)";
+    if (getCount("essay") === 0) {
+      examText = examText.replace(new RegExp("\\n\\s*IV\\.\\s*ESSAY[\\s\\S]*?" + sectionBoundary, "gi"), "");
+    }
+    if (getCount("identification") === 0) {
+      examText = examText.replace(new RegExp("\\n\\s*III\\.\\s*IDENTIFICATION[\\s\\S]*?" + sectionBoundary, "gi"), "");
+    }
+    if (getCount("true-false") === 0) {
+      examText = examText.replace(new RegExp("\\n\\s*II\\.\\s*TRUE[\\s\\S]*?" + sectionBoundary, "gi"), "");
+    }
+    if (getCount("multiple-choice") === 0) {
+      examText = examText.replace(new RegExp("\\n\\s*I\\.\\s*MULTIPLE[\\s\\S]*?" + sectionBoundary, "gi"), "");
+    }
+
     res.json({ success: true, exam: examText });
 
   } catch (err) {
@@ -246,8 +293,10 @@ router.post("/api/move-exam-to-cache/:id", async (req, res) => {
 
     const [insertResult] = await connection.query(`
       INSERT INTO cached_exams (subject, title, content, question_count, types, created_at)
-      SELECT subject, title, content, question_count, types, created_at
-      FROM exams WHERE id = ?
+      SELECT c.subject, e.title, e.content, e.question_count, e.types, e.created_at
+      FROM exams e
+      JOIN classes c ON e.class_id = c.id
+      WHERE e.id = ?
     `, [id]);
 
     if (insertResult.affectedRows === 0) {

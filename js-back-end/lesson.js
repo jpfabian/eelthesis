@@ -5,6 +5,10 @@ const router = express.Router();
 router.get("/curriculum", async (req, res) => {
   try {
     const pool = req.pool; // use pool from middleware
+    const subjectId = req.query.subject_id ? Number(req.query.subject_id) : null;
+
+    const whereClause = Number.isFinite(subjectId) ? "WHERE s.subject_id = ?" : "";
+    const params = Number.isFinite(subjectId) ? [subjectId] : [];
 
     const [rows] = await pool.query(`
       SELECT 
@@ -14,8 +18,9 @@ router.get("/curriculum", async (req, res) => {
       FROM subjects s
       LEFT JOIN lessons l ON s.subject_id = l.subject_id
       LEFT JOIN topics t ON l.lesson_id = t.lesson_id
+      ${whereClause}
       ORDER BY s.subject_id, l.lesson_id, t.topic_id
-    `);
+    `, params);
 
     const subjects = [];
     const subjectMap = {};

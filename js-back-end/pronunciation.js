@@ -9,28 +9,64 @@ const fetch = require("node-fetch");
 require("dotenv").config();
 const Groq = require("groq-sdk");
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+let groq = null;
+try {
+  const key = String(process.env.GROQ_API_KEY || "").trim();
+  if (key) groq = new Groq({ apiKey: key });
+} catch (e) {
+  groq = null;
+}
+
+function requireGroq(res) {
+  if (groq) return groq;
+  res.status(500).json({
+    success: false,
+    message: "AI service is not configured. Set GROQ_API_KEY in your environment."
+  });
+  return null;
+}
 
 
-const s3 = new S3Client({
-  region: process.env.AWS_REGION,
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  },
-});
+// Multer storage (S3 if configured, otherwise local disk)
+const hasS3 =
+  String(process.env.AWS_BUCKET_NAME || "").trim() &&
+  String(process.env.AWS_ACCESS_KEY_ID || "").trim() &&
+  String(process.env.AWS_SECRET_ACCESS_KEY || "").trim() &&
+  String(process.env.AWS_REGION || "").trim();
 
-// Multer config using S3 storage
-const upload = multer({
-  storage: multerS3({
-    s3,
-    bucket: process.env.AWS_BUCKET_NAME,
-    key: (req, file, cb) => {
-      const filename = `pronunciation/${Date.now()}-${file.originalname}`;
-      cb(null, filename);
+let upload;
+if (hasS3) {
+  const s3 = new S3Client({
+    region: process.env.AWS_REGION,
+    credentials: {
+      accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
     },
-  }),
-});
+  });
+
+  upload = multer({
+    storage: multerS3({
+      s3,
+      bucket: process.env.AWS_BUCKET_NAME,
+      key: (req, file, cb) => {
+        const filename = `pronunciation/${Date.now()}-${file.originalname}`;
+        cb(null, filename);
+      },
+    }),
+  });
+} else {
+  const uploadDir = path.join(__dirname, "uploads", "pronunciation");
+  try {
+    if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+  } catch (_) {}
+
+  upload = multer({
+    storage: multer.diskStorage({
+      destination: (req, file, cb) => cb(null, uploadDir),
+      filename: (req, file, cb) => cb(null, `${Date.now()}-${file.originalname}`),
+    }),
+  });
+}
 
 
 // ================= CREATE PRONUNCIATION QUIZ =================
@@ -106,13 +142,39 @@ router.get("/api/pronunciation-quizzes", async (req, res) => {
       params.push(subjectId);
     }
 
-    query += " ORDER BY created_at DESC";
+    // Prefer track order if present
+    query += " ORDER BY quiz_number ASC, created_at ASC";
 
     // ✅ Fetch quizzes from DB
     const [quizzes] = await pool.query(query, params);
 
-    if (studentId) {
-      // ✅ Fetch student attempts if provided
+    // New flow: subject-based progression locking (1..20)
+    if (studentId && subjectId) {
+      const [[progress]] = await pool.query(
+        `SELECT unlocked_quiz_number
+         FROM pronunciation_student_progress
+         WHERE student_id = ? AND subject_id = ?`,
+        [studentId, subjectId]
+      );
+
+      const unlockedQuizNumber = Math.max(1, Number(progress?.unlocked_quiz_number || 1));
+
+      await pool.query(
+        `INSERT INTO pronunciation_student_progress (student_id, subject_id, unlocked_quiz_number)
+         VALUES (?, ?, 1)
+         ON DUPLICATE KEY UPDATE unlocked_quiz_number = unlocked_quiz_number`,
+        [studentId, subjectId]
+      );
+
+      quizzes.forEach(q => {
+        const qn = Number(q.quiz_number || 1);
+        const isFirst = qn === 1;
+        // Quiz #1 is always available; others depend on status + progression
+        q.is_locked = (!isFirst && (q.status !== "active")) || (!isFirst && (qn > unlockedQuizNumber));
+        q.unlocked_quiz_number = unlockedQuizNumber;
+      });
+    } else if (studentId) {
+      // Back-compat schedule/status based locking
       const [attempts] = await pool.query(
         "SELECT * FROM pronunciation_quiz_attempts WHERE student_id = ?",
         [studentId]
@@ -130,7 +192,6 @@ router.get("/api/pronunciation-quizzes", async (req, res) => {
         }
       });
     } else {
-      // ✅ Default lock status when no studentId
       quizzes.forEach(q => q.is_locked = q.status !== 'active');
     }
 
@@ -233,9 +294,25 @@ router.get("/api/teacher/pronunciation-quizzes", async (req, res) => {
 router.patch("/api/pronunciation-quizzes/:id/schedule", async (req, res) => {
   const pool = req.pool;
   const { id } = req.params;
-  const { unlock_time, lock_time, time_limit, retake_option, allowed_students } = req.body;
+  let { unlock_time, lock_time, time_limit, retake_option, allowed_students } = req.body;
 
   try {
+    // Accept either datetime-local or ISO; store as MySQL DATETIME.
+    const toMySqlDateTime = (value) => {
+      if (!value) return null;
+      const d = new Date(value);
+      if (!Number.isNaN(d.getTime())) {
+        return d.toISOString().slice(0, 19).replace("T", " ");
+      }
+      if (typeof value === "string" && value.includes("T") && value.length === 16) {
+        return value.replace("T", " ") + ":00";
+      }
+      return value;
+    };
+
+    unlock_time = toMySqlDateTime(unlock_time);
+    lock_time = toMySqlDateTime(lock_time);
+
     // Use status as the main reference: 'active' = unlocked, 'locked' = locked
     await pool.query(
       `UPDATE pronunciation_quizzes
@@ -397,10 +474,54 @@ router.post("/api/pronunciation-submit", upload.any(), async (req, res) => {
       [avgAccuracy, avgAccuracy, 100, attempt_id]
     );
 
+    // 5️⃣ Unlock next quiz in the subject track if passed
+    let unlockedNext = false;
+    let unlocked_quiz_number = null;
+
+    try {
+      const [[meta]] = await pool.query(
+        `SELECT q.subject_id, q.quiz_number, q.passing_score
+         FROM pronunciation_quizzes q
+         WHERE q.quiz_id = ?`,
+        [quiz_id]
+      );
+
+      if (meta?.subject_id) {
+        const quizNumber = Number(meta.quiz_number || 1);
+        const passing = Number(meta.passing_score ?? 70);
+        const percent = Number(avgAccuracy);
+
+        // If passing_score <= 0, unlock next on completion (no minimum accuracy).
+        if (passing <= 0 || percent >= passing) {
+          const next = Math.max(2, quizNumber + 1);
+          await pool.query(
+            `INSERT INTO pronunciation_student_progress (student_id, subject_id, unlocked_quiz_number)
+             VALUES (?, ?, ?)
+             ON DUPLICATE KEY UPDATE
+               unlocked_quiz_number = GREATEST(unlocked_quiz_number, VALUES(unlocked_quiz_number))`,
+            [student_id, meta.subject_id, next]
+          );
+
+          const [[p]] = await pool.query(
+            `SELECT unlocked_quiz_number
+             FROM pronunciation_student_progress
+             WHERE student_id = ? AND subject_id = ?`,
+            [student_id, meta.subject_id]
+          );
+          unlocked_quiz_number = Number(p?.unlocked_quiz_number || next);
+          unlockedNext = true;
+        }
+      }
+    } catch (e) {
+      console.warn("⚠️ Pronunciation unlock progression skipped:", e?.message || e);
+    }
+
     res.json({
       success: true,
       message: "Pronunciation quiz submitted successfully.",
       accuracy: avgAccuracy,
+      unlockedNext,
+      unlocked_quiz_number
     });
 
   } catch (err) {
@@ -453,6 +574,192 @@ router.get("/api/pronunciation-review", async (req, res) => {
   } catch (err) {
     console.error("❌ Pronunciation review fetch error:", err);
     res.status(500).json({ success: false, message: "Server error", error: err.message });
+  }
+});
+
+// ================= TEACHER: LIST ATTEMPTS FOR A QUIZ (OPTIONAL CLASS FILTER) =================
+router.get("/api/teacher/pronunciation-attempts", async (req, res) => {
+  const pool = req.pool;
+  const quizId = req.query.quiz_id ? Number(req.query.quiz_id) : null;
+  const classId = req.query.class_id ? Number(req.query.class_id) : null;
+
+  if (!quizId) return res.status(400).json({ success: false, error: "quiz_id is required" });
+
+  try {
+    // If class_id is provided, restrict to students who joined that class
+    // (include pending/accepted/rejected — teacher still needs to review submissions).
+    // If class_id is null, return all attempts for the quiz (no class filter, no duplicates).
+    const params = [classId || null, quizId, classId || null];
+    const [rows] = await pool.query(
+      `
+      SELECT 
+        a.attempt_id,
+        a.student_id,
+        CONCAT(u.fname, ' ', u.lname) AS student_name,
+        a.score,
+        a.pronunciation_score,
+        a.status,
+        a.start_time,
+        a.end_time,
+        sc.status AS class_status
+      FROM pronunciation_quiz_attempts a
+      JOIN users u ON a.student_id = u.user_id
+      LEFT JOIN student_classes sc
+        ON sc.student_id = a.student_id
+        AND sc.class_id = ?
+      WHERE a.quiz_id = ?
+        AND (? IS NULL OR sc.class_id IS NOT NULL)
+      ORDER BY a.end_time DESC, a.attempt_id DESC
+      `,
+      params
+    );
+
+    res.json({ success: true, attempts: rows });
+  } catch (err) {
+    console.error("❌ Teacher pronunciation attempts error:", err);
+    res.status(500).json({ success: false, error: "Database error" });
+  }
+});
+
+// ================= TEACHER: GET ANSWERS FOR A PRONUNCIATION ATTEMPT =================
+router.get("/api/teacher/pronunciation-attempts/:attemptId", async (req, res) => {
+  const pool = req.pool;
+  const attemptId = Number(req.params.attemptId);
+
+  if (!attemptId) return res.status(400).json({ success: false, error: "Invalid attemptId" });
+
+  try {
+    const [[attempt]] = await pool.query(
+      `SELECT a.*, q.title, q.difficulty AS quiz_difficulty, q.subject_id, q.quiz_id
+       FROM pronunciation_quiz_attempts a
+       JOIN pronunciation_quizzes q ON q.quiz_id = a.quiz_id
+       WHERE a.attempt_id = ?`,
+      [attemptId]
+    );
+    if (!attempt) return res.status(404).json({ success: false, error: "Attempt not found" });
+
+    const [answers] = await pool.query(
+      `
+      SELECT a.*,
+             CASE
+               WHEN a.difficulty = 'beginner' THEN b.word
+               WHEN a.difficulty = 'intermediate' THEN i.word
+               WHEN a.difficulty = 'advanced' THEN adv.sentence
+               ELSE ''
+             END AS question_text,
+             CASE
+               WHEN a.difficulty = 'beginner' THEN b.correct_pronunciation
+               WHEN a.difficulty = 'intermediate' THEN i.stressed_syllable
+               WHEN a.difficulty = 'advanced' THEN adv.reduced_form
+               ELSE ''
+             END AS correct_pronunciation
+      FROM pronunciation_quiz_answers a
+      LEFT JOIN pronunciation_beginner_questions b ON a.question_id = b.question_id
+      LEFT JOIN pronunciation_intermediate_questions i ON a.question_id = i.question_id
+      LEFT JOIN pronunciation_advanced_questions adv ON a.question_id = adv.question_id
+      WHERE a.attempt_id = ?
+      ORDER BY a.evaluated_at ASC
+      `,
+      [attemptId]
+    );
+
+    res.json({ success: true, attempt, answers });
+  } catch (err) {
+    console.error("❌ Teacher pronunciation attempt fetch error:", err);
+    res.status(500).json({ success: false, error: "Database error" });
+  }
+});
+
+// ================= TEACHER: OVERRIDE PRONUNCIATION SCORES =================
+router.patch("/api/teacher/pronunciation-attempts/:attemptId/override", async (req, res) => {
+  const pool = req.pool;
+  const attemptId = Number(req.params.attemptId);
+  const teacherId = req.body.teacher_id ? Number(req.body.teacher_id) : null;
+  const answers = Array.isArray(req.body.answers) ? req.body.answers : [];
+
+  if (!attemptId) return res.status(400).json({ success: false, error: "Invalid attemptId" });
+
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    await conn.beginTransaction();
+
+    for (const a of answers) {
+      if (!a || !a.answer_id) continue;
+      const teacherScore = a.teacher_score == null ? null : Number(a.teacher_score);
+      const teacherNotes = typeof a.teacher_notes === "string" ? a.teacher_notes : null;
+
+      await conn.query(
+        `UPDATE pronunciation_quiz_answers
+         SET teacher_score = ?,
+             teacher_notes = COALESCE(?, teacher_notes),
+             teacher_id = ?,
+             teacher_updated_at = NOW()
+         WHERE answer_id = ? AND attempt_id = ?`,
+        [teacherScore, teacherNotes, teacherId, a.answer_id, attemptId]
+      );
+    }
+
+    // Recompute attempt score as average of teacher_score (fallback to pronunciation_score)
+    const [[avg]] = await conn.query(
+      `SELECT ROUND(AVG(COALESCE(teacher_score, pronunciation_score)), 2) AS avgScore
+       FROM pronunciation_quiz_answers
+       WHERE attempt_id = ?`,
+      [attemptId]
+    );
+
+    const avgScore = Number(avg?.avgScore || 0);
+
+    await conn.query(
+      `UPDATE pronunciation_quiz_attempts
+       SET score = ?, pronunciation_score = ?
+       WHERE attempt_id = ?`,
+      [avgScore, avgScore, attemptId]
+    );
+
+    // Unlock next quiz if override makes the student pass (or passing_score <= 0)
+    let unlockedNext = false;
+    let unlocked_quiz_number = null;
+
+    const [[meta]] = await conn.query(
+      `SELECT a.student_id, q.subject_id, q.quiz_number, q.passing_score
+       FROM pronunciation_quiz_attempts a
+       JOIN pronunciation_quizzes q ON q.quiz_id = a.quiz_id
+       WHERE a.attempt_id = ?`,
+      [attemptId]
+    );
+
+    if (meta?.student_id && meta?.subject_id) {
+      const quizNumber = Number(meta.quiz_number || 1);
+      const passing = Number(meta.passing_score ?? 70);
+      if (passing <= 0 || avgScore >= passing) {
+        const next = Math.max(2, quizNumber + 1);
+        await conn.query(
+          `INSERT INTO pronunciation_student_progress (student_id, subject_id, unlocked_quiz_number)
+           VALUES (?, ?, ?)
+           ON DUPLICATE KEY UPDATE
+             unlocked_quiz_number = GREATEST(unlocked_quiz_number, VALUES(unlocked_quiz_number))`,
+          [meta.student_id, meta.subject_id, next]
+        );
+        const [[p]] = await conn.query(
+          `SELECT unlocked_quiz_number
+           FROM pronunciation_student_progress
+           WHERE student_id = ? AND subject_id = ?`,
+          [meta.student_id, meta.subject_id]
+        );
+        unlocked_quiz_number = Number(p?.unlocked_quiz_number || next);
+        unlockedNext = true;
+      }
+    }
+
+    await conn.commit();
+    res.json({ success: true, accuracy: avgScore, unlockedNext, unlocked_quiz_number });
+  } catch (err) {
+    if (conn) await conn.rollback();
+    console.error("❌ Teacher pronunciation override error:", err);
+    res.status(500).json({ success: false, error: "Failed to save override" });
+  } finally {
+    if (conn) conn.release();
   }
 });
 
@@ -592,6 +899,9 @@ router.post("/api/generate-pronunciation-quiz", async (req, res) => {
   }
 
   try {
+    const client = requireGroq(res);
+    if (!client) return;
+
     const [topicRows] = await pool.query("SELECT topic_title FROM topics WHERE topic_id = ?", [topic_id]);
     if (!topicRows.length) return res.status(404).json({ success: false, message: "Topic not found" });
 
@@ -615,7 +925,7 @@ No extra text.`;
 
     if (additional_context) instruction += `\nAdditional context: ${additional_context}`;
 
-    const completion = await groq.chat.completions.create({
+    const completion = await client.chat.completions.create({
       model: "llama-3.1-8b-instant",
       messages: [
         { role: "system", content: "You are an educational quiz generator that outputs clean plain text for pronunciation quizzes." },

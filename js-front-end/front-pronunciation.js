@@ -12,6 +12,31 @@ let recognition = null;
 let isRecording = false;
 let pronunciationReviewMode = false;
 
+function initQuizViewToggle(storageKey) {
+    const page = document.querySelector('.quiz-page');
+    if (!page) return;
+
+    const btnGrid = document.getElementById('quiz-view-grid');
+    const btnList = document.getElementById('quiz-view-list');
+
+    const apply = (view) => {
+        const v = (view === 'list') ? 'list' : 'grid';
+        page.dataset.view = v;
+        try { localStorage.setItem(storageKey, v); } catch (_) {}
+        if (window.lucide && typeof window.lucide.createIcons === 'function') {
+            setTimeout(() => window.lucide.createIcons(), 0);
+        }
+    };
+
+    const saved = (() => {
+        try { return localStorage.getItem(storageKey); } catch { return null; }
+    })();
+    apply(saved || 'grid');
+
+    btnGrid?.addEventListener('click', () => apply('grid'));
+    btnList?.addEventListener('click', () => apply('list'));
+}
+
 function getSelectedSubjectId() {
     const selectedClass = JSON.parse(localStorage.getItem("eel_selected_class"));
     return selectedClass?.subject_id || 1; // default to 1 if not found
@@ -38,59 +63,20 @@ document.addEventListener('DOMContentLoaded', async function() {
     try {
         currentUser = await initializePage();
 
-        const teacherControls = document.getElementById('teacher-controls');
-        const tabCreated = document.getElementById('tab-created');
-        const tabCourse = document.getElementById('tab-course');
+        // Grid/List view toggle for main content
+        initQuizViewToggle('eel_pronunciation_view');
 
-        // Set tab text based on role
-        tabCreated.textContent = currentUser.role === 'teacher' ? 'Created by me' : 'Created by teacher';
-        
         // Show main app
         document.getElementById('loading-screen').classList.add('hidden');
         document.getElementById('main-app').classList.remove('hidden');
 
-        // Default tab: always show Built-in lessons
-        showCourseTab();
+        // Only Built-in quizzes
+        await loadPronunciationQuizzes(currentUser);
 
         // Back button
         document.getElementById("back-class-btn")?.addEventListener("click", () => {
             window.location.href = "classes.html";
         });
-
-        // Tab click handlers
-        tabCourse?.addEventListener('click', () => showCourseTab());
-        tabCreated?.addEventListener('click', () => showCreatedTab());
-
-        async function showCourseTab() {
-            document.getElementById('lessons-grid').classList.remove('hidden');
-            document.getElementById('created-lessons-grid').classList.add('hidden');
-            teacherControls?.classList.add('hidden');
-
-            tabCourse.classList.add('btn-primary');
-            tabCourse.classList.remove('btn-outline');
-            tabCreated.classList.remove('btn-primary');
-            tabCreated.classList.add('btn-outline');
-
-            await loadPronunciationQuizzes(currentUser);
-        }
-
-        async function showCreatedTab() {
-            document.getElementById('created-lessons-grid').classList.remove('hidden');
-            document.getElementById('lessons-grid').classList.add('hidden');
-
-            if (currentUser.role === 'teacher') {
-                teacherControls?.classList.remove('hidden');
-            } else {
-                teacherControls?.classList.add('hidden');
-            }
-
-            tabCreated.classList.add('btn-primary');
-            tabCreated.classList.remove('btn-outline');
-            tabCourse.classList.remove('btn-primary');
-            tabCourse.classList.add('btn-outline');
-            
-            await loadPronunciationQuizzesTeacher(currentUser);
-        }
 
     } catch (error) {
         console.error('Error initializing page:', error);
@@ -362,7 +348,7 @@ async function savePronunciationQuiz() {
             // ✅ Get current teacher ID
         const currentUser = JSON.parse(localStorage.getItem("eel_user") || "{}");
         const currentTeacherId = currentUser.user_id;
-        const res = await fetch('/api/pronunciation-quizzes', {
+        const res = await fetch('http://localhost:3000/api/pronunciation-quizzes', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ title, difficulty, passage, questions, subject_id, user_id: currentTeacherId }) // ✅ send correct subject_id
@@ -469,7 +455,7 @@ document.getElementById('save-schedule-btn').addEventListener('click', async () 
     lockTime   = toPHISOString(lockTime);
 
     try {
-        const res = await fetch(`/api/pronunciation-quizzes/${quizId}/schedule`, {
+        const res = await fetch(`http://localhost:3000/api/pronunciation-quizzes/${quizId}/schedule`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -520,7 +506,7 @@ function formatDateTime(dateString) {
 
 async function lockPronunciationQuiz(quizId) {
     try {
-        const res = await fetch(`/api/lock-pronunciation-quiz/${quizId}`, {
+        const res = await fetch(`http://localhost:3000/api/lock-pronunciation-quiz/${quizId}`, {
             method: "PUT",
         });
         const data = await res.json();
@@ -550,6 +536,12 @@ function safeOpenPronunciationModal(quizId, isLocked) {
 // ============================================
 async function loadPronunciationQuizzes(user) {
     try {
+        const role = String(user?.role || '').toLowerCase();
+        const isTeacher = role === "teacher";
+
+        const myName = `${user?.fname || ''} ${user?.lname || ''}`.trim() || String(user?.email || '').trim() || 'Student';
+        const myInitials = getInitials(myName);
+
         // ✅ Get selected class (with subject_id)
         const selectedClass = JSON.parse(localStorage.getItem("eel_selected_class"));
         const subjectId = selectedClass?.subject_id;
@@ -559,14 +551,29 @@ async function loadPronunciationQuizzes(user) {
         }
 
         // ✅ Fetch pronunciation quizzes
-        const res = await fetch(`/api/pronunciation-quizzes?subject_id=${subjectId}`);
+        const res = await fetch(
+            `http://localhost:3000/api/pronunciation-quizzes?subject_id=${subjectId}` +
+            (!isTeacher ? `&student_id=${user.user_id}` : "")
+        );
         const quizzes = await res.json();
 
-        // ✅ Fetch student attempts (if user is a student)
+        // ✅ Ensure consistent ordering before numbering
+        const diffOrder = { beginner: 0, intermediate: 1, advanced: 2 };
+        quizzes.sort((a, b) => {
+            const da = diffOrder[a.difficulty] ?? 99;
+            const db = diffOrder[b.difficulty] ?? 99;
+            if (da !== db) return da - db;
+            const qa = Number(a.quiz_number || 0);
+            const qb = Number(b.quiz_number || 0);
+            if (qa !== qb) return qa - qb;
+            return (a.quiz_id || 0) - (b.quiz_id || 0);
+        });
+
+        // ✅ Fetch student attempts (if user is not a teacher)
         let studentAttempts = [];
-        if (user.role === "student") {
+        if (!isTeacher) {
             try {
-                const attemptRes = await fetch(`/api/pronunciation-attempts?student_id=${user.user_id}`);
+                const attemptRes = await fetch(`http://localhost:3000/api/pronunciation-attempts?student_id=${user.user_id}`);
                 const attemptData = await attemptRes.json();
                 studentAttempts = attemptData.success ? attemptData.attempts : [];
             } catch (attemptErr) {
@@ -587,36 +594,66 @@ async function loadPronunciationQuizzes(user) {
         intermediateContainer.innerHTML = `<h2 class="card-title text-center px-2 py-1 text-lg rounded-lg bg-secondary/10 text-secondary">Intermediate</h2>`;
         advancedContainer.innerHTML = `<h2 class="card-title text-center px-2 py-1 text-lg rounded-lg bg-secondary/10 text-secondary">Advanced</h2>`;
 
-        // ✅ Counters for numbering per difficulty
-        let beginnerCount = 1;
-        let intermediateCount = 1;
-        let advancedCount = 1;
+        // ✅ Numbering (consecutive)
+        // If your DB uses quiz_number 1..30, we display that.
+        // If your DB restarts quiz_number per difficulty (1..10 each),
+        // we compute a consecutive number using offsets.
+        const hasGlobalQuizNumber = quizzes.some(q => Number(q.quiz_number || 0) > 10);
+        let beginnerCount = 0, intermediateCount = 0, advancedCount = 0;
+        const displayNumberByQuizId = new Map();
+        quizzes.forEach(q => {
+            let n;
+            if (hasGlobalQuizNumber && q.quiz_number != null) n = Number(q.quiz_number);
+            else {
+                if (q.difficulty === "beginner") n = (++beginnerCount);
+                else if (q.difficulty === "intermediate") n = 10 + (++intermediateCount);
+                else if (q.difficulty === "advanced") n = 20 + (++advancedCount);
+                else n = (beginnerCount + intermediateCount + advancedCount + 1);
+            }
+            displayNumberByQuizId.set(Number(q.quiz_id), n);
+        });
+
+        // ✅ Unlock progression (prefer backend progress, fallback to attempts)
+        let unlockedUpTo = 1;
+        if (!isTeacher) {
+            const backendUnlockedUpTo = Math.max(
+                1,
+                ...quizzes.map(q => Number(q?.unlocked_quiz_number || 1))
+            );
+            unlockedUpTo = backendUnlockedUpTo;
+
+            if (Array.isArray(studentAttempts) && studentAttempts.length) {
+                const completedNums = new Set(
+                    studentAttempts
+                        .filter(a => a.status === "completed")
+                        .map(a => displayNumberByQuizId.get(Number(a.quiz_id)))
+                        .filter(Boolean)
+                );
+                let inferred = 1;
+                while (completedNums.has(inferred)) inferred++;
+                unlockedUpTo = Math.max(unlockedUpTo, inferred);
+            }
+        }
 
         // ✅ Loop through quizzes
         quizzes.forEach(quiz => {
-            const now = new Date();
-            const unlockTime = quiz.unlock_time ? new Date(quiz.unlock_time.replace(" ", "T")) : null;
-            const lockTime = quiz.lock_time ? new Date(quiz.lock_time.replace(" ", "T")) : null;
-
-            const backendLocked = Number(quiz.is_locked) === 1;
-            const notYetUnlocked = unlockTime && now < unlockTime;
-            const alreadyClosed = lockTime && now > lockTime;
-            const isLocked = backendLocked || notYetUnlocked || alreadyClosed;
+            const backendLocked = (Number(quiz.is_locked) === 1) || (quiz.is_locked === true);
+            const displayNum = displayNumberByQuizId.get(Number(quiz.quiz_id)) || 1;
+            const effectiveLocked = isTeacher
+                ? backendLocked
+                : (displayNum === 1 ? false : (displayNum > unlockedUpTo));
 
             let actionButtons = "";
+            let isCompleted = false;
 
             // ✅ TEACHER VIEW
-            if (user.role === "teacher") {
+            if (isTeacher) {
                 actionButtons = `
+                    <button class="btn btn-primary flex-1" onclick="event.stopPropagation(); openTeacherPronunciationReviewModal(${quiz.quiz_id})">
+                        <i data-lucide="check-square" class="size-3 mr-1"></i>Review Answers
+                    </button>
                     <button class="btn btn-outline flex-1" onclick="openLeaderboardModal(${quiz.quiz_id})">
                         <i data-lucide="bar-chart-3" class="size-3 mr-1"></i>Leaderboard
-                    </button>
-                    <button 
-                        class="btn btn-primary flex-1"
-                        onclick="${isLocked ? `openScheduleModal(${quiz.quiz_id})` : `lockPronunciationQuiz(${quiz.quiz_id})`}"
-                    >
-                        <i data-lucide="${isLocked ? "unlock" : "lock"}" class="size-3 mr-1"></i>
-                        ${isLocked ? "Unlock" : "Lock"}
                     </button>
                 `;
             } 
@@ -626,8 +663,9 @@ async function loadPronunciationQuizzes(user) {
 
                 let btnText = "Start Quiz";
                 let btnIcon = "play";
-                let btnDisabled = isLocked;
+                let btnDisabled = effectiveLocked;
                 let openAction = `openPronunciationModal(${quiz.quiz_id})`;
+                isCompleted = !!studentAttempt && studentAttempt.status === "completed";
 
                 if (studentAttempt) {
                     if (studentAttempt.status === "completed") {
@@ -662,52 +700,62 @@ async function loadPronunciationQuizzes(user) {
                 `;
             }
 
-            // ✅ Determine numbering
-            let quizNumber;
-            if (quiz.difficulty === "beginner") quizNumber = beginnerCount++;
-            else if (quiz.difficulty === "intermediate") quizNumber = intermediateCount++;
-            else if (quiz.difficulty === "advanced") quizNumber = advancedCount++;
+            // ✅ Determine numbering (consecutive)
+            const quizNumber = displayNum;
 
-            // ✅ Card
+            const teacherSubmissionsSlot = isTeacher ? `
+                <div class="quiz-card-seen" data-quiz-submissions>
+                    <div class="quiz-card-seen__avatars" aria-label="Students who completed this quiz"></div>
+                </div>
+            ` : "";
+
+            const completedBadge = (!isTeacher && isCompleted) ? `
+                <span class="mini-avatar mini-avatar--sm" title="Completed by you" aria-label="Completed by you">${escapeHtml(myInitials)}</span>
+            ` : "";
+
+            const scheduleStatusLabel = isTeacher
+                ? (effectiveLocked ? "Locked" : "Open to students")
+                : (effectiveLocked ? "Locked (finish previous quiz to unlock)" : "Unlocked");
+
+            // ✅ Card — same structure as reading-lessons (created-quiz-card__inner)
             const quizCard = document.createElement("div");
-            quizCard.className = "card group cursor-pointer hover:shadow-lg transition-all duration-300 hover:-translate-y-1";
+            quizCard.className = "card created-quiz-card group";
+            quizCard.dataset.quizId = String(quiz.quiz_id);
             quizCard.innerHTML = `
-                <div class="p-4 rounded-lg border border-border cursor-pointer">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <h3 class="font-semibold text-lg text-primary">
-                                ${quizNumber}. ${quiz.title}
-                            </h3>
-                            <p class="text-sm text-muted-foreground italic">
-                                ${quiz.passage ? quiz.passage.substring(0, 100) + "..." : "No description available."}
-                            </p>
+                <div class="created-quiz-card__inner">
+                    <div class="created-quiz-card__header" role="button" tabindex="0" aria-expanded="false" aria-label="Expand quiz details">
+                        <div class="created-quiz-card__icon" aria-hidden="true">
+                            <i data-lucide="mic" class="created-quiz-card__icon-svg"></i>
                         </div>
-                        <div class="flex items-center gap-2">
-                            <span class="px-2 py-1 text-xs rounded bg-secondary/10 text-secondary capitalize">
-                                ${quiz.difficulty}
-                            </span>
-                            <i data-lucide="book-open" class="size-5 text-primary"></i>
+                        <div class="created-quiz-card__title-wrap">
+                            <h3 class="created-quiz-card__title">${escapeHtml(quizNumber + ". " + quiz.title)}</h3>
+                            ${completedBadge}
                         </div>
+                        <i data-lucide="chevron-down" class="created-quiz-card__chevron" aria-hidden="true"></i>
                     </div>
-
-                    <div class="hidden mt-4 border-t pt-3 quiz-details space-y-3">
-                        <div class="flex flex-col text-xs text-muted-foreground gap-1">
-                            <span>Start: ${quiz.unlock_time ? formatDateTime(quiz.unlock_time) : "Not set"}</span>
-                            <span>Deadline: ${quiz.lock_time ? formatDateTime(quiz.lock_time) : "Not set"}</span>
+                    <div class="created-quiz-card__details hidden">
+                        <p class="created-quiz-card__passage">${escapeHtml(quiz.passage ? quiz.passage.substring(0, 140).trim() + (quiz.passage.length > 140 ? "…" : "") : "No description available.")}</p>
+                        <div class="created-quiz-card__schedule">
+                            <span class="created-quiz-card__schedule-text">${scheduleStatusLabel}</span>
                         </div>
-                        <div class="flex gap-2">${actionButtons}</div>
+                        ${teacherSubmissionsSlot}
+                        <div class="quiz-actions created-quiz-card__actions">${actionButtons}</div>
                     </div>
                 </div>
             `;
 
-            // ✅ Toggle details
-            quizCard.addEventListener("click", () => {
-                const details = quizCard.querySelector(".quiz-details");
-                const allCards = container.querySelectorAll(".quiz-details");
-                allCards.forEach(d => { if (d !== details) d.classList.add("hidden"); });
+            const header = quizCard.querySelector(".created-quiz-card__header");
+            const details = quizCard.querySelector(".created-quiz-card__details");
+            const toggle = () => {
+                const wasHidden = details.classList.contains("hidden");
                 details.classList.toggle("hidden");
-                lucide.createIcons({ icons: lucide.icons });
-            });
+                header.setAttribute("aria-expanded", wasHidden);
+                quizCard.classList.toggle("created-quiz-card--open", wasHidden);
+                if (window.lucide && typeof window.lucide.createIcons === "function") window.lucide.createIcons();
+            };
+            header.addEventListener("click", (e) => { e.stopPropagation(); toggle(); });
+            header.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } });
+            quizCard.querySelectorAll(".quiz-actions .btn").forEach(btn => btn.addEventListener("click", (e) => e.stopPropagation()));
 
             // ✅ Append to corresponding difficulty
             if (quiz.difficulty === "beginner") beginnerContainer.appendChild(quizCard);
@@ -734,8 +782,18 @@ async function loadPronunciationQuizzesTeacher(user) {
         if (!user || user.role !== "teacher") return;
 
         // ✅ Fetch teacher's quizzes
-        const res = await fetch(`/api/teacher/pronunciation-quizzes?user_id=${user.user_id}`);
+        const res = await fetch(`http://localhost:3000/api/teacher/pronunciation-quizzes?user_id=${user.user_id}`);
         const quizzes = await res.json();
+        const diffOrder = { beginner: 0, intermediate: 1, advanced: 2 };
+        quizzes.sort((a, b) => {
+            const da = diffOrder[a.difficulty] ?? 99;
+            const db = diffOrder[b.difficulty] ?? 99;
+            if (da !== db) return da - db;
+            const ta = new Date(a.created_at || 0).getTime();
+            const tb = new Date(b.created_at || 0).getTime();
+            if (ta !== tb) return ta - tb;
+            return (a.quiz_id || 0) - (b.quiz_id || 0);
+        });
 
         const container = document.getElementById("created-lessons-grid");
         container.innerHTML = "";
@@ -750,10 +808,8 @@ async function loadPronunciationQuizzesTeacher(user) {
         intermediateContainer.innerHTML = `<h2 class="card-title text-center px-2 py-1 text-lg rounded-lg bg-secondary/10 text-secondary">Intermediate</h2>`;
         advancedContainer.innerHTML = `<h2 class="card-title text-center px-2 py-1 text-lg rounded-lg bg-secondary/10 text-secondary">Advanced</h2>`;
 
-        // ✅ Counters for numbering
-        let beginnerCount = 1;
-        let intermediateCount = 1;
-        let advancedCount = 1;
+        // ✅ Consecutive numbering across all difficulties
+        let seq = 1;
 
         quizzes.forEach(quiz => {
             const now = new Date();
@@ -778,52 +834,47 @@ async function loadPronunciationQuizzesTeacher(user) {
                 </button>
             `;
 
-            // ✅ Determine numbering
-            let quizNumber;
-            if (quiz.difficulty === "beginner") quizNumber = beginnerCount++;
-            else if (quiz.difficulty === "intermediate") quizNumber = intermediateCount++;
-            else if (quiz.difficulty === "advanced") quizNumber = advancedCount++;
+            // ✅ Determine numbering (consecutive)
+            const quizNumber = seq++;
 
-            // ✅ Quiz card
+            // ✅ Quiz card — same structure as reading (created-quiz-card__inner)
             const quizCard = document.createElement("div");
-            quizCard.className = "card group cursor-pointer hover:shadow-lg transition-all duration-300 hover:-translate-y-1";
+            quizCard.className = "card created-quiz-card group";
+            quizCard.dataset.quizId = String(quiz.quiz_id);
             quizCard.innerHTML = `
-                <div class="p-4 rounded-lg border border-border cursor-pointer">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <h3 class="font-semibold text-lg text-primary">
-                                ${quizNumber}. ${quiz.title}
-                            </h3>
-                            <p class="text-sm text-muted-foreground italic">
-                                ${quiz.passage ? quiz.passage.substring(0, 100) + "..." : "No description available."}
-                            </p>
+                <div class="created-quiz-card__inner">
+                    <div class="created-quiz-card__header" role="button" tabindex="0" aria-expanded="false" aria-label="Expand quiz details">
+                        <div class="created-quiz-card__icon" aria-hidden="true">
+                            <i data-lucide="mic" class="created-quiz-card__icon-svg"></i>
                         </div>
-                        <div class="flex items-center gap-2">
-                            <span class="px-2 py-1 text-xs rounded bg-secondary/10 text-secondary capitalize">
-                                ${quiz.difficulty}
-                            </span>
-                            <i data-lucide="book-open" class="size-5 text-primary"></i>
+                        <div class="created-quiz-card__title-wrap">
+                            <h3 class="created-quiz-card__title">${escapeHtml(quizNumber + ". " + quiz.title)}</h3>
                         </div>
+                        <i data-lucide="chevron-down" class="created-quiz-card__chevron" aria-hidden="true"></i>
                     </div>
-
-                    <div class="hidden mt-4 border-t pt-3 quiz-details space-y-3">
-                        <div class="flex flex-col text-xs text-muted-foreground gap-1">
-                            <span>Start: ${quiz.unlock_time ? formatDateTime(quiz.unlock_time) : "Not set"}</span>
-                            <span>Deadline: ${quiz.lock_time ? formatDateTime(quiz.lock_time) : "Not set"}</span>
+                    <div class="created-quiz-card__details hidden">
+                        <p class="created-quiz-card__passage">${escapeHtml(quiz.passage ? quiz.passage.substring(0, 140).trim() + (quiz.passage.length > 140 ? "…" : "") : "No description available.")}</p>
+                        <div class="created-quiz-card__schedule">
+                            <i data-lucide="calendar-clock" class="created-quiz-card__schedule-icon" aria-hidden="true"></i>
+                            <span class="created-quiz-card__schedule-text">Start: ${quiz.unlock_time ? formatDateTime(quiz.unlock_time) : "Not set"} · Deadline: ${quiz.lock_time ? formatDateTime(quiz.lock_time) : "Not set"}</span>
                         </div>
-                        <div class="flex gap-2">${actionButtons}</div>
+                        <div class="quiz-actions created-quiz-card__actions">${actionButtons}</div>
                     </div>
                 </div>
             `;
 
-            // ✅ Toggle details
-            quizCard.addEventListener("click", () => {
-                const details = quizCard.querySelector(".quiz-details");
-                const allCards = container.querySelectorAll(".quiz-details");
-                allCards.forEach(d => { if (d !== details) d.classList.add("hidden"); });
+            const header = quizCard.querySelector(".created-quiz-card__header");
+            const details = quizCard.querySelector(".created-quiz-card__details");
+            const toggle = () => {
+                const wasHidden = details.classList.contains("hidden");
                 details.classList.toggle("hidden");
-                lucide.createIcons({ icons: lucide.icons });
-            });
+                header.setAttribute("aria-expanded", wasHidden);
+                quizCard.classList.toggle("created-quiz-card--open", wasHidden);
+                if (window.lucide && typeof window.lucide.createIcons === "function") window.lucide.createIcons();
+            };
+            header.addEventListener("click", (e) => { e.stopPropagation(); toggle(); });
+            header.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } });
+            quizCard.querySelectorAll(".quiz-actions .btn").forEach(btn => btn.addEventListener("click", (e) => e.stopPropagation()));
 
             // ✅ Append to corresponding difficulty
             if (quiz.difficulty === "beginner") beginnerContainer.appendChild(quizCard);
@@ -851,7 +902,7 @@ async function loadPronunciationQuizzesTeacher(user) {
 // ============================================
 async function openPronunciationModal(quizId) {
     try {
-        const res = await fetch(`/api/pronunciation-quizzes/${quizId}`);
+        const res = await fetch(`http://localhost:3000/api/pronunciation-quizzes/${quizId}`);
         if (!res.ok) return showNotification("Failed to fetch quiz", "error");
         const quiz = await res.json();
 
@@ -1142,7 +1193,7 @@ async function handleRecordingComplete(blob) {
         formData.append("audio", blob, "speech.webm");
         formData.append("expectedText", expectedText);
 
-        const res = await fetch("/api/pronunciation-check", {
+        const res = await fetch("http://localhost:3000/api/pronunciation-check", {
             method: "POST",
             body: formData
         });
@@ -1164,7 +1215,7 @@ async function checkPronunciation(audioBlob, expectedText) {
     formData.append("expectedText", expectedText);
 
     try {
-        const res = await fetch("/api/pronunciation-check", {
+        const res = await fetch("http://localhost:3000/api/pronunciation-check", {
             method: "POST",
             body: formData
         });
@@ -1270,7 +1321,7 @@ async function submitPronunciationQuiz() {
   formData.append('quiz_id', pronunciationQuizData.quiz_id);
 
   try {
-    const res = await fetch('/api/pronunciation-submit', {
+    const res = await fetch('http://localhost:3000/api/pronunciation-submit', {
       method: 'POST',
       body: formData
     });
@@ -1281,6 +1332,10 @@ async function submitPronunciationQuiz() {
       // ✅ Close quiz modal
       closeTakePronunciationModal();
       showQuizResult(data.accuracy);
+
+      if (data.unlockedNext) {
+        showNotification?.("Great job! Next quiz unlocked.", "success");
+      }
 
       // ✅ Reload quizzes dynamically (reflect Review/Continue buttons)
       await loadPronunciationQuizzes(user);
@@ -1351,7 +1406,7 @@ async function openPronunciationReview(quizId, studentId) {
   }
 
   try {
-    const res = await fetch(`/api/pronunciation-review?student_id=${studentId}&quiz_id=${quizId}`);
+    const res = await fetch(`http://localhost:3000/api/pronunciation-review?student_id=${studentId}&quiz_id=${quizId}`);
     const data = await res.json();
 
     if (!data.success || !data.answers || data.answers.length === 0) {
@@ -1428,6 +1483,12 @@ function closeLeaderboardModal() {
     modal.classList.add("hidden");
 }
 
+function refreshLeaderboard() {
+    if (_pronunciationLeaderboardQuizId != null) {
+        openLeaderboardModal(_pronunciationLeaderboardQuizId, _pronunciationLeaderboardClassId);
+    }
+}
+
 // Format duration in mm:ss
 function formatDuration(startTime, endTime) {
     if (!startTime || !endTime) return "-";
@@ -1440,13 +1501,18 @@ function formatDuration(startTime, endTime) {
     return `${seconds}s`;
 }
 
+let _pronunciationLeaderboardQuizId = null;
+let _pronunciationLeaderboardClassId = null;
+
 async function openLeaderboardModal(quizId, classId) {
+    _pronunciationLeaderboardQuizId = quizId;
+    _pronunciationLeaderboardClassId = classId || null;
     const modal = document.getElementById("leaderboard-modal");
     const body = document.getElementById("leaderboard-body");
     const quizName = document.getElementById("quiz-name");
 
     try {
-        const res = await fetch(`/api/leaderboard?quiz_id=${quizId}${classId ? `&class_id=${classId}` : ''}`);
+        const res = await fetch(`http://localhost:3000/api/leaderboard?quiz_id=${quizId}${classId ? `&class_id=${classId}` : ''}`);
         const data = await res.json();
         if (!data.success) throw new Error(data.message || "Failed to load leaderboard");
 
@@ -1485,34 +1551,38 @@ async function openLeaderboardModal(quizId, classId) {
 
 
         // Table
-        leaderboard.forEach(entry => {
-            const row = document.createElement("tr");
-            row.className = "leaderboard-table-row";
-            if (entry.rank <= 3) row.classList.add("top-three");
+        if (leaderboard.length === 0) {
+            body.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--muted-foreground);">No attempts yet.</td></tr>`;
+        } else {
+            leaderboard.forEach(entry => {
+                const row = document.createElement("tr");
+                row.className = "leaderboard-table-row";
+                if (entry.rank <= 3) row.classList.add("top-three");
 
-            const duration = formatDuration(entry.start_time, entry.end_time);
+                const duration = formatDuration(entry.start_time, entry.end_time);
 
-            row.innerHTML = `
-                <td><span class="rank-badge">${entry.rank <= 3 ? ['🥇','🥈','🥉'][entry.rank-1] : entry.rank}</span></td>
-                <td>
-                    <div class="student-info">
-                        <div class="student-avatar" style="background: linear-gradient(135deg, #6366f1, #10b981);">
-                            ${entry.name.split(" ").map(n=>n[0]).join("")}
+                row.innerHTML = `
+                    <td><span class="rank-badge">${entry.rank <= 3 ? ['🥇','🥈','🥉'][entry.rank-1] : entry.rank}</span></td>
+                    <td>
+                        <div class="student-info">
+                            <div class="student-avatar" style="background: linear-gradient(135deg, #6366f1, #10b981);">
+                                ${entry.name.split(" ").map(n=>n[0]).join("")}
+                            </div>
+                            <span>${entry.name}</span>
                         </div>
-                        <span>${entry.name}</span>
-                    </div>
-                </td>
-                <td><span class="score-badge">${entry.score}/100</span></td>
-                <td><span class="time-badge">${duration}</span></td>
-                <td><span class="status-badge ${entry.status === "completed" ? "completed" : "in-progress"}">
-                    ${entry.status === "completed" ? "✓ Completed" : "In Progress"}
-                </span></td>
-            `;
-            body.appendChild(row);
-        });
+                    </td>
+                    <td><span class="score-badge">${entry.score}/100</span></td>
+                    <td><span class="time-badge">${duration}</span></td>
+                    <td><span class="status-badge ${entry.status === "completed" ? "completed" : "in-progress"}">
+                        ${entry.status === "completed" ? "✓ Completed" : "In Progress"}
+                    </span></td>
+                `;
+                body.appendChild(row);
+            });
+        }
 
         modal.classList.remove("hidden");
-
+        if (window.lucide && typeof window.lucide.createIcons === "function") window.lucide.createIcons();
     } catch (err) {
         console.error(err);
         showNotification("Failed to load leaderboard", "error");
@@ -1556,7 +1626,7 @@ async function loadLessonsAndTopics() {
 
     topicSelect.innerHTML = '<option>Loading...</option>';
 
-    const res = await fetch(`/api/lessons-with-topics?class_id=${classId}`);
+    const res = await fetch(`http://localhost:3000/api/lessons-with-topics?class_id=${classId}`);
     const data = await res.json();
 
     if (!Array.isArray(data)) {
@@ -1595,70 +1665,107 @@ async function loadLessonsAndTopics() {
 async function generatePronunciationQuiz() {
   const topicId = document.getElementById('ai-topic').value;
   const difficulty = document.getElementById('ai-difficulty').value;
-  const numQuestions = parseInt(document.getElementById('ai-num-questions').value) || 5;
+  const numQuestions = parseInt(document.getElementById('ai-num-questions').value, 10) || 5;
   const additionalContext = document.getElementById('ai-context').value;
 
   if (!topicId) {
-    alert('Please select a topic first.');
+    if (typeof showNotification === "function") showNotification("Please select a topic first.", "warning");
+    else alert("Please select a topic first.");
     return;
   }
 
   const btn = document.getElementById('ai-generate-btn');
+  const generatedSection = document.getElementById("ai-generated-section");
+  const container = document.getElementById("ai-questions-container");
+  if (!btn || !generatedSection || !container) return;
+
   btn.disabled = true;
-  btn.innerHTML = "⏳ Generating...";
+  btn.innerHTML = "<span>⏳ Generating...</span>";
 
   try {
-    const res = await fetch("/api/generate-pronunciation-quizz", {
+    const res = await fetch("http://localhost:3000/api/generate-pronunciation-quiz", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ topic_id: topicId, difficulty, num_questions: numQuestions, additional_context: additionalContext })
     });
 
-    const data = await res.json();
-    console.log("AI Response:", data);
+    let data;
+    try {
+      data = await res.json();
+    } catch (parseErr) {
+      console.error("Parse error:", parseErr);
+      if (typeof showNotification === "function") showNotification("Server returned invalid response. Try again.", "error");
+      else alert("Server returned invalid response. Try again.");
+      return;
+    }
 
-    if (!data.success) throw new Error(data.message || "Generation failed");
+    if (!res.ok) {
+      const msg = data.message || "Request failed (" + res.status + "). Try again.";
+      if (typeof showNotification === "function") showNotification(msg, "error");
+      else alert(msg);
+      return;
+    }
+    if (!data.success) {
+      const msg = data.message || "Generation failed.";
+      if (typeof showNotification === "function") showNotification(msg, "error");
+      else alert(msg);
+      return;
+    }
 
-    // Show generated section
-    document.getElementById("ai-generated-section").classList.remove("hidden");
+    generatedSection.classList.remove("hidden");
 
-    const container = document.getElementById("ai-questions-container");
+    const rawQuiz = data.quiz != null ? String(data.quiz).trim() : "";
     container.innerHTML = "";
 
-    // Expect plain text: each line = Word : Pronunciation
-    const lines = data.quiz.split("\n").map(l => l.trim()).filter(l => l);
-    lines.forEach((line, i) => {
-      const [word, answer] = line.split(":").map(s => s.trim());
+    if (!rawQuiz) {
+      const passageEl = document.getElementById("ai-generated-passage");
+      if (passageEl) passageEl.value = "";
+      container.innerHTML = "<p class=\"text-muted-foreground text-sm\">No content was returned. Try again or add more instructions.</p>";
+      document.getElementById("ai-save-btn").disabled = true;
+      return;
+    }
 
-      const div = document.createElement("div");
-      div.className = "question-item";
-      div.style = "background:#f9f9ff;border:1px solid rgba(147,51,234,0.1);padding:1rem;border-radius:0.5rem;margin-bottom:1rem;";
+    const passageEl = document.getElementById("ai-generated-passage");
+    if (passageEl) passageEl.value = rawQuiz;
 
-      div.innerHTML = `
-        <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom:0.75rem;">
-          <h4 style="font-weight:600;">Word ${i + 1}</h4>
-          <button type="button" onclick="this.closest('.question-item').remove()" 
-            style="color:#4f46e5;font-weight:500;border:1px solid rgba(79,70,229,0.2);
-                   background:rgba(79,70,229,0.05);padding:0.4rem 1rem;border-radius:0.4rem;cursor:pointer;">
-            Remove
-          </button>
-        </div>
-        <input type="text" class="form-input" placeholder="Word" value="${word || ''}" style="margin-bottom:0.75rem;">
-        <input type="text" class="form-input" placeholder="Correct Pronunciation" value="${answer || ''}">
-      `;
+    const lines = rawQuiz.split("\n").map(l => l.trim()).filter(l => l);
+    if (lines.length === 0) {
+      container.innerHTML = "<p class=\"text-muted-foreground text-sm\">No lines were parsed. Try Regenerate or add instructions.</p>";
+    } else {
+      lines.forEach((line, i) => {
+        const colonIdx = line.indexOf(":");
+        const word = colonIdx >= 0 ? line.slice(0, colonIdx).trim() : line.trim();
+        const answer = colonIdx >= 0 ? line.slice(colonIdx + 1).trim() : "";
+        const div = document.createElement("div");
+        div.className = "question-item ai-question-item";
+        div.innerHTML = `
+          <div class="ai-question-item__header">
+            <h4 class="ai-question-item__title">Word ${i + 1}</h4>
+            <button type="button" class="ai-question-remove-btn" onclick="this.closest('.question-item').remove()">Remove</button>
+          </div>
+          <input type="text" class="form-input ai-question-input" placeholder="Word" value="${escapeHtml(word)}">
+          <input type="text" class="form-input" placeholder="Correct Pronunciation" value="${escapeHtml(answer)}">
+        `;
+        container.appendChild(div);
+      });
+    }
 
-      container.appendChild(div);
-    });
-
-    document.getElementById("ai-save-btn").disabled = false;
-    document.getElementById("ai-save-btn").style.opacity = 1;
-
+    const saveBtn = document.getElementById("ai-save-btn");
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.style.opacity = 1;
+    }
   } catch (err) {
     console.error("Error generating quiz:", err);
-    alert("Error generating quiz. Please check console.");
+    const msg = err.message || "Network or server error. Please try again.";
+    if (typeof showNotification === "function") showNotification(msg, "error");
+    else alert(msg);
+    generatedSection.classList.remove("hidden");
+    container.innerHTML = "<p class=\"text-muted-foreground text-sm\">Generation failed. Check your connection and try again.</p>";
   } finally {
     btn.disabled = false;
-    btn.innerHTML = "✨ Generate Quiz with AI";
+    btn.innerHTML = "<i data-lucide=\"sparkles\" class=\"size-5\"></i><span>Generate quiz with AI</span>";
+    if (window.lucide && typeof window.lucide.createIcons === "function") window.lucide.createIcons();
   }
 }
 
@@ -1687,7 +1794,7 @@ async function saveAIPronunciationQuiz() {
 
     const teacher_id = window.currentUserId;  
 
-    const res = await fetch("/api/save-pronunciation-quiz", {
+    const res = await fetch("http://localhost:3000/api/save-pronunciation-quiz", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title, teacher_id, subject_id, difficulty, passage, questions })
@@ -1709,12 +1816,14 @@ function openAIModal() {
 
     let op = 0;
     const fadeIn = setInterval(() => {
-        if (op >= 1) clearInterval(fadeIn);
+        if (op >= 1) {
+            clearInterval(fadeIn);
+            if (window.lucide && typeof window.lucide.createIcons === "function") window.lucide.createIcons();
+        }
         modal.style.opacity = op;
         op += 0.1;
     }, 30);
 
-    // ✅ Load lessons & topics
     loadLessonsAndTopics();
 }
 
@@ -1725,6 +1834,217 @@ function closeAIModal() {
     if (!modal) return;
 
     modal.classList.add('hidden'); // Hide the modal
+}
+
+// ============================================================
+// TEACHER: Review + override pronunciation scoring
+// ============================================================
+function escapeHtml(str) {
+    return String(str ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+}
+
+function getInitials(name) {
+    const parts = String(name ?? "")
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean);
+    const initials = parts.slice(0, 2).map(p => p[0]?.toUpperCase()).join("");
+    return initials || "S";
+}
+
+let teacherPronReviewState = {
+    quizId: null,
+    attemptId: null,
+    quiz: null,
+    attempts: []
+};
+
+function closeTeacherPronunciationReviewModal() {
+    const modal = document.getElementById('teacher-pronunciation-review-modal');
+    modal?.classList.add('hidden');
+    teacherPronReviewState = { quizId: null, attemptId: null, quiz: null, attempts: [] };
+
+    const list = document.getElementById('teacher-pron-attempts-list');
+    const detail = document.getElementById('teacher-pron-attempt-detail');
+    const title = document.getElementById('teacher-pron-review-quiz-title');
+    const saveBtn = document.getElementById('teacher-pron-review-save-btn');
+    if (list) list.innerHTML = '';
+    if (detail) detail.innerHTML = `<div class="text-muted-foreground">Select an attempt to view answers.</div>`;
+    if (title) title.textContent = 'Quiz';
+    if (saveBtn) saveBtn.classList.add('hidden');
+}
+
+async function openTeacherPronunciationReviewModal(quizId) {
+    const user = getCurrentUser();
+    const role = String(user?.role || '').toLowerCase();
+    if (!user || role !== 'teacher') return;
+
+    const selectedClass = JSON.parse(localStorage.getItem("eel_selected_class"));
+    const classId = selectedClass?.id;
+
+    teacherPronReviewState.quizId = quizId;
+
+    const modal = document.getElementById('teacher-pronunciation-review-modal');
+    modal?.classList.remove('hidden');
+
+    const titleEl = document.getElementById('teacher-pron-review-quiz-title');
+    if (titleEl) titleEl.textContent = 'Loading...';
+
+    try {
+        const quizRes = await fetch(`http://localhost:3000/api/pronunciation-quizzes/${quizId}`);
+        teacherPronReviewState.quiz = await quizRes.json();
+        if (titleEl) titleEl.textContent = teacherPronReviewState.quiz?.title || `Quiz #${quizId}`;
+
+        const attemptsRes = await fetch(
+            `http://localhost:3000/api/teacher/pronunciation-attempts?quiz_id=${quizId}` +
+            (classId ? `&class_id=${classId}` : '')
+        );
+        const attemptsData = await attemptsRes.json();
+        teacherPronReviewState.attempts = attemptsData?.attempts || [];
+        renderTeacherPronAttemptsList();
+
+        if (window.lucide && typeof window.lucide.createIcons === 'function') {
+            window.lucide.createIcons();
+        }
+    } catch (e) {
+        console.error(e);
+        showNotification?.("Failed to load attempts.", "error");
+    }
+}
+
+function renderTeacherPronAttemptsList() {
+    const list = document.getElementById('teacher-pron-attempts-list');
+    if (!list) return;
+
+    const attempts = teacherPronReviewState.attempts || [];
+    if (!attempts.length) {
+        list.innerHTML = `<div class="text-muted-foreground text-sm">No submissions yet.</div>`;
+        return;
+    }
+
+    list.innerHTML = attempts.map(a => {
+        const name = a.student_name || `Student #${a.student_id}`;
+        const initials = getInitials(name);
+        const score = a.score != null ? `${a.score}` : '-';
+        return `
+            <button
+              type="button"
+              class="btn btn-outline w-full justify-between"
+              onclick="loadTeacherPronAttempt(${a.attempt_id})"
+              style="display:flex; align-items:center; gap:.5rem;"
+            >
+              <span class="student-chip" style="min-width:0;">
+                <span class="mini-avatar" aria-hidden="true">${escapeHtml(initials)}</span>
+                <span style="min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                  ${escapeHtml(name)}
+                </span>
+              </span>
+              <span class="text-xs text-muted-foreground">${score}</span>
+            </button>
+        `;
+    }).join('');
+}
+
+async function loadTeacherPronAttempt(attemptId) {
+    const saveBtn = document.getElementById('teacher-pron-review-save-btn');
+    if (saveBtn) saveBtn.classList.add('hidden');
+
+    teacherPronReviewState.attemptId = attemptId;
+    const detail = document.getElementById('teacher-pron-attempt-detail');
+    if (detail) detail.innerHTML = `<div class="text-muted-foreground">Loading answers...</div>`;
+
+    try {
+        const res = await fetch(`http://localhost:3000/api/teacher/pronunciation-attempts/${attemptId}`);
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || "Failed");
+
+        const answers = data.answers || [];
+        detail.innerHTML = answers.map(a => {
+            const current = (a.teacher_score != null) ? a.teacher_score : a.pronunciation_score;
+            return `
+              <div class="card teacher-pron-answer-row" style="margin:0;" data-answer-id="${a.answer_id}">
+                <div class="card-header">
+                  <div class="card-title">${escapeHtml(a.question_text || 'Item')}</div>
+                  <div class="card-description">Target: ${escapeHtml(a.correct_pronunciation || '-')}</div>
+                </div>
+                <div class="card-content space-y-2">
+                  <div class="grid md:grid-cols-2 gap-3">
+                    <div>
+                      <div class="text-xs text-muted-foreground">Transcript (student)</div>
+                      <div class="p-3 rounded-lg border border-border bg-background" style="white-space:pre-wrap;">${escapeHtml(a.transcript || '')}</div>
+                    </div>
+                    <div class="space-y-2">
+                      <div class="text-xs text-muted-foreground">Audio</div>
+                      <audio controls src="${escapeHtml(a.student_audio || '')}" style="width:100%;"></audio>
+                      <div class="flex items-center gap-2 flex-wrap">
+                        <span class="text-xs text-muted-foreground">Score</span>
+                        <input class="form-input teacher-pron-score" type="number" step="0.1" min="0" max="100" value="${current ?? 0}" style="width:110px;" />
+                      </div>
+                      <div>
+                        <div class="text-xs text-muted-foreground">Teacher note (optional)</div>
+                        <input class="form-input teacher-pron-notes" type="text" value="${escapeHtml(a.teacher_notes || '')}" placeholder="e.g. ok but case/small letter..." />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            `;
+        }).join('') || `<div class="text-muted-foreground">No answers found.</div>`;
+
+        if (saveBtn) saveBtn.classList.remove('hidden');
+
+        if (window.lucide && typeof window.lucide.createIcons === 'function') {
+            window.lucide.createIcons();
+        }
+    } catch (e) {
+        console.error(e);
+        showNotification?.("Failed to load answers.", "error");
+    }
+}
+
+async function saveTeacherPronunciationOverrides() {
+    const user = getCurrentUser();
+    if (!user || user.role !== 'teacher') return;
+
+    const attemptId = teacherPronReviewState.attemptId;
+    if (!attemptId) return;
+
+    const answers = [];
+    document.querySelectorAll('#teacher-pron-attempt-detail .teacher-pron-answer-row').forEach(row => {
+        const answerId = Number(row.getAttribute('data-answer-id'));
+        const scoreInput = row.querySelector('.teacher-pron-score');
+        const notesInput = row.querySelector('.teacher-pron-notes');
+        answers.push({
+            answer_id: answerId,
+            teacher_score: scoreInput ? Number(scoreInput.value) : null,
+            teacher_notes: notesInput ? String(notesInput.value || '') : ''
+        });
+    });
+
+    try {
+        const res = await fetch(`http://localhost:3000/api/teacher/pronunciation-attempts/${attemptId}/override`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ teacher_id: user.user_id, answers })
+        });
+        const data = await res.json();
+        if (!data.success) {
+            showNotification?.("Failed to save adjustments.", "error");
+            return;
+        }
+
+        showNotification?.("Adjustments saved.", "success");
+        await openTeacherPronunciationReviewModal(teacherPronReviewState.quizId);
+        await loadTeacherPronAttempt(attemptId);
+    } catch (e) {
+        console.error(e);
+        showNotification?.("Failed to save adjustments.", "error");
+    }
 }
 
     

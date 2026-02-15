@@ -4,10 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>EEL</title>
-    <link rel="stylesheet" href="css/style-index.css">
+    <link rel="stylesheet" href="css/styles.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="js/theme.js"></script>
 </head>
-<body>
+<body class="landing">
     <!-- Header -->
     <header class="header">
         <div class="container">
@@ -15,6 +16,7 @@
                 <div class="logo">
                     <img src="/image/logo.png" alt="EEL Logo" class="logo-img">
                 </div>
+                <span class="brand-text">EEL</span>
             </div>
 
             
@@ -59,13 +61,16 @@
                     
                     <div class="hero-stats">
                         <div class="stat">
-                            <div class="stat-label"></div>
+                            <div class="stat-number text-primary">Practice</div>
+                            <div class="stat-label">anytime</div>
                         </div>
                         <div class="stat">
-                            <div class="stat-label"></div>
+                            <div class="stat-number text-secondary">Instant</div>
+                            <div class="stat-label">feedback</div>
                         </div>
                         <div class="stat">
-                            <div class="stat-label"></div>
+                            <div class="stat-number text-primary">Mobile</div>
+                            <div class="stat-label">friendly</div>
                         </div>
                     </div>
                 </div>
@@ -162,7 +167,7 @@
                 </p>
             </div>
             
-            <div class="services-grid grid-cols-2">
+            <div class="services-grid">
                 <div class="service-card">
                     <div class="service-icon">
                         <i class="fas fa-school text-primary"></i>
@@ -376,7 +381,7 @@
                         </div>
                     </div>
                     
-                    <button class="btn btn-primary btn-large btn-full">Continue Learning</button>
+                    <button class="btn btn-primary btn-large btn-full" onclick="window.location.href='login.html'">Continue Learning</button>
                 </div>
             </div>
         </div>
@@ -436,7 +441,7 @@
                 <h3 class="text-primary">Our Team</h3>
                 <p>EEL is a thesis project developed by students of Norzagaray College, designed to support English literacy education at Norzagaray National High School. It is powered by the creativity and dedication of future educators and technologists committed to advancing language learning..</p>
                 
-                <div class="team-grid grid-cols-5">
+                <div class="team-grid">
                     <div class="team-member">
                         <img src="" alt="">
                         <h4>Jp Fabian</h4>
@@ -542,6 +547,7 @@
                     <a href="#">Privacy Policy</a>
                     <a href="#">Terms of Service</a>
                     <a href="#">Cookie Policy</a>
+                    <a href="admin-login.html">Admin</a>
                 </div>
             </div>
         </div>

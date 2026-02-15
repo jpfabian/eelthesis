@@ -7,8 +7,9 @@
     <link rel="stylesheet" href="css/styles.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.1/lucide.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="js/theme.js"></script>
 </head>
-<body>    
+<body class="auth-page">    
     <a href="index.html" class="back-button">
         <i data-lucide="arrow-left"></i> Back
     </a>
@@ -24,8 +25,27 @@
                 </p>
             </div>
 
-            <!-- Signup Form -->
-            <div class="signup-form-card">
+            <div class="auth-grid">
+                <aside class="auth-aside" aria-label="Signup info">
+                    <div class="auth-aside-card">
+                        <div class="auth-aside-title">
+                            <i data-lucide="rocket" class="size-5"></i>
+                            What you’ll get
+                        </div>
+                        <ul class="auth-aside-list">
+                            <li>Practice reading comprehension and pronunciation.</li>
+                            <li>Progress-based quiz unlocking.</li>
+                            <li>Teacher review and feedback.</li>
+                        </ul>
+                        <div class="auth-aside-badge">
+                            <i data-lucide="wand-2" class="size-4"></i>
+                            Turn your practice into progress
+                        </div>
+                    </div>
+                </aside>
+
+                <!-- Signup Form -->
+                <div class="signup-form-card">
                 <!-- Role Selection -->
                 <div class="role-selection-step" id="role-step">
                     <h3 class="step-title">Choose Your Role</h3>
@@ -75,7 +95,8 @@
                     </div>
 
                     <form id="signup-form" class="signup-form">
-                        <div class="form-group">
+                        <!-- Row 1: Last name + First name -->
+                        <div class="form-group signup-col-1 signup-row-1">
                             <label for="lname" class="form-label">Last Name</label>
                             <input 
                                 type="text" 
@@ -86,8 +107,7 @@
                                 required
                             >
                         </div>
-
-                        <div class="form-group">
+                        <div class="form-group signup-col-2 signup-row-1">
                             <label for="fname" class="form-label">First Name</label>
                             <input 
                                 type="text" 
@@ -99,7 +119,33 @@
                             >
                         </div>
 
-                        <div class="form-group">
+                        <!-- Row 2: Section + STRAND (Student only) -->
+                        <div id="student-extra-fields" class="signup-row-2-fields hidden">
+                            <div class="form-group signup-col-1 signup-row-2">
+                                <label for="section" class="form-label">Section</label>
+                                <input
+                                    type="text"
+                                    id="section"
+                                    name="section"
+                                    class="form-input"
+                                    placeholder="e.g. 12 - A"
+                                >
+                            </div>
+                            <div class="form-group signup-col-2 signup-row-2">
+                                <label for="strand" class="form-label">STRAND</label>
+                                <select id="strand" name="strand" class="form-input">
+                                    <option value="">Select STRAND</option>
+                                    <option value="STEM">STEM</option>
+                                    <option value="ABM">ABM</option>
+                                    <option value="HUMSS">HUMSS</option>
+                                    <option value="GAS">GAS</option>
+                                    <option value="TVL">TVL</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Row 3: Email (full width) -->
+                        <div class="form-group signup-span-2 signup-row-3">
                             <label for="email" class="form-label">Email Address</label>
                             <input 
                                 type="email" 
@@ -111,7 +157,8 @@
                             >
                         </div>
 
-                        <div class="form-group">
+                        <!-- Row 4: Password + Confirm Password -->
+                        <div class="form-group signup-col-1 signup-row-4">
                             <label for="password" class="form-label">Password</label>
                             <div class="password-input-container">
                                 <input 
@@ -129,8 +176,7 @@
                             </div>
                             <div class="password-strength" id="password-strength"></div>
                         </div>
-
-                        <div class="form-group">
+                        <div class="form-group signup-col-2 signup-row-4">
                             <label for="confirm-password" class="form-label">Confirm Password</label>
                             <div class="password-input-container">
                                 <input 
@@ -147,7 +193,7 @@
                             </div>
                         </div>
 
-                        <div class="form-group">
+                        <div class="form-group signup-span-2 signup-row-5">
                             <label class="checkbox-label">
                                 <input type="checkbox" id="terms" name="terms" required>
                                 <span class="checkmark"></span>
@@ -155,7 +201,7 @@
                             </label>
                         </div>
 
-                        <button type="submit" class="btn btn-primary w-full" id="signup-btn">
+                        <button type="submit" class="btn btn-primary w-full signup-span-2 signup-row-6" id="signup-btn">
                             <i data-lucide="user-plus"></i>
                             Create Account
                         </button>
@@ -165,6 +211,7 @@
                 <!-- Login Link -->
                 <div class="login-link">
                     <p>Already have an account? <a href="login.html">Sign in here</a></p>
+                </div>
                 </div>
             </div>
         </div>

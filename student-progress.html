@@ -6,9 +6,10 @@
     <title>Student Progress - EEL</title>
     <link rel="stylesheet" href="css/styles.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.1/lucide.min.css" rel="stylesheet">
+    <script src="js/theme.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body>
+<body class="student-progress-page">
     <!-- Loading Screen -->
     <div id="loading-screen" class="loading-screen">
         <div class="loading-content">
@@ -47,10 +48,21 @@
         <!-- Main Content -->
         <main id="main-content" class="flex-1 overflow-auto">
             <div class="p-6 space-y-6">
-                <div>
-                    <h2 class="text-2xl font-semibold mb-2">Student Progress</h2>
-                    <p class="text-muted-foreground">Monitor and analyze your students' learning progress and performance</p>
-                </div>
+                <header class="page-header">
+                    <div class="page-header-icon" aria-hidden="true">
+                        <i data-lucide="users" class="size-8"></i>
+                    </div>
+                    <div>
+                        <h1 class="page-header-title">Student Progress</h1>
+                        <p class="page-header-subtitle">Monitor and analyze your students' learning progress and performance.</p>
+                    </div>
+                    <div class="page-header-actions">
+                        <button type="button" id="export-progress-btn" class="btn btn-primary flex items-center gap-2" title="Export to CSV">
+                            <i data-lucide="download" class="size-4"></i>
+                            Export to CSV
+                        </button>
+                    </div>
+                </header>
 
                 <!-- Class Overview Stats -->
                 <div class="grid grid-cols-3 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -71,45 +83,143 @@
                                 <h3 class="text-sm font-medium">Average Score</h3>
                                 <i data-lucide="trending-up" class="size-4 text-secondary"></i>
                             </div>
-                            <div class="text-2xl font-bold text-secondary">0%</div>
-                            <p class="text-xs text-muted-foreground">+3% from last month</p>
+                            <div class="text-2xl font-bold text-secondary" id="avg-score-value">—</div>
+                            <p class="text-xs text-muted-foreground" id="avg-score-sub">Across Reading + Pronunciation</p>
                         </div>
                     </div>
 
-                    <div class="card bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+                    <div id="completion-rate-card" class="card bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20 cursor-pointer hover:shadow-lg transition">
                         <div class="card-content p-6">
                             <div class="flex items-center justify-between mb-2">
-                                <h3 class="text-sm font-medium">Completion Rate</h3>
+                                <h3 class="text-sm font-medium">Quiz Completion</h3>
                                 <i data-lucide="check-circle" class="size-4 text-primary"></i>
                             </div>
-                            <div class="text-2xl font-bold text-primary">0%</div>
-                            <p class="text-xs text-muted-foreground">Assignments completed</p>
+                            <div class="text-2xl font-bold text-primary" id="completion-rate-value">—</div>
+                            <p class="text-xs text-muted-foreground" id="completion-rate-sub">Quizzes completed</p>
                         </div>
                     </div>
                 </div>
 
                 <!-- Student Management Section -->
-                <div id="students-section" class="hidden mt-6">
-                    <div class="card p-6">
-                        <h2 class="text-lg font-semibold mb-4">Students waiting for acceptance <span id="pending-count" class="text-primary">(0)</span></h2>
-                        <div id="pending-students" class="space-y-2"></div>
+                <div id="students-section" class="students-section mt-6">
+                    <div class="students-section-card">
+                        <section class="students-section-block students-section-pending" aria-labelledby="pending-heading">
+                            <header class="students-section-header">
+                                <div class="students-section-header-icon students-section-header-icon--pending" aria-hidden="true">
+                                    <i data-lucide="clock" class="size-5"></i>
+                                </div>
+                                <div class="students-section-header-text">
+                                    <h2 id="pending-heading" class="students-section-title">Waiting for acceptance</h2>
+                                    <p class="students-section-desc">Accept or reject students who requested to join this class.</p>
+                                </div>
+                                <span id="pending-count" class="students-section-count">0</span>
+                            </header>
+                            <div id="pending-students" class="sp-student-list students-section-list"></div>
+                            <div id="pending-empty" class="students-section-empty">
+                                <i data-lucide="inbox" class="students-section-empty-icon"></i>
+                                <p class="students-section-empty-text">No pending requests</p>
+                            </div>
+                        </section>
 
-                        <hr class="my-6">
+                        <div class="students-section-divider" aria-hidden="true"></div>
 
-                        <h2 class="text-lg font-semibold mb-4">Joined Students <span id="enrolled-count" class="text-primary">(0)</span></h2>
-                        <div id="enrolled-students" class="space-y-2"></div>
+                        <section class="students-section-block students-section-enrolled" aria-labelledby="enrolled-heading">
+                            <header class="students-section-header">
+                                <div class="students-section-header-icon students-section-header-icon--enrolled" aria-hidden="true">
+                                    <i data-lucide="users" class="size-5"></i>
+                                </div>
+                                <div class="students-section-header-text">
+                                    <h2 id="enrolled-heading" class="students-section-title">Joined students</h2>
+                                    <p class="students-section-desc">Students in this class who can access lessons and quizzes.</p>
+                                </div>
+                                <span id="enrolled-count" class="students-section-count">0</span>
+                            </header>
+                            <div id="enrolled-students" class="sp-student-list students-section-list"></div>
+                            <div id="enrolled-empty" class="students-section-empty">
+                                <i data-lucide="user-plus" class="students-section-empty-icon"></i>
+                                <p class="students-section-empty-text">No students have joined yet</p>
+                            </div>
+                        </section>
                     </div>
                 </div>
 
-                <!-- Average Score Modal -->
-                <div id="average-score" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                    <div class="card w-full max-w-lg p-6 relative">
-                        <h2 class="text-lg font-semibold mb-4 text-secondary">Student Quiz Scores</h2>
-                        <div id="average-score-list" class="space-y-3 max-h-80 overflow-y-auto"></div>
-                        <table class="w-full mt-4 border">
-                            <thead id="average-table-head" class="bg-gray-100"></thead>
-                            <tbody id="average-table-body"></tbody>
-                        </table>
+                <!-- Scores Section -->
+                <div id="scores-section" class="scores-section hidden mt-6">
+                    <div class="scores-section-card">
+                        <header class="scores-section-header">
+                            <div class="scores-section-header-icon" aria-hidden="true">
+                                <i data-lucide="trending-up" class="size-6"></i>
+                            </div>
+                            <div class="scores-section-header-text">
+                                <h2 class="scores-section-title">Student quiz scores</h2>
+                                <p class="scores-section-desc">Reading and Pronunciation performance overview.</p>
+                            </div>
+                        </header>
+
+                        <div class="scores-section-body">
+                            <section class="scores-chart-block" aria-labelledby="scores-chart-title">
+                                <h3 id="scores-chart-title" class="scores-chart-title">Average score by student</h3>
+                                <p class="scores-chart-desc">Overall average (%) per student</p>
+                                <div class="scores-chart-wrap">
+                                    <canvas id="avg-score-chart" height="180"></canvas>
+                                </div>
+                            </section>
+
+                            <div class="scores-view-toggle" role="tablist" aria-label="Choose view">
+                                <button type="button" class="scores-view-btn scores-view-btn--summary is-active" id="scores-show-summary" role="tab" aria-selected="true" aria-controls="scores-summary-block">
+                                    <i data-lucide="list" class="scores-view-btn-icon"></i>
+                                    Summary
+                                </button>
+                                <button type="button" class="scores-view-btn scores-view-btn--breakdown" id="scores-show-breakdown" role="tab" aria-selected="false" aria-controls="scores-table-block">
+                                    <i data-lucide="table" class="scores-view-btn-icon"></i>
+                                    Score breakdown
+                                </button>
+                            </div>
+
+                            <section class="scores-summary-block" id="scores-summary-block" aria-labelledby="scores-summary-title" role="tabpanel">
+                                <h3 id="scores-summary-title" class="scores-summary-title">Summary</h3>
+                                <div id="average-score-list" class="scores-summary-list"></div>
+                            </section>
+
+                            <section class="scores-table-block scores-section-panel-hidden" id="scores-table-block" aria-labelledby="scores-table-title" role="tabpanel">
+                                <h3 id="scores-table-title" class="scores-table-title">Score breakdown</h3>
+                                <div class="scores-table-scroll table-scroll">
+                                    <table class="scores-table" id="scores-data-table">
+                                        <thead id="average-table-head"></thead>
+                                        <tbody id="average-table-body"></tbody>
+                                    </table>
+                                </div>
+                            </section>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Completion Section -->
+                <div id="completion-section" class="completion-section hidden mt-6">
+                    <div class="completion-section-card">
+                        <header class="completion-section-header">
+                            <div class="completion-section-header-icon" aria-hidden="true">
+                                <i data-lucide="check-circle" class="size-6"></i>
+                            </div>
+                            <div class="completion-section-header-text">
+                                <h2 class="completion-section-title">Quiz completion</h2>
+                                <p class="completion-section-desc">Completed quizzes across Reading and Pronunciation.</p>
+                            </div>
+                        </header>
+
+                        <div class="completion-section-body">
+                            <section class="completion-chart-block" aria-labelledby="completion-chart-title">
+                                <h3 id="completion-chart-title" class="completion-chart-title">Completion overview</h3>
+                                <p class="completion-chart-desc">Completed vs remaining quiz pairs</p>
+                                <div class="completion-chart-wrap">
+                                    <canvas id="completion-doughnut" height="200"></canvas>
+                                </div>
+                            </section>
+
+                            <section class="completion-stats-block" aria-labelledby="completion-stats-title">
+                                <div id="completion-details" class="completion-stats-grid"></div>
+                            </section>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -117,11 +227,12 @@
     </div>
 
     <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/navigation.js"></script>
     <script>
-    const API_BASE = '/api';
+    const API_BASE = 'http://localhost:3000/api';
     document.addEventListener('DOMContentLoaded', () => {
         const urlParams = new URLSearchParams(window.location.search);
         const classId = urlParams.get('class_id');
@@ -154,10 +265,13 @@
             // Back button
             document.getElementById('back-class-btn')?.addEventListener('click', () => window.location.href = 'classes.html');
 
-            // Modal toggle function
+            // Export to CSV
+            document.getElementById('export-progress-btn')?.addEventListener('click', () => exportStudentProgress(classId, selectedClass));
+
+            // Panel toggle function
             function toggleSection(section, fetchDataCallback = null) {
                 const isVisible = !section.classList.contains('hidden');
-                document.querySelectorAll('#students-section, #average-score').forEach(el => el.classList.add('hidden'));
+                document.querySelectorAll('#students-section, #scores-section, #completion-section').forEach(el => el.classList.add('hidden'));
                 if (!isVisible) {
                     section.classList.remove('hidden');
                     if (fetchDataCallback) fetchDataCallback();
@@ -172,63 +286,71 @@
             });
 
             const avgScoreCard = document.getElementById('average-score-card');
-            const avgModal = document.getElementById('average-score');
+            const scoresSection = document.getElementById('scores-section');
             const avgList = document.getElementById('average-score-list');
             const tableBody = document.getElementById('average-table-body');
-            const closeAvgModal = document.getElementById('close-average-modal');
+
+            const completionCard = document.getElementById('completion-rate-card');
+            const completionSection = document.getElementById('completion-section');
 
             avgScoreCard?.addEventListener('click', async () => {
-                toggleSection(avgModal, async () => {
-                    avgList.innerHTML = `<p class="text-sm text-gray-500">Loading...</p>`;
-                    tableBody.innerHTML = `<tr><td colspan="5" class="text-center py-3 text-gray-500">Loading...</td></tr>`;
+                toggleSection(scoresSection, async () => {
+                    if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
+                    avgList.innerHTML = `<p class="scores-section-message">Loading...</p>`;
+                    tableBody.innerHTML = `<tr><td colspan="99" class="scores-section-message">Loading...</td></tr>`;
 
                     try {
                         const res = await fetch(`${API_BASE}/class/${classId}/average-scores`);
                         if (!res.ok) throw new Error('Failed to fetch');
                         const data = await res.json();
 
+                        // Update KPI average score
+                        const overall = (data || []).map(x => Number(x.overall_avg)).filter(Number.isFinite);
+                        const overallAvg = overall.length ? (overall.reduce((a,b)=>a+b,0) / overall.length) : null;
+                        const avgEl = document.getElementById('avg-score-value');
+                        if (avgEl) avgEl.textContent = overallAvg == null ? '0%' : `${Math.round(overallAvg)}%`;
+
                         if (!data.length) {
-                            avgList.innerHTML = `<p class="text-sm text-gray-500">No quiz records found.</p>`;
-                            tableBody.innerHTML = `<tr><td colspan="5" class="text-center py-3 text-gray-500">No quiz data found</td></tr>`;
+                            avgList.innerHTML = `<p class="scores-section-message">No quiz records found.</p>`;
+                            tableBody.innerHTML = `<tr><td colspan="99" class="scores-section-message">No quiz data found</td></tr>`;
                             return;
                         }
 
                         avgList.innerHTML = data.map(s => `
-                            <div class="flex items-center justify-between border-b pb-2">
+                            <div class="scores-summary-item">
                                 <div>
-                                    <p class="font-medium">${s.student_fname} ${s.student_lname}</p>
-                                    <p class="text-sm text-muted-foreground">
-                                        Reading: ${s.reading_avg ?? 0}% | Pronunciation: ${s.pronunciation_avg ?? 0}%
-                                    </p>
+                                    <div class="scores-summary-item-name">${s.student_fname} ${s.student_lname}</div>
+                                    <div class="scores-summary-item-detail">Reading: ${s.reading_avg ?? 0}% · Pronunciation: ${s.pronunciation_avg ?? 0}%</div>
                                 </div>
-                                <span class="text-sm font-semibold text-secondary">${s.overall_avg ?? 0}%</span>
+                                <span class="scores-summary-item-value">${s.overall_avg ?? 0}%</span>
                             </div>
                         `).join('');
 
                         const allQuizNames = Array.from(new Set(data.flatMap(s => s.quizzes.map(q => q.quiz_name))));
                         document.getElementById("average-table-head").innerHTML = `
                             <tr>
-                                <th class="px-4 py-2 text-left">Student Name</th>
-                                ${allQuizNames.map(q => `<th class="px-4 py-2 text-center">${q}</th>`).join('')}
-                                <th class="px-4 py-2 text-center">Total</th>
+                                <th>Student name</th>
+                                ${allQuizNames.map(q => `<th>${q}</th>`).join('')}
+                                <th>Total</th>
                             </tr>
                         `;
 
                         tableBody.innerHTML = data.map(s => {
                             const scores = allQuizNames.map(qName => {
                                 const q = s.quizzes.find(quiz => quiz.quiz_name === qName);
-                                return `<td class="px-4 py-2 text-center">${q ? q.score : '-'}</td>`;
+                                return `<td>${q ? q.score : '—'}</td>`;
                             }).join('');
 
                             return `
-                                <tr class="hover:bg-gray-50 transition">
-                                    <td class="px-4 py-2 font-medium">${s.student_lname}, ${s.student_fname}</td>
+                                <tr>
+                                    <td>${s.student_lname}, ${s.student_fname}</td>
                                     ${scores}
-                                    <td class="px-4 py-2 text-center font-semibold text-secondary">${s.total || 0}</td>
+                                    <td>${s.total || 0}</td>
                                 </tr>
                             `;
                         }).join('');
 
+                        renderAvgScoreChart(data);
                         lucide.createIcons({ icons: lucide.icons });
                     } catch (err) {
                         avgList.innerHTML = `<p class="text-sm text-red-500">Failed to load scores.</p>`;
@@ -236,7 +358,35 @@
                 });
             });
 
-            closeAvgModal?.addEventListener('click', () => avgModal.classList.add('hidden'));
+            const scoresShowSummary = document.getElementById('scores-show-summary');
+            const scoresShowBreakdown = document.getElementById('scores-show-breakdown');
+            const scoresSummaryBlock = document.getElementById('scores-summary-block');
+            const scoresTableBlock = document.getElementById('scores-table-block');
+            function showScoresSummary() {
+                scoresSummaryBlock?.classList.remove('scores-section-panel-hidden');
+                scoresTableBlock?.classList.add('scores-section-panel-hidden');
+                scoresShowSummary?.classList.add('is-active');
+                scoresShowBreakdown?.classList.remove('is-active');
+                scoresShowSummary?.setAttribute('aria-selected', 'true');
+                scoresShowBreakdown?.setAttribute('aria-selected', 'false');
+            }
+            function showScoresBreakdown() {
+                scoresTableBlock?.classList.remove('scores-section-panel-hidden');
+                scoresSummaryBlock?.classList.add('scores-section-panel-hidden');
+                scoresShowBreakdown?.classList.add('is-active');
+                scoresShowSummary?.classList.remove('is-active');
+                scoresShowBreakdown?.setAttribute('aria-selected', 'true');
+                scoresShowSummary?.setAttribute('aria-selected', 'false');
+            }
+            scoresShowSummary?.addEventListener('click', showScoresSummary);
+            scoresShowBreakdown?.addEventListener('click', showScoresBreakdown);
+
+            completionCard?.addEventListener('click', async () => {
+                toggleSection(completionSection, async () => {
+                    if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
+                    await loadCompletionRate(classId);
+                });
+            });
 
         } catch (err) {
             console.error('Error initializing page:', err);
@@ -249,6 +399,255 @@
         if (local.length <= 2) return email;
         return local[0] + '****' + local.slice(-1) + '@' + domain;
     }
+
+    function escapeHtml(str) {
+        return String(str ?? "")
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#039;");
+    }
+
+    function csvEscape(val) {
+        const s = String(val ?? "").replace(/"/g, '""');
+        return /[",\r\n]/.test(s) ? `"${s}"` : s;
+    }
+
+    async function exportStudentProgress(classId, selectedClass) {
+        const btn = document.getElementById('export-progress-btn');
+        const originalText = btn?.innerHTML;
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i data-lucide="loader-2" class="size-4 animate-spin"></i> Exporting...';
+            if (typeof lucide !== 'undefined') lucide.createIcons({ icons: lucide.icons });
+        }
+        try {
+            const subjectId = selectedClass?.subject_id || null;
+            const completionUrl = `${API_BASE}/class/${classId}/completion-rate${subjectId ? `?subject_id=${subjectId}` : ''}`;
+
+            const [studentsRes, scoresRes, completionRes] = await Promise.all([
+                fetch(`${API_BASE}/class/${classId}/students`),
+                fetch(`${API_BASE}/class/${classId}/average-scores`),
+                fetch(completionUrl)
+            ]);
+
+            const students = studentsRes.ok ? await studentsRes.json() : [];
+            let scores = scoresRes.ok ? await scoresRes.json() : [];
+            let completion = completionRes.ok ? await completionRes.json() : {};
+            if (subjectId && Number(completion?.total_quizzes || 0) === 0) {
+                const fallback = await fetch(`${API_BASE}/class/${classId}/completion-rate`).then(r => r.ok ? r.json() : {});
+                completion = fallback;
+            }
+
+            const className = (selectedClass?.name || selectedClass?.class_name || 'Class').replace(/[/\\?*:[\]]/g, '-');
+            const dateStr = new Date().toISOString().slice(0, 10);
+            const rows = [];
+
+            // Summary
+            rows.push(['EEL Student Progress Export']);
+            rows.push(['Class', className]);
+            rows.push(['Export Date', dateStr]);
+            rows.push(['Total Students (joined)', String(completion.total_students ?? 0)]);
+            rows.push(['Quiz Completion Rate (%)', String(completion.completion_rate ?? 0)]);
+            rows.push(['Quiz Completions', `${completion.completed_pairs ?? 0} / ${completion.total_possible ?? 0}`]);
+            rows.push([]);
+
+            // Students
+            rows.push(['Students', '', '', '']);
+            rows.push(['Last Name', 'First Name', 'Email', 'Status']);
+            students.forEach(s => {
+                rows.push([
+                    s.student_lname ?? '',
+                    s.student_fname ?? '',
+                    s.email ?? '',
+                    s.status === 'accepted' ? 'Joined' : (s.status === 'pending' ? 'Pending' : String(s.status ?? ''))
+                ]);
+            });
+            rows.push([]);
+
+            // Scores
+            rows.push(['Scores (Average %)', '', '', '', '']);
+            rows.push(['Last Name', 'First Name', 'Reading Avg', 'Pronunciation Avg', 'Overall Avg']);
+            scores.forEach(s => {
+                rows.push([
+                    s.student_lname ?? '',
+                    s.student_fname ?? '',
+                    String(s.reading_avg ?? ''),
+                    String(s.pronunciation_avg ?? ''),
+                    String(s.overall_avg ?? '')
+                ]);
+            });
+
+            const csv = rows.map(row => row.map(csvEscape).join(',')).join('\r\n');
+            const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `EEL-StudentProgress-${className}-${dateStr}.csv`;
+            a.click();
+            URL.revokeObjectURL(a.href);
+        } catch (err) {
+            console.error('Export failed:', err);
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({ icon: 'error', title: 'Export failed', text: err?.message || 'Could not export data.' });
+            } else {
+                alert('Export failed: ' + (err?.message || 'Could not export data.'));
+            }
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = originalText || '<i data-lucide="download" class="size-4"></i> Export to CSV';
+                if (typeof lucide !== 'undefined') lucide.createIcons({ icons: lucide.icons });
+            }
+        }
+    }
+
+    // ===================== Charts (Chart.js) =====================
+    let __avgScoreChart = null;
+    let __completionChart = null;
+
+    function cssVar(name, fallback = "") {
+        const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+        return v || fallback;
+    }
+
+    function chartTextColor() {
+        return cssVar('--muted-foreground', '#64748b');
+    }
+
+    function chartGridColor() {
+        return cssVar('--border', 'rgba(0,0,0,0.1)');
+    }
+
+    function destroyChart(ch) {
+        try { ch?.destroy?.(); } catch (_) {}
+    }
+
+    function renderAvgScoreChart(rows) {
+        const canvas = document.getElementById('avg-score-chart');
+        if (!canvas || typeof Chart === 'undefined') return;
+
+        const data = (rows || [])
+            .map(r => ({
+                label: `${r.student_lname || ''}, ${r.student_fname || ''}`.replace(/^,\s*/, '').trim(),
+                value: Number(r.overall_avg ?? 0)
+            }))
+            .filter(x => x.label)
+            .sort((a, b) => (b.value || 0) - (a.value || 0));
+
+        const labels = data.map(x => x.label);
+        const values = data.map(x => (Number.isFinite(x.value) ? Math.round(x.value) : 0));
+
+        destroyChart(__avgScoreChart);
+        __avgScoreChart = new Chart(canvas.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [{
+                    label: 'Overall average (%)',
+                    data: values,
+                    borderRadius: 10,
+                    backgroundColor: cssVar('--secondary', '#22c55e'),
+                    borderColor: cssVar('--secondary', '#22c55e'),
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        max: 100,
+                        grid: { color: chartGridColor() },
+                        ticks: {
+                            color: chartTextColor(),
+                            callback: (v) => `${v}%`
+                        }
+                    },
+                    y: {
+                        grid: { display: false },
+                        ticks: { color: chartTextColor() }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: (ctx) => ` ${ctx.parsed.x}%`
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function renderCompletionDoughnut(payload) {
+        const canvas = document.getElementById('completion-doughnut');
+        if (!canvas || typeof Chart === 'undefined') return;
+
+        const completed = Math.max(0, Number(payload?.completed_pairs || 0));
+        const totalPossible = Math.max(0, Number(payload?.total_possible || 0));
+        const remaining = Math.max(0, totalPossible - completed);
+
+        destroyChart(__completionChart);
+        __completionChart = new Chart(canvas.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Completed', 'Remaining'],
+                datasets: [{
+                    data: [completed, remaining],
+                    backgroundColor: [
+                        cssVar('--primary', '#8b5cf6'),
+                        cssVar('--muted', '#f1f5f9')
+                    ],
+                    borderColor: cssVar('--card', '#ffffff'),
+                    borderWidth: 2,
+                    hoverOffset: 6,
+                    cutout: '62%'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { color: chartTextColor() }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: (ctx) => {
+                                const v = Number(ctx.raw || 0);
+                                const pct = totalPossible > 0 ? Math.round((v / totalPossible) * 1000) / 10 : 0;
+                                return ` ${ctx.label}: ${v} (${pct}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Re-theme charts when switching dark/light
+    const __themeObserver = new MutationObserver(() => {
+        if (__avgScoreChart) {
+            try {
+                __avgScoreChart.options.scales.x.ticks.color = chartTextColor();
+                __avgScoreChart.options.scales.y.ticks.color = chartTextColor();
+                __avgScoreChart.options.scales.x.grid.color = chartGridColor();
+                __avgScoreChart.update();
+            } catch (_) {}
+        }
+        if (__completionChart) {
+            try {
+                __completionChart.options.plugins.legend.labels.color = chartTextColor();
+                __completionChart.update();
+            } catch (_) {}
+        }
+    });
+    __themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 
     async function loadStudents(classId) {
         try {
@@ -273,45 +672,69 @@
                 return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
             }
 
+            function getInitials(fname, lname) {
+                const f = String(fname || "").trim();
+                const l = String(lname || "").trim();
+                const a = (f ? f[0] : "") + (l ? l[0] : "");
+                return (a || "U").toUpperCase();
+            }
+
             enrolled.forEach(s => {
+                const fname = capitalizeName(s.student_fname);
+                const lname = capitalizeName(s.student_lname);
+                const name = `${fname} ${lname}`.trim();
+                const initials = getInitials(fname, lname);
                 enrolledContainer.innerHTML += `
-                    <div class="flex items-center justify-between border rounded-lg p-3 bg-muted/20 bg-gradient-to-br from-secondary/5 to-secondary/10 border-secondary/20">
-                        <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shadow-md">
-                                <i data-lucide="user" class="w-5 h-5 text-white"></i>
-                            </div>
-                            <div>
-                                <p class="font-medium">
-                                    ${capitalizeName(s.student_fname)} ${capitalizeName(s.student_lname)}
-                                </p>
-                                <p class="text-sm text-muted-foreground">${maskEmail(s.email)}</p>
+                    <div class="sp-student-row">
+                        <div class="sp-student-left">
+                            <div class="sp-student-avatar" aria-hidden="true">${escapeHtml(initials)}</div>
+                            <div class="sp-student-meta">
+                                <div class="sp-student-name">${escapeHtml(name)}</div>
+                                <div class="sp-student-email">${escapeHtml(maskEmail(s.email || ""))}</div>
                             </div>
                         </div>
-                        <span class="font-medium bg-primary/10 text-primary">Joined</span>
+                        <div class="sp-student-right">
+                            <span class="sp-badge sp-badge--accepted">
+                                <i data-lucide="check-circle" class="size-4"></i>
+                                Joined
+                            </span>
+                            <button type="button" title="Remove student from class" aria-label="Remove student from class" onclick="removeStudent('${s.id}')" class="sp-btn-remove">
+                                <i data-lucide="user-minus" class="sp-btn-icon" aria-hidden="true"></i>
+                                <span class="sp-btn-label">Remove</span>
+                            </button>
+                        </div>
                     </div>`;
             });
 
             pending.forEach(s => {
+                const fname = capitalizeName(s.student_fname);
+                const lname = capitalizeName(s.student_lname);
+                const name = `${fname} ${lname}`.trim();
+                const initials = getInitials(fname, lname);
                 pendingContainer.innerHTML += `
-                    <div class="flex items-center justify-between border rounded-lg p-3 bg-muted/10">
-                        <div class="flex items-center gap-6">
-                            <div class="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
-                                <i data-lucide="user" class="size-4 text-gray-500"></i>
-                            </div>
-                            <div>
-                                <p class="font-medium">
-                                    ${capitalizeName(s.student_fname)} ${capitalizeName(s.student_lname)}
-                                </p>
-                                <p class="text-sm text-muted-foreground">${maskEmail(s.email)}</p>
+                    <div class="sp-student-row">
+                        <div class="sp-student-left">
+                            <div class="sp-student-avatar" aria-hidden="true">${escapeHtml(initials)}</div>
+                            <div class="sp-student-meta">
+                                <div class="sp-student-name">${escapeHtml(name)}</div>
+                                <div class="sp-student-email">${escapeHtml(maskEmail(s.email || ""))}</div>
                             </div>
                         </div>
-                        <div class="flex gap-2">
-                            <button onclick="updateStudentStatus('${s.id}', 'accepted')" class="bg-green-100 hover:bg-green-200 p-2 rounded-full bg-secondary/10 text-secondary">
-                                <i data-lucide="check" class="size-4 text-green-600"></i>
-                            </button>
-                            <button onclick="updateStudentStatus('${s.id}', 'rejected')" class="bg-red-100 hover:bg-red-200 p-2 rounded-full bg-secondary/10 text-secondary">
-                                <i data-lucide="x" class="size-4 text-red-600"></i>
-                            </button>
+                        <div class="sp-student-right">
+                            <span class="sp-badge sp-badge--pending">
+                                <i data-lucide="clock" class="size-4"></i>
+                                Pending
+                            </span>
+                            <div class="sp-pending-actions">
+                                <button type="button" title="Accept student" aria-label="Accept student" onclick="updateStudentStatus('${s.id}', 'accepted')" class="sp-btn-accept">
+                                    <i data-lucide="check" class="sp-btn-icon" aria-hidden="true"></i>
+                                    <span class="sp-btn-label">Accept</span>
+                                </button>
+                                <button type="button" title="Reject student" aria-label="Reject student" onclick="updateStudentStatus('${s.id}', 'rejected')" class="sp-btn-reject">
+                                    <i data-lucide="x" class="sp-btn-icon" aria-hidden="true"></i>
+                                    <span class="sp-btn-label">Reject</span>
+                                </button>
+                            </div>
                         </div>
                     </div>`;
             });
@@ -330,12 +753,129 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ status })
             });
+            const data = await res.json().catch(() => ({}));
             if (res.ok) {
-                const classId = new URLSearchParams(window.location.search).get('class_id');
-                await loadStudents(classId);
+                const selectedClass = JSON.parse(localStorage.getItem("eel_selected_class"));
+                if (selectedClass?.id) await loadStudents(selectedClass.id);
+                showNotification(data.message || `Student ${status}`, 'success');
+            } else {
+                showNotification(data.message || 'Failed to update', 'error');
             }
         } catch (err) {
             console.error('Error updating status:', err);
+            showNotification('Failed to update', 'error');
+        }
+    }
+
+    async function removeStudent(studentClassId) {
+        const result = await Swal.fire({
+            icon: 'warning',
+            title: 'Remove student?',
+            text: 'This student will be removed from the class and will need to join again with the class code.',
+            showCancelButton: true,
+            confirmButtonText: 'Remove',
+            cancelButtonText: 'Cancel',
+            confirmButtonColor: '#dc2626',
+        });
+        if (!result.isConfirmed) return;
+        try {
+            const res = await fetch(`${API_BASE}/students/${studentClassId}/status`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: 'rejected' })
+            });
+            const data = await res.json().catch(() => ({}));
+            if (res.ok) {
+                const selectedClass = JSON.parse(localStorage.getItem("eel_selected_class"));
+                if (selectedClass?.id) await loadStudents(selectedClass.id);
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({ icon: 'success', title: 'Removed', text: 'Student has been removed from the class.' });
+                } else {
+                    showNotification('Student removed from class', 'success');
+                }
+            } else {
+                if (typeof Swal !== 'undefined') {
+                    Swal.fire({ icon: 'error', title: 'Failed', text: data.message || 'Failed to remove student.' });
+                } else {
+                    showNotification(data.message || 'Failed to remove student', 'error');
+                }
+            }
+        } catch (err) {
+            console.error('Error removing student:', err);
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to remove student.' });
+            } else {
+                showNotification('Failed to remove student', 'error');
+            }
+        }
+    }
+
+    async function loadCompletionRate(classId) {
+        try {
+            const selectedClass = JSON.parse(localStorage.getItem("eel_selected_class"));
+            const subjectId = selectedClass?.subject_id || null;
+
+            // Completion rate is quiz-based. Prefer subject filter if available,
+            // but fall back to "all quizzes" if the filter yields 0 quizzes.
+            const urlWithSubject = `${API_BASE}/class/${classId}/completion-rate${subjectId ? `?subject_id=${encodeURIComponent(subjectId)}` : ''}`;
+            let res = await fetch(urlWithSubject);
+            if (!res.ok) throw new Error('Failed to fetch completion');
+            let data = await res.json();
+
+            if (subjectId && Number(data?.total_quizzes || 0) === 0) {
+                const res2 = await fetch(`${API_BASE}/class/${classId}/completion-rate`);
+                if (res2.ok) data = await res2.json();
+            }
+
+            const rate = Number(data?.completion_rate || 0);
+            const rateEl = document.getElementById('completion-rate-value');
+            if (rateEl) rateEl.textContent = `${rate}%`;
+
+            const subEl = document.getElementById('completion-rate-sub');
+            if (subEl) {
+                const completedPairs = Number(data?.completed_pairs || 0);
+                const totalPossible = Number(data?.total_possible || 0);
+                subEl.textContent = `${completedPairs}/${totalPossible} quiz completions`;
+            }
+
+            const details = document.getElementById('completion-details');
+            if (details) {
+                const totalQuizzes = Number(data?.total_quizzes || 0);
+                const completedPairs = Number(data?.completed_pairs || 0);
+                const totalPossible = Number(data?.total_possible || 0);
+                const engagedStudents = Number(data?.engaged_students || 0);
+                const totalStudents = Number(data?.total_students || 0);
+                details.innerHTML = `
+                  <div class="completion-stat-card">
+                    <div class="completion-stat-header">
+                      <span class="completion-stat-label">Track size</span>
+                      <span class="completion-stat-desc">Total quizzes available</span>
+                    </div>
+                    <div class="completion-stat-value">${totalQuizzes}</div>
+                    <div class="completion-stat-meta">Reading: ${Number(data?.reading_quizzes || 0)} · Pronunciation: ${Number(data?.pronunciation_quizzes || 0)}</div>
+                  </div>
+                  <div class="completion-stat-card">
+                    <div class="completion-stat-header">
+                      <span class="completion-stat-label">Completed</span>
+                      <span class="completion-stat-desc">Student × quiz completions</span>
+                    </div>
+                    <div class="completion-stat-value">${completedPairs}</div>
+                    <div class="completion-stat-meta">Out of ${totalPossible} possible</div>
+                  </div>
+                  <div class="completion-stat-card">
+                    <div class="completion-stat-header">
+                      <span class="completion-stat-label">Completion rate</span>
+                      <span class="completion-stat-desc">Class-wide progress</span>
+                    </div>
+                    <div class="completion-stat-value completion-stat-value--rate">${rate}%</div>
+                    <div class="completion-stat-meta">${engagedStudents}/${totalStudents} students completed at least one quiz</div>
+                  </div>
+                `;
+            }
+
+            renderCompletionDoughnut(data);
+        } catch (err) {
+            console.error('Error loading completion rate:', err);
         }
     }
     </script>

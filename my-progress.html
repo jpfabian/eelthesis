@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Progress - EEL</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.1/lucide.min.css" rel="stylesheet">
+    <script src="js/theme.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="my-progress-page">
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="loading-screen">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <p>Loading My Progress...</p>
+        </div>
+    </div>
+
+    <!-- Main Application Layout -->
+    <div id="main-app" class="flex h-screen bg-background hidden">
+        <!-- Sidebar -->
+        <div id="sidebar" class="w-64 bg-sidebar border-r border-sidebar-border h-full flex flex-col">
+            <div class="p-6">
+                <h1 id="sidebar-title" class="text-xl font-semibold">EEL</h1>
+                <p id="sidebar-welcome" class="text-sm text-muted-foreground mt-1">Welcome</p>
+            </div>
+            <div class="p-4">
+                <button id="back-class-btn" class="nav-button btn btn-side-bar w-full justify-start gap-3 p-3 rounded-md text-left transition-all flex items-center">
+                    <i data-lucide="arrow-left" class="size-5"></i>
+                    Back to Classes
+                </button>
+            </div>
+            <nav id="sidebar-nav" class="flex-1 px-4 space-y-2"></nav>
+            <div class="p-4">
+                <button id="logout-btn" class="w-full p-3 logout-button btn-side-bar border">
+                    <i data-lucide="log-out"></i>
+                    Logout
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <main id="main-content" class="flex-1 overflow-auto">
+            <div class="p-6 space-y-6">
+                <header class="page-header">
+                    <div class="page-header-icon" aria-hidden="true">
+                        <i data-lucide="trending-up" class="size-8"></i>
+                    </div>
+                    <div>
+                        <h1 class="page-header-title">My Progress</h1>
+                        <p id="my-progress-subtitle" class="page-header-subtitle">Track your learning: quizzes completed, scores, and completion rate.</p>
+                    </div>
+                </header>
+
+                <!-- Stats Cards (2 per row) -->
+                <div class="grid grid-cols-4 sm:grid-cols-2 gap-4">
+                    <div class="card bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20">
+                        <div class="card-content p-5">
+                            <div class="flex items-center justify-between mb-2">
+                                <h3 class="text-sm font-medium text-muted-foreground">Quizzes completed</h3>
+                                <i data-lucide="check-circle" class="size-5 text-primary"></i>
+                            </div>
+                            <div class="text-2xl font-bold text-primary" id="stat-completed">0</div>
+                            <p class="text-xs text-muted-foreground" id="stat-completed-sub">of 0 total</p>
+                        </div>
+                    </div>
+                    <div class="card bg-gradient-to-br from-secondary/5 to-secondary/10 border border-secondary/20">
+                        <div class="card-content p-5">
+                            <div class="flex items-center justify-between mb-2">
+                                <h3 class="text-sm font-medium text-muted-foreground">Overall average</h3>
+                                <i data-lucide="trending-up" class="size-5 text-secondary"></i>
+                            </div>
+                            <div class="text-2xl font-bold text-secondary" id="stat-overall">—</div>
+                            <p class="text-xs text-muted-foreground">% across Reading &amp; Pronunciation</p>
+                        </div>
+                    </div>
+                    <div class="card border border-border">
+                        <div class="card-content p-5">
+                            <div class="flex items-center justify-between mb-2">
+                                <h3 class="text-sm font-medium text-muted-foreground">Reading average</h3>
+                                <i data-lucide="book-open" class="size-5 text-muted-foreground"></i>
+                            </div>
+                            <div class="text-2xl font-bold" id="stat-reading">—</div>
+                            <p class="text-xs text-muted-foreground">%</p>
+                        </div>
+                    </div>
+                    <div class="card border border-border">
+                        <div class="card-content p-5">
+                            <div class="flex items-center justify-between mb-2">
+                                <h3 class="text-sm font-medium text-muted-foreground">Pronunciation average</h3>
+                                <i data-lucide="mic" class="size-5 text-muted-foreground"></i>
+                            </div>
+                            <div class="text-2xl font-bold" id="stat-pronunciation">—</div>
+                            <p class="text-xs text-muted-foreground">%</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Completion rate -->
+                <div class="card border border-border">
+                    <div class="card-content p-5">
+                        <div class="flex items-center gap-3 flex-nowrap">
+                            <i data-lucide="percent" class="size-5 text-muted-foreground flex-shrink-0"></i>
+                            <span class="font-medium whitespace-nowrap">Completion rate</span>
+                            <span class="text-2xl font-bold text-primary" id="stat-completion-rate">0</span>
+                            <span class="text-muted-foreground">%</span>
+                        </div>
+                        <p class="text-sm text-muted-foreground mt-2" id="stat-completion-sub">You have completed 0 of 0 available quizzes.</p>
+                    </div>
+                </div>
+
+                <!-- Charts -->
+                <div class="my-progress-charts grid grid-cols-2 sm:grid-cols-2 gap-4">
+                    <div class="card border border-border my-progress-chart-card">
+                        <h3 class="text-lg font-semibold mb-4">Completion progress</h3>
+                        <div class="my-progress-chart-wrap h-64">
+                            <canvas id="my-progress-completion-chart"></canvas>
+                        </div>
+                    </div>
+                    <div class="card border border-border my-progress-chart-card">
+                        <h3 class="text-lg font-semibold mb-4">Quiz scores</h3>
+                        <div class="my-progress-chart-wrap h-64">
+                            <canvas id="my-progress-scores-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quiz history -->
+                <div class="card p-6">
+                    <h3 class="text-lg font-semibold mb-4">Quiz history</h3>
+                    <div id="quiz-history-empty" class="hidden text-center py-8 text-muted-foreground">
+                        <i data-lucide="inbox" class="size-12 mx-auto mb-2 opacity-50"></i>
+                        <p>No quizzes completed yet. Start with Reading or Pronunciation to see your progress here.</p>
+                    </div>
+                    <div id="quiz-history-wrap" class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse" id="quiz-history-table">
+                            <thead>
+                                <tr class="border-b border-border">
+                                    <th class="pb-3 font-medium text-muted-foreground">Quiz</th>
+                                    <th class="pb-3 font-medium text-muted-foreground">Type</th>
+                                    <th class="pb-3 font-medium text-muted-foreground">Score</th>
+                                    <th class="pb-3 font-medium text-muted-foreground">Completed</th>
+                                </tr>
+                            </thead>
+                            <tbody id="quiz-history-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/navigation.js"></script>
+    <script src="js-front-end/front-my-progress.js"></script>
+</body>
+</html>

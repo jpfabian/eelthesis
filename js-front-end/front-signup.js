@@ -5,6 +5,7 @@ let selectedRole = null;
             const roleContinueBtn = document.getElementById('role-continue-btn');
             const signupForm = document.getElementById('signup-form');
             const passwordInput = document.getElementById('password');
+            const studentExtra = document.getElementById('student-extra-fields');
 
             // Handle role selection
             roleCards.forEach(card => {
@@ -28,15 +29,26 @@ let selectedRole = null;
                 e.preventDefault();
                 
                 const formData = new FormData(this);
-                const fname = formData.get('fname');
-                const lname = formData.get('lname');
+                const fnameRaw = formData.get('fname');
+                const lnameRaw = formData.get('lname');
                 const email = formData.get('email');
                 const password = formData.get('password');
                 const confirmPassword = formData.get('confirm-password');
+                const section = formData.get('section');
+                const strand = formData.get('strand');
 
-                if (!validateSignupForm(fname, lname, email, password, confirmPassword)) return;
+                const fname = toNameCase(fnameRaw);
+                const lname = toNameCase(lnameRaw);
 
-                await registerUser(fname, lname, email, password, selectedRole);
+                // reflect formatting back to inputs (nice UX)
+                const fnameEl = document.getElementById('fname');
+                const lnameEl = document.getElementById('lname');
+                if (fnameEl) fnameEl.value = fname;
+                if (lnameEl) lnameEl.value = lname;
+
+                if (!validateSignupForm(fname, lname, email, password, confirmPassword, selectedRole, section, strand)) return;
+
+                await registerUser(fname, lname, email, password, selectedRole, section, strand);
             });
 
             // Password strength
@@ -50,6 +62,15 @@ let selectedRole = null;
         function showRegistrationStep() {
             document.getElementById('role-step').classList.add('hidden');
             document.getElementById('registration-step').classList.remove('hidden');
+
+            // Student-only fields
+            const studentExtra = document.getElementById('student-extra-fields');
+            const sectionEl = document.getElementById('section');
+            const strandEl = document.getElementById('strand');
+            const isStudent = String(selectedRole || '').toLowerCase() === 'student';
+            if (studentExtra) studentExtra.classList.toggle('hidden', !isStudent);
+            if (sectionEl) sectionEl.required = isStudent;
+            if (strandEl) strandEl.required = isStudent;
         }
 
         function showRoleStep() {
@@ -57,12 +78,12 @@ let selectedRole = null;
             document.getElementById('role-step').classList.remove('hidden');
         }
 
-        async function registerUser(fname, lname, email, password, role) {
+        async function registerUser(fname, lname, email, password, role, section, strand) {
             try {
-                const response = await fetch('/api/auth/register', {
+                const response = await fetch('http://localhost:3000/api/auth/register', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ fname, lname, email, password, role }) // send both separately
+                    body: JSON.stringify({ fname, lname, email, password, role, section, strand }) // send both separately
                 });
 
                 const data = await response.json();
@@ -100,7 +121,7 @@ let selectedRole = null;
             return re.test(email);
         }
 
-        function validateSignupForm(fname, lname, email, password, confirmPassword) {
+        function validateSignupForm(fname, lname, email, password, confirmPassword, role, section, strand) {
             if (!fname || fname.trim().length < 1) {
                 showNotification('Please enter a valid first name', 'error');
                 return false;
@@ -109,6 +130,18 @@ let selectedRole = null;
             if (!lname || lname.trim().length < 1) {
                 showNotification('Please enter a valid last name', 'error');
                 return false;
+            }
+
+            const isStudent = String(role || '').toLowerCase() === 'student';
+            if (isStudent) {
+                if (!section || String(section).trim().length < 1) {
+                    showNotification('Please enter your section', 'error');
+                    return false;
+                }
+                if (!strand || String(strand).trim().length < 1) {
+                    showNotification('Please select your STRAND', 'error');
+                    return false;
+                }
             }
 
             if (!isValidEmail(email)) {
@@ -127,6 +160,29 @@ let selectedRole = null;
             }
 
             return true;
+        }
+
+        function toNameCase(input) {
+            const s = String(input || "").trim();
+            if (!s) return "";
+            // Collapse spaces, lower-case, then title-case each word segment (keeps hyphens and apostrophes)
+            return s
+                .replace(/\s+/g, " ")
+                .toLowerCase()
+                .split(" ")
+                .map(word =>
+                    word
+                        .split("-")
+                        .map(part => {
+                            if (!part) return part;
+                            // handle apostrophes (o'connor)
+                            const bits = part.split("'");
+                            const cased = bits.map(b => (b ? b.charAt(0).toUpperCase() + b.slice(1) : b));
+                            return cased.join("'");
+                        })
+                        .join("-")
+                )
+                .join(" ");
         }
 
 

@@ -7,8 +7,9 @@
     <link rel="stylesheet" href="css/styles.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.1/lucide.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="js/theme.js"></script>
 </head>
-<body>
+<body class="auth-page">
     <a href="index.html" class="back-button">
         <i data-lucide="arrow-left"></i> Back
     </a>
@@ -24,8 +25,27 @@
                 </p>
             </div>
 
-            <!-- Login Form -->
-            <div class="login-form-card">
+            <div class="auth-grid">
+                <aside class="auth-aside" aria-label="Login tips">
+                    <div class="auth-aside-card">
+                        <div class="auth-aside-title">
+                            <i data-lucide="sparkles" class="size-5"></i>
+                            Quick tips
+                        </div>
+                        <ul class="auth-aside-list">
+                            <li>Use the same email you registered with.</li>
+                            <li>If you can’t sign in, use <strong>Forgot password</strong>.</li>
+                            <li>New accounts may require admin approval.</li>
+                        </ul>
+                        <div class="auth-aside-badge">
+                            <i data-lucide="shield-check" class="size-4"></i>
+                            Secure sign-in
+                        </div>
+                    </div>
+                </aside>
+
+                <!-- Login Form -->
+                <div class="login-form-card">
                 <form id="login-form" class="login-form">
                     <div class="form-group">
                         <label for="email" class="form-label">Email Address</label>
@@ -62,7 +82,7 @@
                             <span class="checkmark"></span>
                             Remember me
                         </label>
-                        <a href="#" class="forgot-password">Forgot password?</a>
+                        <a href="forgot-password.html" class="forgot-password">Forgot password?</a>
                     </div>
 
                     <button type="submit" class="btn btn-primary w-full" id="login-btn">
@@ -74,6 +94,7 @@
                 <!-- Sign Up Link -->
                 <div class="signup-link">
                     <p>Don't have an account? <a href="signup.html">Sign up here</a></p>
+                </div>
                 </div>
             </div>
         </div>
