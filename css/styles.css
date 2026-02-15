@@ -2468,6 +2468,16 @@ body.settings-page #main-content .card:hover {
   border: 1px solid color-mix(in srgb, var(--primary) 18%, var(--border));
 }
 
+.page-header-character {
+  width: auto;
+  height: 3.5rem;
+  max-height: 4rem;
+  object-fit: contain;
+  flex-shrink: 0;
+  margin-left: auto;
+  order: 1;
+}
+
 .page-header-icon {
   width: 3.5rem;
   height: 3.5rem;
@@ -3339,21 +3349,54 @@ body.landing .header {
   z-index: 1000;
     background: linear-gradient(
       135deg,
-    color-mix(in srgb, var(--primary) 22%, transparent) 0%,
-    color-mix(in srgb, var(--secondary) 18%, transparent) 100%
+    color-mix(in srgb, var(--primary) 14%, var(--card)) 0%,
+    color-mix(in srgb, var(--card) 98%, transparent) 50%,
+    color-mix(in srgb, var(--secondary) 12%, var(--card)) 100%
   );
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 2px solid transparent;
+  border-image: linear-gradient(90deg, var(--primary), var(--secondary)) 1;
+  box-shadow: 0 4px 24px -8px rgba(109, 40, 217, 0.2),
+              0 2px 12px -6px rgba(34, 197, 94, 0.12);
 }
 
-/* Dark-mode landing header tweak for contrast */
+/* Dark-mode landing header – violet & green */
 :root[data-theme="dark"] body.landing .header {
   background: linear-gradient(
     135deg,
-    color-mix(in srgb, var(--card) 70%, transparent) 0%,
-    color-mix(in srgb, var(--card) 55%, transparent) 100%
+    color-mix(in srgb, var(--primary) 20%, var(--card)) 0%,
+    color-mix(in srgb, var(--card) 95%, transparent) 50%,
+    color-mix(in srgb, var(--secondary) 16%, var(--card)) 100%
   );
-  border-bottom-color: rgba(255, 255, 255, 0.12);
+  border-bottom: 2px solid color-mix(in srgb, var(--primary) 35%, rgba(255,255,255,0.12));
+  box-shadow: 0 4px 24px -8px rgba(0, 0, 0, 0.35);
+}
+
+:root[data-theme="dark"] body.landing .hero {
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--primary) 28%, transparent) 0%,
+    color-mix(in srgb, var(--primary) 14%, transparent) 40%,
+    color-mix(in srgb, var(--secondary) 20%, transparent) 70%,
+    color-mix(in srgb, var(--secondary) 12%, transparent) 100%
+  );
+}
+:root[data-theme="dark"] body.landing .hero-inner {
+  border-color: color-mix(in srgb, var(--primary) 30%, rgba(255,255,255,0.08));
+  box-shadow: 0 24px 48px -20px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255,255,255,0.05);
+}
+
+:root[data-theme="dark"] body.landing .home-logos-slider {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--card) 85%, transparent) 0%,
+    color-mix(in srgb, var(--card) 60%, transparent) 100%
+  );
+  border-top-color: color-mix(in srgb, var(--primary) 28%, rgba(255,255,255,0.1));
+  border-bottom-color: color-mix(in srgb, var(--primary) 28%, rgba(255,255,255,0.1));
+  box-shadow: 0 4px 0 0 color-mix(in srgb, var(--primary) 35%, transparent),
+              0 8px 32px -12px rgba(0, 0, 0, 0.4);
 }
 
 body.landing .header .container {
@@ -3370,47 +3413,133 @@ body.landing .nav-brand {
   gap: 0.75rem;
 }
 
-body.landing .logo {
-  width: 44px;
-  height: 44px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  border-radius: 9999px;
-  background: color-mix(in srgb, var(--primary) 12%, transparent);
-  border: 1px solid color-mix(in srgb, var(--primary) 18%, var(--border));
-  overflow: hidden;
+body.landing .nav-brand-link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: none;
+  color: inherit;
+  transition: opacity 0.2s ease;
+}
+body.landing .nav-brand-link:hover {
+  opacity: 0.9;
 }
 
-body.landing .brand-text {
+body.landing .header .logo {
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+body.landing .header .logo .logo-img {
+  width: 200%;
+  height: 200%;
+  object-fit: contain;
+}
+
+body.landing .header .brand-text {
   font-weight: 900;
-  letter-spacing: 0.02em;
-  color: var(--foreground);
+  letter-spacing: 0.04em;
+  color: var(--primary);
+}
+body.landing .header .nav-brand-link:hover .brand-text {
+  color: var(--primary);
+  opacity: 0.92;
 }
 
 body.landing .nav-menu {
   display: flex;
-  gap: 2rem;
+  gap: 0.5rem;
   align-items: center;
+  flex-wrap: wrap;
+  margin-left: auto;
+  margin-right: 0.75rem;
 }
 
-body.landing .nav-menu a {
+body.landing .nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 1rem;
+  border-radius: 0.5rem;
   text-decoration: none;
+  font-weight: 600;
+  font-size: 0.9rem;
+  border: 1px solid transparent;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+/* Nav links: neutral default, single accent on hover */
+body.landing .nav-menu .nav-link {
   color: var(--foreground);
-  font-weight: var(--font-weight-medium);
-  opacity: 0.92;
-  transition: opacity 0.2s ease, color 0.2s ease;
+  background: color-mix(in srgb, var(--foreground) 6%, transparent);
+  border-color: color-mix(in srgb, var(--foreground) 14%, var(--border));
+}
+body.landing .nav-link i {
+  font-size: 0.95em;
+  color: var(--muted-foreground);
+}
+body.landing .nav-menu .nav-link:hover {
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
+}
+body.landing .nav-menu .nav-link:hover i {
+  color: var(--primary);
+}
+body.landing .nav-link:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
-body.landing .nav-menu a:hover {
+/* Active nav link (current page) */
+body.landing[data-page="home"] .nav-menu a[href="index.html"],
+body.landing[data-page="features"] .nav-menu a[href="features.html"],
+body.landing[data-page="services"] .nav-menu a[href="services.html"],
+body.landing[data-page="teachers"] .nav-menu a[href="for-teachers.html"],
+body.landing[data-page="students"] .nav-menu a[href="for-students.html"],
+body.landing[data-page="about"] .nav-menu a[href="about.html"] {
+  color: var(--secondary) !important;
+  background: color-mix(in srgb, var(--secondary) 22%, transparent) !important;
+  border-color: color-mix(in srgb, var(--secondary) 45%, transparent) !important;
+  font-weight: 700;
+}
+body.landing[data-page="home"] .nav-menu a[href="index.html"] i,
+body.landing[data-page="features"] .nav-menu a[href="features.html"] i,
+body.landing[data-page="services"] .nav-menu a[href="services.html"] i,
+body.landing[data-page="teachers"] .nav-menu a[href="for-teachers.html"] i,
+body.landing[data-page="students"] .nav-menu a[href="for-students.html"] i,
+body.landing[data-page="about"] .nav-menu a[href="about.html"] i {
+  color: var(--secondary) !important;
   opacity: 1;
-  color: var(--primary);
 }
 
 body.landing .nav-actions {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+}
+
+body.landing .header .btn-ghost {
+  border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
+  color: var(--foreground);
+}
+body.landing .header .btn-ghost:hover {
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+body.landing .header .btn-primary {
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  border: none;
+  box-shadow: 0 2px 12px -4px rgba(109, 40, 217, 0.35),
+              0 2px 8px -4px rgba(34, 197, 94, 0.25);
+}
+body.landing .header .btn-primary:hover {
+  filter: brightness(1.05);
+  box-shadow: 0 4px 16px -4px rgba(109, 40, 217, 0.4),
+              0 4px 12px -4px rgba(34, 197, 94, 0.3);
 }
 
 /* Hide broken/empty images on landing */
@@ -3503,23 +3632,206 @@ body.landing .badge-outline-secondary {
 
 body.landing .mobile-menu-btn {
   display: none;
-  background: transparent;
-  border: 1px solid var(--border);
-  color: var(--foreground);
-  border-radius: 9999px;
+  background: color-mix(in srgb, var(--primary) 12%, var(--card));
+  border: 1px solid color-mix(in srgb, var(--primary) 28%, var(--border));
+  color: var(--primary);
+  border-radius: 0.5rem;
   width: 44px;
   height: 44px;
   cursor: pointer;
+  flex-shrink: 0;
 }
 
-/* Hero */
+/* Hero – violet & green theme */
 body.landing .hero {
-  padding: 8rem 1rem 4rem;
+  min-height: calc(100vh - 4rem);
+  padding: 6rem 1rem 3rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   background: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--primary) 18%, transparent) 0%,
+    145deg,
+    color-mix(in srgb, var(--primary) 22%, transparent) 0%,
+    color-mix(in srgb, var(--primary) 12%, transparent) 35%,
+    color-mix(in srgb, var(--secondary) 18%, transparent) 65%,
     color-mix(in srgb, var(--secondary) 14%, transparent) 100%
   );
+  position: relative;
+  overflow-x: hidden;
+}
+body.landing .hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 80% 50% at 20% 40%, color-mix(in srgb, var(--primary) 15%, transparent), transparent 50%),
+              radial-gradient(ellipse 70% 60% at 80% 60%, color-mix(in srgb, var(--secondary) 12%, transparent), transparent 50%);
+  pointer-events: none;
+}
+
+body.landing .hero-container {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  position: relative;
+  z-index: 1;
+}
+
+/* Home: Logo slider – continuous scroll right to left (marquee) */
+@keyframes home-logos-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+body.landing .home-logos-slider {
+  width: 100vw;
+  max-width: none;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+  margin-top: 2.5rem;
+  padding: 2rem 1.5rem;
+  overflow: hidden;
+  position: relative;
+  z-index: 1;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--card) 75%, transparent) 0%,
+    color-mix(in srgb, var(--card) 50%, transparent) 100%
+  );
+  border: none;
+  border-top: 1px solid color-mix(in srgb, var(--primary) 18%, var(--border));
+  border-bottom: 1px solid color-mix(in srgb, var(--primary) 18%, var(--border));
+  border-radius: 0;
+  box-shadow: 0 4px 0 0 color-mix(in srgb, var(--primary) 25%, transparent),
+              0 8px 32px -12px rgba(109, 40, 217, 0.15),
+              0 4px 16px -8px rgba(34, 197, 94, 0.1);
+  backdrop-filter: blur(12px);
+}
+body.landing .home-logos-slider::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
+}
+
+body.landing .home-logos-caption {
+  text-align: center;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  margin: 0 0 1.5rem;
+  padding: 0 1rem;
+  position: relative;
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: none;
+}
+body.landing .home-logos-caption::before,
+body.landing .home-logos-caption::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 2rem;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--primary) 50%, var(--border)));
+}
+body.landing .home-logos-caption::before {
+  right: 100%;
+  margin-right: 1rem;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--primary) 45%, var(--muted-foreground)));
+}
+body.landing .home-logos-caption::after {
+  left: 100%;
+  margin-left: 1rem;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--secondary) 45%, var(--muted-foreground)), transparent);
+}
+
+body.landing .home-logos-track {
+  display: flex;
+  align-items: center;
+  gap: 4rem;
+  width: max-content;
+  min-height: 160px;
+  animation: home-logos-scroll 20s linear infinite;
+}
+body.landing .home-logos-slider .home-logo-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+body.landing .home-logos-slider .home-logo-img {
+  height: 160px;
+  width: auto;
+  max-width: 380px;
+  object-fit: contain;
+  object-position: center;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.08));
+}
+
+@media (max-width: 768px) {
+  body.landing .home-logos-slider {
+    margin-top: 2rem;
+    padding: 1.5rem 1rem;
+  }
+  body.landing .home-logos-caption {
+    font-size: 0.8rem;
+    letter-spacing: 0.15em;
+    margin-bottom: 1.25rem;
+  }
+  body.landing .home-logos-caption::before,
+  body.landing .home-logos-caption::after {
+    width: 1.25rem;
+  }
+  body.landing .home-logos-track {
+    gap: 3rem;
+    min-height: 120px;
+    animation-duration: 16s;
+  }
+  body.landing .home-logos-slider .home-logo-img {
+    height: 120px;
+    max-width: 280px;
+  }
+}
+
+@media (max-width: 600px) {
+  body.landing .hero-inner {
+    padding: 1.5rem 1.25rem;
+  }
+}
+
+/* Hero inner card – violet & green theme */
+body.landing .hero-inner {
+  background: linear-gradient(
+    165deg,
+    color-mix(in srgb, var(--card) 98%, var(--primary) 4%) 0%,
+    color-mix(in srgb, var(--card) 96%, var(--secondary) 3%) 100%
+  );
+  border: 1px solid color-mix(in srgb, var(--primary) 20%, var(--border));
+  border-radius: 1.25rem;
+  padding: 2.5rem 2rem;
+  box-shadow: 0 24px 48px -20px rgba(109, 40, 217, 0.18), 0 12px 24px -12px rgba(34, 197, 94, 0.12);
+  backdrop-filter: blur(12px);
+  position: relative;
+  overflow: hidden;
+}
+body.landing .hero-inner::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
+  border-radius: 1.25rem 1.25rem 0 0;
 }
 
 body.landing .hero-content {
@@ -3529,28 +3841,106 @@ body.landing .hero-content {
   align-items: center;
 }
 
+body.landing .hero-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
 body.landing .hero-title {
   font-size: clamp(2rem, 4vw, 3rem);
   line-height: 1.1;
   letter-spacing: -0.02em;
+  -webkit-text-fill-color: unset;
+  background-clip: unset;
+  background: none;
+  color: inherit;
+}
+body.landing .hero-title .text-primary,
+body.landing .hero-title .text-secondary {
+  -webkit-text-fill-color: inherit;
+  background: none;
+  background-clip: unset;
+}
+
+body.landing .hero-description-wrap {
+  max-width: 36rem;
+  margin: 0 auto 1.75rem;
+  padding: 1.25rem 1.5rem;
+  border-top: 4px solid var(--primary);
+  background: color-mix(in srgb, var(--primary) 6%, transparent);
+  border-radius: 0.75rem;
+  text-align: left;
 }
 
 body.landing .hero-description {
-  font-size: 1.15rem;
-  color: color-mix(in srgb, var(--foreground) 70%, var(--muted-foreground));
-  max-width: 34rem;
+  font-size: 1.2rem;
+  line-height: 1.65;
+  color: color-mix(in srgb, var(--foreground) 85%, var(--muted-foreground));
+  margin: 0;
+  text-align: left;
 }
 
 body.landing .hero-buttons {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: 0.75rem;
+}
+
+body.landing .hero-cta {
+  padding: 1rem 2rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  border: none;
+  box-shadow: 0 4px 20px -6px rgba(109, 40, 217, 0.4),
+              0 2px 10px -4px rgba(34, 197, 94, 0.3);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+body.landing .hero-cta:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px -8px rgba(109, 40, 217, 0.45),
+              0 4px 16px -6px rgba(34, 197, 94, 0.35);
+}
+body.landing .hero-cta .hero-cta-icon {
+  transition: transform 0.25s ease;
+}
+body.landing .hero-cta:hover .hero-cta-icon {
+  transform: translateX(4px);
 }
 
 body.landing .hero-stats {
   display: flex;
-  gap: 1.5rem;
-  padding-top: 1rem;
+  gap: 1rem;
+  padding-top: 1.25rem;
+  flex-wrap: wrap;
+}
+
+body.landing .hero .stat {
+  padding: 0.75rem 1.25rem;
+  border-radius: 0.75rem;
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary) 18%, transparent);
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+body.landing .hero .stat:nth-child(2) {
+  background: color-mix(in srgb, var(--secondary) 10%, transparent);
+  border-color: color-mix(in srgb, var(--secondary) 22%, transparent);
+}
+body.landing .hero .stat:nth-child(3) {
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+  border-color: color-mix(in srgb, var(--primary) 18%, transparent);
+}
+body.landing .hero .stat:hover {
+  background: color-mix(in srgb, var(--primary) 14%, transparent);
+  border-color: color-mix(in srgb, var(--primary) 28%, transparent);
+}
+body.landing .hero .stat:nth-child(2):hover {
+  background: color-mix(in srgb, var(--secondary) 16%, transparent);
+  border-color: color-mix(in srgb, var(--secondary) 32%, transparent);
 }
 
 body.landing .stat-number {
@@ -3563,12 +3953,22 @@ body.landing .stat-label {
   color: var(--muted-foreground);
 }
 
-body.landing .image-container {
-  background: var(--card);
-  border: 1px solid var(--border);
+body.landing .hero .image-container {
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--primary) 8%, var(--card)) 0%,
+    color-mix(in srgb, var(--secondary) 6%, var(--card)) 100%
+  );
+  border: 1px solid color-mix(in srgb, var(--primary) 22%, var(--border));
   border-radius: 1rem;
-  box-shadow: 0 25px 50px -18px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 20px 40px -16px rgba(109, 40, 217, 0.22), 0 8px 20px -10px rgba(34, 197, 94, 0.15);
   padding: 1.25rem;
+  height: 28rem;
+  min-height: 28rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
 }
 
 body.landing .image-container img {
@@ -3580,6 +3980,17 @@ body.landing .image-container img {
 
 body.landing .hero-image {
   position: relative;
+}
+
+body.landing .hero .image-container .hero-character {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  object-position: center;
+  transform: scale(1.3);
 }
 
 body.landing .students-image {
@@ -3634,14 +4045,1321 @@ body.landing .about {
   background: color-mix(in srgb, var(--accent) 35%, transparent);
 }
 
-body.landing .services,
-body.landing .students,
+/* Features page: beautiful container and cards */
+body.landing .features {
+  background: linear-gradient(
+    165deg,
+    color-mix(in srgb, var(--primary) 12%, transparent) 0%,
+    color-mix(in srgb, var(--background) 98%, transparent) 40%,
+    color-mix(in srgb, var(--secondary) 10%, transparent) 100%
+  );
+  padding: 6rem 1rem 5rem;
+}
+body.landing .features-container {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+body.landing .features-inner {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--card) 98%, var(--primary) 2%) 0%,
+    color-mix(in srgb, var(--card) 98%, var(--secondary) 1%) 100%
+  );
+  border: 1px solid color-mix(in srgb, var(--primary) 18%, var(--border));
+  border-radius: 1.25rem;
+  padding: 2.5rem 2rem;
+  box-shadow: 0 4px 0 0 color-mix(in srgb, var(--primary) 20%, transparent),
+              0 20px 50px -24px rgba(109, 40, 217, 0.15),
+              0 10px 24px -12px rgba(34, 197, 94, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+body.landing .features-inner::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
+  border-radius: 1.25rem 1.25rem 0 0;
+}
+body.landing .features-header {
+  margin-bottom: 2.5rem;
+}
+body.landing .features-header .section-title {
+  font-size: clamp(1.75rem, 3.5vw, 2.25rem);
+  line-height: 1.25;
+}
+body.landing .features-header .section-description {
+  font-size: 1.05rem;
+  max-width: 36rem;
+  margin: 0.75rem auto 0;
+  line-height: 1.55;
+}
+body.landing .features .features-grid {
+  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+body.landing .features .feature-card {
+  padding: 2rem 1.5rem;
+  border-radius: 1rem;
+  border: 1px solid color-mix(in srgb, var(--primary) 12%, var(--border));
+  background: color-mix(in srgb, var(--card) 95%, transparent);
+  box-shadow: 0 4px 16px -8px rgba(0, 0, 0, 0.12);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  text-align: center;
+}
+body.landing .features .feature-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 28px -12px rgba(109, 40, 217, 0.2),
+              0 6px 16px -8px rgba(34, 197, 94, 0.12);
+  border-color: color-mix(in srgb, var(--primary) 25%, var(--border));
+}
+body.landing .features .feature-card h3 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin-bottom: 0.6rem;
+  color: var(--foreground);
+}
+body.landing .features .feature-card p {
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--muted-foreground);
+  margin: 0;
+}
+body.landing .features .feature-icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 1.25rem;
+  border-radius: 1rem;
+  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease;
+}
+body.landing .features .feature-card:hover .feature-icon {
+  transform: scale(1.08);
+}
+body.landing .features .feature-icon.text-primary {
+  background: color-mix(in srgb, var(--primary) 14%, var(--card));
+  border: 1px solid color-mix(in srgb, var(--primary) 28%, var(--border));
+  color: var(--primary);
+}
+body.landing .features .feature-icon.text-secondary {
+  background: color-mix(in srgb, var(--secondary) 14%, var(--card));
+  border: 1px solid color-mix(in srgb, var(--secondary) 28%, var(--border));
+  color: var(--secondary);
+}
+@media (max-width: 768px) {
+  body.landing .features {
+    padding: 5rem 1rem 3rem;
+  }
+  body.landing .features-inner {
+    padding: 1.75rem 1.25rem;
+  }
+  body.landing .features .features-grid {
+    grid-template-columns: 1fr;
+  }
+}
+:root[data-theme="dark"] body.landing .features-inner {
+  border-color: color-mix(in srgb, var(--primary) 28%, rgba(255,255,255,0.08));
+  box-shadow: 0 4px 0 0 color-mix(in srgb, var(--primary) 30%, transparent),
+              0 20px 50px -24px rgba(0, 0, 0, 0.4);
+}
+
+/* Services page: beautiful container and cards */
+body.landing .services {
+  background: linear-gradient(
+    165deg,
+    color-mix(in srgb, var(--secondary) 12%, transparent) 0%,
+    color-mix(in srgb, var(--background) 98%, transparent) 40%,
+    color-mix(in srgb, var(--primary) 10%, transparent) 100%
+  );
+  padding: 6rem 1rem 5rem;
+}
+body.landing .services-container {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+body.landing .services-inner {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--card) 98%, var(--secondary) 2%) 0%,
+    color-mix(in srgb, var(--card) 98%, var(--primary) 1%) 100%
+  );
+  border: 1px solid color-mix(in srgb, var(--secondary) 18%, var(--border));
+  border-radius: 1.25rem;
+  padding: 2.5rem 2rem;
+  box-shadow: 0 4px 0 0 color-mix(in srgb, var(--secondary) 20%, transparent),
+              0 20px 50px -24px rgba(34, 197, 94, 0.15),
+              0 10px 24px -12px rgba(109, 40, 217, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+body.landing .services-inner::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--secondary), var(--primary));
+  border-radius: 1.25rem 1.25rem 0 0;
+}
+body.landing .services-header {
+  margin-bottom: 2.5rem;
+}
+body.landing .services-header .section-title {
+  font-size: clamp(1.75rem, 3.5vw, 2.25rem);
+  line-height: 1.25;
+}
+body.landing .services-header .section-description {
+  font-size: 1.05rem;
+  max-width: 36rem;
+  margin: 0.75rem auto 0;
+  line-height: 1.55;
+}
+body.landing .services .services-grid {
+  gap: 1.5rem;
+  grid-template-columns: repeat(4, 1fr);
+}
+body.landing .services .service-card {
+  padding: 2rem 1.5rem;
+  border-radius: 1rem;
+  border: 1px solid color-mix(in srgb, var(--primary) 12%, var(--border));
+  background: color-mix(in srgb, var(--card) 95%, transparent);
+  box-shadow: 0 4px 16px -8px rgba(0, 0, 0, 0.12);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  text-align: center;
+}
+body.landing .services .service-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 28px -12px rgba(34, 197, 94, 0.2),
+              0 6px 16px -8px rgba(109, 40, 217, 0.12);
+  border-color: color-mix(in srgb, var(--secondary) 25%, var(--border));
+}
+body.landing .services .service-card h3 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin-bottom: 0.6rem;
+  color: var(--foreground);
+}
+body.landing .services .service-card p {
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--muted-foreground);
+  margin: 0;
+}
+body.landing .services .service-icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 1.25rem;
+  border-radius: 1rem;
+  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease;
+}
+body.landing .services .service-card:hover .service-icon {
+  transform: scale(1.08);
+}
+body.landing .services .service-icon.text-primary {
+  background: color-mix(in srgb, var(--primary) 14%, var(--card));
+  border: 1px solid color-mix(in srgb, var(--primary) 28%, var(--border));
+  color: var(--primary);
+}
+body.landing .services .service-icon.text-secondary {
+  background: color-mix(in srgb, var(--secondary) 14%, var(--card));
+  border: 1px solid color-mix(in srgb, var(--secondary) 28%, var(--border));
+  color: var(--secondary);
+}
+body.landing .services .service-card ul {
+  margin-top: 1rem;
+  text-align: left;
+  display: inline-grid;
+  gap: 0.5rem;
+}
+body.landing .services .service-card li {
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+body.landing .services .service-card li::before {
+  color: var(--primary);
+}
+@media (max-width: 1024px) {
+  body.landing .services .services-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 768px) {
+  body.landing .services {
+    padding: 5rem 1rem 3rem;
+  }
+  body.landing .services-inner {
+    padding: 1.75rem 1.25rem;
+  }
+  body.landing .services .services-grid {
+    grid-template-columns: 1fr;
+  }
+}
+:root[data-theme="dark"] body.landing .services-inner {
+  border-color: color-mix(in srgb, var(--secondary) 28%, rgba(255,255,255,0.08));
+  box-shadow: 0 4px 0 0 color-mix(in srgb, var(--secondary) 30%, transparent),
+              0 20px 50px -24px rgba(0, 0, 0, 0.4);
+}
+
+/* For Teachers page: beautiful container and layout */
+body.landing .teachers {
+  background: linear-gradient(
+    165deg,
+    color-mix(in srgb, var(--primary) 12%, transparent) 0%,
+    color-mix(in srgb, var(--background) 98%, transparent) 40%,
+    color-mix(in srgb, var(--secondary) 10%, transparent) 100%
+  );
+  padding: 6rem 1rem 5rem;
+}
+body.landing .teachers-container {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+body.landing .teachers-inner {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--card) 98%, var(--primary) 2%) 0%,
+    color-mix(in srgb, var(--card) 98%, var(--secondary) 1%) 100%
+  );
+  border: 1px solid color-mix(in srgb, var(--primary) 18%, var(--border));
+  border-radius: 1.25rem;
+  padding: 2.5rem 2rem;
+  box-shadow: 0 4px 0 0 color-mix(in srgb, var(--primary) 20%, transparent),
+              0 20px 50px -24px rgba(109, 40, 217, 0.15),
+              0 10px 24px -12px rgba(34, 197, 94, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+body.landing .teachers-inner::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
+  border-radius: 1.25rem 1.25rem 0 0;
+}
+body.landing .teachers .teachers-content {
+  gap: 2.5rem;
+  align-items: center;
+}
+body.landing .teachers .teachers-text .badge {
+  display: inline-block;
+  padding: 0.35rem 0.85rem;
+  border-radius: 9999px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  background: color-mix(in srgb, var(--primary) 14%, var(--card));
+  border: 1px solid color-mix(in srgb, var(--primary) 28%, var(--border));
+  color: var(--primary);
+  margin-bottom: 1rem;
+}
+body.landing .teachers .teachers-text .section-title {
+  font-size: clamp(1.75rem, 3.5vw, 2.25rem);
+  line-height: 1.25;
+  margin-bottom: 0.75rem;
+}
+body.landing .teachers .teachers-text .section-description {
+  font-size: 1.05rem;
+  line-height: 1.55;
+  color: var(--muted-foreground);
+  margin-bottom: 1.25rem;
+}
+body.landing .teachers .teachers-text .features-list {
+  margin-bottom: 1.5rem;
+}
+body.landing .teachers .teachers-text .features-list li {
+  font-size: 0.9375rem;
+}
+body.landing .teachers .teachers-text .features-list i {
+  color: var(--secondary);
+}
+body.landing .teachers .teachers-text .action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+body.landing .teachers .teachers-cards {
+  gap: 1.25rem;
+}
+body.landing .teachers .dashboard-card {
+  padding: 1.5rem 1.25rem;
+  border-radius: 1rem;
+  border: 1px solid color-mix(in srgb, var(--primary) 12%, var(--border));
+  background: color-mix(in srgb, var(--card) 95%, transparent);
+  box-shadow: 0 4px 16px -8px rgba(0, 0, 0, 0.12);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+body.landing .teachers .dashboard-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 24px -12px rgba(109, 40, 217, 0.18),
+              0 6px 14px -8px rgba(34, 197, 94, 0.1);
+  border-color: color-mix(in srgb, var(--primary) 25%, var(--border));
+}
+body.landing .teachers .dashboard-card .card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-weight: 700;
+  font-size: 1rem;
+  margin-bottom: 0.75rem;
+  color: var(--foreground);
+}
+body.landing .teachers .dashboard-card .card-header i {
+  width: 40px;
+  height: 40px;
+  border-radius: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+body.landing .teachers .dashboard-card .card-header i.text-primary {
+  background: color-mix(in srgb, var(--primary) 14%, var(--card));
+  border: 1px solid color-mix(in srgb, var(--primary) 28%, var(--border));
+  color: var(--primary);
+}
+body.landing .teachers .dashboard-card .card-header i.text-secondary {
+  background: color-mix(in srgb, var(--secondary) 14%, var(--card));
+  border: 1px solid color-mix(in srgb, var(--secondary) 28%, var(--border));
+  color: var(--secondary);
+}
+body.landing .teachers .dashboard-card .card-content p,
+body.landing .teachers .dashboard-card .stat-large + p {
+  font-size: 0.9375rem;
+  color: var(--muted-foreground);
+  margin: 0.25rem 0 0;
+}
+body.landing .teachers .dashboard-card .stat-large {
+  font-size: 1.75rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+body.landing .teachers .dashboard-card.wide .card-content img {
+  width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+}
+body.landing .teachers .dashboard-card.wide .card-content img[src=""],
+body.landing .teachers .dashboard-card.wide .card-content img:not([src]) {
+  display: none;
+}
+/* Analytics card: progress bar */
+body.landing .teachers .teachers-progress-wrap {
+  margin-top: 1rem;
+}
+body.landing .teachers .teachers-progress-bar {
+  height: 8px;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--primary) 12%, var(--card));
+  overflow: hidden;
+}
+body.landing .teachers .teachers-progress-fill {
+  display: block;
+  height: 100%;
+  width: 0;
+  max-width: 100%;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, var(--secondary), var(--primary));
+  animation: teachersProgressFill 0.9s ease-out forwards;
+}
+@keyframes teachersProgressFill {
+  to { width: calc(var(--progress, 0) * 1%); }
+}
+body.landing .teachers .teachers-progress-label {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  margin-top: 0.35rem;
+}
+/* Quizzes card: trend */
+body.landing .teachers .teachers-quiz-trend {
+  margin-top: 0.75rem;
+}
+body.landing .teachers .teachers-trend-up {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8125rem;
+  color: var(--secondary);
+  font-weight: 600;
+}
+body.landing .teachers .teachers-trend-up i {
+  font-size: 0.7rem;
+}
+/* Student Progress card: outcome bar chart */
+body.landing .teachers .teachers-outcome-chart {
+  display: grid;
+  gap: 0.85rem;
+  margin-top: 0.5rem;
+}
+body.landing .teachers .teachers-chart-row {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr;
+  gap: 0.75rem;
+  align-items: center;
+}
+body.landing .teachers .teachers-chart-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--foreground);
+}
+body.landing .teachers .teachers-chart-bar-wrap {
+  height: 1.5rem;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--primary) 10%, var(--card));
+  overflow: hidden;
+}
+body.landing .teachers .teachers-chart-bar {
+  height: 100%;
+  width: 0;
+  min-width: 0;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, var(--secondary), var(--primary));
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 0.4rem;
+  box-sizing: border-box;
+  animation: teachersChartFill 0.7s ease-out forwards;
+}
+body.landing .teachers .teachers-chart-row:nth-child(1) .teachers-chart-bar { animation-delay: 0.05s; }
+body.landing .teachers .teachers-chart-row:nth-child(2) .teachers-chart-bar { animation-delay: 0.15s; }
+body.landing .teachers .teachers-chart-row:nth-child(3) .teachers-chart-bar { animation-delay: 0.25s; }
+body.landing .teachers .teachers-chart-row:nth-child(4) .teachers-chart-bar { animation-delay: 0.35s; }
+@keyframes teachersChartFill {
+  to { width: calc(var(--pct, 0) * 1%); min-width: 2.5rem; }
+}
+body.landing .teachers .teachers-chart-pct {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--primary-foreground);
+  text-shadow: 0 0 1px rgba(0,0,0,0.3);
+}
+@media (max-width: 768px) {
+  body.landing .teachers {
+    padding: 5rem 1rem 3rem;
+  }
+  body.landing .teachers-inner {
+    padding: 1.75rem 1.25rem;
+  }
+  body.landing .teachers .teachers-cards {
+    grid-template-columns: 1fr;
+  }
+  body.landing .teachers .dashboard-card.wide {
+    grid-column: span 1;
+  }
+}
+:root[data-theme="dark"] body.landing .teachers-inner {
+  border-color: color-mix(in srgb, var(--primary) 28%, rgba(255,255,255,0.08));
+  box-shadow: 0 4px 0 0 color-mix(in srgb, var(--primary) 30%, transparent),
+              0 20px 50px -24px rgba(0, 0, 0, 0.4);
+}
+
+/* For Students page: beautiful container and layout */
+body.landing .students {
+  background: linear-gradient(
+    165deg,
+    color-mix(in srgb, var(--secondary) 12%, transparent) 0%,
+    color-mix(in srgb, var(--background) 98%, transparent) 40%,
+    color-mix(in srgb, var(--primary) 10%, transparent) 100%
+  );
+  padding: 6rem 1rem 5rem;
+}
+body.landing .students-container {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+body.landing .students-inner {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--card) 98%, var(--secondary) 2%) 0%,
+    color-mix(in srgb, var(--card) 98%, var(--primary) 1%) 100%
+  );
+  border: 1px solid color-mix(in srgb, var(--secondary) 18%, var(--border));
+  border-radius: 1.25rem;
+  padding: 2.5rem 2rem;
+  box-shadow: 0 4px 0 0 color-mix(in srgb, var(--secondary) 20%, transparent),
+              0 20px 50px -24px rgba(34, 197, 94, 0.15),
+              0 10px 24px -12px rgba(109, 40, 217, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+body.landing .students-inner::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--secondary), var(--primary));
+  border-radius: 1.25rem 1.25rem 0 0;
+}
+body.landing .students .students-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2.5rem;
+  align-items: center;
+}
+body.landing .students .students-text .badge {
+  display: inline-block;
+  padding: 0.35rem 0.85rem;
+  border-radius: 9999px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  background: color-mix(in srgb, var(--secondary) 14%, var(--card));
+  border: 1px solid color-mix(in srgb, var(--secondary) 28%, var(--border));
+  color: var(--secondary);
+  margin-bottom: 1rem;
+}
+body.landing .students .students-text .section-title {
+  font-size: clamp(1.75rem, 3.5vw, 2.25rem);
+  line-height: 1.25;
+  margin-bottom: 0.75rem;
+}
+body.landing .students .students-text .section-description {
+  font-size: 1.05rem;
+  line-height: 1.55;
+  color: var(--muted-foreground);
+  margin-bottom: 1.5rem;
+}
+body.landing .students .students-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+body.landing .students .students-cards-title {
+  grid-column: 1 / -1;
+  font-size: 1.1rem;
+  margin: 0 0 0.25rem 0;
+}
+body.landing .students .path-card.wide {
+  grid-column: span 2;
+}
+body.landing .students .path-card {
+  padding: 1.25rem 1.25rem;
+  border-radius: 1rem;
+  border: 1px solid color-mix(in srgb, var(--primary) 12%, var(--border));
+  background: color-mix(in srgb, var(--card) 95%, transparent);
+  box-shadow: 0 4px 16px -8px rgba(0, 0, 0, 0.12);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  margin-bottom: 0.75rem;
+}
+body.landing .students .path-card:last-of-type {
+  margin-bottom: 0;
+}
+body.landing .students .path-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px -10px rgba(109, 40, 217, 0.18);
+  border-color: color-mix(in srgb, var(--primary) 22%, var(--border));
+}
+body.landing .students .path-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+body.landing .students .path-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+body.landing .students .path-icon.text-primary {
+  background: color-mix(in srgb, var(--primary) 14%, var(--card));
+  border: 1px solid color-mix(in srgb, var(--primary) 28%, var(--border));
+  color: var(--primary);
+}
+body.landing .students .path-icon.text-secondary {
+  background: color-mix(in srgb, var(--secondary) 14%, var(--card));
+  border: 1px solid color-mix(in srgb, var(--secondary) 28%, var(--border));
+  color: var(--secondary);
+}
+body.landing .students .path-details h4 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0 0 0.25rem 0;
+  color: var(--foreground);
+}
+body.landing .students .path-details p {
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+  margin: 0;
+}
+body.landing .students .path-lessons {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--primary);
+  margin-left: auto;
+}
+body.landing .students .progress-bar {
+  height: 8px;
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--primary) 10%, var(--card));
+  overflow: hidden;
+  margin-bottom: 0.25rem;
+}
+body.landing .students .progress-fill {
+  height: 100%;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, var(--secondary), var(--primary));
+  transition: width 0.5s ease;
+}
+body.landing .students .progress-text {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+}
+@media (max-width: 768px) {
+  body.landing .students {
+    padding: 5rem 1rem 3rem;
+  }
+  body.landing .students-inner {
+    padding: 1.75rem 1.25rem;
+  }
+  body.landing .students .students-content {
+    grid-template-columns: 1fr;
+  }
+  body.landing .students .students-cards {
+    grid-template-columns: 1fr;
+  }
+  body.landing .students .path-card.wide {
+    grid-column: span 1;
+  }
+}
+:root[data-theme="dark"] body.landing .students-inner {
+  border-color: color-mix(in srgb, var(--secondary) 28%, rgba(255,255,255,0.08));
+  box-shadow: 0 4px 0 0 color-mix(in srgb, var(--secondary) 30%, transparent),
+              0 20px 50px -24px rgba(0, 0, 0, 0.4);
+}
+
+/* About page: beautiful container and layout */
+body.landing .about {
+  background: linear-gradient(
+    165deg,
+    color-mix(in srgb, var(--primary) 12%, transparent) 0%,
+    color-mix(in srgb, var(--background) 98%, transparent) 40%,
+    color-mix(in srgb, var(--secondary) 10%, transparent) 100%
+  );
+  padding: 6rem 1rem 5rem;
+}
+body.landing .about-container {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+body.landing .about-inner {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--card) 98%, var(--primary) 2%) 0%,
+    color-mix(in srgb, var(--card) 98%, var(--secondary) 1%) 100%
+  );
+  border: 1px solid color-mix(in srgb, var(--primary) 18%, var(--border));
+  border-radius: 1.25rem;
+  padding: 2.5rem 2rem;
+  box-shadow: 0 4px 0 0 color-mix(in srgb, var(--primary) 20%, transparent),
+              0 20px 50px -24px rgba(109, 40, 217, 0.15),
+              0 10px 24px -12px rgba(34, 197, 94, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+body.landing .about-inner::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
+  border-radius: 1.25rem 1.25rem 0 0;
+}
+body.landing .about .about-header {
+  margin-bottom: 2.5rem;
+}
+body.landing .about .about-header .section-title {
+  font-size: clamp(1.75rem, 3.5vw, 2.25rem);
+  line-height: 1.25;
+}
+body.landing .about .about-header .section-description {
+  font-size: 1.05rem;
+  max-width: 36rem;
+  margin: 0.75rem auto 0;
+  line-height: 1.55;
+  color: var(--muted-foreground);
+}
+body.landing .about .about-content {
+  display: grid;
+  grid-template-columns: 1fr;
+  margin-bottom: 2.5rem;
+}
+body.landing .about .about-text h3 {
+  font-size: 1.25rem;
+  margin: 0 0 0.75rem 0;
+}
+body.landing .about .about-text h3.text-primary {
+  color: var(--primary);
+}
+body.landing .about .about-text h3.text-secondary {
+  color: var(--secondary);
+}
+body.landing .about .about-text p {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--muted-foreground);
+  margin: 0 0 1.25rem 0;
+}
+body.landing .about .why-choose {
+  display: grid;
+  gap: 1.25rem;
+  margin-top: 1rem;
+}
+body.landing .about .reason {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  padding: 1.25rem 1.25rem;
+  border-radius: 1rem;
+  border: 1px solid color-mix(in srgb, var(--primary) 12%, var(--border));
+  background: color-mix(in srgb, var(--card) 95%, transparent);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+body.landing .about .reason:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px -10px rgba(109, 40, 217, 0.15);
+  border-color: color-mix(in srgb, var(--primary) 22%, var(--border));
+}
+body.landing .about .reason > i {
+  width: 44px;
+  height: 44px;
+  border-radius: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+body.landing .about .reason > i.text-primary {
+  background: color-mix(in srgb, var(--primary) 14%, var(--card));
+  border: 1px solid color-mix(in srgb, var(--primary) 28%, var(--border));
+  color: var(--primary);
+}
+body.landing .about .reason > i.text-secondary {
+  background: color-mix(in srgb, var(--secondary) 14%, var(--card));
+  border: 1px solid color-mix(in srgb, var(--secondary) 28%, var(--border));
+  color: var(--secondary);
+}
+body.landing .about .reason h4 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0 0 0.35rem 0;
+  color: var(--foreground);
+}
+body.landing .about .reason p {
+  font-size: 0.9375rem;
+  margin: 0;
+  line-height: 1.55;
+}
+body.landing .about .team-section {
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 1px solid color-mix(in srgb, var(--primary) 12%, var(--border));
+}
+body.landing .about .team-section h3 {
+  font-size: 1.25rem;
+  margin: 0 0 0.75rem 0;
+}
+body.landing .about .team-section-desc {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--muted-foreground);
+  margin: 0 0 1.5rem 0;
+}
+body.landing .about .team-grid {
+  gap: 1.25rem;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+body.landing .about .team-member {
+  padding: 1.5rem 1rem;
+  border-radius: 1rem;
+  border: 1px solid color-mix(in srgb, var(--primary) 12%, var(--border));
+  background: color-mix(in srgb, var(--card) 95%, transparent);
+  box-shadow: 0 4px 16px -8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+body.landing .about .team-member:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 24px -12px rgba(109, 40, 217, 0.18);
+  border-color: color-mix(in srgb, var(--primary) 22%, var(--border));
+}
+body.landing .about .team-member-avatar {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 0.75rem;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--primary) 14%, var(--card));
+  border: 1px solid color-mix(in srgb, var(--primary) 28%, var(--border));
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+}
+body.landing .about .team-member h4 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0 0 0.25rem 0;
+  color: var(--foreground);
+}
+body.landing .about .team-member .role {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  margin: 0;
+}
+@media (max-width: 768px) {
+  body.landing .about {
+    padding: 5rem 1rem 3rem;
+  }
+  body.landing .about-inner {
+    padding: 1.75rem 1.25rem;
+  }
+  body.landing .about .team-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+:root[data-theme="dark"] body.landing .about-inner {
+  border-color: color-mix(in srgb, var(--primary) 28%, rgba(255,255,255,0.08));
+  box-shadow: 0 4px 0 0 color-mix(in srgb, var(--primary) 30%, transparent),
+              0 20px 50px -24px rgba(0, 0, 0, 0.4);
+}
+
+/* Legal pages: Privacy Policy, Terms of Service – beautiful container & sections */
+body.landing.legal-page .legal-section {
+  background: linear-gradient(
+    165deg,
+    color-mix(in srgb, var(--primary) 12%, transparent) 0%,
+    color-mix(in srgb, var(--background) 98%, transparent) 35%,
+    color-mix(in srgb, var(--secondary) 10%, transparent) 100%
+  );
+  padding: 6rem 1rem 4rem;
+  min-height: 50vh;
+}
+
+body.landing .legal-container {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+body.landing .legal-inner {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--card) 99%, var(--primary) 1%) 0%,
+    color-mix(in srgb, var(--card) 98%, var(--secondary) 1%) 100%
+  );
+  border: 1px solid color-mix(in srgb, var(--primary) 16%, var(--border));
+  border-radius: 1.5rem;
+  padding: 2.75rem 2.5rem;
+  box-shadow: 0 4px 0 0 color-mix(in srgb, var(--primary) 22%, transparent),
+              0 24px 56px -24px rgba(109, 40, 217, 0.18),
+              0 12px 28px -12px rgba(34, 197, 94, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+body.landing .legal-inner::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 5px;
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
+  border-radius: 1.5rem 1.5rem 0 0;
+}
+
+body.landing .legal-header {
+  margin-bottom: 2.25rem;
+  padding-bottom: 1.75rem;
+  border-bottom: 2px solid color-mix(in srgb, var(--primary) 14%, var(--border));
+  text-align: center;
+}
+
+body.landing .legal-title {
+  font-size: clamp(1.85rem, 4vw, 2.35rem);
+  font-weight: 800;
+  color: var(--foreground);
+  margin: 0 0 0.5rem 0;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+}
+
+body.landing .legal-updated {
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+  margin: 0;
+}
+
+body.landing .legal-content {
+  font-size: 1.0625rem;
+  line-height: 1.75;
+  color: var(--foreground);
+}
+
+body.landing .legal-intro {
+  margin: 0 0 2rem 0;
+  padding: 1.25rem 1.5rem;
+  background: color-mix(in srgb, var(--primary) 6%, var(--card));
+  border-radius: 1rem;
+  border-left: 4px solid var(--primary);
+  color: var(--muted-foreground);
+  font-size: 1.05rem;
+}
+
+body.landing .legal-block {
+  margin-bottom: 1.5rem;
+  padding: 1.35rem 1.5rem;
+  background: color-mix(in srgb, var(--card) 98%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary) 10%, var(--border));
+  border-radius: 1rem;
+  border-left: 4px solid color-mix(in srgb, var(--primary) 50%, transparent);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+body.landing .legal-block:hover {
+  border-color: color-mix(in srgb, var(--primary) 20%, var(--border));
+  box-shadow: 0 4px 16px -8px rgba(109, 40, 217, 0.12);
+}
+
+body.landing .legal-block:last-child {
+  margin-bottom: 0;
+  border-left-color: var(--secondary);
+}
+
+body.landing .legal-block h2 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--foreground);
+  margin: 0 0 0.75rem 0;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--primary) 10%, var(--border));
+}
+
+body.landing .legal-block p {
+  margin: 0 0 0.65rem 0;
+  color: var(--muted-foreground);
+}
+
+body.landing .legal-block p:last-child {
+  margin-bottom: 0;
+}
+
+body.landing .legal-block li {
+  margin: 0 0 0.5rem 0;
+  color: var(--muted-foreground);
+  padding-left: 0.25rem;
+}
+
+body.landing .legal-block ul {
+  margin: 0.6rem 0 1rem 0;
+  padding-left: 1.5rem;
+  list-style: none;
+}
+
+body.landing .legal-block ul li {
+  position: relative;
+  padding-left: 0.75rem;
+}
+
+body.landing .legal-block ul li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--primary);
+}
+
+body.landing .legal-block a {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 500;
+}
+body.landing .legal-block a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 768px) {
+  body.landing.legal-page .legal-section {
+    padding: 5rem 1rem 3rem;
+  }
+  body.landing .legal-inner {
+    padding: 1.75rem 1.25rem;
+  }
+  body.landing .legal-block {
+    padding: 1.15rem 1.2rem;
+  }
+  body.landing .legal-intro {
+    padding: 1rem 1.2rem;
+  }
+}
+
+:root[data-theme="dark"] body.landing .legal-inner {
+  border-color: color-mix(in srgb, var(--primary) 28%, rgba(255,255,255,0.08));
+  box-shadow: 0 4px 0 0 color-mix(in srgb, var(--primary) 30%, transparent),
+              0 24px 56px -24px rgba(0, 0, 0, 0.4);
+}
+
 body.landing .footer {
   background: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--primary) 14%, transparent) 0%,
-    color-mix(in srgb, var(--secondary) 12%, transparent) 100%
+    165deg,
+    color-mix(in srgb, var(--primary) 18%, transparent) 0%,
+    color-mix(in srgb, var(--background) 96%, transparent) 30%,
+    color-mix(in srgb, var(--secondary) 14%, transparent) 100%
   );
+  padding: 4rem 1rem 2rem;
+  border-top: 1px solid color-mix(in srgb, var(--primary) 15%, var(--border));
+}
+
+body.landing .footer-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+body.landing .footer-content {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1.5fr;
+  gap: 2.5rem;
+  margin-bottom: 2.5rem;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--primary) 12%, var(--border));
+}
+
+body.landing .footer-brand-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  text-decoration: none;
+  color: var(--foreground);
+  font-weight: 800;
+  margin-bottom: 1rem;
+  transition: opacity 0.2s ease;
+}
+body.landing .footer-brand-link:hover {
+  opacity: 0.9;
+}
+
+body.landing .footer-logo {
+  width: 40px;
+  height: 40px;
+  border-radius: 0.75rem;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  color: var(--primary-foreground);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+}
+
+body.landing .footer-tagline {
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--muted-foreground);
+  margin: 0 0 1.25rem 0;
+  max-width: 20rem;
+}
+
+body.landing .footer-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+body.landing .footer-badge {
+  display: inline-block;
+  padding: 0.4rem 0.9rem;
+  border-radius: 9999px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+body.landing .footer-badge:hover {
+  transform: translateY(-1px);
+}
+body.landing .footer-badge-primary {
+  background: color-mix(in srgb, var(--primary) 14%, var(--card));
+  border: 1px solid color-mix(in srgb, var(--primary) 30%, var(--border));
+  color: var(--primary);
+}
+body.landing .footer-badge-primary:hover {
+  box-shadow: 0 4px 12px -4px rgba(109, 40, 217, 0.3);
+}
+body.landing .footer-badge-secondary {
+  background: color-mix(in srgb, var(--secondary) 14%, var(--card));
+  border: 1px solid color-mix(in srgb, var(--secondary) 30%, var(--border));
+  color: var(--secondary);
+}
+body.landing .footer-badge-secondary:hover {
+  box-shadow: 0 4px 12px -4px rgba(34, 197, 94, 0.3);
+}
+
+body.landing .footer-heading {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--foreground);
+  margin: 0 0 1rem 0;
+  letter-spacing: 0.02em;
+}
+
+body.landing .footer-links ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+body.landing .footer-links a {
+  text-decoration: none;
+  color: var(--muted-foreground);
+  font-size: 0.9375rem;
+  transition: color 0.2s ease, padding-left 0.2s ease;
+  display: inline-block;
+}
+body.landing .footer-links a:hover {
+  color: var(--primary);
+  padding-left: 0.25rem;
+}
+
+body.landing .footer-newsletter p {
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  color: var(--muted-foreground);
+  margin: 0 0 1rem 0;
+}
+
+body.landing .footer .newsletter-form {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+body.landing .footer .newsletter-form input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.65rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--primary) 20%, var(--border));
+  border-radius: 0.75rem;
+  background: color-mix(in srgb, var(--card) 95%, transparent);
+  color: var(--foreground);
+  font-size: 0.9375rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+body.landing .footer .newsletter-form input::placeholder {
+  color: var(--muted-foreground);
+}
+body.landing .footer .newsletter-form input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 20%, transparent);
+}
+
+body.landing .footer .btn-subscribe {
+  flex-shrink: 0;
+  padding: 0.65rem 1.25rem;
+  font-size: 0.9375rem;
+}
+
+body.landing .contact-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+body.landing .contact-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+}
+body.landing .contact-item i {
+  color: var(--primary);
+  width: 1rem;
+  text-align: center;
+}
+
+body.landing .footer-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding-top: 0;
+  border-top: none;
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+}
+
+body.landing .footer-copyright {
+  margin: 0;
+}
+
+body.landing .footer-legal {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+body.landing .footer-legal a {
+  color: var(--muted-foreground);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+body.landing .footer-legal a:hover {
+  color: var(--primary);
+}
+
+@media (max-width: 1024px) {
+  body.landing .footer-content {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  body.landing .footer {
+    padding: 3rem 1rem 1.5rem;
+  }
+  body.landing .footer-content {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+  }
+  body.landing .footer-tagline {
+    max-width: none;
+  }
+  body.landing .footer .newsletter-form {
+    flex-direction: column;
+  }
+  body.landing .footer-bottom {
+    flex-direction: column;
+    text-align: center;
+  }
 }
 
 body.landing .features-grid,
@@ -3803,59 +5521,6 @@ body.landing .newsletter-form input {
   color: var(--foreground);
 }
 
-body.landing .footer-content {
-  display: grid;
-  grid-template-columns: 2fr 1fr 1fr 1.5fr;
-  gap: 2rem;
-  margin-bottom: 2rem;
-}
-
-body.landing .footer-bottom {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding-top: 2rem;
-  border-top: 1px solid var(--border);
-  font-size: 0.875rem;
-  color: var(--muted-foreground);
-}
-
-body.landing .footer-legal {
-  display: flex;
-  gap: 1.25rem;
-}
-
-body.landing .footer-links h4,
-body.landing .footer-newsletter h4 {
-  color: var(--foreground);
-  font-weight: 900;
-  margin-bottom: 0.75rem;
-}
-
-body.landing .footer-links ul {
-  list-style: none;
-  display: grid;
-  gap: 0.35rem;
-  padding: 0;
-}
-
-body.landing .footer-links a {
-  text-decoration: none;
-  color: var(--muted-foreground);
-}
-
-body.landing .footer-links a:hover {
-  color: var(--foreground);
-}
-
-body.landing .contact-item {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: var(--muted-foreground);
-  font-size: 0.875rem;
-}
-
 /* Mobile / responsive */
 @media (max-width: 1024px) {
   body.landing .hero-content,
@@ -3870,7 +5535,8 @@ body.landing .contact-item {
   }
 }
 
-@media (max-width: 768px) {
+/* Tablet & mini laptop: burger menu (nav collapses into hamburger) */
+@media (max-width: 1024px) {
   body.landing .nav-menu {
     display: none;
   }
@@ -3878,6 +5544,16 @@ body.landing .contact-item {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    background: color-mix(in srgb, var(--primary) 14%, var(--card));
+    border: 1px solid color-mix(in srgb, var(--primary) 28%, var(--border));
+    border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
+    color: var(--primary);
+    border-radius: 0.5rem;
+    padding: 0.5rem 0.75rem;
+  }
+  body.landing .mobile-menu-btn:hover {
+    background: color-mix(in srgb, var(--primary) 22%, var(--card));
+    border-color: var(--primary);
   }
   body.landing .nav-menu.show {
     display: flex;
@@ -3885,16 +5561,78 @@ body.landing .contact-item {
     left: 1rem;
     right: 1rem;
     top: calc(100% + 0.75rem);
-    background: var(--card);
-    border: 1px solid var(--border);
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--card) 99%, var(--primary) 2%) 0%,
+      color-mix(in srgb, var(--card) 98%, var(--secondary) 1%) 100%
+    );
+    border: 1px solid color-mix(in srgb, var(--primary) 25%, var(--border));
     border-radius: 1rem;
-    padding: 1rem;
+    padding: 0.75rem;
     flex-direction: column;
-    gap: 1rem;
-    box-shadow: 0 25px 50px -20px rgba(0, 0, 0, 0.35);
+    gap: 0.25rem;
+    box-shadow: 0 20px 40px -16px rgba(109, 40, 217, 0.25),
+                0 8px 24px -12px rgba(34, 197, 94, 0.15);
+    backdrop-filter: blur(12px);
+  }
+  body.landing .nav-menu.show .nav-link {
+    width: 100%;
+    justify-content: flex-start;
+    padding: 0.75rem 1rem;
+    border-radius: 0.75rem;
+  }
+  body.landing .nav-menu.show .nav-link:hover,
+  body.landing .nav-menu.show .nav-link:focus {
+    background: color-mix(in srgb, var(--primary) 14%, transparent);
+  }
+  body.landing .nav-menu.show .nav-link i {
+    width: 1.25rem;
+    text-align: center;
+  }
+}
+
+@media (max-width: 768px) {
+  body.landing .nav-brand {
+    display: none;
+  }
+  body.landing .header .container {
+    justify-content: flex-start;
+  }
+  body.landing .mobile-menu-btn {
+    order: -1;
+    margin-right: 0.5rem;
+  }
+  body.landing .nav-actions {
+    flex-wrap: nowrap;
+    margin-left: 0;
+    width: 100%;
+    justify-content: space-between;
+  }
+  body.landing .nav-actions .btn:first-of-type {
+    margin-left: auto;
   }
   body.landing .hero {
-    padding: 6.5rem 1rem 3rem;
+    min-height: calc(100vh - 3.5rem);
+    padding: 5.5rem 1rem 2.5rem;
+  }
+  body.landing .hero-inner {
+    padding: 1.75rem 1.25rem;
+  }
+  body.landing .hero-description-wrap {
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+  body.landing .hero-description {
+    font-size: 1.1rem;
+  }
+  body.landing .hero-cta {
+    width: 100%;
+    justify-content: center;
+    padding: 1rem 1.5rem;
+  }
+  body.landing .hero .image-container {
+    height: 20rem;
+    min-height: 20rem;
   }
   body.landing .hero-buttons {
     flex-direction: column;

@@ -7,6 +7,24 @@ function avg(nums) {
   return sum / nums.length;
 }
 
+// ================= GET QUIZ COUNTS (public, no login) =================
+// GET /api/quiz-counts — total reading and pronunciation quizzes for landing/for-students.
+router.get("/api/quiz-counts", async (req, res) => {
+  const pool = req.pool;
+  try {
+    const [[r]] = await pool.query("SELECT COUNT(*) AS c FROM reading_quizzes");
+    const [[p]] = await pool.query("SELECT COUNT(*) AS c FROM pronunciation_quizzes");
+    res.json({
+      success: true,
+      reading_total: Number(r?.c || 0),
+      pronunciation_total: Number(p?.c || 0),
+    });
+  } catch (err) {
+    console.error("quiz-counts error:", err);
+    res.status(500).json({ success: false, error: "Database error" });
+  }
+});
+
 // ================= GET MY PROGRESS (student's own progress) =================
 // GET /api/my-progress?student_id=:id&class_id=:classId (class_id optional)
 // Returns the logged-in student's reading/pronunciation scores and completion stats.
@@ -108,6 +126,11 @@ router.get("/api/my-progress", async (req, res) => {
     const completion_rate =
       total_quizzes > 0 ? Math.round((completed_count / total_quizzes) * 1000) / 10 : 0;
 
+    const reading_completed_count = readingList.length;
+    const pronunciation_completed_count = pronList.length;
+    const reading_total = Number(rTotal?.c || 0);
+    const pronunciation_total = Number(pTotal?.c || 0);
+
     res.json({
       success: true,
       reading_avg,
@@ -117,6 +140,10 @@ router.get("/api/my-progress", async (req, res) => {
       total_quizzes,
       completed_count,
       completion_rate,
+      reading_completed_count,
+      pronunciation_completed_count,
+      reading_total,
+      pronunciation_total,
     });
   } catch (error) {
     console.error("❌ My progress error:", error);

@@ -6,10 +6,12 @@ document.addEventListener('DOMContentLoaded', function() {
     if (mobileMenuBtn && navMenu) {
         mobileMenuBtn.addEventListener('click', function() {
             navMenu.classList.toggle('show');
-            
+            const isOpen = navMenu.classList.contains('show');
+            mobileMenuBtn.setAttribute('aria-expanded', isOpen);
+            mobileMenuBtn.setAttribute('aria-label', isOpen ? 'Close menu' : 'Open menu');
             // Toggle icon
             const icon = mobileMenuBtn.querySelector('i');
-            if (navMenu.classList.contains('show')) {
+            if (isOpen) {
                 icon.classList.remove('fa-bars');
                 icon.classList.add('fa-times');
             } else {
@@ -231,7 +233,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
-        @media (max-width: 768px) {
+        @media (max-width: 1024px) {
             .nav-menu.show {
                 display: flex;
                 flex-direction: column;

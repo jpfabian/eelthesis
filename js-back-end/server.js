@@ -17,6 +17,8 @@ const { handleGenerateRecitationQuestions } = require("./recitation");
 const adminRoutes = require("./admin");
 const passwordResetRoutes = require("./password-reset");
 const profileRoutes = require("./profile");
+const teachersDashboardRoutes = require("./teachers-dashboard");
+const { getTeachersDashboardStats } = require("./teachers-dashboard");
 
 // 1️⃣ Create Express app first
 const app = express();
@@ -55,6 +57,7 @@ app.use((req, res, next) => {
 
 // 5️⃣ API routes (before static so /api/* is never served as static files)
 app.get('/api/health', (req, res) => res.json({ ok: true, service: 'eel-backend' }));
+app.get('/api/teachers-dashboard-stats', getTeachersDashboardStats);
 app.post('/api/generate-recitation-questions', handleGenerateRecitationQuestions);
 
 // Serve PDFs from uploads. Use UPLOADS_DIR env or path next to server.js.
@@ -149,6 +152,7 @@ app.use("/", examGenerated);
 app.use("/", adminRoutes);
 app.use("/", passwordResetRoutes);
 app.use("/", profileRoutes);
+app.use("/", teachersDashboardRoutes);
 
 // 6️⃣ Static files (after API so API takes precedence)
 app.use('/images', express.static(path.join(__dirname, '../images')));

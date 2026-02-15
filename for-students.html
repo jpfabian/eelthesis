@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>For Students - EEL</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="js/theme.js"></script>
+</head>
+<body class="landing" data-page="students">
+    <header class="header">
+        <div class="container">
+            <div class="nav-brand">
+                <a href="index.html" class="nav-brand-link">
+                    <div class="logo">
+                        <img src="image/logo.png" alt="EEL Logo" class="logo-img">
+                    </div>
+                </a>
+            </div>
+            <nav class="nav-menu" id="navMenu" aria-label="Main navigation">
+                <a href="index.html" class="nav-link"><i class="fas fa-home" aria-hidden="true"></i><span>Home</span></a>
+                <a href="features.html" class="nav-link"><i class="fas fa-star" aria-hidden="true"></i><span>Features</span></a>
+                <a href="services.html" class="nav-link"><i class="fas fa-briefcase" aria-hidden="true"></i><span>Services</span></a>
+                <a href="for-teachers.html" class="nav-link"><i class="fas fa-chalkboard-teacher" aria-hidden="true"></i><span>For Teachers</span></a>
+                <a href="for-students.html" class="nav-link"><i class="fas fa-user-graduate" aria-hidden="true"></i><span>For Students</span></a>
+                <a href="about.html" class="nav-link"><i class="fas fa-info-circle" aria-hidden="true"></i><span>About Us</span></a>
+            </nav>
+            <div class="nav-actions">
+                <a href="login.html" class="btn btn-ghost">Sign In</a>
+                <a href="signup.html" class="btn btn-primary">Get Started</a>
+                <button class="mobile-menu-btn" id="mobileMenuBtn"><i class="fas fa-bars"></i></button>
+            </div>
+        </div>
+    </header>
+
+    <section class="students page-section">
+        <div class="container">
+            <div class="students-container">
+                <div class="students-inner">
+                    <div class="students-content">
+                        <div class="students-text">
+                            <div class="badge badge-primary">For Students</div>
+                            <h2 class="section-title">
+                                <span class="text-secondary">Learn at Your</span><br>
+                                <span class="text-primary">Own Pace</span>
+                            </h2>
+                            <p class="section-description">
+                                Personalized learning paths, interactive exercises, and real-time feedback to help you achieve English fluency faster.
+                            </p>
+                            <button class="btn btn-primary btn-large" onclick="window.location.href='login.html'">Continue Learning</button>
+                        </div>
+                        <div class="students-cards">
+                            <h3 class="students-cards-title text-primary">Your Learning Paths</h3>
+                            <div class="path-card path-card-reading">
+                                <div class="path-info">
+                                    <div class="path-icon text-primary"><i class="fas fa-book-open"></i></div>
+                                    <div class="path-details">
+                                        <h4>Reading Practice</h4>
+                                        <p id="students-reading-desc">Available quizzes</p>
+                                    </div>
+                                    <div class="path-lessons" id="students-reading-count">—</div>
+                                </div>
+                                <div class="progress-bar students-progress-bar-static">
+                                    <div class="progress-fill" id="students-reading-fill" style="width: 0%"></div>
+                                </div>
+                                <span class="progress-text" id="students-reading-pct">—</span>
+                            </div>
+                            <div class="path-card path-card-pronunciation">
+                                <div class="path-info">
+                                    <div class="path-icon text-secondary"><i class="fas fa-headphones"></i></div>
+                                    <div class="path-details">
+                                        <h4>Pronunciation Practice</h4>
+                                        <p id="students-pronunciation-desc">Available quizzes</p>
+                                    </div>
+                                    <div class="path-lessons" id="students-pronunciation-count">—</div>
+                                </div>
+                                <div class="progress-bar students-progress-bar-static">
+                                    <div class="progress-fill" id="students-pronunciation-fill" style="width: 0%"></div>
+                                </div>
+                                <span class="progress-text" id="students-pronunciation-pct">—</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script src="js/main-index.js"></script>
+    <script>
+(function() {
+  var API_BASE = (window.location.port === '3000' && /localhost|127\.0\.0\.1/.test(window.location.hostname))
+    ? '' : 'http://localhost:3000';
+
+  function setReading(count) {
+    var el = document.getElementById('students-reading-count');
+    if (el) el.textContent = count != null ? count + ' quizzes' : '—';
+  }
+  function setPronunciation(count) {
+    var el = document.getElementById('students-pronunciation-count');
+    if (el) el.textContent = count != null ? count + ' quizzes' : '—';
+  }
+
+  fetch(API_BASE + '/api/quiz-counts')
+    .then(function(r) { return r.ok ? r.json() : Promise.reject(); })
+    .then(function(data) {
+      if (!data.success) return;
+      setReading(data.reading_total);
+      setPronunciation(data.pronunciation_total);
+      var rFill = document.getElementById('students-reading-fill');
+      var pFill = document.getElementById('students-pronunciation-fill');
+      var rPct = document.getElementById('students-reading-pct');
+      var pPct = document.getElementById('students-pronunciation-pct');
+      if (rPct) rPct.textContent = 'Sign in to see your progress';
+      if (pPct) pPct.textContent = 'Sign in to see your progress';
+      if (rFill) rFill.style.width = '0%';
+      if (pFill) pFill.style.width = '0%';
+    })
+    .catch(function() {
+      setReading(null);
+      setPronunciation(null);
+    });
+})();
+    </script>
+</body>
+</html>

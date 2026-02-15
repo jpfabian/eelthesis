@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>For Teachers - EEL</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="js/theme.js"></script>
+</head>
+<body class="landing" data-page="teachers">
+    <header class="header">
+        <div class="container">
+            <div class="nav-brand">
+                <a href="index.html" class="nav-brand-link">
+                    <div class="logo">
+                        <img src="image/logo.png" alt="EEL Logo" class="logo-img">
+                    </div>
+                </a>
+            </div>
+            <nav class="nav-menu" id="navMenu" aria-label="Main navigation">
+                <a href="index.html" class="nav-link"><i class="fas fa-home" aria-hidden="true"></i><span>Home</span></a>
+                <a href="features.html" class="nav-link"><i class="fas fa-star" aria-hidden="true"></i><span>Features</span></a>
+                <a href="services.html" class="nav-link"><i class="fas fa-briefcase" aria-hidden="true"></i><span>Services</span></a>
+                <a href="for-teachers.html" class="nav-link"><i class="fas fa-chalkboard-teacher" aria-hidden="true"></i><span>For Teachers</span></a>
+                <a href="for-students.html" class="nav-link"><i class="fas fa-user-graduate" aria-hidden="true"></i><span>For Students</span></a>
+                <a href="about.html" class="nav-link"><i class="fas fa-info-circle" aria-hidden="true"></i><span>About Us</span></a>
+            </nav>
+            <div class="nav-actions">
+                <a href="login.html" class="btn btn-ghost">Sign In</a>
+                <a href="signup.html" class="btn btn-primary">Get Started</a>
+                <button class="mobile-menu-btn" id="mobileMenuBtn"><i class="fas fa-bars"></i></button>
+            </div>
+        </div>
+    </header>
+
+    <section class="teachers page-section">
+        <div class="container">
+            <div class="teachers-container">
+                <div class="teachers-inner">
+                    <div class="teachers-content">
+                        <div class="teachers-text">
+                    <div class="badge">For Educators</div>
+                    <h2 class="section-title">
+                        <span class="text-primary">Empower Your Teaching</span><br>
+                        <span class="text-secondary">with AI-Driven Tools</span>
+                    </h2>
+                    <p class="section-description">
+                        Save time creating engaging content and get deeper insights into student learning patterns with our comprehensive teacher dashboard.
+                    </p>
+                    <ul class="features-list">
+                        <li><i class="fas fa-check-circle text-secondary"></i> Create custom reading passages and exercises</li>
+                        <li><i class="fas fa-check-circle text-secondary"></i> Generate AI-powered quizzes in seconds</li>
+                        <li><i class="fas fa-check-circle text-secondary"></i> Track student progress with detailed analytics</li>
+                        <li><i class="fas fa-check-circle text-secondary"></i> Manage multiple classrooms and assignments</li>
+                        <li><i class="fas fa-check-circle text-secondary"></i> Export reports and grades seamlessly</li>
+                    </ul>
+                    <div class="action-buttons">
+                        <button class="btn btn-secondary btn-large" onclick="window.location.href='signup.html'">Start Teaching</button>
+                    </div>
+                </div>
+                <div class="teachers-cards">
+                    <div class="dashboard-card dashboard-card-analytics">
+                        <div class="card-header">
+                            <i class="fas fa-chart-bar text-secondary"></i>
+                            <span>Analytics</span>
+                        </div>
+                        <div class="card-content">
+                            <div class="stat-large text-primary" id="teachers-analytics-rate">—</div>
+                            <p>Average improvement rate</p>
+                            <div class="teachers-progress-wrap" aria-hidden="true">
+                                <div class="teachers-progress-bar" id="teachers-analytics-bar" style="--progress: 0;" role="presentation">
+                                    <span class="teachers-progress-fill"></span>
+                                </div>
+                                <span class="teachers-progress-label">Improvement trend</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="dashboard-card dashboard-card-quizzes">
+                        <div class="card-header">
+                            <i class="fas fa-file-alt text-primary"></i>
+                            <span>Quizzes</span>
+                        </div>
+                        <div class="card-content">
+                            <div class="stat-large text-secondary"><span id="teachers-quiz-count" data-target="0">0</span></div>
+                            <p>Generated this month</p>
+                            <div class="teachers-quiz-trend" aria-hidden="true" id="teachers-quiz-trend" style="display: none;">
+                                <span class="teachers-trend-up"><i class="fas fa-arrow-up"></i> <span id="teachers-quiz-trend-text">—</span></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="dashboard-card wide dashboard-card-progress">
+                        <div class="card-header">
+                            <i class="fas fa-users text-primary"></i>
+                            <span>Student Progress</span>
+                        </div>
+                        <div class="card-content">
+                            <div class="teachers-outcome-chart" id="teachers-student-progress-chart" aria-label="Progress by practice">
+                                <div class="teachers-chart-row"><span class="teachers-chart-label">Reading practice</span><div class="teachers-chart-bar-wrap"><div class="teachers-chart-bar" style="--pct: 0;"><span class="teachers-chart-pct">0%</span></div></div></div>
+                                <div class="teachers-chart-row"><span class="teachers-chart-label">Pronunciation practice</span><div class="teachers-chart-bar-wrap"><div class="teachers-chart-bar" style="--pct: 0;"><span class="teachers-chart-pct">0%</span></div></div></div>
+                            </div>
+                        </div>
+                    </div>
+                    </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script src="js/main-index.js"></script>
+    <script>
+(function() {
+  var API_BASE = (window.location.port === '3000' && /localhost|127\.0\.0\.1/.test(window.location.hostname))
+    ? '' : 'http://localhost:3000';
+  var userJson = null;
+  try { userJson = localStorage.getItem('eel_user'); } catch (_) {}
+  var user = userJson ? JSON.parse(userJson) : null;
+  var teacherId = (user && user.role === 'teacher' && user.user_id) ? user.user_id : null;
+  var qs = teacherId != null ? '?teacher_id=' + encodeURIComponent(teacherId) : '';
+
+  function runQuizCountUp(target) {
+    var el = document.getElementById('teachers-quiz-count');
+    if (!el || target == null) return;
+    target = Math.max(0, parseInt(target, 10));
+    el.setAttribute('data-target', target);
+    el.textContent = '0';
+    var duration = 1500;
+    var start = null;
+    function step(ts) {
+      if (!start) start = ts;
+      var progress = Math.min((ts - start) / duration, 1);
+      var ease = 1 - Math.pow(1 - progress, 2);
+      var value = Math.floor(ease * target);
+      el.textContent = value.toLocaleString();
+      if (progress < 1) requestAnimationFrame(step);
+    }
+    var obs = new IntersectionObserver(function(entries) {
+      entries.forEach(function(e) {
+        if (e.isIntersecting) {
+          obs.disconnect();
+          requestAnimationFrame(step);
+        }
+      });
+    }, { threshold: 0.2 });
+    obs.observe(el);
+  }
+
+  fetch(API_BASE + '/api/teachers-dashboard-stats' + qs)
+    .then(function(r) { return r.ok ? r.json() : Promise.reject(new Error('Network error')); })
+    .then(function(data) {
+      if (!data.success) return;
+
+      var analytics = data.analytics || {};
+      var improvementRate = analytics.improvementRate;
+      var rateEl = document.getElementById('teachers-analytics-rate');
+      var barEl = document.getElementById('teachers-analytics-bar');
+      if (rateEl) {
+        rateEl.textContent = improvementRate != null ? Math.round(improvementRate) + '%' : '—';
+      }
+      if (barEl) {
+        barEl.style.setProperty('--progress', improvementRate != null ? String(improvementRate) : '0');
+        var fill = barEl.querySelector('.teachers-progress-fill');
+        if (fill) {
+          fill.style.animation = 'none';
+          fill.offsetHeight;
+          fill.style.animation = '';
+        }
+      }
+
+      var quizzes = data.quizzes || {};
+      var count = quizzes.generatedThisMonth;
+      if (count != null) {
+        runQuizCountUp(count);
+      }
+
+      var progress = data.studentProgress || [];
+      var chart = document.getElementById('teachers-student-progress-chart');
+      if (chart && progress.length) {
+        var skills = ['Reading practice', 'Pronunciation practice'];
+        chart.innerHTML = skills.map(function(skill) {
+          var item = progress.find(function(p) { return String(p.skill).trim() === skill; });
+          var pct = (item && item.pct != null) ? Math.min(100, Math.max(0, Number(item.pct))) : 0;
+          return '<div class="teachers-chart-row">' +
+            '<span class="teachers-chart-label">' + skill + '</span>' +
+            '<div class="teachers-chart-bar-wrap">' +
+            '<div class="teachers-chart-bar" style="--pct: ' + pct + ';"><span class="teachers-chart-pct">' + Math.round(pct) + '%</span></div>' +
+            '</div></div>';
+        }).join('');
+      }
+    })
+    .catch(function() {
+      var rateEl = document.getElementById('teachers-analytics-rate');
+      if (rateEl) rateEl.textContent = '—';
+      runQuizCountUp(0);
+    });
+})();
+    </script>
+</body>
+</html>
