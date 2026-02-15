@@ -96,7 +96,7 @@ router.post("/api/auth/login", async (req, res) => {
       }
     }
 
-    res.json({
+    const payload = {
       success: true,
       message: "Login successful",
       user: {
@@ -106,7 +106,11 @@ router.post("/api/auth/login", async (req, res) => {
         email: user.email,
         role: user.role,
       },
-    });
+    };
+    if (user.role === "admin") {
+      payload.adminToken = "eel_admin_token_v1";
+    }
+    res.json(payload);
   } catch (err) {
     console.error("❌ Login error:", err);
     res.status(500).json({ success: false, error: "Server error" });

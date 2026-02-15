@@ -41,41 +41,52 @@ function isAuthenticated() {
                 });
 
                 const result = await response.json();
-
                 hideLoading();
 
                 if (result.success) {
-                    // Save session data
                     localStorage.setItem("eel_token", "real_token");
                     localStorage.setItem("eel_user", JSON.stringify({
-                        user_id: result.user.user_id,  // ✅ important
+                        user_id: result.user.user_id,
                         fname: result.user.fname,
                         lname: result.user.lname,
                         role: result.user.role
                     }));
+                    if (result.adminToken) {
+                        try { localStorage.setItem("eel_admin_token", result.adminToken); } catch (_) {}
+                    }
 
-                    // Role-based SweetAlert
-                    if (result.user.role === "teacher") {
+                    var role = result.user.role;
+                    if (role === "admin") {
+                        Swal.fire({
+                            icon: "success",
+                            title: "Welcome Admin!",
+                            text: "Signed in successfully.",
+                            confirmButtonColor: "#3085d6"
+                        }).then(() => {
+                            window.location.href = "admin-dashboard.html";
+                        });
+                    } else if (role === "teacher") {
                         Swal.fire({
                             icon: "success",
                             title: "Welcome Teacher!",
-                            text: `Hello, Teacher ${result.user.lname}!`,
+                            text: "Hello, " + result.user.fname + "!",
                             confirmButtonColor: "#3085d6"
                         }).then(() => {
                             window.location.href = "classes.html";
                         });
-                    } else if (result.user.role === "student") {
+                    } else if (role === "student") {
                         Swal.fire({
                             icon: "success",
                             title: "Welcome Student!",
-                            text: `Hello, ${result.user.lname}!`,
+                            text: "Hello, " + result.user.fname + "!",
                             confirmButtonColor: "#3085d6"
                         }).then(() => {
                             window.location.href = "classes.html";
                         });
+                    } else {
+                        window.location.href = "classes.html";
                     }
-                }
-                else {
+                } else {
                     Swal.fire({
                         icon: "error",
                         title: "Login Failed",
@@ -127,74 +138,6 @@ function isAuthenticated() {
                 text: message,
                 confirmButtonColor: "#3085d6"
             });
-        }
-
-        async function handleLogin(e) {
-            e.preventDefault();
-
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-
-            try {
-                showLoading();
-
-                const response = await fetch("http://localhost:3000/api/auth/login", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ email, password })
-                });
-
-                const result = await response.json();
-                hideLoading();
-
-                if (result.success) {
-                    // ✅ Save full user data including ID
-                    localStorage.setItem("eel_token", "real_token");
-                    localStorage.setItem("eel_user", JSON.stringify({
-                        user_id: result.user.user_id, 
-                        fname: result.user.fname,
-                        lname: result.user.lname,
-                        role: result.user.role
-                    }));
-
-                    // Role-based SweetAlert
-                    if (result.user.role === "teacher") {
-                        Swal.fire({
-                            icon: "success",
-                            title: "Welcome Teacher!",
-                            text: `Hello, Teacher ${result.user.lname}!`,
-                            confirmButtonColor: "#3085d6"
-                        }).then(() => {
-                            window.location.href = "classes.html";
-                        });
-                    } else if (result.user.role === "student") {
-                        Swal.fire({
-                            icon: "success",
-                            title: "Welcome Student!",
-                            text: `Hello, ${result.user.lname}!`,
-                            confirmButtonColor: "#3085d6"
-                        }).then(() => {
-                            window.location.href = "classes.html";
-                        });
-                    }
-                }
-                else {
-                    Swal.fire({
-                        icon: "error",
-                        title: "Login Failed",
-                        text: result.error || "Invalid email or password",
-                        confirmButtonColor: "#d33"
-                    });
-                }
-            } catch (error) {
-                hideLoading();
-                Swal.fire({
-                    icon: "error",
-                    title: "Error",
-                    text: "Something went wrong. Try again.",
-                    confirmButtonColor: "#d33"
-                });
-            }
         }
 
         function togglePassword() {

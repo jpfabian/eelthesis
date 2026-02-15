@@ -323,7 +323,7 @@ async function initAdminDashboardPage() {
 
   const token = getAdminToken();
   if (!token) {
-    window.location.href = "admin-login.html";
+    window.location.href = "login.html";
     return;
   }
 
@@ -363,7 +363,7 @@ async function initAdminDashboardPage() {
   document.getElementById("admin-logout-btn")?.addEventListener("click", () => {
     clearAdminToken();
     try { localStorage.removeItem("eel_token"); localStorage.removeItem("eel_user"); } catch (_) {}
-    window.location.href = "admin-login.html";
+    window.location.href = "login.html";
   });
 
   document.getElementById("admin-search")?.addEventListener("input", () => {
