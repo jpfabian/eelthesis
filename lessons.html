@@ -4,8 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lessons - EEL</title>
+    <link rel="icon" href="image/eel-character.png" type="image/png">
     <link rel="stylesheet" href="css/styles.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.1/lucide.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://docs.google.com">
+    <link rel="preconnect" href="https://eel-bucket.s3.ap-southeast-1.amazonaws.com" crossorigin>
     <script src="js/theme.js"></script>
 </head>
 <body class="lessons-page">
@@ -52,13 +55,12 @@
         <main id="main-content" class="flex-1 overflow-auto">
             <div class="p-6 space-y-6">
                 <header class="page-header">
-                    <img src="image/eel-character.png" alt="EEL mascot" class="page-header-character">
                     <div class="page-header-icon" aria-hidden="true">
                         <i data-lucide="file-text" class="size-8"></i>
                     </div>
                     <div>
                         <h1 class="page-header-title">Lessons</h1>
-                        <p id="lessons-subtitle" class="page-header-subtitle">Browse lesson topics and open the PDF, or manage AI-generated quizzes.</p>
+                        <p id="lessons-subtitle" class="page-header-subtitle">Browse lesson topics and open the presentation, or manage AI-generated quizzes.</p>
                     </div>
                 </header>
 
@@ -97,8 +99,8 @@
                                 <i data-lucide="inbox" class="size-5"></i>
                             </div>
                             <div>
-                                <div class="font-medium">No matching topics</div>
-                                <div class="text-sm text-muted-foreground">Try a different keyword or clear the search.</div>
+                                <div class="font-medium" data-lessons-empty-msg>No matching topics</div>
+                                <div class="text-sm text-muted-foreground" data-lessons-empty-hint>Try a different keyword or clear the search.</div>
                             </div>
                         </div>
                         <div id="lessons-container" class="lessons-list" aria-live="polite"></div>
@@ -160,10 +162,22 @@
                         Step 1 — Quiz configuration
                     </h4>
                     <div class="space-y-2">
-                        <label class="form-label" for="ai-topic">Topic</label>
-                        <select id="ai-topic" class="form-input">
-                            <option value="">Select a topic</option>
-                        </select>
+                        <label class="form-label" for="ai-topic-trigger">Topic</label>
+                        <div id="ai-topic-wrap" class="ai-topic-combo">
+                            <button type="button" id="ai-topic-trigger" class="ai-topic-trigger form-input" aria-haspopup="listbox" aria-expanded="false" aria-label="Select a topic">
+                                <span id="ai-topic-label" class="ai-topic-label text-muted-foreground">Select a topic</span>
+                                <i data-lucide="chevron-down" class="ai-topic-chevron size-4"></i>
+                            </button>
+                            <div id="ai-topic-dropdown" class="ai-topic-dropdown hidden" role="listbox">
+                                <div class="ai-topic-search-wrap">
+                                    <i data-lucide="search" class="size-4 text-muted-foreground"></i>
+                                    <input id="ai-topic-search" class="form-input" type="text" placeholder="Search topics..." aria-label="Search topics" autocomplete="off" />
+                                </div>
+                                <div id="ai-topic-list" class="ai-topic-list" role="group"></div>
+                            </div>
+                            <input type="hidden" id="ai-topic" value="" />
+                            <input type="hidden" id="ai-topic-title" value="" />
+                        </div>
                     </div>
                     <div class="ai-quiz-types-quantity-wrap">
                         <h4 class="ai-quiz-types-quantity-title">Question Types &amp; Quantity</h4>
@@ -276,9 +290,9 @@
             </div>
             <div class="schedule-modal-content">
                 <div class="schedule-modal-section">
-                    <h4 class="schedule-modal-section-title"><i data-lucide="unlock" class="size-4"></i> Unlock</h4>
+                    <h4 class="schedule-modal-section-title"><i data-lucide="send" class="size-4"></i> Publish</h4>
                     <p class="schedule-modal-hint">Earliest date and time students can start the quiz.</p>
-                    <label class="schedule-modal-label" for="lesson-modal-unlock-time">Unlock date & time</label>
+                    <label class="schedule-modal-label" for="lesson-modal-unlock-time">Publish date & time</label>
                     <input type="datetime-local" id="lesson-modal-unlock-time" class="schedule-modal-input">
                 </div>
                 <div class="schedule-modal-connector" aria-hidden="true"></div>
@@ -290,14 +304,14 @@
                 </div>
                 <div class="schedule-modal-connector" aria-hidden="true"></div>
                 <div class="schedule-modal-section">
-                    <h4 class="schedule-modal-section-title"><i data-lucide="lock" class="size-4"></i> Lock (deadline)</h4>
+                    <h4 class="schedule-modal-section-title"><i data-lucide="ban" class="size-4"></i> Unpublish (deadline)</h4>
                     <p class="schedule-modal-hint">After this time the quiz is no longer available.</p>
-                    <label class="schedule-modal-label" for="lesson-modal-lock-time">Lock date & time</label>
+                    <label class="schedule-modal-label" for="lesson-modal-lock-time">Unpublish date & time</label>
                     <input type="datetime-local" id="lesson-modal-lock-time" class="schedule-modal-input">
                 </div>
                 <div class="schedule-modal-tip" role="status">
                     <i data-lucide="info" class="size-4 schedule-modal-tip-icon"></i>
-                    <p>Unlock and lock define the availability window. Time limit applies per attempt.</p>
+                    <p>Publish and unpublish define the availability window. Time limit applies per attempt.</p>
                 </div>
             </div>
             <div class="schedule-modal-footer">
@@ -323,8 +337,10 @@
                         <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path>
                     </svg>
                 </div>
-                <h2 class="leaderboard-modal-title">Quiz Leaderboard</h2>
-                <p class="leaderboard-subtitle" id="lesson-quiz-name">—</p>
+                <div class="leaderboard-header-text">
+                    <h2 class="leaderboard-modal-title">Quiz Leaderboard</h2>
+                    <p class="leaderboard-subtitle" id="lesson-quiz-name">—</p>
+                </div>
             </div>
 
             <!-- Top 3 Podium -->
@@ -334,6 +350,7 @@
                     <div class="podium-avatar" style="background: linear-gradient(135deg, #9ca3af, #6b7280);"></div>
                     <div class="podium-name"></div>
                     <div class="podium-score"><span></span></div>
+                    <div class="podium-time" aria-label="Time taken"></div>
                     <div class="podium-rank"></div>
                 </div>
                 <div class="podium-card first-place">
@@ -341,6 +358,7 @@
                     <div class="podium-avatar" style="background: linear-gradient(135deg, #fbbf24, #f59e0b);"></div>
                     <div class="podium-name"></div>
                     <div class="podium-score"><span></span></div>
+                    <div class="podium-time" aria-label="Time taken"></div>
                     <div class="podium-rank"></div>
                 </div>
                 <div class="podium-card third-place">
@@ -348,6 +366,7 @@
                     <div class="podium-avatar" style="background: linear-gradient(135deg, #fb923c, #ea580c);"></div>
                     <div class="podium-name"></div>
                     <div class="podium-score"><span></span></div>
+                    <div class="podium-time" aria-label="Time taken"></div>
                     <div class="podium-rank"></div>
                 </div>
             </div>
@@ -389,7 +408,127 @@
     </div>
 
     <!-- ============================================
-     📖 LESSON MODAL (PDF Viewer)
+     ✅ TEACHER: Review student answers (AI quiz)
+     ============================================ -->
+    <div id="lesson-teacher-review-modal" class="modal-overlay hidden">
+        <div class="lesson-teacher-review-card">
+            <header class="lesson-teacher-review-header">
+                <div class="lesson-teacher-review-header-inner">
+                    <div class="lesson-teacher-review-header-icon" aria-hidden="true">
+                        <i data-lucide="check-square" class="lesson-teacher-review-header-icon-svg"></i>
+                    </div>
+                    <div class="lesson-teacher-review-header-text">
+                        <h2 class="lesson-teacher-review-title">Review Student Answers</h2>
+                        <p class="lesson-teacher-review-quiz-name" id="lesson-teacher-review-quiz-title">Quiz</p>
+                    </div>
+                </div>
+                <button type="button" class="lesson-teacher-review-close" onclick="closeLessonTeacherReviewModal()" aria-label="Close">
+                    <i data-lucide="x" class="size-5"></i>
+                </button>
+            </header>
+            <div class="lesson-teacher-review-body">
+                <aside class="lesson-teacher-review-sidebar">
+                    <div class="lesson-teacher-review-sidebar-header">
+                        <h3 class="lesson-teacher-review-sidebar-title">Students</h3>
+                        <p class="lesson-teacher-review-sidebar-desc">Select a student to view and grade their answers.</p>
+                    </div>
+                    <div class="lesson-teacher-review-search-wrap">
+                        <i data-lucide="search" class="lesson-teacher-review-search-icon" aria-hidden="true"></i>
+                        <input id="lesson-teacher-review-search" class="lesson-teacher-review-search" type="search" placeholder="Search by name..." />
+                        <span id="lesson-teacher-review-count" class="lesson-teacher-review-count"></span>
+                    </div>
+                    <div id="lesson-teacher-review-attempts-list" class="lesson-teacher-review-attempts-list"></div>
+                </aside>
+                <main class="lesson-teacher-review-main">
+                    <div class="lesson-teacher-review-main-header">
+                        <h3 class="lesson-teacher-review-main-title">Answers &amp; grading</h3>
+                        <p class="lesson-teacher-review-main-desc">Toggle &quot;Mark correct&quot; for each answer, then click Save Adjustments.</p>
+                    </div>
+                    <div id="lesson-teacher-review-detail" class="lesson-teacher-review-detail">
+                        <div class="lesson-teacher-review-empty">
+                            <i data-lucide="user-check" class="lesson-teacher-review-empty-icon" aria-hidden="true"></i>
+                            <p class="lesson-teacher-review-empty-text">Select a student from the list to view their answers.</p>
+                        </div>
+                    </div>
+                </main>
+            </div>
+            <footer class="lesson-teacher-review-footer">
+                <button type="button" id="lesson-teacher-review-save-btn" class="lesson-teacher-review-save-btn hidden" onclick="saveLessonTeacherReviewOverrides()">
+                    <i data-lucide="save" class="size-4 mr-2"></i>Save Adjustments
+                </button>
+            </footer>
+        </div>
+    </div>
+
+    <!-- ============================================
+     ✍️ TAKE QUIZ – Terms & Conditions (then Proceed opens take-quiz.html)
+     ============================================ -->
+    <div id="lesson-take-quiz-modal" class="modal-quiz-overlay hidden">
+        <div class="quiz-card lesson-quiz-terms-card" style="width: 90%; max-width: 600px;">
+            <button type="button" onclick="closeLessonQuizModal()" class="close-btn" aria-label="Close">&times;</button>
+
+            <h2 id="lesson-quiz-terms-title" class="quiz-title">Before you start</h2>
+            <p class="lesson-quiz-terms-quiz-name text-muted-foreground" id="lesson-quiz-terms-quiz-name" style="margin-top: -0.5rem; margin-bottom: 1rem;">—</p>
+
+            <div class="lesson-quiz-terms-text">
+                <p>By clicking <strong>Proceed</strong>, you agree to the following:</p>
+                <ul style="margin: 1rem 0; padding-left: 1.5rem; line-height: 1.7;">
+                    <li>You will complete this quiz on your own without external help.</li>
+                    <li>You will not share quiz questions or answers with others during the quiz period.</li>
+                    <li>Your teacher may use your results for grading and feedback.</li>
+                    <li>Once you start, the time limit (if any) applies until you submit.</li>
+                </ul>
+                <p class="text-muted-foreground" style="font-size: 0.9rem;">Click <strong>Proceed</strong> to open the quiz in a new page.</p>
+            </div>
+
+            <div class="lesson-quiz-terms-actions" style="display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem; flex-wrap: wrap;">
+                <button type="button" onclick="closeLessonQuizModal()" class="btn btn-outline">Cancel</button>
+                <button type="button" id="lesson-quiz-proceed-btn" onclick="proceedToLessonQuizPage()" class="btn btn-primary">
+                    Proceed <i data-lucide="arrow-right" class="size-4"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================
+     📋 REVIEW MY ANSWERS – Modal (student reviews completed quiz)
+     ============================================ -->
+    <div id="lesson-review-modal" class="modal-overlay hidden">
+        <div class="modal-card lesson-review-modal-card">
+            <div class="modal-header">
+                <h3 id="lesson-review-modal-title" class="modal-title">
+                    <i data-lucide="file-text" class="size-5"></i>
+                    Review your answers
+                </h3>
+                <button type="button" class="close-btn" onclick="closeLessonReviewModal()" aria-label="Close">
+                    <i data-lucide="x" class="size-5"></i>
+                </button>
+            </div>
+            <div class="modal-content lesson-review-modal-content">
+                <div id="lesson-review-loading" class="lesson-review-loading hidden">
+                    <div class="loading-spinner"></div>
+                    <p>Loading your attempt...</p>
+                </div>
+                <div id="lesson-review-body" class="lesson-review-body hidden">
+                    <div id="lesson-review-score" class="quiz-review-score-bar"></div>
+                    <div id="lesson-review-passage" class="quiz-review-passage"></div>
+                    <div id="lesson-review-answers" class="quiz-review-answers"></div>
+                </div>
+                <div id="lesson-review-error" class="lesson-review-error hidden">
+                    <p id="lesson-review-error-msg"></p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="closeLessonReviewModal()">
+                    <i data-lucide="check" class="size-4"></i>
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================
+     📖 LESSON MODAL (PPTX / presentation viewer)
      ============================================ -->
     <div id="lesson-modal" class="modal-overlay hidden">
         <div class="modal-card" style="width: 100%; max-width: 1500px;">
@@ -403,15 +542,34 @@
                 </button>
             </div>
 
-            <div class="modal-content">
-                <!-- Embed PDF will update dynamically -->
-                <embed id="lesson-pdf" class="lesson-viewer" src="" type="application/pdf" />
-                
+            <div id="lesson-view-toolbar" class="lesson-view-toolbar hidden">
+                <button type="button" id="lesson-slideshow-btn" class="btn btn-outline btn-sm">
+                    <i data-lucide="presentation" class="size-4"></i>
+                    Slideshow
+                </button>
+            </div>
+
+            <div id="lesson-modal-content" class="modal-content">
+                <div id="lesson-viewer-loading" class="lesson-viewer-loading hidden">
+                    <div class="lesson-viewer-loading-spinner"></div>
+                    <p class="lesson-viewer-loading-text">Loading presentation…</p>
+                </div>
+                <iframe id="lesson-pdf" class="lesson-viewer" src="" title="Lesson viewer"></iframe>
             </div>
 
             <div class="modal-footer">
             </div>
         </div>
+    </div>
+
+    <!-- Fullscreen presentation overlay (PPTX via Google Docs viewer) -->
+    <div id="lesson-slideshow-overlay" class="lesson-slideshow-overlay hidden">
+        <div id="lesson-slideshow-iframe-wrap" class="lesson-slideshow-iframe-wrap">
+            <iframe id="lesson-slideshow-iframe" class="lesson-slideshow-iframe" title="Presentation"></iframe>
+        </div>
+        <button type="button" id="lesson-slideshow-exit" class="lesson-slideshow-exit" title="Exit (Esc)">
+            <i data-lucide="x" class="size-6"></i> Exit
+        </button>
     </div>
 
     <!-- Scripts -->

@@ -8,6 +8,7 @@ const path = require("path");
 const fetch = require("node-fetch");
 require("dotenv").config();
 const Groq = require("groq-sdk");
+const { nowPhilippineDatetime } = require("./utils/datetime");
 
 let groq = null;
 try {
@@ -26,6 +27,13 @@ function requireGroq(res) {
   return null;
 }
 
+/** Ensure first letter is uppercase when saving to DB. */
+function capitalizeFirst(s) {
+  if (s == null || typeof s !== "string") return s;
+  const t = String(s).trim();
+  if (!t) return t;
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
 
 // Multer storage (S3 if configured, otherwise local disk)
 const hasS3 =
@@ -80,12 +88,15 @@ router.post("/api/pronunciation-quizzes", async (req, res) => {
       return res.status(400).json({ message: "All fields including user_id are required" });
     }
 
+    const safeTitle = capitalizeFirst(title);
+    const safePassage = passage != null ? capitalizeFirst(passage) : passage;
+
     // Insert quiz record into teacher_pronunciation_quizzes
     const [quizResult] = await pool.execute(
       `INSERT INTO teacher_pronunciation_quizzes 
         (subject_id, user_id, title, difficulty, passage) 
        VALUES (?, ?, ?, ?, ?)`,
-      [validSubjectId, user_id, title, difficulty, passage]
+      [validSubjectId, user_id, safeTitle, difficulty, safePassage]
     );
     const quizId = quizResult.insertId;
 
@@ -96,7 +107,7 @@ router.post("/api/pronunciation-quizzes", async (req, res) => {
           `INSERT INTO teacher_pronunciation_beginner_questions 
             (quiz_id, word, correct_pronunciation) 
            VALUES (?, ?, ?)`,
-          [quizId, q.word, q.stressed_form]
+          [quizId, capitalizeFirst(q.word), q.stressed_form]
         );
       }
     } else if (difficulty === "intermediate") {
@@ -105,7 +116,7 @@ router.post("/api/pronunciation-quizzes", async (req, res) => {
           `INSERT INTO teacher_pronunciation_intermediate_questions 
             (quiz_id, word, stressed_syllable) 
            VALUES (?, ?, ?)`,
-          [quizId, q.word, q.stressed_form]
+          [quizId, capitalizeFirst(q.word), q.stressed_form]
         );
       }
     } else if (difficulty === "advanced") {
@@ -114,7 +125,7 @@ router.post("/api/pronunciation-quizzes", async (req, res) => {
           `INSERT INTO teacher_pronunciation_advanced_questions 
             (quiz_id, sentence, reduced_form, full_sentence) 
            VALUES (?, ?, ?, ?)`,
-          [quizId, q.sentence, q.reduced_form, q.full_sentence]
+          [quizId, capitalizeFirst(q.sentence), q.reduced_form, capitalizeFirst(q.full_sentence)]
         );
       }
     }
@@ -425,11 +436,12 @@ router.post("/api/pronunciation-submit", upload.any(), async (req, res) => {
     const quizDifficulty = quizRows[0].difficulty;
 
     // 2️⃣ Create a new quiz attempt
+    const attemptNow = nowPhilippineDatetime();
     const [attemptResult] = await pool.query(
       `INSERT INTO pronunciation_quiz_attempts 
          (student_id, quiz_id, start_time, end_time, status)
-       VALUES (?, ?, NOW(), NOW(), 'completed')`,
-      [student_id, quiz_id]
+       VALUES (?, ?, ?, ?, 'completed')`,
+      [student_id, quiz_id, attemptNow, attemptNow]
     );
     const attempt_id = attemptResult.insertId;
 
@@ -469,9 +481,9 @@ router.post("/api/pronunciation-submit", upload.any(), async (req, res) => {
 
     await pool.query(
       `UPDATE pronunciation_quiz_attempts
-         SET score = ?, pronunciation_score = ?, total_points = ?, end_time = NOW(), status = 'completed'
+         SET score = ?, pronunciation_score = ?, total_points = ?, end_time = ?, status = 'completed'
        WHERE attempt_id = ?`,
-      [avgAccuracy, avgAccuracy, 100, attempt_id]
+      [avgAccuracy, avgAccuracy, 100, nowPhilippineDatetime(), attempt_id]
     );
 
     // 5️⃣ Unlock next quiz in the subject track if passed
@@ -694,9 +706,9 @@ router.patch("/api/teacher/pronunciation-attempts/:attemptId/override", async (r
          SET teacher_score = ?,
              teacher_notes = COALESCE(?, teacher_notes),
              teacher_id = ?,
-             teacher_updated_at = NOW()
+             teacher_updated_at = ?
          WHERE answer_id = ? AND attempt_id = ?`,
-        [teacherScore, teacherNotes, teacherId, a.answer_id, attemptId]
+        [teacherScore, teacherNotes, teacherId, nowPhilippineDatetime(), a.answer_id, attemptId]
       );
     }
 
@@ -860,9 +872,9 @@ router.get('/api/lessons-with-topics', async (req, res) => {
       return res.status(404).json({ error: `No subject_id found for "${subjectName}"` });
     }
 
-    // ✅ Step 3: Fetch lessons for that subject
+    // ✅ Step 3: Fetch lessons for that subject (include quarter for display grouping)
     const [lessons] = await pool.query(
-      'SELECT lesson_id, lesson_title FROM lessons WHERE subject_id = ? ORDER BY lesson_id',
+      'SELECT lesson_id, lesson_title, quarter_number, quarter_title FROM lessons WHERE subject_id = ? ORDER BY lesson_id',
       [subjectId]
     );
 
@@ -876,10 +888,12 @@ router.get('/api/lessons-with-topics', async (req, res) => {
       [lessons.map(l => l.lesson_id)]
     );
 
-    // ✅ Step 5: Combine lessons + topics
+    // ✅ Step 5: Combine lessons + topics (include quarter_number, quarter_title for exam generator / lessons UI)
     const data = lessons.map(lesson => ({
       lesson_id: lesson.lesson_id,
       lesson_title: lesson.lesson_title,
+      quarter_number: lesson.quarter_number != null ? lesson.quarter_number : null,
+      quarter_title: lesson.quarter_title ? String(lesson.quarter_title).trim() : null,
       topics: topics.filter(t => t.lesson_id === lesson.lesson_id)
     }));
 
@@ -953,10 +967,12 @@ router.post("/api/save-pronunciation-quiz", async (req, res) => {
     }
 
     try {
+        const safePassage = passage != null ? capitalizeFirst(passage) : passage;
+
         // Insert the main quiz
         const [result] = await pool.query(
             "INSERT INTO ai_quiz_pronunciation (teacher_id, subject_id, difficulty, passage) VALUES (?, ?, ?, ?)",
-            [teacher_id, subject_id, difficulty, passage]
+            [teacher_id, subject_id, difficulty, safePassage]
         );
 
         const quizId = result.insertId;
@@ -966,7 +982,7 @@ router.post("/api/save-pronunciation-quiz", async (req, res) => {
             questions.map(q =>
                 pool.query(
                     "INSERT INTO ai_quiz_pronunciation_questions (quiz_id, word, answer) VALUES (?, ?, ?)",
-                    [quizId, q.word, q.answer]
+                    [quizId, capitalizeFirst(q.word), capitalizeFirst(q.answer)]
                 )
             )
         );

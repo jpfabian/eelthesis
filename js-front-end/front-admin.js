@@ -27,6 +27,18 @@ function escapeHtml(str) {
     .replaceAll("'", "&#039;");
 }
 
+/** Mask email for display in admin dashboard (e.g. "j***@gmail.com"). */
+function maskEmailForDisplay(email) {
+  const s = String(email ?? "").trim();
+  if (!s) return "—";
+  const at = s.indexOf("@");
+  if (at <= 0) return "***";
+  const local = s.slice(0, at);
+  const domain = s.slice(at + 1);
+  const first = local.charAt(0);
+  return first ? `${first}***@${domain}` : `***@${domain}`;
+}
+
 function formatDateTime(dateString) {
   if (!dateString) return "";
   const d = new Date(dateString);
@@ -209,7 +221,7 @@ function clamp(n, min, max) {
   return Math.max(min, Math.min(max, n));
 }
 
-function buildAdminUserRow(u) {
+function buildAdminUserRow(u, isStudent) {
   const name = `${u.fname || ""} ${u.lname || ""}`.trim() || `User #${u.user_id}`;
   const created = formatDateTime(u.created_at);
   const status = String(u.verification_status || "").toLowerCase();
@@ -231,6 +243,10 @@ function buildAdminUserRow(u) {
       ? `<span class="px-2 py-1 text-xs rounded bg-primary/10 text-primary capitalize">active</span>`
       : "";
 
+  const sectionStrandCells = isStudent
+    ? `<td class="admin-dashboard-section-cell text-muted-foreground">${escapeHtml(u.section ?? "—")}</td><td class="admin-dashboard-strand-cell text-muted-foreground">${escapeHtml(u.strand ?? "—")}</td>`
+    : "";
+
   return `
     <tr class="leaderboard-table-row">
       <td>
@@ -241,10 +257,11 @@ function buildAdminUserRow(u) {
           <span>${escapeHtml(name)}</span>
         </div>
       </td>
-      <td class="text-muted-foreground">${escapeHtml(u.email || "")}</td>
-      <td class="space-y-1">
-        <span class="px-2 py-1 text-xs rounded capitalize ${statusColor}" title="${escapeHtml(u.rejected_reason || "")}">${escapeHtml(statusLabel)}</span>
-        ${activeBadge ? `<span style="display:inline-block; margin-left:.35rem;">${activeBadge}</span>` : ""}
+      <td class="text-muted-foreground">${escapeHtml(maskEmailForDisplay(u.email))}</td>
+      ${sectionStrandCells}
+      <td class="admin-dashboard-status-cell">
+        <span class="admin-dashboard-status-pill px-2 py-1 text-xs rounded capitalize ${statusColor}" title="${escapeHtml(u.rejected_reason || "")}">${escapeHtml(statusLabel)}</span>
+        ${activeBadge ? `<span class="admin-dashboard-status-badge">${activeBadge}</span>` : ""}
       </td>
       <td class="text-muted-foreground">${escapeHtml(created)}</td>
       <td style="text-align:right;">
@@ -259,13 +276,14 @@ function buildAdminUserRow(u) {
   `;
 }
 
-function renderAdminTableSection(bodyEl, list, pager, pageInfoId, prevId, nextId) {
+function renderAdminTableSection(bodyEl, list, pager, pageInfoId, prevId, nextId, isStudent) {
   if (!bodyEl) return;
   const total = list.length;
   const totalPages = Math.max(1, Math.ceil(total / adminPagerPageSize));
   pager.page = clamp(pager.page, 1, totalPages);
   const start = (pager.page - 1) * adminPagerPageSize;
   const pageItems = list.slice(start, start + adminPagerPageSize);
+  const colspan = isStudent ? 7 : 5;
 
   const pageInfo = document.getElementById(pageInfoId);
   if (pageInfo) pageInfo.textContent = total ? `Page ${pager.page} of ${totalPages}` : "—";
@@ -276,11 +294,11 @@ function renderAdminTableSection(bodyEl, list, pager, pageInfoId, prevId, nextId
   if (nextBtn) nextBtn.disabled = pager.page >= totalPages;
 
   if (!list.length) {
-    bodyEl.innerHTML = `<tr><td colspan="5" class="admin-dashboard-empty">No users in this group.</td></tr>`;
+    bodyEl.innerHTML = `<tr><td colspan="${colspan}" class="admin-dashboard-empty">No users in this group.</td></tr>`;
     return;
   }
 
-  bodyEl.innerHTML = pageItems.map(buildAdminUserRow).join("");
+  bodyEl.innerHTML = pageItems.map((u) => buildAdminUserRow(u, isStudent)).join("");
 }
 
 function renderAdminUsers(users) {
@@ -305,11 +323,11 @@ function renderAdminUsers(users) {
 
   if (teachersBody) {
     if (!filtered.length && !users?.length) teachersBody.innerHTML = `<tr><td colspan="5" class="admin-dashboard-empty">${escapeHtml(emptyMsg)}</td></tr>`;
-    else renderAdminTableSection(teachersBody, teachers, adminTeachersPager, "admin-teachers-page-info", "admin-teachers-prev", "admin-teachers-next");
+    else renderAdminTableSection(teachersBody, teachers, adminTeachersPager, "admin-teachers-page-info", "admin-teachers-prev", "admin-teachers-next", false);
   }
   if (studentsBody) {
-    if (!filtered.length && !users?.length) studentsBody.innerHTML = `<tr><td colspan="5" class="admin-dashboard-empty">${escapeHtml(emptyMsg)}</td></tr>`;
-    else renderAdminTableSection(studentsBody, students, adminStudentsPager, "admin-students-page-info", "admin-students-prev", "admin-students-next");
+    if (!filtered.length && !users?.length) studentsBody.innerHTML = `<tr><td colspan="7" class="admin-dashboard-empty">${escapeHtml(emptyMsg)}</td></tr>`;
+    else renderAdminTableSection(studentsBody, students, adminStudentsPager, "admin-students-page-info", "admin-students-prev", "admin-students-next", true);
   }
 
   if (window.lucide && typeof window.lucide.createIcons === "function") {
@@ -333,14 +351,12 @@ async function initAdminDashboardPage() {
       const data = await fetchAdminUsers(status);
       if (!data.enabled) {
         // Also render an inline message (not just a popup)
-        tbody.innerHTML = `
-          <tr>
-            <td colspan="5" class="text-muted-foreground">
-              Account verification is not enabled in your database yet.
-              Run <strong>js-back-end/migrate-account-verification.sql</strong> then refresh.
-            </td>
-          </tr>
-        `;
+        const teachersBody = document.getElementById("admin-teachers-body");
+        const studentsBody = document.getElementById("admin-students-body");
+        const msgRow = `<tr><td colspan="5" class="text-muted-foreground">Account verification is not enabled in your database yet. Run <strong>js-back-end/migrate-account-verification.sql</strong> then refresh.</td></tr>`;
+        const msgRowStudents = `<tr><td colspan="7" class="text-muted-foreground">Account verification is not enabled in your database yet. Run <strong>js-back-end/migrate-account-verification.sql</strong> then refresh.</td></tr>`;
+        if (teachersBody) teachersBody.innerHTML = msgRow;
+        if (studentsBody) studentsBody.innerHTML = msgRowStudents;
         Swal.fire({
           icon: "warning",
           title: "Migration required",

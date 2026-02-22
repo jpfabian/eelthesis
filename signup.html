@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sign Up - EEL</title>
+    <link rel="icon" href="image/eel-character.png" type="image/png">
     <link rel="stylesheet" href="css/styles.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.1/lucide.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -169,6 +170,8 @@
                                     placeholder="Create a strong password"
                                     required
                                     minlength="6"
+                                    maxlength="30"
+                                    autocomplete="new-password"
                                 >
                                 <button type="button" class="password-toggle" onclick="togglePassword('password')">
                                     <i data-lucide="eye-off" id="password-icon"></i>
@@ -186,6 +189,8 @@
                                     class="form-input" 
                                     placeholder="Confirm your password"
                                     required
+                                    maxlength="30"
+                                    autocomplete="new-password"
                                 >
                                 <button type="button" class="password-toggle" onclick="togglePassword('confirm-password')">
                                     <i data-lucide="eye-off" id="confirm-password-icon"></i>

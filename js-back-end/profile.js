@@ -2,6 +2,7 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
 const router = express.Router();
+const { nowPhilippineDatetime } = require("./utils/datetime");
 
 // GET current user profile (by user_id from query; no session auth)
 router.get("/api/users/me", async (req, res) => {
@@ -98,8 +99,9 @@ router.post("/api/auth/change-password", async (req, res) => {
       return res.status(400).json({ success: false, error: "Current password is incorrect" });
     }
     const hashed = await bcrypt.hash(newPassword, 10);
-    await pool.execute("UPDATE users SET password = ?, updated_at = NOW() WHERE user_id = ?", [
+    await pool.execute("UPDATE users SET password = ?, updated_at = ? WHERE user_id = ?", [
       hashed,
+      nowPhilippineDatetime(),
       userId,
     ]);
     res.json({ success: true, message: "Password updated" });

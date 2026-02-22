@@ -10,8 +10,31 @@ let state = {
     currentSlideIndex: 0,
     selectedStudent: null,
     currentAnswer: '',
-    intervalId: null
+    intervalId: null,
+    pickMode: 'auto', // 'manual' = tap a card to choose; 'auto' = Play + slider
+    nextQuestionRandom: false // true after Remove/Close so next pick gets random question
 };
+
+// Ticking sound for the slider (Web Audio API – no file needed)
+let sliderTickAudioContext = null;
+function playSliderTick() {
+    if (!state.isSpinning) return;
+    try {
+        if (!sliderTickAudioContext) sliderTickAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const ctx = sliderTickAudioContext;
+        if (ctx.state === 'suspended') ctx.resume();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(900, ctx.currentTime);
+        gain.gain.setValueAtTime(0.12, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.03);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.03);
+    } catch (_) { /* ignore if audio not allowed */ }
+}
 
 // Same pattern as lessons.html AI quiz: types and quantity per type
 const RECITATION_QUESTION_TYPES = ['multiple-choice', 'true-false', 'identification'];
@@ -117,17 +140,173 @@ async function loadRecitationTopics() {
             });
             topicSelect.appendChild(optgroup);
         });
+        buildRecitationTopicDropdownOptions();
+        syncRecitationTopicTriggerText();
     } catch (err) {
         console.error("loadRecitationTopics:", err);
         const topicSelect = document.getElementById("recitation-topic");
         if (topicSelect) topicSelect.innerHTML = "<option value=''>Error loading topics</option>";
+        buildRecitationTopicDropdownOptions();
+        syncRecitationTopicTriggerText();
+    }
+}
+
+function getRecitationTopicOptionsFromSelect() {
+    const topicSelect = document.getElementById("recitation-topic");
+    if (!topicSelect) return [];
+    const list = [];
+    const optgroups = topicSelect.querySelectorAll("optgroup");
+    optgroups.forEach(function (optgroup) {
+        const groupLabel = optgroup.label || "";
+        optgroup.querySelectorAll("option").forEach(function (opt) {
+            if ((opt.value || "").trim() === "") return;
+            list.push({ value: opt.value, text: (opt.textContent || "").trim(), group: groupLabel });
+        });
+    });
+    return list;
+}
+
+function buildRecitationTopicDropdownOptions(query) {
+    const container = document.getElementById("recitation-topic-options");
+    const topicSelect = document.getElementById("recitation-topic");
+    if (!container || !topicSelect) return;
+    const options = getRecitationTopicOptionsFromSelect();
+    const q = (query || "").trim().toLowerCase();
+    const filtered = q
+        ? options.filter(function (o) {
+            return (o.text || "").toLowerCase().includes(q) || (o.group || "").toLowerCase().includes(q);
+        })
+        : options;
+
+    const selectedValue = (topicSelect.value || "").trim();
+    const byGroup = {};
+    filtered.forEach(function (o) {
+        const g = o.group || "";
+        if (!byGroup[g]) byGroup[g] = [];
+        byGroup[g].push(o);
+    });
+    const groupLabels = Object.keys(byGroup);
+
+    container.innerHTML = "";
+    if (groupLabels.length === 0) {
+        const empty = document.createElement("div");
+        empty.className = "recitation-topic-option";
+        empty.setAttribute("role", "option");
+        empty.textContent = q ? "No topics match your search." : "No topics available.";
+        empty.style.pointerEvents = "none";
+        empty.style.color = "var(--muted-foreground)";
+        container.appendChild(empty);
+        return;
+    }
+    groupLabels.forEach(function (label) {
+        const groupDiv = document.createElement("div");
+        groupDiv.className = "recitation-topic-option-group";
+        if (label) {
+            const groupLabelEl = document.createElement("div");
+            groupLabelEl.className = "recitation-topic-option-group-label";
+            groupLabelEl.textContent = label;
+            groupDiv.appendChild(groupLabelEl);
+        }
+        byGroup[label].forEach(function (o) {
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "recitation-topic-option";
+            btn.setAttribute("role", "option");
+            btn.setAttribute("aria-selected", o.value === selectedValue);
+            btn.dataset.value = o.value;
+            btn.textContent = o.text;
+            btn.addEventListener("click", function () {
+                if (topicSelect.value !== o.value) {
+                    topicSelect.value = o.value;
+                    topicSelect.dispatchEvent(new Event("change", { bubbles: true }));
+                }
+                syncRecitationTopicTriggerText();
+                closeRecitationTopicDropdown();
+            });
+            groupDiv.appendChild(btn);
+        });
+        container.appendChild(groupDiv);
+    });
+}
+
+function syncRecitationTopicTriggerText() {
+    const topicSelect = document.getElementById("recitation-topic");
+    const triggerText = document.getElementById("recitation-topic-trigger-text");
+    if (!topicSelect || !triggerText) return;
+    const opt = topicSelect.options[topicSelect.selectedIndex];
+    triggerText.textContent = opt ? opt.textContent.trim() : "Select a topic";
+}
+
+function openRecitationTopicDropdown() {
+    const wrap = document.getElementById("recitation-topic-wrap");
+    const dropdown = document.getElementById("recitation-topic-dropdown");
+    const searchInput = document.getElementById("recitation-topic-search");
+    if (!wrap || !dropdown) return;
+    wrap.setAttribute("data-open", "true");
+    dropdown.classList.remove("hidden");
+    document.getElementById("recitation-topic-trigger")?.setAttribute("aria-expanded", "true");
+    buildRecitationTopicDropdownOptions((searchInput && searchInput.value) || "");
+    if (searchInput) {
+        searchInput.value = "";
+        searchInput.focus();
+    }
+    if (window.lucide && typeof window.lucide.createIcons === "function") window.lucide.createIcons();
+}
+
+function closeRecitationTopicDropdown() {
+    const wrap = document.getElementById("recitation-topic-wrap");
+    const dropdown = document.getElementById("recitation-topic-dropdown");
+    if (!wrap || !dropdown) return;
+    wrap.setAttribute("data-open", "false");
+    dropdown.classList.add("hidden");
+    document.getElementById("recitation-topic-trigger")?.setAttribute("aria-expanded", "false");
+}
+
+function setupRecitationTopicDropdown() {
+    const wrap = document.getElementById("recitation-topic-wrap");
+    const trigger = document.getElementById("recitation-topic-trigger");
+    const dropdown = document.getElementById("recitation-topic-dropdown");
+    const searchInput = document.getElementById("recitation-topic-search");
+    const topicSelect = document.getElementById("recitation-topic");
+
+    if (!trigger || !dropdown) return;
+
+    trigger.addEventListener("click", function (e) {
+        e.preventDefault();
+        const isOpen = wrap && wrap.getAttribute("data-open") === "true";
+        if (isOpen) closeRecitationTopicDropdown();
+        else openRecitationTopicDropdown();
+    });
+
+    if (searchInput) {
+        searchInput.addEventListener("input", function () {
+            buildRecitationTopicDropdownOptions(this.value);
+        });
+        searchInput.addEventListener("click", function (e) {
+            e.stopPropagation();
+        });
+    }
+
+    if (dropdown) {
+        dropdown.addEventListener("click", function (e) {
+            e.stopPropagation();
+        });
+    }
+
+    document.addEventListener("click", function (e) {
+        if (!wrap || !wrap.contains(e.target)) closeRecitationTopicDropdown();
+    });
+
+    if (topicSelect) {
+        topicSelect.addEventListener("change", syncRecitationTopicTriggerText);
     }
 }
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
-    
+    setupRecitationTopicDropdown();
+
     // Back to Classes
     const backBtn = document.getElementById('back-class-btn');
     if (backBtn) backBtn.addEventListener('click', () => window.location.href = 'classes.html');
@@ -182,6 +361,13 @@ function setupEventListeners() {
 
     const generateBtn = document.getElementById('generate-questions');
     if (generateBtn) generateBtn.addEventListener('click', generateQuestions);
+
+    const studentSearchInput = document.getElementById('recitation-student-search');
+    if (studentSearchInput) {
+        studentSearchInput.addEventListener('input', function () {
+            if (state.pickMode === 'manual') renderStudentSlider();
+        });
+    }
 }
 
 function updateGenerateButton() {
@@ -265,9 +451,55 @@ async function generateQuestions() {
     }
 }
 
+function getPickMode() {
+    const radio = document.querySelector('input[name="recitation-pick-mode"]:checked');
+    return (radio && radio.value === 'manual') ? 'manual' : 'auto';
+}
+
+function getRecitationTimeLimitSeconds() {
+    const input = document.getElementById('recitation-time-limit-value');
+    const unit = document.getElementById('recitation-time-limit-unit');
+    const val = Math.max(1, parseInt(input && input.value, 10) || 20);
+    const isMin = unit && unit.value === 'min';
+    const seconds = isMin ? val * 60 : val;
+    return Math.min(600, Math.max(1, seconds));
+}
+
+function applyPickModeUI() {
+    const hint = document.getElementById('recitation-picker-hint');
+    const actions = document.getElementById('recitation-picker-actions');
+    const wrap = document.querySelector('.recitation-slider-wrap');
+    const searchWrap = document.getElementById('recitation-student-search-wrap');
+    const searchInput = document.getElementById('recitation-student-search');
+    if (hint) {
+        hint.textContent = state.pickMode === 'manual'
+            ? 'Tap a student card below to choose who answers this question. Scroll horizontally to see all students.'
+            : 'Tap Play to spin the slider and select a student, or enable Auto pick to stop automatically.';
+    }
+    if (actions) {
+        actions.style.display = state.pickMode === 'auto' ? 'flex' : 'none';
+    }
+    if (wrap) {
+        if (state.pickMode === 'manual') wrap.classList.add('recitation-slider-wrap--manual');
+        else wrap.classList.remove('recitation-slider-wrap--manual');
+    }
+    if (searchWrap) {
+        if (state.pickMode === 'manual') {
+            searchWrap.classList.remove('hidden');
+            if (searchInput) searchInput.value = '';
+            if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
+        } else {
+            searchWrap.classList.add('hidden');
+            if (searchInput) searchInput.value = '';
+        }
+    }
+}
+
 function startSession() {
     const setup = document.getElementById('session-setup');
     const picker = document.getElementById('student-picker');
+
+    state.pickMode = getPickMode();
 
     if (setup && picker) {
         setup.classList.remove('active');
@@ -278,13 +510,12 @@ function startSession() {
     state.currentQuestionIndex = 0;
     state.students.forEach(s => s.answered = false);
 
-    // Clear any previously selected student
     clearSelectedStudents();
-
+    applyPickModeUI();
     updateQuestionProgress();
     renderStudentSlider();
-    // Position slider after modal is visible and laid out
     setTimeout(updateSliderPosition, 80);
+    if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
 }
 
 
@@ -303,11 +534,14 @@ function backToSetup() {
 
 
 function updateQuestionProgress() {
-    document.getElementById('current-question-num').textContent = state.currentQuestionIndex + 1;
-    document.getElementById('total-questions').textContent = state.questions.length;
-    
+    const qNumEl = document.getElementById('current-question-num');
+    const qTotalEl = document.getElementById('total-questions');
+    if (qNumEl) qNumEl.textContent = state.currentQuestionIndex + 1;
+    if (qTotalEl) qTotalEl.textContent = state.questions.length;
+
     const availableStudents = state.students.filter(s => !s.answered);
-    document.getElementById('students-remaining').textContent = availableStudents.length;
+    const remainingEl = document.getElementById('students-remaining');
+    if (remainingEl) remainingEl.textContent = availableStudents.length;
 }
 
 function escapeHtmlRecitation(s) {
@@ -330,17 +564,41 @@ function getInitials(name) {
 
 function renderStudentSlider() {
     const slider = document.getElementById('student-slider');
-    const availableStudents = state.students.filter(s => !s.answered);
+    let availableStudents = state.students.filter(s => !s.answered);
     if (!slider) return;
 
+    // Manual mode: filter by search query (by name)
+    if (state.pickMode === 'manual') {
+        const query = (document.getElementById('recitation-student-search')?.value || '').trim().toLowerCase();
+        if (query) {
+            availableStudents = availableStudents.filter(s => (s.name || '').toLowerCase().includes(query));
+        }
+    }
+
     slider.innerHTML = '';
-    
-    // Triple the students for continuous sliding effect
-    const studentsToRender = [...availableStudents, ...availableStudents, ...availableStudents];
-    
+
+    // Manual mode with search and no matches: show message
+    const searchInputEl = document.getElementById('recitation-student-search');
+    const hasSearchQuery = state.pickMode === 'manual' && searchInputEl && (searchInputEl.value || '').trim().length > 0;
+    if (state.pickMode === 'manual' && hasSearchQuery && availableStudents.length === 0) {
+        const msg = document.createElement('div');
+        msg.className = 'recitation-no-search-results';
+        msg.setAttribute('role', 'status');
+        msg.textContent = 'No students match your search. Try a different name.';
+        slider.appendChild(msg);
+        return;
+    }
+
+    // Manual mode: show each student once in a horizontal scroll row. Auto mode: triple copy for sliding effect.
+    const studentsToRender = state.pickMode === 'manual'
+        ? availableStudents
+        : [...availableStudents, ...availableStudents, ...availableStudents];
+
     studentsToRender.forEach((student) => {
         const box = document.createElement('div');
         box.className = 'student-box';
+        box.setAttribute('data-student-id', String(student.id));
+        if (state.pickMode === 'manual') box.classList.add('student-box--clickable');
         const initials = getInitials(student.name);
         const avatarHtml = student.avatarUrl
             ? `<img class="recitation-student-avatar-img" src="${escapeHtmlRecitation(student.avatarUrl)}" alt="">`
@@ -349,14 +607,28 @@ function renderStudentSlider() {
             <div class="recitation-student-avatar">${avatarHtml}</div>
             <span class="student-name">${escapeHtmlRecitation(student.name)}</span>
         `;
+        if (state.pickMode === 'manual') {
+            box.addEventListener('click', function () {
+                const id = this.getAttribute('data-student-id');
+                const available = state.students.filter(s => !s.answered);
+                const chosen = available.find(s => String(s.id) === id);
+                if (chosen) {
+                    state.selectedStudent = chosen;
+                    highlightSelectedStudentById(chosen.id);
+                    setTimeout(showQuestionModal, 300);
+                }
+            });
+        }
         slider.appendChild(box);
     });
 
-    // Set initial position after layout (no animation). Animation runs when user clicks Play.
-    requestAnimationFrame(() => {
-        updateSliderPosition({ animate: false });
-        setTimeout(() => updateSliderPosition({ animate: false }), 60);
-    });
+    // In auto mode, center slider; in manual mode layout is static and scrollable.
+    if (state.pickMode === 'auto') {
+        requestAnimationFrame(() => {
+            updateSliderPosition({ animate: false });
+            setTimeout(() => updateSliderPosition({ animate: false }), 60);
+        });
+    }
 }
 
 function startSpinning() {
@@ -369,14 +641,22 @@ function startSpinning() {
     state.intervalId = setInterval(() => {
         // advance index safely using availableStudents length
         state.currentSlideIndex = (state.currentSlideIndex + 1) % availableStudents.length;
+        playSliderTick();
         updateSliderPosition();
     }, state.spinSpeed);
+}
+
+function setPlayButtonIcon(name) {
+    const btn = document.getElementById('play-button');
+    const wrapper = btn ? btn.querySelector('.recitation-play-btn-icon') : null;
+    if (!wrapper) return;
+    wrapper.innerHTML = `<i data-lucide="${name}" class="size-4"></i>`;
+    if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
 }
 
 function toggleSpin(autoPick = false) {
     const btn = document.getElementById('play-button');
     const btnText = document.getElementById('play-btn-text');
-    const icon = btn ? btn.querySelector('i') : null;
 
     const availableStudents = state.students.filter(s => !s.answered);
     if (availableStudents.length === 0) return;
@@ -388,9 +668,8 @@ function toggleSpin(autoPick = false) {
         state.isSpinning = true;
         state.spinSpeed = 50;
 
-        if (icon) icon.setAttribute('data-lucide', 'pause');
+        setPlayButtonIcon('square'); // stop icon when spinning
         if (btnText) btnText.textContent = 'Stop';
-        lucide.createIcons({ icons: lucide.icons });
 
         startSpinning();
 
@@ -415,7 +694,6 @@ function toggleSpin(autoPick = false) {
 function speedUpAndStop(availableStudents) {
     const btn = document.getElementById('play-button');
     const btnText = document.getElementById('play-btn-text');
-    const icon = btn ? btn.querySelector('i') : null;
 
     if (!btn || !btnText) return;
 
@@ -441,9 +719,8 @@ function speedUpAndStop(availableStudents) {
             highlightSelectedStudent();
             setTimeout(showQuestionModal, 500);
 
-            if (icon) icon.setAttribute('data-lucide', 'play');
+            setPlayButtonIcon('play');
             btnText.textContent = 'Play';
-            lucide.createIcons({ icons: lucide.icons });
             return;
         }
 
@@ -490,6 +767,7 @@ function parsePaddingPx(el, side) {
 
 function updateSliderPosition(opts) {
     opts = opts || {};
+    if (state.pickMode === 'manual') return;
     const slider = document.getElementById('student-slider');
     const boxes = document.querySelectorAll('.student-box');
     const container = slider ? slider.closest('.recitation-slider-wrap') || slider.closest('.recitation-slider-container') || slider.closest('.slider-container') : null;
@@ -538,12 +816,29 @@ function highlightSelectedStudent() {
     });
 }
 
+function highlightSelectedStudentById(studentId) {
+    const boxes = document.querySelectorAll('.student-box');
+    const id = String(studentId);
+    boxes.forEach((box) => {
+        if (box.getAttribute('data-student-id') === id) {
+            box.classList.add('selected');
+        } else {
+            box.classList.remove('selected');
+        }
+    });
+}
+
 function showQuestionModal() {
     const modal = document.getElementById('question-modal');
-    const currentQuestion = state.questions[state.currentQuestionIndex];
-    const timerEl = document.getElementById('question-timer');
+    if (!modal || !state.selectedStudent || !state.questions.length) return;
 
-    if (!modal || !state.selectedStudent || !currentQuestion) return;
+    // Random question only after teacher clicked Remove or Close and picked another student; otherwise use next in sequence
+    if (state.nextQuestionRandom) {
+        state.currentQuestionIndex = Math.floor(Math.random() * state.questions.length);
+        state.nextQuestionRandom = false;
+    }
+    const currentQuestion = state.questions[state.currentQuestionIndex];
+    if (!currentQuestion) return;
 
     // --- reset modal-answer state to avoid race conditions ---
     state.modalAnswered = false;
@@ -558,8 +853,9 @@ function showQuestionModal() {
     const modalActions = document.getElementById('modal-actions');
     const continueBtn = document.getElementById('continue-button');
 
-    // Timer configuration
-    let timeLeft = 20; // seconds to answer
+    // Timer configuration (from Configuration card: time limit per question)
+    const totalSeconds = getRecitationTimeLimitSeconds();
+    let timeLeft = totalSeconds;
 
     // Fill in modal content
     if (studentNameEl) studentNameEl.textContent = state.selectedStudent.name;
@@ -588,60 +884,54 @@ function showQuestionModal() {
     if (resultSection) resultSection.style.display = 'none';
     if (modalActions) modalActions.style.display = 'flex';
     if (continueBtn) continueBtn.style.display = 'none';
+    const removeCloseActions = document.getElementById('recitation-remove-close-actions');
+    if (removeCloseActions) removeCloseActions.classList.add('hidden');
 
-    // Timer lives in content area (below header); ensure it's in the right place
-    const contentArea = modal.querySelector('.recitation-question-content');
-    const timerDisplay = document.getElementById('question-timer');
-    if (timerDisplay && contentArea && !contentArea.contains(timerDisplay)) {
-        contentArea.insertBefore(timerDisplay, contentArea.firstChild);
+    const timerWrap = document.getElementById('question-timer-wrap');
+    const timerFill = document.getElementById('question-timer-fill');
+    const timerValue = document.getElementById('question-timer-value');
+    const timerLabel = document.getElementById('question-timer-label');
+
+    function formatTime(seconds) {
+        const m = Math.floor(seconds / 60);
+        const s = seconds % 60;
+        return m > 0 ? m + ':' + String(s).padStart(2, '0') : String(s);
     }
 
-    // Start countdown
-    timerDisplay.textContent = `⏰ ${timeLeft}s left`;
-    timerDisplay.style.color = '#ef4444';
-    timerDisplay.style.background = '#fff1f2';
-    timerDisplay.style.transform = 'scale(1)';
+    function updateTimerUI(remaining, isUp) {
+        if (!timerWrap || !timerFill || !timerValue) return;
+        const pct = totalSeconds > 0 ? Math.max(0, (remaining / totalSeconds) * 100) : 0;
+        timerFill.style.width = pct + '%';
+        timerValue.textContent = isUp ? "Time's up!" : formatTime(remaining);
+        if (timerLabel) timerLabel.textContent = isUp ? '' : 'left';
+        timerWrap.setAttribute('data-state', isUp ? 'up' : (remaining <= 5 ? 'critical' : (remaining <= 10 ? 'low' : 'normal')));
+    }
 
-    // Clear any previous interval then start a new one
+    updateTimerUI(timeLeft, false);
+
     if (state.timerInterval) { clearInterval(state.timerInterval); state.timerInterval = null; }
     state.timerInterval = setInterval(() => {
         timeLeft--;
-        // if already answered, stop timer immediately
         if (state.modalAnswered) {
             clearInterval(state.timerInterval);
             state.timerInterval = null;
             return;
         }
 
-        timerDisplay.textContent = `⏰ ${timeLeft}s left`;
-
-        if (timeLeft <= 5) {
-            timerDisplay.style.color = '#dc2626';
-            timerDisplay.style.background = '#fee2e2';
-            timerDisplay.style.transform = 'scale(1.05)';
-        }
+        if (timeLeft >= 0) updateTimerUI(timeLeft, false);
 
         if (timeLeft <= 0) {
             clearInterval(state.timerInterval);
             state.timerInterval = null;
+            updateTimerUI(0, true);
 
-            // final visual
-            timerDisplay.textContent = '⏳ Time’s Up!';
-            timerDisplay.style.color = '#b91c1c';
-            timerDisplay.style.background = '#fecaca';
-
-            // Disable answer inputs immediately
             const inputs = answerSection.querySelectorAll('input, button, textarea, select');
             inputs.forEach(el => el.disabled = true);
 
-            // If not already answered, show time-up result — use correctAnswer field
             if (!state.modalAnswered) {
-                state.modalAnswered = true; // prevent duplicate handling
+                state.modalAnswered = true;
                 const correct = (currentQuestion.correctAnswer || '').toString();
-                // showResult(false, 'No answer', correct, false)  -> false autoContinue here
                 showResult(false, 'No answer', correct, false);
-
-                // reveal continue button (teacher can continue)
                 if (continueBtn) continueBtn.style.display = 'block';
             }
         }
@@ -711,8 +1001,34 @@ function closeQuestionModal() {
     const modal = document.getElementById('question-modal');
     if (!modal) return;
 
+    if (state.timerInterval) {
+        clearInterval(state.timerInterval);
+        state.timerInterval = null;
+    }
+    if (state.autoContinueTimeout) {
+        clearTimeout(state.autoContinueTimeout);
+        state.autoContinueTimeout = null;
+    }
+
     modal.classList.remove('active');
-    modal.classList.add('hidden');  // hide it completely
+    modal.classList.add('hidden');
+}
+
+function closeQuestionModalWithRandomNext() {
+    state.nextQuestionRandom = true;
+    closeQuestionModal();
+}
+
+function removeStudentAndClose() {
+    if (state.selectedStudent) {
+        state.selectedStudent.answered = true;
+    }
+    state.nextQuestionRandom = true; // next student pick will get a random question
+    closeQuestionModal();
+    updateQuestionProgress();
+    renderStudentSlider();
+    clearSelectedStudents();
+    if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
 }
 
 
@@ -756,7 +1072,7 @@ function submitAnswer() {
 }
 
 
-function showResult(isCorrect, userAnswer, correctAnswer, autoContinue = true) {
+function showResult(isCorrect, userAnswer, correctAnswer, autoContinue = false) {
     // prevent duplicate calls
     if (state.modalAnswered === false) {
         state.modalAnswered = true;
@@ -791,26 +1107,38 @@ function showResult(isCorrect, userAnswer, correctAnswer, autoContinue = true) {
     const safeUser = escapeHtml(userAnswer);
     const safeCorrect = escapeHtml(correctAnswer);
 
-    if (isCorrect) {
-        resultContent.innerHTML = `
-            <span class="result-icon" aria-hidden="true">✅</span>
-            <div class="result-body">
-                <h4>Correct!</h4>
-                <p>Great job! 🎉</p>
+    const characterImg = isCorrect ? 'image/eel-character-celebrate.png' : 'image/eel-character-sad.png';
+    const characterAlt = isCorrect ? 'EEL character celebrating' : 'EEL character sad';
+    const resultTitle = isCorrect ? 'Correct!' : 'Incorrect';
+    const resultMessage = isCorrect ? 'Great job! 🎉' : 'Here’s the correct answer.';
+    const resultIcon = isCorrect ? '✅' : '❌';
+
+    resultContent.innerHTML = `
+        <img src="${characterImg}" alt="${characterAlt}" class="recitation-result-character" aria-hidden="true">
+        <div class="recitation-result-body">
+            <div class="recitation-result-header">
+                <span class="result-icon" aria-hidden="true">${resultIcon}</span>
+                <div class="recitation-result-title-wrap">
+                    <h4 class="recitation-result-title">${resultTitle}</h4>
+                    <p class="recitation-result-message">${resultMessage}</p>
+                </div>
             </div>
-        `;
-    } else {
-        resultContent.innerHTML = `
-            <span class="result-icon" aria-hidden="true">❌</span>
-            <div class="result-body">
-                <h4>Incorrect</h4>
-                <p>💡 <strong>Correct answer:</strong> <span class="correct-answer">${safeCorrect}</span></p>
-                <p>📝 <strong>Your answer:</strong> <span class="your-answer">${safeUser}</span></p>
+            <div class="recitation-result-answers">
+                <div class="recitation-result-answer-row">
+                    <span class="recitation-result-answer-label">Your answer</span>
+                    <span class="recitation-result-answer-value your-answer">${safeUser || '—'}</span>
+                </div>
+                <div class="recitation-result-answer-row">
+                    <span class="recitation-result-answer-label">Correct answer</span>
+                    <span class="recitation-result-answer-value correct-answer">${safeCorrect || '—'}</span>
+                </div>
             </div>
-        `;
-    }
+        </div>
+    `;
 
     if (continueBtn) continueBtn.style.display = 'block';
+    const removeCloseActions = document.getElementById('recitation-remove-close-actions');
+    if (removeCloseActions) removeCloseActions.classList.remove('hidden');
     lucide.createIcons({ icons: lucide.icons });
     // Auto-continue after 5s if requested
     if (autoContinue) {

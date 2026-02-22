@@ -3,6 +3,7 @@ const bcrypt = require("bcryptjs");
 const router = express.Router();
 // Use req.pool from server.js (single source of truth)
 const { sendAccountStatusEmail } = require("./mailer");
+const { nowPhilippineDatetime } = require("./utils/datetime");
 
 // SIGNUP route
 router.post("/api/auth/register", async (req, res) => {
@@ -10,6 +11,9 @@ router.post("/api/auth/register", async (req, res) => {
 
   if (!fname || !lname || !email || !password || !role)
     return res.status(400).json({ success: false, error: "All required fields must be provided" });
+
+  if (String(password).length > 30)
+    return res.status(400).json({ success: false, error: "Password must be at most 30 characters" });
 
   function toNameCase(input) {
     const s = String(input || "").trim();
@@ -36,8 +40,8 @@ router.post("/api/auth/register", async (req, res) => {
   const safeFname = toNameCase(fname);
   const safeLname = toNameCase(lname);
   const safeEmail = String(email || "").trim();
-  const safeSection = section == null ? null : String(section).trim();
-  const safeStrand = strand == null ? null : String(strand).trim();
+  const safeSection = section == null ? null : toNameCase(section);
+  const safeStrand = strand == null ? null : toNameCase(strand);
 
   if (!safeFname || !safeLname || !safeEmail || !safeRole) {
     return res.status(400).json({ success: false, error: "All required fields must be provided" });
@@ -87,8 +91,8 @@ router.post("/api/auth/register", async (req, res) => {
     );
     const hasStrand = Number(colStrand?.[0]?.c || 0) > 0;
 
-    const colsInsert = ["fname", "lname", "email", "password", "role"];
-    const vals = [safeFname, safeLname, safeEmail, hashedPassword, safeRole];
+    const colsInsert = ["fname", "lname", "email", "password", "role", "created_at"];
+    const vals = [safeFname, safeLname, safeEmail, hashedPassword, safeRole, nowPhilippineDatetime()];
 
     if (hasSection) {
       colsInsert.push("section");

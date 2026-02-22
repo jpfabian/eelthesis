@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 
 const { sendAccountStatusEmail, isEmailEnabled } = require("./mailer");
+const { nowPhilippineDatetime } = require("./utils/datetime");
 
 const ADMIN_USER = "admin";
 const ADMIN_PASS = "admin123";
@@ -79,7 +80,7 @@ router.get("/api/admin/pending-users", requireAdmin, async (req, res) => {
 
     const [rows] = await conn.execute(
       `
-      SELECT user_id, fname, lname, email, role, verification_status, created_at, rejected_reason
+      SELECT user_id, fname, lname, email, role, section, strand, verification_status, created_at, rejected_reason
       FROM users
       WHERE role IN ('student','teacher')
         AND verification_status = 'pending'
@@ -126,7 +127,7 @@ router.get("/api/admin/users", requireAdmin, async (req, res) => {
     try {
       const [r] = await conn.execute(
         `
-        SELECT user_id, fname, lname, email, role,
+        SELECT user_id, fname, lname, email, role, section, strand,
                verification_status, created_at, rejected_reason,
                is_active, deactivated_at, deactivated_by, deactivated_reason
         FROM users
@@ -143,7 +144,7 @@ router.get("/api/admin/users", requireAdmin, async (req, res) => {
       deactivationEnabled = false;
       const [r] = await conn.execute(
         `
-        SELECT user_id, fname, lname, email, role,
+        SELECT user_id, fname, lname, email, role, section, strand,
                verification_status, created_at, rejected_reason,
                1 AS is_active, NULL AS deactivated_at, NULL AS deactivated_by, NULL AS deactivated_reason
         FROM users
@@ -192,18 +193,19 @@ router.patch("/api/admin/users/:id/approve", requireAdmin, async (req, res) => {
     if (hasDeactivatedReason) activeSet.push("deactivated_reason = NULL");
     const activeSql = activeSet.length ? `, ${activeSet.join(", ")}` : "";
 
+    const now = nowPhilippineDatetime();
     const [result] = await conn.execute(
       `
       UPDATE users
       SET verification_status = 'approved',
-          verified_at = NOW(),
+          verified_at = ?,
           verified_by = 'admin',
           rejected_at = NULL,
           rejected_reason = NULL
           ${activeSql}
       WHERE user_id = ?
       `,
-      [userId]
+      [now, userId]
     );
 
     // notify user (best-effort)
@@ -237,17 +239,18 @@ router.patch("/api/admin/users/:id/reject", requireAdmin, async (req, res) => {
   let conn;
   try {
     conn = await pool.getConnection();
+    const now = nowPhilippineDatetime();
     const [result] = await conn.execute(
       `
       UPDATE users
       SET verification_status = 'rejected',
           verified_at = NULL,
           verified_by = NULL,
-          rejected_at = NOW(),
+          rejected_at = ?,
           rejected_reason = ?
       WHERE user_id = ?
       `,
-      [reason || null, userId]
+      [now, reason || null, userId]
     );
 
     // notify user (best-effort)
@@ -296,7 +299,10 @@ router.patch("/api/admin/users/:id/deactivate", requireAdmin, async (req, res) =
 
     const sets = ["is_active = 0"];
     const params = [];
-    if (hasDeactivatedAt) sets.push("deactivated_at = NOW()");
+    if (hasDeactivatedAt) {
+      sets.push("deactivated_at = ?");
+      params.push(nowPhilippineDatetime());
+    }
     if (hasDeactivatedBy) sets.push("deactivated_by = 'admin'");
     if (hasDeactivatedReason) {
       sets.push("deactivated_reason = ?");

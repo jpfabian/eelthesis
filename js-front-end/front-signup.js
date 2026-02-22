@@ -54,10 +54,31 @@ let selectedRole = null;
             // Password strength
             passwordInput.addEventListener('input', function() {
                 checkPasswordStrength(this.value);
+                if (this.value.length >= 30) showMaxLengthModal();
             });
+
+            const confirmPasswordInput = document.getElementById('confirm-password');
+            if (confirmPasswordInput) {
+                confirmPasswordInput.addEventListener('input', function() {
+                    if (this.value.length >= 30) showMaxLengthModal();
+                });
+            }
 
             lucide.createIcons({ icons: lucide.icons });
         });
+
+        const PASSWORD_MAX_LENGTH = 30;
+
+        function showMaxLengthModal() {
+            if (typeof Swal === 'undefined') return;
+            Swal.fire({
+                icon: 'info',
+                title: 'Maximum length reached',
+                text: `Password cannot exceed ${PASSWORD_MAX_LENGTH} characters.`,
+                confirmButtonText: 'OK',
+                confirmButtonColor: 'var(--primary, #6d28d9)'
+            });
+        }
 
         function showRegistrationStep() {
             document.getElementById('role-step').classList.add('hidden');

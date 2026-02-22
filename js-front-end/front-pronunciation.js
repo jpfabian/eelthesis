@@ -829,8 +829,8 @@ async function loadPronunciationQuizzesTeacher(user) {
                 <button 
                     class="btn btn-primary flex-1"
                     onclick="${isLocked ? `openScheduleModal(${quiz.quiz_id})` : `lockPronunciationQuiz(${quiz.quiz_id})`}">
-                    <i data-lucide="${isLocked ? "unlock" : "lock"}" class="size-3 mr-1"></i>
-                    ${isLocked ? "Unlock" : "Lock"}
+                    <i data-lucide="${isLocked ? "send" : "ban"}" class="size-3 mr-1"></i>
+                    ${isLocked ? "Publish" : "Unpublish"}
                 </button>
             `;
 
@@ -1550,19 +1550,21 @@ async function openLeaderboardModal(quizId, classId) {
         });
 
 
-        // Table
+        // Table: from 4th onwards only (top 3 are on the podium)
+        const tableEntries = leaderboard.filter(e => e.rank > 3);
         if (leaderboard.length === 0) {
             body.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--muted-foreground);">No attempts yet.</td></tr>`;
+        } else if (tableEntries.length === 0) {
+            body.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--muted-foreground);">Top 3 shown above. No other rankings.</td></tr>`;
         } else {
-            leaderboard.forEach(entry => {
+            tableEntries.forEach(entry => {
                 const row = document.createElement("tr");
                 row.className = "leaderboard-table-row";
-                if (entry.rank <= 3) row.classList.add("top-three");
 
                 const duration = formatDuration(entry.start_time, entry.end_time);
 
                 row.innerHTML = `
-                    <td><span class="rank-badge">${entry.rank <= 3 ? ['🥇','🥈','🥉'][entry.rank-1] : entry.rank}</span></td>
+                    <td><span class="rank-badge">${entry.rank}</span></td>
                     <td>
                         <div class="student-info">
                             <div class="student-avatar" style="background: linear-gradient(135deg, #6366f1, #10b981);">
@@ -1627,16 +1629,12 @@ async function loadLessonsAndTopics() {
     topicSelect.innerHTML = '<option>Loading...</option>';
 
     const res = await fetch(`http://localhost:3000/api/lessons-with-topics?class_id=${classId}`);
-    const data = await res.json();
+    const raw = await res.json();
+    const data = Array.isArray(raw) ? raw : (raw.lessons || []);
 
-    if (!Array.isArray(data)) {
-      console.error("Invalid data format:", data);
-      topicSelect.innerHTML = '<option>Error loading topics</option>';
-      return;
-    }
-
-    if (data.length === 0) {
-      topicSelect.innerHTML = '<option>No topics found</option>';
+    if (!Array.isArray(data) || data.length === 0) {
+      if (data.length === 0) topicSelect.innerHTML = '<option>No topics found</option>';
+      else { console.error("Invalid data format:", raw); topicSelect.innerHTML = '<option>Error loading topics</option>'; }
       return;
     }
 
@@ -1874,8 +1872,9 @@ function closeTeacherPronunciationReviewModal() {
     const title = document.getElementById('teacher-pron-review-quiz-title');
     const saveBtn = document.getElementById('teacher-pron-review-save-btn');
     if (list) list.innerHTML = '';
-    if (detail) detail.innerHTML = `<div class="text-muted-foreground">Select an attempt to view answers.</div>`;
+    if (detail) detail.innerHTML = `<div class="lesson-teacher-review-empty"><i data-lucide="user-check" class="lesson-teacher-review-empty-icon" aria-hidden="true"></i><p class="lesson-teacher-review-empty-text">Select a submission from the list to view answers.</p></div>`;
     if (title) title.textContent = 'Quiz';
+    if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
     if (saveBtn) saveBtn.classList.add('hidden');
 }
 
@@ -1923,7 +1922,7 @@ function renderTeacherPronAttemptsList() {
 
     const attempts = teacherPronReviewState.attempts || [];
     if (!attempts.length) {
-        list.innerHTML = `<div class="text-muted-foreground text-sm">No submissions yet.</div>`;
+        list.innerHTML = `<div class="lesson-teacher-review-list-empty">No submissions yet.</div>`;
         return;
     }
 
@@ -1931,10 +1930,11 @@ function renderTeacherPronAttemptsList() {
         const name = a.student_name || `Student #${a.student_id}`;
         const initials = getInitials(name);
         const score = a.score != null ? `${a.score}` : '-';
+        const isActive = Number(teacherPronReviewState.attemptId) === Number(a.attempt_id);
         return `
             <button
               type="button"
-              class="btn btn-outline w-full justify-between"
+              class="btn btn-outline w-full justify-between teacher-attempt-item ${isActive ? 'is-active' : ''}"
               onclick="loadTeacherPronAttempt(${a.attempt_id})"
               style="display:flex; align-items:center; gap:.5rem;"
             >
@@ -1944,7 +1944,9 @@ function renderTeacherPronAttemptsList() {
                   ${escapeHtml(name)}
                 </span>
               </span>
-              <span class="text-xs text-muted-foreground">${score}</span>
+              <span class="teacher-attempt-meta">
+                <span class="text-xs teacher-attempt-score">${escapeHtml(score)}</span>
+              </span>
             </button>
         `;
     }).join('');
@@ -1956,7 +1958,8 @@ async function loadTeacherPronAttempt(attemptId) {
 
     teacherPronReviewState.attemptId = attemptId;
     const detail = document.getElementById('teacher-pron-attempt-detail');
-    if (detail) detail.innerHTML = `<div class="text-muted-foreground">Loading answers...</div>`;
+    if (detail) detail.innerHTML = `<div class="lesson-teacher-review-empty"><i data-lucide="loader" class="lesson-teacher-review-empty-icon" aria-hidden="true"></i><p class="lesson-teacher-review-empty-text">Loading answers...</p></div>`;
+    if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
 
     try {
         const res = await fetch(`http://localhost:3000/api/teacher/pronunciation-attempts/${attemptId}`);

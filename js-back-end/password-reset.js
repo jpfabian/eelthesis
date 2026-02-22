@@ -3,6 +3,7 @@ const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 
 const router = express.Router();
+const { nowPhilippineDatetime, formatPhilippineDatetime } = require("./utils/datetime");
 
 function sha256Hex(input) {
   return crypto.createHash("sha256").update(String(input || "")).digest("hex");
@@ -76,13 +77,13 @@ router.post("/api/auth/forgot-password", async (req, res) => {
       );
 
       // Invalidate previous unused tokens for this user
-      await conn.execute("UPDATE password_reset_tokens SET used_at = NOW() WHERE user_id = ? AND used_at IS NULL", [userId]);
+      await conn.execute("UPDATE password_reset_tokens SET used_at = ? WHERE user_id = ? AND used_at IS NULL", [nowPhilippineDatetime(), userId]);
 
       const tokenHash = sha256Hex(token);
-      const expiresAt = toMySqlDateTime(addMinutes(new Date(), 15));
+      const expiresAt = formatPhilippineDatetime(addMinutes(new Date(), 15));
       await conn.execute(
-        "INSERT INTO password_reset_tokens (user_id, token_hash, expires_at) VALUES (?, ?, ?)",
-        [userId, tokenHash, expiresAt]
+        "INSERT INTO password_reset_tokens (user_id, token_hash, expires_at, created_at) VALUES (?, ?, ?, ?)",
+        [userId, tokenHash, expiresAt, nowPhilippineDatetime()]
       );
     }
 
@@ -125,15 +126,16 @@ router.post("/api/auth/reset-password", async (req, res) => {
     }
 
     const tokenHash = sha256Hex(token);
+    const now = nowPhilippineDatetime();
     const [rows] = await conn.execute(
       `SELECT reset_id
        FROM password_reset_tokens
        WHERE user_id = ?
          AND token_hash = ?
          AND used_at IS NULL
-         AND expires_at > NOW()
+         AND expires_at > ?
        LIMIT 1`,
-      [userId, tokenHash]
+      [userId, tokenHash, now]
     );
 
     if (!rows.length) {
@@ -141,8 +143,8 @@ router.post("/api/auth/reset-password", async (req, res) => {
     }
 
     const hashed = await bcrypt.hash(newPassword, 10);
-    await conn.execute("UPDATE users SET password = ?, updated_at = NOW() WHERE user_id = ?", [hashed, userId]);
-    await conn.execute("UPDATE password_reset_tokens SET used_at = NOW() WHERE reset_id = ?", [rows[0].reset_id]);
+    await conn.execute("UPDATE users SET password = ?, updated_at = ? WHERE user_id = ?", [hashed, now, userId]);
+    await conn.execute("UPDATE password_reset_tokens SET used_at = ? WHERE reset_id = ?", [now, rows[0].reset_id]);
 
     return res.json({ success: true, message: "Password updated" });
   } catch (err) {

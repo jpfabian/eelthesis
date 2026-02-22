@@ -44,6 +44,15 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 });
 
+function escapeHtml(str) {
+  return String(str ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
 async function loadLessonsAndTopics() {
   try {
     const classId = localStorage.getItem("eel_selected_class_id");
@@ -60,40 +69,96 @@ async function loadLessonsAndTopics() {
     const container = document.getElementById('topicDropdownContainer');
     container.innerHTML = '';
 
-    data.forEach(lesson => {
-      // Lesson header
+    // Group lessons by quarter (same separation as lessons.html)
+    const quarterGroups = [];
+    const noQuarter = [];
+    data.forEach((lesson) => {
+      const qNum = lesson.quarter_number != null ? Number(lesson.quarter_number) : null;
+      const qTitle = lesson.quarter_title ? String(lesson.quarter_title).trim() : "";
+      if (qNum != null && qNum >= 1 && qNum <= 4) {
+        let group = quarterGroups.find((g) => g.quarter_number === qNum);
+        if (!group) {
+          group = { quarter_number: qNum, quarter_title: qTitle || `Quarter ${qNum}`, lessons: [] };
+          quarterGroups.push(group);
+        }
+        group.lessons.push(lesson);
+      } else {
+        noQuarter.push(lesson);
+      }
+    });
+    quarterGroups.sort((a, b) => a.quarter_number - b.quarter_number);
+
+    function appendLessonAndTopics(lesson, parentEl) {
+      const target = parentEl || container;
       const lessonHeader = document.createElement('div');
       lessonHeader.textContent = lesson.lesson_title;
       lessonHeader.classList.add('exam-topic-lesson-header');
 
-      // Topics container
       const topicsDiv = document.createElement('div');
       topicsDiv.style.display = 'none';
       topicsDiv.classList.add('exam-topic-topics');
 
-      lesson.topics.forEach(topic => {
+      (lesson.topics || []).forEach(topic => {
         const label = document.createElement('label');
         label.classList.add('exam-topic-option');
-
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         checkbox.value = topic.topic_id;
         checkbox.name = 'topics';
         checkbox.classList.add('exam-topic-checkbox');
-
         label.appendChild(checkbox);
         label.appendChild(document.createTextNode(topic.topic_title));
         topicsDiv.appendChild(label);
       });
 
-      // Toggle topics
       lessonHeader.addEventListener('click', () => {
         topicsDiv.style.display = topicsDiv.style.display === 'none' ? 'block' : 'none';
       });
 
-      container.appendChild(lessonHeader);
-      container.appendChild(topicsDiv);
+      target.appendChild(lessonHeader);
+      target.appendChild(topicsDiv);
+    }
+
+    function syncQuarterCheckbox(quarterBlock) {
+      const quarterCheckbox = quarterBlock.querySelector('.exam-quarter-checkbox');
+      const topicCheckboxes = quarterBlock.querySelectorAll('input[name="topics"]');
+      if (!quarterCheckbox || topicCheckboxes.length === 0) return;
+      const checkedCount = Array.from(topicCheckboxes).filter(cb => cb.checked).length;
+      quarterCheckbox.checked = checkedCount === topicCheckboxes.length;
+      quarterCheckbox.indeterminate = checkedCount > 0 && checkedCount < topicCheckboxes.length;
+    }
+
+    quarterGroups.forEach((group) => {
+      const quarterBlock = document.createElement('div');
+      quarterBlock.className = 'exam-quarter-block';
+
+      const quarterHeading = document.createElement('div');
+      quarterHeading.className = 'lesson-quarter-heading lesson-quarter-heading--with-checkbox';
+      quarterHeading.innerHTML = `
+        <label class="lesson-quarter-heading__checkbox-wrap">
+          <input type="checkbox" class="exam-quarter-checkbox" aria-label="Select all topics in Quarter ${group.quarter_number}">
+        </label>
+        <span class="lesson-quarter-heading__badge">Quarter ${group.quarter_number}</span>
+        <span class="lesson-quarter-heading__title">${escapeHtml(group.quarter_title)}</span>
+      `;
+      quarterBlock.appendChild(quarterHeading);
+
+      const quarterCb = quarterHeading.querySelector('.exam-quarter-checkbox');
+      quarterCb.addEventListener('change', () => {
+        const topicCheckboxes = quarterBlock.querySelectorAll('input[name="topics"]');
+        topicCheckboxes.forEach(cb => { cb.checked = quarterCb.checked; });
+        quarterCb.indeterminate = false;
+      });
+
+      group.lessons.forEach(lesson => appendLessonAndTopics(lesson, quarterBlock));
+
+      quarterBlock.querySelectorAll('input[name="topics"]').forEach(topicCb => {
+        topicCb.addEventListener('change', () => syncQuarterCheckbox(quarterBlock));
+      });
+
+      container.appendChild(quarterBlock);
     });
+    noQuarter.forEach(lesson => appendLessonAndTopics(lesson));
   } catch (err) {
     console.error('Error loading lessons and topics:', err);
   }
@@ -256,7 +321,7 @@ function showExamPreview(examText, subject, selectedTopics, questionTypes) {
   const headerHTML = `
     <header class="exam-doc-header">
       <div class="exam-doc-logo">
-        <img src="../image/norzagaray-logo.png" alt="School Logo" class="exam-doc-logo-img">
+        <img src="../image/school-logo.png" alt="School Logo" class="exam-doc-logo-img">
       </div>
       <p class="exam-doc-agency">Republic of the Philippines<br>Department of Education<br>Region III – Central Luzon<br>Schools Division of Bulacan</p>
       <p class="exam-doc-school">NORZAGARAY NATIONAL HIGH SCHOOL</p>

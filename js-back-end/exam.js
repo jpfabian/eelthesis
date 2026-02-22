@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 require("dotenv").config();
+const { nowPhilippineDatetime } = require("./utils/datetime");
 const Groq = require("groq-sdk");
 let groq = null;
 try {
@@ -17,6 +18,13 @@ function requireGroq(res) {
     message: "AI service is not configured. Set GROQ_API_KEY in your environment."
   });
   return null;
+}
+
+function capitalizeFirst(s) {
+  if (s == null || typeof s !== "string") return s;
+  const t = String(s).trim();
+  if (!t) return t;
+  return t.charAt(0).toUpperCase() + t.slice(1);
 }
 
 router.post("/api/generate-exam", async (req, res) => {
@@ -91,6 +99,8 @@ The layout, indentation, and spacing must be EXACTLY as shown — do not add or 
 
 CRITICAL: Include ONLY the sections that appear in the layout below. Do NOT add any section that is not in the layout. For example: if the layout does NOT contain "IV. ESSAY", you must NOT include an Essay section. If it does NOT contain "III. IDENTIFICATION", do NOT include Identification. Only generate the sections that are explicitly listed in the layout.
 
+CRITICAL: Generate EVERY question in the layout. If the layout shows 50 numbered items in a section, you must output all 50 full questions (and 50 answers in the answer key). Do not stop early, do not write "..." or "items 25–50 similar", and do not abbreviate. Each number must have a complete question.
+
 Do NOT include any explanations or notes outside the exam itself.
 Do NOT include any exam title, subject name, school info, or date at the top of the exam.
 Do NOT include any subject not related in english.
@@ -119,13 +129,19 @@ ${sections.join("\n")}
 Follow this format strictly. Do not add any explanations or instructions outside the exam.
 `;
 
-    // Call Groq
+    // Total questions so we request enough output tokens (50 questions ≈ 4k+ tokens; allow plenty for full exam + answer key)
+    const totalQuestions = (getCount("multiple-choice") || 0) + (getCount("true-false") || 0) +
+      (getCount("identification") || 0) + (getCount("essay") || 0);
+    const maxTokens = Math.min(32768, Math.max(4096, totalQuestions * 150));
+
+    // Call Groq (set max_tokens high enough so 50+ questions are not truncated)
     const response = await client.chat.completions.create({
       model: "llama-3.1-8b-instant",
+      max_tokens: maxTokens,
       messages: [
         {
           role: "system",
-          content: "You are an expert senior high school teacher formatting exams in clean, centered academic layout with clear sections and an answer key."
+          content: "You are an expert senior high school teacher formatting exams in clean, centered academic layout with clear sections and an answer key. Always generate the FULL number of questions requested in each section; do not stop early or summarize."
         },
         { role: "user", content: prompt }
       ]
@@ -166,11 +182,13 @@ router.post("/api/save-exam", async (req, res) => {
     return res.status(400).json({ success: false, error: "Teacher ID and Class ID are required" });
   }
 
+  const safeTitle = capitalizeFirst(title);
+
   try {
     const [result] = await pool.query(
       `INSERT INTO exams (class_id, created_by, title, content, question_count, types, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, NOW())`,
-      [class_id, created_by, title, content, question_count, JSON.stringify(types)]
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [class_id, created_by, safeTitle, content, question_count, JSON.stringify(types), nowPhilippineDatetime()]
     );
 
     res.json({ success: true, id: result.insertId });
@@ -222,10 +240,12 @@ router.get('/api/lessons-with-topics', async (req, res) => {
     // ✅ Step 4: Fetch all topics
     const [topics] = await pool.query('SELECT * FROM topics');
 
-    // ✅ Step 5: Combine lessons + topics
+    // ✅ Step 5: Combine lessons + topics (include quarter for display grouping)
     const data = lessons.map(lesson => ({
       lesson_id: lesson.lesson_id,
       lesson_title: lesson.lesson_title,
+      quarter_number: lesson.quarter_number != null ? lesson.quarter_number : null,
+      quarter_title: lesson.quarter_title ? String(lesson.quarter_title).trim() : null,
       topics: topics.filter(t => t.lesson_id === lesson.lesson_id)
     }));
 

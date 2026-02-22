@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const pool = require("./db"); // ✅ Import your pool
+const { nowPhilippineDatetime } = require("./utils/datetime");
 
 // Function to generate class code
 function generateClassCode(length = 8) {
@@ -23,8 +24,8 @@ router.post("/api/classes", async (req, res) => {
     const class_code = generateClassCode();
 
     const [result] = await pool.query(
-      "INSERT INTO classes (class_code, name, section, subject, teacher_id) VALUES (?, ?, ?, ?, ?)",
-      [class_code, name, section, subject, teacher_id]
+      "INSERT INTO classes (class_code, name, section, subject, teacher_id, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+      [class_code, name, section, subject, teacher_id, nowPhilippineDatetime()]
     );
 
     res.json({ success: true, class_id: result.insertId, class_code });
@@ -81,9 +82,9 @@ router.post("/api/join-class", async (req, res) => {
 
     // 3. Insert both names into student_classes
     await pool.query(
-      `INSERT INTO student_classes (student_id, student_fname, student_lname, class_id, status)
-      VALUES (?, ?, ?, ?, 'pending')`,
-      [student_id, student_fname, student_lname, classId]
+      `INSERT INTO student_classes (student_id, student_fname, student_lname, class_id, status, joined_at)
+      VALUES (?, ?, ?, ?, 'pending', ?)`,
+      [student_id, student_fname, student_lname, classId, nowPhilippineDatetime()]
     );
 
     res.json({ success: true, message: "Please wait for your teacher's approval!" });

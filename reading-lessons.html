@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reading Lessons - EEL</title>
+    <link rel="icon" href="image/eel-character.png" type="image/png">
     <link rel="stylesheet" href="css/styles.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.1/lucide.min.css" rel="stylesheet">
     <script src="js/theme.js"></script>
@@ -54,12 +55,11 @@
             <div class="p-6 space-y-6">
                 <div class="quiz-page">
                     <header class="page-header">
-                        <img src="image/eel-character.png" alt="EEL mascot" class="page-header-character">
                         <div class="page-header-icon" aria-hidden="true">
                             <i data-lucide="book-open" class="size-8"></i>
                         </div>
                         <div>
-                            <h1 class="page-header-title">Reading Practice</h1>
+                            <h1 class="page-header-title">Reading and Writing Practice</h1>
                             <p class="page-header-subtitle">Engaging texts with comprehension questions, feedback, and progress.</p>
                         </div>
                     </header>
@@ -319,11 +319,11 @@
             <div class="schedule-modal-content">
                 <div class="schedule-modal-section">
                     <h4 class="schedule-modal-section-title">
-                        <i data-lucide="unlock" class="size-4"></i>
-                        Unlock
+                        <i data-lucide="send" class="size-4"></i>
+                        Publish
                     </h4>
                     <p class="schedule-modal-hint">Earliest date and time students can start the quiz.</p>
-                    <label class="schedule-modal-label" for="modal-unlock-time">Unlock date & time</label>
+                    <label class="schedule-modal-label" for="modal-unlock-time">Publish date & time</label>
                     <input type="datetime-local" id="modal-unlock-time" class="schedule-modal-input" aria-describedby="unlock-hint">
                 </div>
 
@@ -343,11 +343,11 @@
 
                 <div class="schedule-modal-section">
                     <h4 class="schedule-modal-section-title">
-                        <i data-lucide="lock" class="size-4"></i>
-                        Lock (deadline)
+                        <i data-lucide="ban" class="size-4"></i>
+                        Unpublish (deadline)
                     </h4>
                     <p class="schedule-modal-hint">After this time, the quiz is no longer available.</p>
-                    <label class="schedule-modal-label" for="modal-lock-time">Lock date & time</label>
+                    <label class="schedule-modal-label" for="modal-lock-time">Unpublish date & time</label>
                     <input type="datetime-local" id="modal-lock-time" class="schedule-modal-input" aria-describedby="lock-hint">
                 </div>
 
@@ -373,7 +373,7 @@
 
                 <div class="schedule-modal-tip" role="status">
                     <i data-lucide="info" class="size-4 schedule-modal-tip-icon"></i>
-                    <p>Unlock and lock define the availability window. Time limit applies per attempt once a student starts.</p>
+                    <p>Publish and unpublish define the availability window. Time limit applies per attempt once a student starts.</p>
                 </div>
             </div>
 
@@ -506,8 +506,10 @@
                         <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path>
                     </svg>
                 </div>
-                <h2 class="leaderboard-modal-title">Quiz Leaderboard</h2>
-                <p class="leaderboard-subtitle" id="quiz-name">Communication Skills Assessment</p>
+                <div class="leaderboard-header-text">
+                    <h2 class="leaderboard-modal-title">Quiz Leaderboard</h2>
+                    <p class="leaderboard-subtitle" id="quiz-name">Communication Skills Assessment</p>
+                </div>
             </div>
 
             <!-- Top 3 Podium -->
@@ -581,62 +583,52 @@
      ✅ TEACHER REVIEW / OVERRIDE MODAL (Reading)
      ============================================ -->
     <div id="teacher-reading-review-modal" class="modal-overlay hidden">
-        <div class="modal-card" style="width: min(1200px, 96vw); padding: 0 !important;">
-            <div class="modal-header">
-                <h3 class="modal-title">Review Student Answers</h3>
-                <button class="close-btn" onclick="closeTeacherReadingReviewModal()">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="18" y1="6" x2="6" y2="18"></line>
-                        <line x1="6" y1="6" x2="18" y2="18"></line>
-                    </svg>
+        <div class="lesson-teacher-review-card">
+            <header class="lesson-teacher-review-header">
+                <div class="lesson-teacher-review-header-inner">
+                    <div class="lesson-teacher-review-header-icon" aria-hidden="true">
+                        <i data-lucide="check-square" class="lesson-teacher-review-header-icon-svg"></i>
+                    </div>
+                    <div class="lesson-teacher-review-header-text">
+                        <h2 class="lesson-teacher-review-title">Review Student Answers</h2>
+                        <p class="lesson-teacher-review-quiz-name" id="teacher-reading-review-quiz-title">Quiz</p>
+                    </div>
+                </div>
+                <button type="button" class="lesson-teacher-review-close" onclick="closeTeacherReadingReviewModal()" aria-label="Close">
+                    <i data-lucide="x" class="size-5"></i>
                 </button>
+            </header>
+            <div class="lesson-teacher-review-body">
+                <aside class="lesson-teacher-review-sidebar">
+                    <div class="lesson-teacher-review-sidebar-header">
+                        <h3 class="lesson-teacher-review-sidebar-title">Students</h3>
+                        <p class="lesson-teacher-review-sidebar-desc">Select a student to view and grade their answers.</p>
+                    </div>
+                    <div class="lesson-teacher-review-search-wrap">
+                        <i data-lucide="search" class="lesson-teacher-review-search-icon" aria-hidden="true"></i>
+                        <input id="teacher-reading-attempt-search" class="lesson-teacher-review-search" type="search" placeholder="Search by name..." />
+                        <span id="teacher-reading-attempts-count" class="lesson-teacher-review-count"></span>
+                    </div>
+                    <div id="teacher-reading-attempts-list" class="lesson-teacher-review-attempts-list"></div>
+                </aside>
+                <main class="lesson-teacher-review-main">
+                    <div class="lesson-teacher-review-main-header">
+                        <h3 class="lesson-teacher-review-main-title">Answers &amp; grading</h3>
+                        <p class="lesson-teacher-review-main-desc">Toggle correct/wrong to adjust grading (points update automatically).</p>
+                    </div>
+                    <div id="teacher-reading-attempt-detail" class="lesson-teacher-review-detail">
+                        <div class="lesson-teacher-review-empty">
+                            <i data-lucide="user-check" class="lesson-teacher-review-empty-icon" aria-hidden="true"></i>
+                            <p class="lesson-teacher-review-empty-text">Select a student from the list to view their answers.</p>
+                        </div>
+                    </div>
+                </main>
             </div>
-
-            <div class="modal-content space-y-4">
-                <div class="flex items-center justify-between gap-3 flex-wrap">
-                    <div class="text-sm text-muted-foreground">
-                        <span id="teacher-reading-review-quiz-title">Quiz</span>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <button id="teacher-reading-review-save-btn" class="btn btn-primary hidden" onclick="saveTeacherReadingOverrides()">
-                            <i data-lucide="save" class="size-4 mr-2"></i>
-                            Save Adjustments
-                        </button>
-                    </div>
-                </div>
-
-                <div class="grid md:grid-cols-3 gap-4">
-                    <div class="card" style="margin:0;">
-                        <div class="card-header">
-                            <div class="card-title">Attempts</div>
-                            <div class="card-description">Pick a student attempt to review.</div>
-                        </div>
-                        <div class="card-content">
-                            <div class="flex items-center gap-2 mb-3 flex-wrap">
-                                <input id="teacher-reading-attempt-search" class="form-input" type="search" placeholder="Search student..." style="flex:1; min-width: 180px;" />
-                                <span id="teacher-reading-attempts-count" class="text-xs text-muted-foreground" style="white-space:nowrap;"></span>
-                            </div>
-                            <div id="teacher-reading-attempts-list" class="space-y-2"></div>
-                        </div>
-                    </div>
-
-                    <div class="card md:col-span-2" style="margin:0;">
-                        <div class="card-header">
-                            <div class="card-title">Answers</div>
-                            <div class="card-description">Toggle correct/wrong to adjust grading (points update automatically).</div>
-                        </div>
-                        <div class="card-content">
-                            <div id="teacher-reading-attempt-detail" class="space-y-4 text-sm text-foreground">
-                                <div class="text-muted-foreground">Select an attempt to view answers.</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="modal-footer">
-                <button class="btn btn-outline" onclick="closeTeacherReadingReviewModal()">Close</button>
-            </div>
+            <footer class="lesson-teacher-review-footer">
+                <button type="button" id="teacher-reading-review-save-btn" class="lesson-teacher-review-save-btn hidden" onclick="saveTeacherReadingOverrides()">
+                    <i data-lucide="save" class="size-4 mr-2"></i>Save Adjustments
+                </button>
+            </footer>
         </div>
     </div>
 

@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Recitation - EEL</title>
+    <link rel="icon" href="image/eel-character.png" type="image/png">
     <link rel="stylesheet" href="css/styles.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.1/lucide.min.css" rel="stylesheet">
     <script src="js/theme.js"></script>
@@ -52,7 +53,6 @@
         <main id="main-content" class="flex-1 overflow-auto">
             <div class="recitation-main-wrap">
                 <header class="recitation-page-header">
-                    <img src="image/eel-character.png" alt="EEL mascot" class="page-header-character">
                     <div class="recitation-page-header-icon" aria-hidden="true">
                         <i data-lucide="mic" class="size-8"></i>
                     </div>
@@ -74,24 +74,27 @@
                                 </div>
                             </div>
                             <div class="recitation-card-body">
-                                <label class="form-label" for="recitation-topic">Topic</label>
-                                <select id="recitation-topic" class="form-input recitation-select">
-                                    <option value="">Select a topic</option>
-                                </select>
-                            </div>
-                        </section>
-
-                        <section class="card recitation-card recitation-config-card">
-                            <div class="recitation-card-header">
-                                <span class="recitation-card-icon" aria-hidden="true"><i data-lucide="settings" class="size-5"></i></span>
-                                <div>
-                                    <h2 class="recitation-card-title">Question Configuration</h2>
-                                    <p class="recitation-card-desc">Same logic as Lessons: choose types and quantity per type, then generate with AI.</p>
+                                <label id="recitation-topic-label" class="form-label" for="recitation-topic-trigger">Topic</label>
+                                <div id="recitation-topic-wrap" class="recitation-topic-wrap">
+                                    <select id="recitation-topic" class="form-input recitation-select recitation-topic-select-native" aria-hidden="true" tabindex="-1">
+                                        <option value="">Select a topic</option>
+                                    </select>
+                                    <button type="button" id="recitation-topic-trigger" class="recitation-topic-trigger" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="recitation-topic-label">
+                                        <span id="recitation-topic-trigger-text" class="recitation-topic-trigger-text">Select a topic</span>
+                                        <span class="recitation-topic-trigger-icon" aria-hidden="true"><i data-lucide="chevron-down" class="size-4"></i></span>
+                                    </button>
+                                    <div id="recitation-topic-dropdown" class="recitation-topic-dropdown hidden" role="listbox" aria-label="Topic options">
+                                        <div class="recitation-topic-search-wrap">
+                                            <span class="recitation-topic-search-icon" aria-hidden="true"><i data-lucide="search" class="size-4"></i></span>
+                                            <input type="search" id="recitation-topic-search" class="recitation-topic-search-input" placeholder="Search topic..." autocomplete="off" aria-label="Search topic">
+                                        </div>
+                                        <div id="recitation-topic-options" class="recitation-topic-options">
+                                            <!-- options filled by JS -->
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="recitation-card-body">
-                                <div class="ai-quiz-types-quantity-wrap">
-                                    <h4 class="ai-quiz-types-quantity-title">Question Types &amp; Quantity</h4>
+                                <div class="ai-quiz-types-quantity-wrap recitation-topic-quantity-section">
+                                    <h3 class="recitation-section-header">Question Types &amp; Quantity</h3>
                                     <div class="ai-quiz-types-quantity" role="group" aria-label="Question types and quantity">
                                         <label class="ai-quiz-type-qty-row">
                                             <input type="checkbox" name="recitation-quiz-type" class="ai-quiz-type-cb recitation-type-cb" value="multiple-choice">
@@ -110,6 +113,53 @@
                                             <span class="ai-quiz-type-qty-label">Identification</span>
                                             <input type="number" id="recitation-qty-identification" class="ai-quiz-type-qty-input" value="0" min="0" max="20" aria-label="Identification questions">
                                             <span class="ai-quiz-type-qty-unit">questions</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="card recitation-card recitation-config-card">
+                            <div class="recitation-card-header">
+                                <span class="recitation-card-icon" aria-hidden="true"><i data-lucide="settings" class="size-5"></i></span>
+                                <div>
+                                    <h2 class="recitation-card-title">Configuration</h2>
+                                    <p class="recitation-card-desc">How to pick students and generate questions.</p>
+                                </div>
+                            </div>
+                            <div class="recitation-card-body">
+                                <div class="recitation-time-limit-wrap" role="group" aria-label="Time limit per question">
+                                    <h4 class="recitation-time-limit-title">Time limit per question</h4>
+                                    <div class="recitation-time-limit-row">
+                                        <input type="number" id="recitation-time-limit-value" class="form-input recitation-time-limit-input" value="20" min="1" max="300" aria-label="Time amount">
+                                        <select id="recitation-time-limit-unit" class="form-input recitation-time-limit-unit" aria-label="Time unit">
+                                            <option value="sec">seconds</option>
+                                            <option value="min">minutes</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="recitation-pick-mode-wrap" role="group" aria-label="How to pick student">
+                                    <h4 class="recitation-pick-mode-title">How to pick student</h4>
+                                    <div class="recitation-pick-mode-options">
+                                        <label class="recitation-pick-mode-card">
+                                            <input type="radio" name="recitation-pick-mode" value="manual" class="recitation-pick-mode-radio" aria-describedby="recitation-pick-mode-manual-desc">
+                                            <span class="recitation-pick-mode-card-inner">
+                                                <span class="recitation-pick-mode-icon" aria-hidden="true"><i data-lucide="hand" class="size-5"></i></span>
+                                                <span class="recitation-pick-mode-card-text">
+                                                    <span class="recitation-pick-mode-label">Manually pick</span>
+                                                    <span id="recitation-pick-mode-manual-desc" class="recitation-pick-mode-desc">Tap a student card to choose who answers.</span>
+                                                </span>
+                                            </span>
+                                        </label>
+                                        <label class="recitation-pick-mode-card">
+                                            <input type="radio" name="recitation-pick-mode" value="auto" class="recitation-pick-mode-radio" checked aria-describedby="recitation-pick-mode-auto-desc">
+                                            <span class="recitation-pick-mode-card-inner">
+                                                <span class="recitation-pick-mode-icon" aria-hidden="true"><i data-lucide="sliders-horizontal" class="size-5"></i></span>
+                                                <span class="recitation-pick-mode-card-text">
+                                                    <span class="recitation-pick-mode-label">Auto select (slider)</span>
+                                                    <span id="recitation-pick-mode-auto-desc" class="recitation-pick-mode-desc">Use Play to spin the slider; optionally enable Auto pick to stop automatically.</span>
+                                                </span>
+                                            </span>
                                         </label>
                                     </div>
                                 </div>
@@ -143,9 +193,6 @@
             <header class="recitation-picker-header">
                 <div class="recitation-picker-header-text">
                     <h2 id="picker-heading" class="recitation-picker-heading">🎓 Recitation Session</h2>
-                    <p class="recitation-picker-sub">
-                        Question <span id="current-question-num">1</span> of <span id="total-questions">10</span>
-                    </p>
                 </div>
                 <button type="button" class="recitation-picker-close" onclick="backToSetup()" aria-label="Close">✕</button>
             </header>
@@ -153,7 +200,12 @@
             <div class="recitation-picker-body">
                 <div class="recitation-picker-instruction">
                     <h3 class="recitation-picker-title">🎯 Pick a Student</h3>
-                    <p class="recitation-picker-hint">Tap <strong>Play</strong> to randomly select a student, or tap a card to choose.</p>
+                    <p id="recitation-picker-hint" class="recitation-picker-hint">Tap a student card to choose who answers.</p>
+                </div>
+
+                <div id="recitation-student-search-wrap" class="recitation-student-search-wrap hidden" aria-label="Search students">
+                    <span class="recitation-student-search-icon" aria-hidden="true"><i data-lucide="search" class="size-4"></i></span>
+                    <input type="search" id="recitation-student-search" class="recitation-student-search-input" placeholder="Search student by name..." autocomplete="off" aria-label="Search student by name">
                 </div>
 
                 <div class="recitation-slider-wrap">
@@ -164,42 +216,52 @@
             </div>
 
             <footer class="recitation-picker-footer">
-                <div class="recitation-picker-actions">
-                    <button type="button" id="play-button" class="btn btn-primary recitation-play-btn" onclick="onPlayButtonClick()">
-                        <span aria-hidden="true">▶️</span> <span id="play-btn-text">Play</span>
+                <div id="recitation-picker-actions" class="recitation-picker-actions">
+                    <button type="button" id="play-button" class="recitation-play-btn" onclick="onPlayButtonClick()">
+                        <span class="recitation-play-btn-icon" aria-hidden="true"><i data-lucide="play" class="size-4"></i></span>
+                        <span id="play-btn-text">Play</span>
                     </button>
                     <label class="recitation-picker-auto-label">
-                        <input type="checkbox" id="auto-pick-toggle" class="recitation-picker-auto-cb"> <span>Auto pick</span>
+                        <input type="checkbox" id="auto-pick-toggle" class="recitation-picker-auto-cb"> <span class="recitation-picker-auto-text">Auto pick</span>
                     </label>
                 </div>
-                <p class="recitation-picker-remaining">
-                    <span id="students-remaining" class="recitation-picker-remaining-num">10</span> students remaining
-                </p>
+                <div class="recitation-picker-remaining-wrap">
+                    <span id="students-remaining" class="recitation-picker-remaining-num">10</span>
+                    <span class="recitation-picker-remaining-label">students remaining</span>
+                </div>
             </footer>
         </div>
     </div>
 
 
-    <!-- Question Modal: compact, readable layout that fits laptop (1366×768) -->
-    <div id="question-modal" class="modal-overlay recitation-modal-overlay hidden">
+    <!-- Question Modal: clear, readable layout -->
+    <div id="question-modal" class="modal-overlay recitation-modal-overlay recitation-question-overlay hidden">
         <div class="modal-card recitation-modal-card recitation-question-card">
-            <header class="modal-header recitation-modal-header recitation-question-header">
+            <header class="recitation-question-header">
                 <div class="recitation-question-header-inner">
-                    <h3 class="recitation-question-title">
-                        <span id="modal-student-name" class="recitation-student-name"></span>
-                    </h3>
+                    <div class="recitation-question-student">
+                        <span class="recitation-question-student-label">Answering</span>
+                        <h2 id="modal-student-name" class="recitation-student-name"></h2>
+                    </div>
                     <div class="recitation-question-meta-row">
-                        <span class="recitation-question-progress">
+                        <span class="recitation-question-progress" aria-label="Question progress">
                             <span id="modal-question-num">1</span> of <span id="modal-total-questions">10</span>
                         </span>
                         <span id="modal-question-type" class="recitation-question-type-badge"></span>
                     </div>
                 </div>
-                <button type="button" class="close-btn recitation-close-btn" onclick="closeQuestionModal()" aria-label="Close">✖</button>
             </header>
 
-            <div class="recitation-modal-content recitation-question-content">
-                <div id="question-timer" class="recitation-question-timer" aria-live="polite">⏰ 20s left</div>
+            <div class="recitation-question-content">
+                <div id="question-timer-wrap" class="recitation-timer-wrap" aria-live="polite" role="timer" aria-label="Time remaining">
+                    <div class="recitation-timer-bar-track">
+                        <div id="question-timer-fill" class="recitation-timer-bar-fill" style="width: 100%"></div>
+                    </div>
+                    <div class="recitation-timer-display">
+                        <span id="question-timer-value" class="recitation-timer-value">0:20</span>
+                        <span id="question-timer-label" class="recitation-timer-label">left</span>
+                    </div>
+                </div>
                 <section class="recitation-question-block" aria-label="Question">
                     <p id="modal-question-text" class="recitation-question-text"></p>
                 </section>
@@ -209,18 +271,26 @@
                     <div id="answer-input-container" class="recitation-answer-input-container"></div>
                 </section>
 
-                <section id="result-section" class="result-section recitation-result-section hidden" aria-label="Result">
+                <section id="result-section" class="recitation-result-section hidden" aria-label="Result">
                     <div id="result-content" class="recitation-result-content"></div>
                 </section>
             </div>
 
-            <footer class="modal-footer recitation-modal-footer recitation-question-footer">
+            <footer class="recitation-question-footer">
                 <div id="modal-actions" class="recitation-footer-actions">
-                    <button type="button" class="btn btn-outline" onclick="closeQuestionModal()">
+                    <button type="button" class="btn btn-outline recitation-btn-cancel" onclick="closeQuestionModal()">
                         <i data-lucide="x" class="size-4 mr-1"></i> Cancel
                     </button>
-                    <button type="button" class="btn btn-primary" onclick="submitAnswer()">
+                    <button type="button" class="btn btn-primary recitation-btn-submit" onclick="submitAnswer()">
                         <i data-lucide="send" class="size-4 mr-1"></i> Submit
+                    </button>
+                </div>
+                <div id="recitation-remove-close-actions" class="recitation-footer-actions recitation-remove-close-actions hidden">
+                    <button type="button" class="btn btn-outline recitation-btn-remove" onclick="removeStudentAndClose()" aria-label="Remove student from recitation">
+                        <i data-lucide="user-minus" class="size-4 mr-1"></i> Remove
+                    </button>
+                    <button type="button" class="btn btn-ghost recitation-btn-close" onclick="closeQuestionModalWithRandomNext()" aria-label="Close modal, student remains">
+                        <i data-lucide="x" class="size-4 mr-1"></i> Close
                     </button>
                 </div>
                 <button type="button" id="continue-button" class="btn btn-primary recitation-continue-btn hidden" onclick="continueToNext()">

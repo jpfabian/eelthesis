@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Take Quiz - EEL</title>
+    <link rel="icon" href="image/eel-character.png" type="image/png">
+    <link rel="stylesheet" href="css/styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.1/lucide.min.css" rel="stylesheet">
+    <script src="js/theme.js"></script>
+</head>
+<body class="take-quiz-page">
+    <div id="loading-screen" class="loading-screen">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <p>Loading quiz...</p>
+        </div>
+    </div>
+
+    <div id="quiz-fullscreen-gate" class="hidden take-quiz-fullscreen-gate">
+        <div class="take-quiz-gate-content">
+            <div class="take-quiz-gate-wrap">
+                <img src="image/eel-character-celebrate.png" alt="EEL character celebrating" class="take-quiz-gate-character take-quiz-gate-character-left">
+                <img src="image/eel-character-celebrate.png" alt="EEL character celebrating" class="take-quiz-gate-character take-quiz-gate-character-right">
+                <div class="take-quiz-gate-card">
+                <h2 class="take-quiz-gate-title">Ready to start?</h2>
+                <p class="take-quiz-gate-text">The quiz will open in fullscreen for the best experience. Click the button below when you’re ready.</p>
+                <button type="button" id="quiz-gate-get-started-btn" class="btn btn-primary take-quiz-gate-btn">
+                    <i data-lucide="play" class="size-5"></i>
+                    Get Started
+                </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="quiz-page" class="hidden take-quiz-layout">
+        <header class="take-quiz-header">
+            <h1 id="take-quiz-title" class="quiz-title take-quiz-title">Quiz</h1>
+            <div id="take-quiz-timer-wrap" class="take-quiz-timer-center">
+                <span class="take-quiz-timer-label">Time remaining</span>
+                <span id="take-quiz-countdown" class="take-quiz-countdown">--:--</span>
+            </div>
+        </header>
+
+        <main class="take-quiz-main">
+            <div class="progress-bar take-quiz-progress-bar">
+                <div id="take-quiz-progress" class="progress" style="width: 0%;"></div>
+            </div>
+
+            <div id="take-quiz-passage" class="quiz-passage take-quiz-passage"></div>
+            <div id="take-quiz-questions" class="quiz-questions take-quiz-questions"></div>
+
+            <div id="take-quiz-nav" class="quiz-nav take-quiz-nav">
+                <button type="button" id="take-quiz-prev-btn" class="btn btn-outline">
+                    <i data-lucide="chevron-left" class="size-4"></i> Previous
+                </button>
+                <div style="display: flex; gap: 0.75rem;">
+                    <button type="button" id="take-quiz-next-btn" class="btn btn-primary">
+                        Next <i data-lucide="chevron-right" class="size-4"></i>
+                    </button>
+                    <button type="button" id="take-quiz-submit-btn" class="btn hidden" style="background: linear-gradient(135deg, #10b981, #059669); color: white;">
+                        <i data-lucide="check" class="size-4"></i> Submit
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="quiz-error" class="hidden" style="min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 2rem;">
+        <div style="text-align: center;">
+            <p id="quiz-error-message" style="margin-bottom: 1rem;">Invalid quiz or not available.</p>
+            <a href="lessons.html" class="btn btn-primary back-to-lessons-link">Back to Lessons</a>
+        </div>
+    </div>
+
+    <div id="quiz-review" class="hidden quiz-review-wrap">
+        <div class="quiz-review-inner">
+            <h1 id="quiz-review-title" class="quiz-review-title">Review your answers</h1>
+            <div id="quiz-review-score" class="quiz-review-score-bar"></div>
+            <div id="quiz-review-passage" class="quiz-review-passage"></div>
+            <div id="quiz-review-answers" class="quiz-review-answers"></div>
+            <a href="lessons.html" class="btn btn-primary quiz-review-back back-to-lessons-link">
+                <i data-lucide="arrow-left" class="size-4"></i>
+                Back to Lessons
+            </a>
+        </div>
+    </div>
+
+    <div id="quiz-submit-confirm-modal" class="modal-overlay hidden" style="z-index: 9999;">
+        <div class="modal-card" style="max-width: 560px; max-height: 85vh; display: flex; flex-direction: column;">
+            <div class="modal-header">
+                <h3 class="modal-title">Confirm submission</h3>
+                <button type="button" class="close-btn" id="quiz-submit-confirm-close" aria-label="Close"><i data-lucide="x" class="size-5"></i></button>
+            </div>
+            <div class="modal-content" style="overflow-y: auto; flex: 1; min-height: 0;">
+                <p class="text-muted-foreground" style="margin-bottom: 1rem;">Review your answers below. Submit to finish or go back to change them.</p>
+                <div id="quiz-submit-confirm-answers" class="space-y-4"></div>
+            </div>
+            <div class="modal-footer" style="flex-shrink: 0;">
+                <button type="button" class="btn btn-outline" id="quiz-submit-confirm-back">Back to quiz</button>
+                <button type="button" class="btn btn-primary" id="quiz-submit-confirm-submit" style="background: linear-gradient(135deg, #10b981, #059669); color: white;">
+                    <i data-lucide="check" class="size-4"></i> Submit
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="quiz-done" class="hidden quiz-done-wrap">
+        <div class="quiz-done-card">
+            <img id="quiz-done-character" src="image/eel-character-celebrate.png" alt="" class="quiz-done-character">
+            <h2 class="quiz-done-title">Quiz completed!</h2>
+            <div id="quiz-done-score-wrap" class="quiz-done-score-wrap hidden">
+                <div class="quiz-done-score">
+                    <span id="quiz-done-score-value">0</span>
+                    <span class="quiz-done-score-sep">/</span>
+                    <span id="quiz-done-score-total">0</span>
+                </div>
+                <div class="quiz-done-percent" id="quiz-done-percent">0%</div>
+            </div>
+            <p class="quiz-done-msg take-quiz-done-msg" id="quiz-done-msg">Your attempt has been saved.</p>
+            <a href="lessons.html" class="btn btn-primary quiz-done-btn back-to-lessons-link">
+                <i data-lucide="arrow-left" class="size-4"></i>
+                Back to Lessons
+            </a>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="js/auth.js"></script>
+    <script src="js-front-end/take-quiz.js"></script>
+</body>
+</html>

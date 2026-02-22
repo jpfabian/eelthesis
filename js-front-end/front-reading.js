@@ -1076,7 +1076,7 @@ document.getElementById('save-schedule-btn').addEventListener('click', async () 
     const nowPH = new Date(new Date().getTime() + (8 * 60 + new Date().getTimezoneOffset()) * 60000);
 
     if (unlockTimeValue <= nowPH || lockTimeValue <= nowPH) {
-        showNotification("Unlock and lock times cannot be in the past", "warning");
+        showNotification("Publish and unpublish times cannot be in the past", "warning");
         return;
     }
 
@@ -1128,7 +1128,7 @@ document.getElementById('save-schedule-btn').addEventListener('click', async () 
         let data = {};
         try { data = text ? JSON.parse(text) : {}; } catch (_) {}
         if (data.success) {
-            showNotification("✅ Unlock & lock schedule saved!", "success");
+            showNotification("✅ Publish & unpublish schedule saved!", "success");
             closeScheduleModal();
             var isTeacherQuiz = currentScheduleIsTeacherQuiz;
             setTimeout(async function () {
@@ -1803,8 +1803,8 @@ async function loadQuizzes(user = getCurrentUser()) {
             ` : '';
 
             const scheduleStatusLabel = isTeacher
-                ? (effectiveLocked ? 'Locked' : 'Open to students')
-                : (effectiveLocked ? 'Locked (finish previous quiz to unlock)' : 'Unlocked');
+                ? (effectiveLocked ? 'Unpublished' : 'Open to students')
+                : (effectiveLocked ? 'Unpublished (finish previous quiz to unlock)' : 'Published');
 
             card.innerHTML = `
                 <div class="created-quiz-card__inner">
@@ -1938,7 +1938,7 @@ async function loadQuizzesTeacher() {
                     <i data-lucide="bar-chart-3" class="size-3 mr-1"></i>Leaderboard
                 </button>
                 <button class="btn btn-outline flex-1" onclick="event.stopPropagation(); handleLockTeacherQuiz(${quiz.quiz_id}, this)" data-unlock-time="${(quiz.unlock_time || '').replace(/"/g, '&quot;')}" data-time-limit="${quiz.time_limit != null ? quiz.time_limit : ''}">
-                    <i data-lucide="lock" class="size-3 mr-1"></i>Lock
+                    <i data-lucide="ban" class="size-3 mr-1"></i>Unpublish
                 </button>
                 <button class="btn btn-primary flex-1" data-schedule='${scheduleData}' onclick="event.stopPropagation(); openScheduleModalWithData(${quiz.quiz_id}, this.getAttribute('data-schedule'))">
                     <i data-lucide="calendar-clock" class="size-3 mr-1"></i>Edit schedule
@@ -1949,7 +1949,7 @@ async function loadQuizzesTeacher() {
                     <i data-lucide="bar-chart-3" class="size-3 mr-1"></i>Leaderboard
                 </button>
                 <button id="lock-btn-${quiz.quiz_id}" class="btn btn-primary flex-1" data-schedule='${scheduleData}' onclick="event.stopPropagation(); (this.getAttribute('data-schedule') ? openScheduleModalWithData(${quiz.quiz_id}, this.getAttribute('data-schedule')) : openScheduleModal(${quiz.quiz_id}, true))">
-                    <i data-lucide="unlock" class="size-3 mr-1"></i>Unlock
+                    <i data-lucide="send" class="size-3 mr-1"></i>Publish
                 </button>
             `;
             } else {
@@ -1959,9 +1959,9 @@ async function loadQuizzesTeacher() {
                 if (effectiveLocked) {
                     if (scheduleNotSet) btnLabel = 'Not scheduled';
                     else if (notYetOpen) btnLabel = 'Not yet open';
-                    else btnLabel = 'Locked';
+                    else btnLabel = 'Unpublished';
                 }
-                const btnIcon = effectiveLocked ? 'lock' : 'play';
+                const btnIcon = effectiveLocked ? 'ban' : 'play';
                 actionButtons = `
                 <button type="button" id="quiz-btn-${quiz.quiz_id}" class="btn btn-primary flex-1" ${effectiveLocked ? 'disabled' : ''} onclick="event.stopPropagation(); startLesson(${quiz.quiz_id}, true)">
                     <i data-lucide="${btnIcon}" class="size-3 mr-1"></i>${btnLabel}
@@ -2036,11 +2036,11 @@ function handleLockUnlock(quizId, isLocked) {
 
 async function handleLockTeacherQuiz(quizId, lockButton) {
     if (typeof Swal === 'undefined') {
-        if (confirm('Lock this quiz? Students will no longer be able to take it.')) doLockTeacherQuiz(quizId, lockButton);
+        if (confirm('Unpublish this quiz? Students will no longer be able to take it.')) doLockTeacherQuiz(quizId, lockButton);
         return;
     }
     const result = await Swal.fire({
-        title: 'Lock quiz?',
+        title: 'Unpublish quiz?',
         text: 'Students will no longer be able to take this quiz. You can change the schedule again with "Edit schedule".',
         icon: 'warning',
         showCancelButton: true,
@@ -2079,13 +2079,13 @@ async function doLockTeacherQuiz(quizId, lockButton) {
         try { data = text ? JSON.parse(text) : {}; } catch (_) {}
         if (res.ok && data.success) {
             if (typeof Swal !== 'undefined') {
-                Swal.fire({ icon: 'success', title: 'Locked', text: 'Quiz is now locked.', confirmButtonColor: '#6366f1' });
+                Swal.fire({ icon: 'success', title: 'Unpublished', text: 'Quiz is now unpublished.', confirmButtonColor: '#6366f1' });
             } else {
                 showNotification('Quiz locked.', 'success');
             }
             if (typeof loadQuizzesTeacher === 'function') loadQuizzesTeacher();
         } else {
-            showNotification(data.message || (res.status === 404 ? 'Lock not available. Try again.' : 'Failed to lock quiz.'), 'error');
+            showNotification(data.message || (res.status === 404 ? 'Unpublish not available. Try again.' : 'Failed to unpublish quiz.'), 'error');
         }
     } catch (err) {
         console.error(err);
@@ -2149,37 +2149,44 @@ async function loadLeaderboard(quizId = null, isTeacherQuiz = null) {
         });
 
         if (Array.isArray(data.leaderboard) && data.leaderboard.length > 0) {
-            data.leaderboard.forEach((entry, index) => {
+            const leaderboard = data.leaderboard;
+
+            // Podium: first 3 only
+            leaderboard.slice(0, 3).forEach((entry, index) => {
+                if (!podiums[index]) return;
                 const initials = entry.student_name.split(" ").map(n => n[0]).join("").slice(0,2).toUpperCase();
-
-                if (index < 3 && podiums[index]) {
-                    podiums[index].querySelector(".podium-avatar").textContent = initials;
-                    podiums[index].querySelector(".podium-name").textContent = entry.student_name;
-                    const sp = scoreSpan(podiums[index]);
-                    if (sp) sp.textContent = entry.total_points ? `${entry.score}/${entry.total_points}` : `${entry.score} pts`;
-                }
-
-                // Table rows
-                const rankBadge = index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : index + 1;
-                const rowClass = index < 3 ? "top-three" : "";
-                const avatarGradient = gradients[index % gradients.length];
-
-                const row = `
-                    <tr class="leaderboard-table-row ${rowClass}">
-                        <td><span class="rank-badge ${index < 3 ? 'rank-' + (index+1) : ''}">${rankBadge}</span></td>
-                        <td>
-                            <div class="student-info">
-                                <div class="student-avatar" style="background: linear-gradient(135deg, ${avatarGradient});">${initials}</div>
-                                <span>${entry.student_name}</span>
-                            </div>
-                        </td>
-                        <td><span class="score-badge">${entry.score}/${entry.total_points}</span></td>
-                        <td><span class="time-badge">${entry.time_taken || "-"}</span></td>
-                        <td><span class="status-badge completed">✓ ${entry.status}</span></td>
-                    </tr>
-                `;
-                tbody.insertAdjacentHTML("beforeend", row);
+                podiums[index].querySelector(".podium-avatar").textContent = initials;
+                podiums[index].querySelector(".podium-name").textContent = entry.student_name;
+                const sp = scoreSpan(podiums[index]);
+                if (sp) sp.textContent = entry.total_points ? `${entry.score}/${entry.total_points}` : `${entry.score} pts`;
             });
+
+            // Table: from 4th onwards only
+            const tableEntries = leaderboard.length > 3 ? leaderboard.slice(3) : [];
+            if (tableEntries.length > 0) {
+                tableEntries.forEach((entry, i) => {
+                    const rank = i + 4;
+                    const initials = entry.student_name.split(" ").map(n => n[0]).join("").slice(0,2).toUpperCase();
+                    const avatarGradient = gradients[(i + 3) % gradients.length];
+                    const row = `
+                        <tr class="leaderboard-table-row">
+                            <td><span class="rank-badge">${rank}</span></td>
+                            <td>
+                                <div class="student-info">
+                                    <div class="student-avatar" style="background: linear-gradient(135deg, ${avatarGradient});">${initials}</div>
+                                    <span>${entry.student_name}</span>
+                                </div>
+                            </td>
+                            <td><span class="score-badge">${entry.score}/${entry.total_points}</span></td>
+                            <td><span class="time-badge">${entry.time_taken || "-"}</span></td>
+                            <td><span class="status-badge completed">✓ ${entry.status}</span></td>
+                        </tr>
+                    `;
+                    tbody.insertAdjacentHTML("beforeend", row);
+                });
+            } else {
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--muted-foreground);">Top 3 shown above. No other rankings.</td></tr>`;
+            }
         } else {
             tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--muted-foreground);">No students have taken this quiz yet.</td></tr>`;
         }
@@ -2408,6 +2415,29 @@ function formatDateTime(dateString) {
     });
 }
 
+/** Philippine time (Asia/Manila) with AM/PM for teacher/AI quiz attempt times. API returns "YYYY-MM-DD HH:mm:ss" in Philippine time (same as schedule). */
+function formatDateTimePhilippineMilitary(value) {
+    if (value == null || value === '') return '';
+    try {
+        const s = String(value).trim();
+        const hasTz = /Z|[+-]\d{2}:?\d{2}$/.test(s);
+        const instant = hasTz ? new Date(value) : new Date(s.replace(' ', 'T') + '+08:00');
+        if (isNaN(instant.getTime())) return s;
+        return instant.toLocaleString('en-PH', {
+            timeZone: 'Asia/Manila',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: true
+        });
+    } catch {
+        return String(value);
+    }
+}
+
 // ============================================================
 // TEACHER: Review + override grading (near-miss spelling/case)
 // ============================================================
@@ -2447,9 +2477,10 @@ function closeTeacherReadingReviewModal() {
     const title = document.getElementById('teacher-reading-review-quiz-title');
     const saveBtn = document.getElementById('teacher-reading-review-save-btn');
     if (list) list.innerHTML = '';
-    if (detail) detail.innerHTML = `<div class="text-muted-foreground">Select an attempt to view answers.</div>`;
+    if (detail) detail.innerHTML = `<div class="lesson-teacher-review-empty"><i data-lucide="user-check" class="lesson-teacher-review-empty-icon" aria-hidden="true"></i><p class="lesson-teacher-review-empty-text">Select a student from the list to view their answers.</p></div>`;
     if (title) title.textContent = 'Quiz';
     if (saveBtn) saveBtn.classList.add('hidden');
+    if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
 }
 
 async function openTeacherReadingReviewModal(quizId) {
@@ -2523,7 +2554,7 @@ function renderTeacherReadingAttemptsList() {
     }
 
     if (!attempts.length) {
-        list.innerHTML = `<div class="text-muted-foreground text-sm">No submissions yet.</div>`;
+        list.innerHTML = `<div class="lesson-teacher-review-list-empty">No submissions yet.</div>`;
         return;
     }
 
@@ -2534,7 +2565,7 @@ function renderTeacherReadingAttemptsList() {
             ? `${Math.round(a.score)}/${Math.round(a.total_points)}`
             : '-';
         const isActive = Number(teacherReadingReviewState.attemptId) === Number(a.attempt_id);
-        const time = a.end_time ? formatDateTime(a.end_time) : (a.start_time ? formatDateTime(a.start_time) : '');
+        const time = a.end_time ? formatDateTimePhilippineMilitary(a.end_time) : (a.start_time ? formatDateTimePhilippineMilitary(a.start_time) : '');
         return `
             <button
               type="button"
@@ -2565,7 +2596,8 @@ async function loadTeacherReadingAttempt(attemptId) {
     // reflect active selection immediately
     renderTeacherReadingAttemptsList();
     const detail = document.getElementById('teacher-reading-attempt-detail');
-    if (detail) detail.innerHTML = `<div class="text-muted-foreground">Loading answers...</div>`;
+    if (detail) detail.innerHTML = `<div class="lesson-teacher-review-empty"><i data-lucide="loader" class="lesson-teacher-review-empty-icon" aria-hidden="true"></i><p class="lesson-teacher-review-empty-text">Loading answers...</p></div>`;
+    if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
 
     try {
         const res = await fetch(`http://localhost:3000/api/reading-quiz-attempts/${attemptId}/answers`);
@@ -2594,7 +2626,7 @@ function renderTeacherReadingAttemptDetail(answers) {
     const score = (attempt?.score != null && attempt?.total_points != null)
         ? `${Math.round(attempt.score)}/${Math.round(attempt.total_points)}`
         : '-';
-    const submitted = attempt?.end_time ? formatDateTime(attempt.end_time) : '';
+    const submitted = attempt?.end_time ? formatDateTimePhilippineMilitary(attempt.end_time) : '';
 
     const byQuestionId = new Map((answers || []).map(a => [Number(a.question_id), a]));
 

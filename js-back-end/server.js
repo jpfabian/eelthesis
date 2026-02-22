@@ -48,6 +48,7 @@ const pool = mysql.createPool({
   connectionLimit: 10,
   queueLimit: 0,
   connectTimeout: 10000,
+  dateStrings: ["DATE", "DATETIME"],
 });
 
 app.use((req, res, next) => {
@@ -81,7 +82,10 @@ app.get('/api/lesson-pdf', (req, res) => {
     const relative = path.relative(uploadsDir, resolved);
     if (relative.startsWith('..') || path.isAbsolute(relative)) return res.status(400).send('Invalid path');
     if (!fs.existsSync(resolved) || !fs.statSync(resolved).isFile()) return res.status(404).send('File not found');
-    res.setHeader('Content-Type', 'application/pdf');
+    const ext = path.extname(resolved).toLowerCase();
+    const contentType = ext === '.pptx' ? 'application/vnd.openxmlformats-officedocument.presentationml.presentation' : 'application/pdf';
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', 'public, max-age=300');
     res.sendFile(resolved, (err) => {
       if (err && !res.headersSent) res.status(500).send('Error');
     });

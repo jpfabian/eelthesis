@@ -20,6 +20,16 @@ function requireGroq(res) {
   return null;
 }
 
+/** Ensure first letter is uppercase when saving to DB (e.g. AI quiz, titles). */
+function capitalizeFirst(s) {
+  if (s == null || typeof s !== "string") return s;
+  const t = String(s).trim();
+  if (!t) return t;
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
+
+const { nowPhilippineDatetime } = require("./utils/datetime");
+
 // ================= CREATE TEACHER READING QUIZ =================
 router.post("/api/teacher/reading-quizzes", async (req, res) => {
     const pool = req.pool;
@@ -30,6 +40,9 @@ router.post("/api/teacher/reading-quizzes", async (req, res) => {
         return res.status(400).json({ success: false, message: "user_id is required" });
     }
 
+    const safeTitle = capitalizeFirst(title);
+    const safePassage = capitalizeFirst(passage);
+
     let conn;
     try {
         conn = await pool.getConnection();
@@ -38,7 +51,7 @@ router.post("/api/teacher/reading-quizzes", async (req, res) => {
         // Insert quiz (difficulty defaults to beginner for AI-generated quizzes)
         const [quizResult] = await conn.query(
             "INSERT INTO teacher_reading_quizzes (subject_id, user_id, title, difficulty, passage) VALUES (?, ?, ?, ?, ?)",
-            [subject_id, user_id, title, effectiveDifficulty, passage]
+            [subject_id, user_id, safeTitle, effectiveDifficulty, safePassage]
         );
         const quizId = quizResult.insertId;
 
@@ -50,7 +63,7 @@ router.post("/api/teacher/reading-quizzes", async (req, res) => {
                 // Beginner MCQ
                 const [qResult] = await conn.query(
                     "INSERT INTO teacher_reading_beginner_questions (quiz_id, question_text) VALUES (?, ?)",
-                    [quizId, q.question_text]
+                    [quizId, capitalizeFirst(q.question_text)]
                 );
                 const questionId = qResult.insertId;
 
@@ -59,7 +72,7 @@ router.post("/api/teacher/reading-quizzes", async (req, res) => {
                     const opt = q.options[j];
                     await conn.query(
                         "INSERT INTO teacher_reading_mcq_options (question_id, option_text, is_correct, position) VALUES (?, ?, ?, ?)",
-                        [questionId, opt.option_text, opt.is_correct ? 1 : 0, j + 1]
+                        [questionId, capitalizeFirst(opt.option_text), opt.is_correct ? 1 : 0, j + 1]
                     );
                 }
             } 
@@ -67,7 +80,7 @@ router.post("/api/teacher/reading-quizzes", async (req, res) => {
                 // Intermediate Fill-in-the-blank
                 const [qResult] = await conn.query(
                     "INSERT INTO teacher_reading_intermediate_questions (quiz_id, question_text) VALUES (?, ?)",
-                    [quizId, q.question_text]
+                    [quizId, capitalizeFirst(q.question_text)]
                 );
                 const questionId = qResult.insertId;
 
@@ -76,7 +89,7 @@ router.post("/api/teacher/reading-quizzes", async (req, res) => {
                     const blank = q.blanks[b];
                     await conn.query(
                         "INSERT INTO teacher_reading_fill_blanks (question_id, blank_number, answer_text, points) VALUES (?, ?, ?, ?)",
-                        [questionId, blank.blank_number, blank.answer_text, blank.points || 1.0]
+                        [questionId, blank.blank_number, capitalizeFirst(blank.answer_text), blank.points || 1.0]
                     );
                 }
             } 
@@ -84,7 +97,7 @@ router.post("/api/teacher/reading-quizzes", async (req, res) => {
                 // Advanced Essay
                 await conn.query(
                     "INSERT INTO teacher_reading_advanced_questions (quiz_id, question_text, points) VALUES (?, ?, ?)",
-                    [quizId, q.question_text, q.points || 1.0]
+                    [quizId, capitalizeFirst(q.question_text), q.points || 1.0]
                 );
             }
         }
@@ -226,6 +239,157 @@ router.get("/api/teacher/reading-quizzes", async (req, res) => {
   }
 });
 
+// ================= LIST QUIZ IDs WHERE STUDENT HAS COMPLETED ATTEMPT (must be before /:id) =================
+router.get("/api/teacher/reading-quizzes/completed-by-student", async (req, res) => {
+  const pool = req.pool;
+  const studentId = req.query.student_id ? Number(req.query.student_id) : null;
+  if (!studentId) return res.status(400).json({ success: false, error: "student_id required" });
+  try {
+    const [rows] = await pool.query(
+      `SELECT DISTINCT quiz_id FROM teacher_reading_quiz_attempts
+       WHERE student_id = ? AND status = 'completed'`,
+      [studentId]
+    );
+    res.json({ success: true, quiz_ids: rows.map((r) => r.quiz_id) });
+  } catch (err) {
+    console.error("❌ Completed-by-student error:", err);
+    res.status(500).json({ success: false, error: "Database error" });
+  }
+});
+
+// ================= GET REVIEW DATA (must be before /:id) =================
+router.get("/api/teacher/reading-quizzes/:quizId/review", async (req, res) => {
+  const pool = req.pool;
+  const quizId = Number(req.params.quizId);
+  const studentId = req.query.student_id ? Number(req.query.student_id) : null;
+  if (!quizId || !studentId) return res.status(400).json({ success: false, error: "quiz_id and student_id required" });
+  try {
+    const [[quiz]] = await pool.query(
+      "SELECT quiz_id, title, passage, difficulty, lock_time FROM teacher_reading_quizzes WHERE quiz_id = ?",
+      [quizId]
+    );
+    if (!quiz) return res.status(404).json({ success: false, error: "Quiz not found" });
+
+    const asTeacher = String(req.query.as_teacher || "").toLowerCase() === "1" || req.query.as_teacher === "true";
+    if (!asTeacher) {
+      const now = new Date();
+      const lockTime = quiz.lock_time ? new Date(quiz.lock_time) : null;
+      if (lockTime && now <= lockTime) {
+        return res.status(403).json({ success: false, error: "Review is available after the quiz schedule has ended." });
+      }
+    }
+
+    const [[attempt]] = await pool.query(
+      `SELECT attempt_id, score, total_points, start_time, end_time
+       FROM teacher_reading_quiz_attempts
+       WHERE quiz_id = ? AND student_id = ? AND status = 'completed'
+       ORDER BY attempt_id DESC LIMIT 1`,
+      [quizId, studentId]
+    );
+    if (!attempt) return res.status(404).json({ success: false, error: "No completed attempt found" });
+
+    const questionTable = quiz.difficulty === "beginner"
+      ? "teacher_reading_beginner_questions"
+      : quiz.difficulty === "intermediate"
+        ? "teacher_reading_intermediate_questions"
+        : "teacher_reading_advanced_questions";
+
+    const [answerRows] = await pool.query(
+      `SELECT a.answer_id, a.question_id, a.student_answer, a.is_correct, a.points_earned
+       FROM teacher_reading_quiz_answers a
+       WHERE a.attempt_id = ?
+       ORDER BY a.answer_id ASC`,
+      [attempt.attempt_id]
+    );
+
+    const [questionRows] = await pool.query(
+      `SELECT question_id, question_text FROM ${questionTable} WHERE quiz_id = ? ORDER BY question_id ASC`,
+      [quizId]
+    );
+    const answers = [];
+    for (let i = 0; i < questionRows.length; i++) {
+      const q = questionRows[i];
+      const ans = answerRows.find((a) => Number(a.question_id) === Number(q.question_id));
+      let options = [];
+      let correctAnswerText = null;
+      if (quiz.difficulty === "beginner") {
+        const [opts] = await pool.query(
+          "SELECT option_id, option_text, is_correct FROM teacher_reading_mcq_options WHERE question_id = ? ORDER BY position ASC",
+          [q.question_id]
+        );
+        options = opts.map((o) => ({ option_id: o.option_id, option_text: o.option_text, is_correct: !!o.is_correct }));
+        const correctOpt = opts.find((o) => o.is_correct);
+        if (correctOpt) correctAnswerText = correctOpt.option_text;
+      }
+      answers.push({
+        answer_id: ans ? ans.answer_id : null,
+        question_id: q.question_id,
+        question_text: q.question_text,
+        question_type: "mcq",
+        options,
+        student_answer: ans ? ans.student_answer : null,
+        is_correct: ans ? !!ans.is_correct : null,
+        points_earned: ans ? ans.points_earned : null,
+        correct_answer_text: correctAnswerText
+      });
+    }
+
+    res.json({
+      success: true,
+      quiz: { quiz_id: quiz.quiz_id, title: quiz.title, passage: quiz.passage || "" },
+      attempt: {
+        attempt_id: attempt.attempt_id,
+        score: attempt.score,
+        total_points: attempt.total_points,
+        end_time: attempt.end_time
+      },
+      answers
+    });
+  } catch (err) {
+    console.error("❌ Review endpoint error:", err);
+    res.status(500).json({ success: false, error: "Database error" });
+  }
+});
+
+// ================= TEACHER: OVERRIDE GRADING FOR TEACHER QUIZ ATTEMPT (AI quiz) =================
+router.patch("/api/teacher/reading-quiz-attempts/:attemptId/override", async (req, res) => {
+  const pool = req.pool;
+  const attemptId = Number(req.params.attemptId);
+  const answers = Array.isArray(req.body.answers) ? req.body.answers : [];
+
+  if (!attemptId) return res.status(400).json({ success: false, error: "Invalid attemptId" });
+
+  try {
+    for (const a of answers) {
+      if (!a || a.answer_id == null) continue;
+      const isCorrect = a.is_correct == null ? null : (a.is_correct ? 1 : 0);
+      const pointsEarned = isCorrect != null ? (isCorrect ? 1 : 0) : null;
+      await pool.query(
+        `UPDATE teacher_reading_quiz_answers
+         SET is_correct = COALESCE(?, is_correct), points_earned = COALESCE(?, points_earned)
+         WHERE answer_id = ? AND attempt_id = ?`,
+        [isCorrect, pointsEarned, a.answer_id, attemptId]
+      );
+    }
+
+    const [[totals]] = await pool.query(
+      `SELECT COALESCE(SUM(COALESCE(points_earned, 0)), 0) AS totalScore
+       FROM teacher_reading_quiz_answers WHERE attempt_id = ?`,
+      [attemptId]
+    );
+    const newScore = Number(totals?.totalScore ?? 0);
+    await pool.query(
+      `UPDATE teacher_reading_quiz_attempts SET score = ? WHERE attempt_id = ?`,
+      [newScore, attemptId]
+    );
+
+    res.json({ success: true, score: newScore });
+  } catch (err) {
+    console.error("❌ Teacher quiz override error:", err);
+    res.status(500).json({ success: false, error: "Database error" });
+  }
+});
+
 // ================= GET SINGLE TEACHER QUIZ (for students to take) =================
 router.get("/api/teacher/reading-quizzes/:id", async (req, res) => {
   const pool = req.pool;
@@ -316,6 +480,151 @@ router.patch("/api/teacher/reading-quizzes/:id/schedule", async (req, res) => {
   }
 });
 
+// ================= START TEACHER / AI QUIZ ATTEMPT =================
+router.post("/api/teacher/reading-quiz-attempts", async (req, res) => {
+  const pool = req.pool;
+  const { student_id, quiz_id } = req.body;
+  if (!student_id || !quiz_id) {
+    return res.status(400).json({ success: false, error: "student_id and quiz_id are required" });
+  }
+  try {
+    const [[quiz]] = await pool.query(
+      "SELECT quiz_id, unlock_time, lock_time, time_limit FROM teacher_reading_quizzes WHERE quiz_id = ?",
+      [quiz_id]
+    );
+    if (!quiz) return res.status(404).json({ success: false, error: "Quiz not found" });
+    const now = new Date();
+    const unlockTime = quiz.unlock_time ? new Date(quiz.unlock_time) : null;
+    const lockTime = quiz.lock_time ? new Date(quiz.lock_time) : null;
+    if (unlockTime && now < unlockTime) return res.status(403).json({ success: false, error: "Quiz is not yet open." });
+    if (lockTime && now > lockTime) return res.status(403).json({ success: false, error: "Quiz has closed." });
+
+    const [[existing]] = await pool.query(
+      `SELECT attempt_id FROM teacher_reading_quiz_attempts
+       WHERE student_id = ? AND quiz_id = ? AND status = 'completed'
+       LIMIT 1`,
+      [student_id, quiz_id]
+    );
+    if (existing) {
+      return res.status(403).json({ success: false, error: "You have already taken this quiz." });
+    }
+
+    const startTime = nowPhilippineDatetime();
+    const [result] = await pool.query(
+      `INSERT INTO teacher_reading_quiz_attempts (student_id, quiz_id, start_time, status)
+       VALUES (?, ?, ?, 'in_progress')`,
+      [student_id, quiz_id, startTime]
+    );
+    res.status(201).json({
+      success: true,
+      attempt_id: result.insertId,
+      start_time: startTime,
+      time_limit: quiz.time_limit || null
+    });
+  } catch (err) {
+    console.error("❌ Start teacher quiz attempt error:", err);
+    res.status(500).json({ success: false, error: "Database error" });
+  }
+});
+
+// ================= SUBMIT TEACHER / AI QUIZ ATTEMPT =================
+router.patch("/api/teacher/reading-quiz-attempts/:id/submit", async (req, res) => {
+  const pool = req.pool;
+  const attemptId = Number(req.params.id);
+  const { answers } = req.body || {};
+  if (!attemptId || !Array.isArray(answers)) {
+    return res.status(400).json({ success: false, error: "attempt id and answers array required" });
+  }
+  try {
+    const [[attempt]] = await pool.query(
+      `SELECT a.attempt_id, a.quiz_id, a.student_id, a.start_time, a.status
+       FROM teacher_reading_quiz_attempts a
+       WHERE a.attempt_id = ?`,
+      [attemptId]
+    );
+    if (!attempt) return res.status(404).json({ success: false, error: "Attempt not found" });
+    if (attempt.status === "completed") {
+      return res.json({ success: true, already_completed: true, score: attempt.score, total_points: attempt.total_points });
+    }
+
+    const [[quiz]] = await pool.query(
+      "SELECT difficulty FROM teacher_reading_quizzes WHERE quiz_id = ?",
+      [attempt.quiz_id]
+    );
+    if (!quiz) return res.status(404).json({ success: false, error: "Quiz not found" });
+
+    const questionTable = quiz.difficulty === "beginner"
+      ? "teacher_reading_beginner_questions"
+      : quiz.difficulty === "intermediate"
+        ? "teacher_reading_intermediate_questions"
+        : "teacher_reading_advanced_questions";
+
+    let totalScore = 0;
+    let totalPoints = 0;
+    const endTime = nowPhilippineDatetime();
+
+    for (const a of answers) {
+      const questionId = a.question_id;
+      let studentAnswer = a.student_answer;
+      if (studentAnswer !== undefined && studentAnswer !== null && typeof studentAnswer === "object" && !Array.isArray(studentAnswer)) {
+        studentAnswer = JSON.stringify(studentAnswer);
+      }
+      const studentAnswerText = studentAnswer != null ? String(studentAnswer).trim() : "";
+
+      let isCorrect = 0;
+      let pointsEarned = 0;
+      const pointsPerQuestion = 1;
+
+      if (quiz.difficulty === "beginner") {
+        const [opts] = await pool.query(
+          "SELECT option_id, option_text, is_correct FROM teacher_reading_mcq_options WHERE question_id = ? ORDER BY position ASC",
+          [questionId]
+        );
+        const correctOpt = opts.find((o) => o.is_correct);
+        const isIdentification = opts.length === 2 && opts.some((o) => String(o.option_text || "").trim() === "(Other)");
+        if (isIdentification) {
+          const correctText = (correctOpt && correctOpt.option_text) ? String(correctOpt.option_text).trim().toLowerCase() : "";
+          const given = studentAnswerText.toLowerCase();
+          isCorrect = correctText && given === correctText ? 1 : 0;
+        } else {
+          const selectedOptId = parseInt(studentAnswerText, 10);
+          const selected = opts.find((o) => Number(o.option_id) === selectedOptId);
+          isCorrect = selected && selected.is_correct ? 1 : 0;
+        }
+        pointsEarned = isCorrect ? pointsPerQuestion : 0;
+      } else {
+        pointsEarned = 0;
+      }
+
+      totalPoints += pointsPerQuestion;
+      totalScore += pointsEarned;
+
+      await pool.query(
+        `INSERT INTO teacher_reading_quiz_answers (attempt_id, question_id, question_type, student_answer, is_correct, points_earned)
+         VALUES (?, ?, 'mcq', ?, ?, ?)`,
+        [attemptId, questionId, studentAnswerText, isCorrect, pointsEarned]
+      );
+    }
+
+    await pool.query(
+      `UPDATE teacher_reading_quiz_attempts
+       SET end_time = ?, status = 'completed', score = ?, total_points = ?
+       WHERE attempt_id = ?`,
+      [endTime, totalScore, totalPoints, attemptId]
+    );
+
+    res.json({
+      success: true,
+      score: totalScore,
+      total_points: totalPoints,
+      end_time: endTime
+    });
+  } catch (err) {
+    console.error("❌ Submit teacher quiz attempt error:", err);
+    res.status(500).json({ success: false, error: "Database error" });
+  }
+});
+
 // ================= SCHEDULE / UNLOCK QUIZ =================
 router.patch("/api/reading-quizzes/:id/schedule", async (req, res) => {
   const pool = req.pool;
@@ -371,7 +680,7 @@ router.put("/api/lock-quiz/:id", async (req, res) => {
   const { id } = req.params;
 
   try {
-    const now = new Date();
+    const now = nowPhilippineDatetime();
     await pool.query(
       `UPDATE reading_quizzes
        SET status = 'locked', is_locked = 0,
@@ -966,9 +1275,9 @@ router.patch("/api/teacher/reading-attempts/:attemptId/override", async (req, re
              points_earned = COALESCE(?, points_earned),
              teacher_override = 1,
              teacher_id = ?,
-             teacher_updated_at = NOW()
+             teacher_updated_at = ?
          WHERE answer_id = ? AND attempt_id = ?`,
-        [isCorrect, pointsEarned, teacherId, a.answer_id, attemptId]
+        [isCorrect, pointsEarned, teacherId, nowPhilippineDatetime(), a.answer_id, attemptId]
       );
     }
 
@@ -998,9 +1307,9 @@ router.patch("/api/teacher/reading-attempts/:attemptId/override", async (req, re
              points_earned = COALESCE(?, points_earned),
              teacher_override = 1,
              teacher_id = ?,
-             teacher_updated_at = NOW()
+             teacher_updated_at = ?
          WHERE student_blank_id = ?`,
-        [isCorrect, pointsEarned, teacherId, b.student_blank_id]
+        [isCorrect, pointsEarned, teacherId, nowPhilippineDatetime(), b.student_blank_id]
       );
     }
 
@@ -1118,7 +1427,27 @@ router.get("/api/reading-quiz-leaderboard", async (req, res) => {
         [quizId]
       );
       quizTitle = quizRows[0]?.title || "Quiz";
-      // Teacher quiz attempts not stored yet; return empty leaderboard
+      const sql = `
+        SELECT
+          a.attempt_id,
+          a.student_id,
+          u.user_id,
+          CONCAT(u.fname, ' ', u.lname) AS student_name,
+          a.quiz_id,
+          a.score,
+          a.total_points,
+          a.status,
+          a.start_time,
+          a.end_time,
+          TIMESTAMPDIFF(SECOND, a.start_time, a.end_time) AS time_taken_seconds
+        FROM teacher_reading_quiz_attempts a
+        JOIN users u ON a.student_id = u.user_id
+        WHERE a.status = 'completed' AND a.quiz_id = ?
+        ORDER BY a.score DESC, TIMESTAMPDIFF(SECOND, a.start_time, a.end_time) ASC, a.end_time ASC
+        LIMIT 20
+      `;
+      const [r] = await pool.query(sql, [quizId]);
+      rows = r;
     } else {
       const [quizRows] = await pool.query(
         "SELECT title FROM reading_quizzes WHERE quiz_id = ?",
@@ -1210,9 +1539,9 @@ router.get('/api/lessons-with-topics', async (req, res) => {
       return res.status(404).json({ error: `No subject_id found for "${subjectName}"` });
     }
 
-    // ✅ Step 3: Fetch lessons for that subject
+    // ✅ Step 3: Fetch lessons for that subject (include quarter for display grouping)
     const [lessons] = await pool.query(
-      'SELECT lesson_id, lesson_title FROM lessons WHERE subject_id = ? ORDER BY lesson_id',
+      'SELECT lesson_id, lesson_title, quarter_number, quarter_title FROM lessons WHERE subject_id = ? ORDER BY lesson_id',
       [subjectId]
     );
 
@@ -1226,10 +1555,12 @@ router.get('/api/lessons-with-topics', async (req, res) => {
       [lessons.map(l => l.lesson_id)]
     );
 
-    // ✅ Step 5: Combine lessons + topics
+    // ✅ Step 5: Combine lessons + topics (include quarter_number, quarter_title for exam generator / lessons UI)
     const data = lessons.map(lesson => ({
       lesson_id: lesson.lesson_id,
       lesson_title: lesson.lesson_title,
+      quarter_number: lesson.quarter_number != null ? lesson.quarter_number : null,
+      quarter_title: lesson.quarter_title ? String(lesson.quarter_title).trim() : null,
       topics: topics.filter(t => t.lesson_id === lesson.lesson_id)
     }));
 

@@ -13,13 +13,13 @@ router.get("/curriculum", async (req, res) => {
     const [rows] = await pool.query(`
       SELECT 
         s.subject_id, s.subject_name, 
-        l.lesson_id, l.lesson_title,
+        l.lesson_id, l.lesson_title, l.quarter_number, l.quarter_title,
         t.topic_id, t.topic_title, t.pdf_path
       FROM subjects s
       LEFT JOIN lessons l ON s.subject_id = l.subject_id
       LEFT JOIN topics t ON l.lesson_id = t.lesson_id
       ${whereClause}
-      ORDER BY s.subject_id, l.lesson_id, t.topic_id
+      ORDER BY s.subject_id, COALESCE(l.quarter_number, 0), l.lesson_id, t.topic_id
     `, params);
 
     const subjects = [];
@@ -42,6 +42,8 @@ router.get("/curriculum", async (req, res) => {
         lesson = { 
           lesson_id: r.lesson_id, 
           lesson_title: r.lesson_title, 
+          quarter_number: r.quarter_number ?? null, 
+          quarter_title: r.quarter_title ?? null, 
           topics: [] 
         };
         subject.lessons.push(lesson);
