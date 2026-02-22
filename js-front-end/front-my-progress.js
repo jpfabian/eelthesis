@@ -1,7 +1,7 @@
 (function () {
     "use strict";
 
-    const API_BASE = "http://localhost:3000";
+    const API_BASE = window.API_BASE || "";
 
     function hideLoading() {
         const el = document.getElementById("loading-screen");

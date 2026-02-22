@@ -93,7 +93,7 @@ async function readJsonOrThrow(res) {
 }
 
 async function adminLogin(username, password) {
-  const res = await fetch("http://localhost:3000/api/admin/login", {
+  const res = await fetch((window.API_BASE || "") + "/api/admin/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ username, password }),
@@ -111,7 +111,7 @@ async function adminLogin(username, password) {
 
 async function fetchPendingUsers() {
   const token = getAdminToken();
-  const res = await fetch("http://localhost:3000/api/admin/pending-users", {
+  const res = await fetch((window.API_BASE || "") + "/api/admin/pending-users", {
     headers: { "x-admin-token": token || "" },
   });
   const data = await readJsonOrThrow(res);
@@ -122,7 +122,7 @@ async function fetchPendingUsers() {
 async function fetchAdminUsers(status) {
   const token = getAdminToken();
   const qs = status ? `?status=${encodeURIComponent(status)}` : "";
-  const res = await fetch(`http://localhost:3000/api/admin/users${qs}`, {
+  const res = await fetch(`${window.API_BASE || ""}/api/admin/users${qs}`, {
     headers: { "x-admin-token": token || "" },
   });
   const data = await readJsonOrThrow(res);
@@ -132,7 +132,7 @@ async function fetchAdminUsers(status) {
 
 async function approveUser(userId) {
   const token = getAdminToken();
-  const res = await fetch(`http://localhost:3000/api/admin/users/${userId}/approve`, {
+  const res = await fetch(`${window.API_BASE || ""}/api/admin/users/${userId}/approve`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json", "x-admin-token": token || "" },
     body: JSON.stringify({}),
@@ -144,7 +144,7 @@ async function approveUser(userId) {
 
 async function rejectUser(userId, reason) {
   const token = getAdminToken();
-  const res = await fetch(`http://localhost:3000/api/admin/users/${userId}/reject`, {
+  const res = await fetch(`${window.API_BASE || ""}/api/admin/users/${userId}/reject`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json", "x-admin-token": token || "" },
     body: JSON.stringify({ reason }),
@@ -156,7 +156,7 @@ async function rejectUser(userId, reason) {
 
 async function deactivateUser(userId, reason) {
   const token = getAdminToken();
-  const res = await fetch(`http://localhost:3000/api/admin/users/${userId}/deactivate`, {
+  const res = await fetch(`${window.API_BASE || ""}/api/admin/users/${userId}/deactivate`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json", "x-admin-token": token || "" },
     body: JSON.stringify({ reason }),
@@ -168,7 +168,7 @@ async function deactivateUser(userId, reason) {
 
 async function activateUser(userId) {
   const token = getAdminToken();
-  const res = await fetch(`http://localhost:3000/api/admin/users/${userId}/activate`, {
+  const res = await fetch(`${window.API_BASE || ""}/api/admin/users/${userId}/activate`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json", "x-admin-token": token || "" },
     body: JSON.stringify({}),

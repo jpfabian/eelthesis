@@ -88,11 +88,12 @@
         </div>
     </section>
 
+    <script src="js-front-end/api-config.js"></script>
     <script src="js/main-index.js"></script>
     <script>
 (function() {
-  var API_BASE = (window.location.port === '3000' && /localhost|127\.0\.0\.1/.test(window.location.hostname))
-    ? '' : 'http://localhost:3000';
+  // Same origin on EC2; for local dev with frontend on another port set window.API_BASE = 'http://localhost:3000' before other scripts
+var API_BASE = (typeof window !== 'undefined' && window.API_BASE !== undefined) ? window.API_BASE : '';
 
   function setReading(count) {
     var el = document.getElementById('students-reading-count');

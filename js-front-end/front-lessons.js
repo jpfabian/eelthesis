@@ -127,8 +127,8 @@ async function loadCurriculum() {
 
     // Prefer server-side filtering by subject_id (guarantees correct subject PPT/PDF)
     const url = Number.isFinite(subjectId)
-      ? `http://localhost:3000/curriculum?subject_id=${encodeURIComponent(subjectId)}`
-      : "http://localhost:3000/curriculum";
+      ? `${window.API_BASE || ""}/curriculum?subject_id=${encodeURIComponent(subjectId)}`
+      : (window.API_BASE || "") + "/curriculum";
 
     const res = await fetch(url);
     if (!res.ok) throw new Error(`Failed to load curriculum: ${res.status}`);
@@ -144,7 +144,7 @@ async function loadCurriculum() {
     const hasMismatch = expectedName && gotName && !subjectNamesMatch(expectedName, subject.subject_name);
 
     if (!subject || (Array.isArray(data) && data.length === 0) || hasMismatch) {
-      const resAll = await fetch("http://localhost:3000/curriculum");
+      const resAll = await fetch((window.API_BASE || "") + "/curriculum");
       if (resAll.ok) {
         const all = await resAll.json();
         const byName = expectedName
@@ -296,9 +296,8 @@ function renderLessonSection(lesson, isOpenByDefault) {
 }
 
 // API/base URL for lesson PDFs — must match backend (same as curriculum fetch)
-const LESSON_API_BASE = "http://localhost:3000";
 function getPdfBaseUrl() {
-  return LESSON_API_BASE;
+  return window.API_BASE || "";
 }
 
 /** S3 bucket base URL for lesson files (region: ap-southeast-1). */
@@ -731,7 +730,7 @@ async function loadLeaderboardLesson(quizId) {
   if (!tbody) return;
 
   try {
-    const res = await fetch(`http://localhost:3000/api/reading-quiz-leaderboard?quiz_id=${qid}&teacher_quiz=1`);
+    const res = await fetch(`${window.API_BASE || ""}/api/reading-quiz-leaderboard?quiz_id=${qid}&teacher_quiz=1`);
     const data = await res.json();
     if (nameEl) nameEl.textContent = data.quizTitle || "Quiz";
 
@@ -841,7 +840,7 @@ async function openLessonTeacherReviewModal(quizId) {
   if (titleEl) titleEl.textContent = "Loading...";
 
   try {
-    const res = await fetch(`http://localhost:3000/api/reading-quiz-leaderboard?quiz_id=${quizId}&teacher_quiz=1`);
+    const res = await fetch(`${window.API_BASE || ""}/api/reading-quiz-leaderboard?quiz_id=${quizId}&teacher_quiz=1`);
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Failed to load attempts");
     _lessonTeacherReviewState.quizTitle = data.quizTitle || "Quiz";
@@ -934,7 +933,7 @@ async function loadLessonTeacherReviewAttempt(studentId) {
   if (window.lucide && typeof window.lucide.createIcons === "function") window.lucide.createIcons();
 
   try {
-    const res = await fetch("http://localhost:3000/api/teacher/reading-quizzes/" + quizId + "/review?student_id=" + encodeURIComponent(studentId) + "&as_teacher=1");
+    const res = await fetch((window.API_BASE || "") + "/api/teacher/reading-quizzes/" + quizId + "/review?student_id=" + encodeURIComponent(studentId) + "&as_teacher=1");
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Failed to load answers");
     if (!data.success || !data.quiz || !data.attempt || !data.answers) throw new Error("Invalid review data");
@@ -1044,7 +1043,7 @@ async function saveLessonTeacherReviewOverrides() {
   });
 
   try {
-    const res = await fetch("http://localhost:3000/api/teacher/reading-quiz-attempts/" + attemptId + "/override", {
+    const res = await fetch((window.API_BASE || "") + "/api/teacher/reading-quiz-attempts/" + attemptId + "/override", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ answers: answers })
@@ -1055,7 +1054,7 @@ async function saveLessonTeacherReviewOverrides() {
     var quizId = _lessonTeacherReviewState.quizId;
     var studentId = _lessonTeacherReviewState.studentId;
     if (quizId) {
-      var listRes = await fetch("http://localhost:3000/api/reading-quiz-leaderboard?quiz_id=" + quizId + "&teacher_quiz=1");
+      var listRes = await fetch((window.API_BASE || "") + "/api/reading-quiz-leaderboard?quiz_id=" + quizId + "&teacher_quiz=1");
       var listData = await listRes.json().catch(function () { return {}; });
       if (listData.leaderboard) _lessonTeacherReviewState.attempts = listData.leaderboard;
       renderLessonTeacherReviewAttemptsList();
@@ -1083,7 +1082,7 @@ document.addEventListener("DOMContentLoaded", function () {
       }
       const timeLimit = limitVal ? parseInt(limitVal, 10) : null;
       try {
-        const res = await fetch(`http://localhost:3000/api/teacher/reading-quizzes/${quizId}/schedule`, {
+        const res = await fetch(`${window.API_BASE || ""}/api/teacher/reading-quizzes/${quizId}/schedule`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ unlock_time: unlockStr, lock_time: lockStr, time_limit: timeLimit }),
@@ -1130,11 +1129,11 @@ async function doLockTeacherQuizLesson(quizId) {
   const sec = String(ph.getUTCSeconds()).padStart(2, "0");
   const lockTime = `${y}-${m}-${d} ${hr}:${min}:${sec}`;
   try {
-    const getRes = await fetch(`http://localhost:3000/api/teacher/reading-quizzes/${quizId}`);
+    const getRes = await fetch(`${window.API_BASE || ""}/api/teacher/reading-quizzes/${quizId}`);
     const quiz = await getRes.json().catch(() => ({}));
     const unlockTime = quiz.unlock_time || null;
     const timeLimit = quiz.time_limit != null ? quiz.time_limit : null;
-    const res = await fetch(`http://localhost:3000/api/teacher/reading-quizzes/${quizId}/schedule`, {
+    const res = await fetch(`${window.API_BASE || ""}/api/teacher/reading-quizzes/${quizId}/schedule`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ unlock_time: unlockTime, lock_time: lockTime, time_limit: timeLimit }),
@@ -1161,7 +1160,7 @@ async function loadLessonsAIGeneratedList() {
   const queryParams = new URLSearchParams({ user_id: user.user_id });
   if (Number.isFinite(subjectId)) queryParams.set("subject_id", subjectId);
   try {
-    const res = await fetch(`http://localhost:3000/api/teacher/reading-quizzes?${queryParams.toString()}`);
+    const res = await fetch(`${window.API_BASE || ""}/api/teacher/reading-quizzes?${queryParams.toString()}`);
     if (!res.ok) throw new Error("Failed to fetch");
     const quizzes = await res.json();
     const now = new Date();
@@ -1298,13 +1297,13 @@ async function loadLessonsAIQuizzesForStudent() {
     const user = typeof getCurrentUser === "function" ? getCurrentUser() : null;
     const studentId = user && user.role === "student" ? user.user_id : null;
 
-    const res = await fetch(`http://localhost:3000/api/teacher/reading-quizzes?subject_id=${subjectId}`);
+    const res = await fetch(`${window.API_BASE || ""}/api/teacher/reading-quizzes?subject_id=${subjectId}`);
     if (!res.ok) throw new Error("Failed to fetch quizzes");
     const quizzes = await res.json();
     let completedQuizIds = [];
     if (studentId) {
       try {
-        const cr = await fetch(`http://localhost:3000/api/teacher/reading-quizzes/completed-by-student?student_id=${studentId}`);
+        const cr = await fetch(`${window.API_BASE || ""}/api/teacher/reading-quizzes/completed-by-student?student_id=${studentId}`);
         const crData = await cr.json();
         if (crData.success && Array.isArray(crData.quiz_ids)) completedQuizIds = crData.quiz_ids;
       } catch (_) {}
@@ -1433,7 +1432,7 @@ async function openLessonQuizModal(quizId) {
   if (!modal) return;
 
   try {
-    const res = await fetch(`http://localhost:3000/api/teacher/reading-quizzes/${quizId}`);
+    const res = await fetch(`${window.API_BASE || ""}/api/teacher/reading-quizzes/${quizId}`);
     if (!res.ok) {
       if (typeof showNotification === "function") showNotification("Failed to load quiz.", "error");
       return;
@@ -1508,7 +1507,7 @@ async function openLessonReviewModal(quizId) {
   if (window.lucide && typeof window.lucide.createIcons === "function") window.lucide.createIcons();
 
   try {
-    const res = await fetch("http://localhost:3000/api/teacher/reading-quizzes/" + quizId + "/review?student_id=" + encodeURIComponent(user.user_id));
+    const res = await fetch((window.API_BASE || "") + "/api/teacher/reading-quizzes/" + quizId + "/review?student_id=" + encodeURIComponent(user.user_id));
     const data = await res.json().catch(function () { return {}; });
     if (res.status === 404) {
       if (loadingEl) loadingEl.classList.add("hidden");
@@ -1794,7 +1793,7 @@ async function loadLessonsAndTopicsForAI() {
       label.textContent = "Loading...";
       label.classList.add("text-muted-foreground");
     }
-    const res = await fetch(`http://localhost:3000/api/lessons-with-topics?class_id=${classId}`);
+    const res = await fetch(`${window.API_BASE || ""}/api/lessons-with-topics?class_id=${classId}`);
     const data = await res.json();
     if (!Array.isArray(data)) {
       _aiLessonsTopicsData = [];
@@ -1854,7 +1853,7 @@ async function generateAIQuizLesson() {
   const payload = { topic_id: topicId, question_counts: questionCounts, additional_context: additionalContext };
   if (tosLevels.length > 0) payload.tos_levels = tosLevels;
   try {
-    const res = await fetch("http://localhost:3000/api/generate-quiz", {
+    const res = await fetch((window.API_BASE || "") + "/api/generate-quiz", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -2123,7 +2122,7 @@ async function saveAIQuizLesson() {
     return;
   }
   try {
-    const res = await fetch("http://localhost:3000/api/teacher/reading-quizzes", {
+    const res = await fetch((window.API_BASE || "") + "/api/teacher/reading-quizzes", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

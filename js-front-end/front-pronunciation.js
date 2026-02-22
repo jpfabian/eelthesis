@@ -348,7 +348,7 @@ async function savePronunciationQuiz() {
             // ✅ Get current teacher ID
         const currentUser = JSON.parse(localStorage.getItem("eel_user") || "{}");
         const currentTeacherId = currentUser.user_id;
-        const res = await fetch('http://localhost:3000/api/pronunciation-quizzes', {
+        const res = await fetch((window.API_BASE || "") + "/api/pronunciation-quizzes", {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ title, difficulty, passage, questions, subject_id, user_id: currentTeacherId }) // ✅ send correct subject_id
@@ -455,7 +455,7 @@ document.getElementById('save-schedule-btn').addEventListener('click', async () 
     lockTime   = toPHISOString(lockTime);
 
     try {
-        const res = await fetch(`http://localhost:3000/api/pronunciation-quizzes/${quizId}/schedule`, {
+        const res = await fetch(`${window.API_BASE || ""}/api/pronunciation-quizzes/${quizId}/schedule`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -506,7 +506,7 @@ function formatDateTime(dateString) {
 
 async function lockPronunciationQuiz(quizId) {
     try {
-        const res = await fetch(`http://localhost:3000/api/lock-pronunciation-quiz/${quizId}`, {
+        const res = await fetch(`${window.API_BASE || ""}/api/lock-pronunciation-quiz/${quizId}`, {
             method: "PUT",
         });
         const data = await res.json();
@@ -552,7 +552,7 @@ async function loadPronunciationQuizzes(user) {
 
         // ✅ Fetch pronunciation quizzes
         const res = await fetch(
-            `http://localhost:3000/api/pronunciation-quizzes?subject_id=${subjectId}` +
+            `${window.API_BASE || ""}/api/pronunciation-quizzes?subject_id=${subjectId}` +
             (!isTeacher ? `&student_id=${user.user_id}` : "")
         );
         const quizzes = await res.json();
@@ -573,7 +573,7 @@ async function loadPronunciationQuizzes(user) {
         let studentAttempts = [];
         if (!isTeacher) {
             try {
-                const attemptRes = await fetch(`http://localhost:3000/api/pronunciation-attempts?student_id=${user.user_id}`);
+                const attemptRes = await fetch(`${window.API_BASE || ""}/api/pronunciation-attempts?student_id=${user.user_id}`);
                 const attemptData = await attemptRes.json();
                 studentAttempts = attemptData.success ? attemptData.attempts : [];
             } catch (attemptErr) {
@@ -782,7 +782,7 @@ async function loadPronunciationQuizzesTeacher(user) {
         if (!user || user.role !== "teacher") return;
 
         // ✅ Fetch teacher's quizzes
-        const res = await fetch(`http://localhost:3000/api/teacher/pronunciation-quizzes?user_id=${user.user_id}`);
+        const res = await fetch(`${window.API_BASE || ""}/api/teacher/pronunciation-quizzes?user_id=${user.user_id}`);
         const quizzes = await res.json();
         const diffOrder = { beginner: 0, intermediate: 1, advanced: 2 };
         quizzes.sort((a, b) => {
@@ -902,7 +902,7 @@ async function loadPronunciationQuizzesTeacher(user) {
 // ============================================
 async function openPronunciationModal(quizId) {
     try {
-        const res = await fetch(`http://localhost:3000/api/pronunciation-quizzes/${quizId}`);
+        const res = await fetch(`${window.API_BASE || ""}/api/pronunciation-quizzes/${quizId}`);
         if (!res.ok) return showNotification("Failed to fetch quiz", "error");
         const quiz = await res.json();
 
@@ -1193,7 +1193,7 @@ async function handleRecordingComplete(blob) {
         formData.append("audio", blob, "speech.webm");
         formData.append("expectedText", expectedText);
 
-        const res = await fetch("http://localhost:3000/api/pronunciation-check", {
+        const res = await fetch((window.API_BASE || "") + "/api/pronunciation-check", {
             method: "POST",
             body: formData
         });
@@ -1215,7 +1215,7 @@ async function checkPronunciation(audioBlob, expectedText) {
     formData.append("expectedText", expectedText);
 
     try {
-        const res = await fetch("http://localhost:3000/api/pronunciation-check", {
+        const res = await fetch((window.API_BASE || "") + "/api/pronunciation-check", {
             method: "POST",
             body: formData
         });
@@ -1321,7 +1321,7 @@ async function submitPronunciationQuiz() {
   formData.append('quiz_id', pronunciationQuizData.quiz_id);
 
   try {
-    const res = await fetch('http://localhost:3000/api/pronunciation-submit', {
+    const res = await fetch((window.API_BASE || "") + "/api/pronunciation-submit", {
       method: 'POST',
       body: formData
     });
@@ -1406,7 +1406,7 @@ async function openPronunciationReview(quizId, studentId) {
   }
 
   try {
-    const res = await fetch(`http://localhost:3000/api/pronunciation-review?student_id=${studentId}&quiz_id=${quizId}`);
+    const res = await fetch(`${window.API_BASE || ""}/api/pronunciation-review?student_id=${studentId}&quiz_id=${quizId}`);
     const data = await res.json();
 
     if (!data.success || !data.answers || data.answers.length === 0) {
@@ -1512,7 +1512,7 @@ async function openLeaderboardModal(quizId, classId) {
     const quizName = document.getElementById("quiz-name");
 
     try {
-        const res = await fetch(`http://localhost:3000/api/leaderboard?quiz_id=${quizId}${classId ? `&class_id=${classId}` : ''}`);
+        const res = await fetch(`${window.API_BASE || ""}/api/leaderboard?quiz_id=${quizId}${classId ? `&class_id=${classId}` : ''}`);
         const data = await res.json();
         if (!data.success) throw new Error(data.message || "Failed to load leaderboard");
 
@@ -1628,7 +1628,7 @@ async function loadLessonsAndTopics() {
 
     topicSelect.innerHTML = '<option>Loading...</option>';
 
-    const res = await fetch(`http://localhost:3000/api/lessons-with-topics?class_id=${classId}`);
+    const res = await fetch(`${window.API_BASE || ""}/api/lessons-with-topics?class_id=${classId}`);
     const raw = await res.json();
     const data = Array.isArray(raw) ? raw : (raw.lessons || []);
 
@@ -1681,7 +1681,7 @@ async function generatePronunciationQuiz() {
   btn.innerHTML = "<span>⏳ Generating...</span>";
 
   try {
-    const res = await fetch("http://localhost:3000/api/generate-pronunciation-quiz", {
+    const res = await fetch((window.API_BASE || "") + "/api/generate-pronunciation-quiz", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ topic_id: topicId, difficulty, num_questions: numQuestions, additional_context: additionalContext })
@@ -1792,7 +1792,7 @@ async function saveAIPronunciationQuiz() {
 
     const teacher_id = window.currentUserId;  
 
-    const res = await fetch("http://localhost:3000/api/save-pronunciation-quiz", {
+    const res = await fetch((window.API_BASE || "") + "/api/save-pronunciation-quiz", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title, teacher_id, subject_id, difficulty, passage, questions })
@@ -1895,12 +1895,12 @@ async function openTeacherPronunciationReviewModal(quizId) {
     if (titleEl) titleEl.textContent = 'Loading...';
 
     try {
-        const quizRes = await fetch(`http://localhost:3000/api/pronunciation-quizzes/${quizId}`);
+        const quizRes = await fetch(`${window.API_BASE || ""}/api/pronunciation-quizzes/${quizId}`);
         teacherPronReviewState.quiz = await quizRes.json();
         if (titleEl) titleEl.textContent = teacherPronReviewState.quiz?.title || `Quiz #${quizId}`;
 
         const attemptsRes = await fetch(
-            `http://localhost:3000/api/teacher/pronunciation-attempts?quiz_id=${quizId}` +
+            `${window.API_BASE || ""}/api/teacher/pronunciation-attempts?quiz_id=${quizId}` +
             (classId ? `&class_id=${classId}` : '')
         );
         const attemptsData = await attemptsRes.json();
@@ -1962,7 +1962,7 @@ async function loadTeacherPronAttempt(attemptId) {
     if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
 
     try {
-        const res = await fetch(`http://localhost:3000/api/teacher/pronunciation-attempts/${attemptId}`);
+        const res = await fetch(`${window.API_BASE || ""}/api/teacher/pronunciation-attempts/${attemptId}`);
         const data = await res.json();
         if (!data.success) throw new Error(data.error || "Failed");
 
@@ -2030,7 +2030,7 @@ async function saveTeacherPronunciationOverrides() {
     });
 
     try {
-        const res = await fetch(`http://localhost:3000/api/teacher/pronunciation-attempts/${attemptId}/override`, {
+        const res = await fetch(`${window.API_BASE || ""}/api/teacher/pronunciation-attempts/${attemptId}/override`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ teacher_id: user.user_id, answers })

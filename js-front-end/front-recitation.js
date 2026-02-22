@@ -118,7 +118,7 @@ async function loadRecitationTopics() {
             return;
         }
         topicSelect.innerHTML = "<option value=''>Loading...</option>";
-        const res = await fetch(`http://localhost:3000/api/lessons-with-topics?class_id=${classId}`);
+        const res = await fetch(`${window.API_BASE || ""}/api/lessons-with-topics?class_id=${classId}`);
         const data = await res.json();
         if (!Array.isArray(data)) {
             topicSelect.innerHTML = "<option value=''>Error loading topics</option>";
@@ -315,7 +315,7 @@ document.addEventListener('DOMContentLoaded', () => {
 async function loadClassStudents(classId) {
     try {
         console.log("Loading students for class:", classId);
-        const res = await fetch(`http://localhost:3000/api/recitation/class/${classId}/students`);
+        const res = await fetch(`${window.API_BASE || ""}/api/recitation/class/${classId}/students`);
         const data = await res.json();
 
         // data itself is an array already ✅ (API may send { id, name, answered } or { student_id, student_fname, student_lname })
@@ -407,7 +407,7 @@ async function generateQuestions() {
     if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
 
     try {
-        const res = await fetch('http://localhost:3000/api/generate-recitation-questions', {
+        const res = await fetch((window.API_BASE || "") + "/api/generate-recitation-questions", {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

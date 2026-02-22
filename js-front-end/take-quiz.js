@@ -395,7 +395,7 @@
 
     if (teacherQuizAttemptId != null) {
       var answers = buildAnswersPayload();
-      fetch("http://localhost:3000/api/teacher/reading-quiz-attempts/" + teacherQuizAttemptId + "/submit", {
+      fetch((window.API_BASE || "") + "/api/teacher/reading-quiz-attempts/" + teacherQuizAttemptId + "/submit", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ answers: answers })
@@ -498,7 +498,7 @@
     }
 
     if (isReviewMode) {
-      fetch("http://localhost:3000/api/teacher/reading-quizzes/" + quizId + "/review?student_id=" + encodeURIComponent(user.user_id))
+      fetch((window.API_BASE || "") + "/api/teacher/reading-quizzes/" + quizId + "/review?student_id=" + encodeURIComponent(user.user_id))
         .then(function (res) {
           if (res.status === 404) throw new Error("You have not taken this quiz yet.");
           if (!res.ok) throw new Error("Could not load your attempt.");
@@ -552,7 +552,7 @@
       return;
     }
 
-    fetch("http://localhost:3000/api/teacher/reading-quizzes/" + quizId)
+    fetch((window.API_BASE || "") + "/api/teacher/reading-quizzes/" + quizId)
       .then(function (res) {
         if (!res.ok) throw new Error("Quiz not found or not available.");
         return res.json();
@@ -569,7 +569,7 @@
         studentAnswers = {};
         currentQuestionIndex = 0;
 
-        fetch("http://localhost:3000/api/teacher/reading-quiz-attempts", {
+        fetch((window.API_BASE || "") + "/api/teacher/reading-quiz-attempts", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ student_id: user.user_id, quiz_id: quiz.quiz_id })

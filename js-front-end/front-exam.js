@@ -58,7 +58,7 @@ async function loadLessonsAndTopics() {
     const classId = localStorage.getItem("eel_selected_class_id");
     if (!classId) return console.error("No class_id found in localStorage");
 
-    const res = await fetch(`http://localhost:3000/api/lessons-with-topics?class_id=${classId}`);
+    const res = await fetch(`${window.API_BASE || ""}/api/lessons-with-topics?class_id=${classId}`);
     const data = await res.json();
 
     if (!Array.isArray(data)) {
@@ -278,7 +278,7 @@ function setupExamGenerator() {
     };
 
     try {
-      const res = await fetch("http://localhost:3000/api/generate-exam", {
+      const res = await fetch((window.API_BASE || "") + "/api/generate-exam", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(bodyData),
@@ -412,7 +412,7 @@ function showExamPreview(examText, subject, selectedTopics, questionTypes) {
     }
 
     try {
-      const res = await fetch("http://localhost:3000/api/save-exam", {
+      const res = await fetch((window.API_BASE || "") + "/api/save-exam", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -467,7 +467,7 @@ async function loadExams() {
     const selectedClass = JSON.parse(localStorage.getItem("eel_selected_class") || "{}");
     const classId = selectedClass.id;
 
-    const res = await fetch(`http://localhost:3000/api/get-exams?class_id=${classId}`);
+    const res = await fetch(`${window.API_BASE || ""}/api/get-exams?class_id=${classId}`);
     const data = await res.json();
     const exams = data.exams;
 
@@ -528,7 +528,7 @@ function capitalizeWords(str) {
 
 // ✅ Export Excel function (no modules, fully browser compatible)
 async function exportExamExcel(id) {
-  const res = await fetch(`http://localhost:3000/api/get-exam-content/${id}`);
+  const res = await fetch(`${window.API_BASE || ""}/api/get-exam-content/${id}`);
   const data = await res.json();
   if (!data.success) return alert("Failed to fetch exam content.");
 
@@ -541,7 +541,7 @@ async function exportExamExcel(id) {
 
 // ✅ Move exam to cache and show proper message
 function moveExamToCache(id) {
-  fetch(`http://localhost:3000/api/move-exam-to-cache/${id}`, { method: "POST" })
+  fetch(`${window.API_BASE || ""}/api/move-exam-to-cache/${id}`, { method: "POST" })
     .then(async res => {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();

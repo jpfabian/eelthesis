@@ -23,15 +23,17 @@ const { getTeachersDashboardStats } = require("./teachers-dashboard");
 // 1️⃣ Create Express app first
 const app = express();
 
-// 2️⃣ Middlewares
+// 2️⃣ Middlewares — CORS: localhost (dev) + ALLOWED_ORIGINS for EC2 (e.g. http://your-ec2-ip:3000)
+const allowedOriginsEnv = (process.env.ALLOWED_ORIGINS || "").trim().split(",").filter(Boolean);
 app.use(cors({
   origin: (origin, cb) => {
-    // Allow same-origin, Live Server ports, and file:// (no origin)
     if (!origin) return cb(null, true);
-    const ok =
-      /^http:\/\/localhost:\d+$/.test(origin) ||
-      /^http:\/\/127\.0\.0\.1:\d+$/.test(origin);
-    return cb(null, ok);
+    const isLocal =
+      /^http:\/\/localhost(:\d+)?$/.test(origin) ||
+      /^http:\/\/127\.0\.0\.1(:\d+)?$/.test(origin);
+    if (isLocal) return cb(null, true);
+    if (allowedOriginsEnv.includes(origin)) return cb(null, true);
+    return cb(null, false);
   },
   credentials: true,
 }));
