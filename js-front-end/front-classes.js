@@ -73,7 +73,13 @@ async function joinClass() {
 }
 
 function selectClass(cls) {
+    if (!cls) return;
     localStorage.setItem("eel_selected_class", JSON.stringify(cls));
+    // Keep class_id in sync so pages (reading, exam, recitation, etc.) load data for this class, not a previous one
+    const classId = cls.id != null ? cls.id : cls.class_id;
+    if (classId != null) {
+        localStorage.setItem("eel_selected_class_id", String(classId));
+    }
     window.location.href = "lessons.html";
 }
 

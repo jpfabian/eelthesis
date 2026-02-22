@@ -61,7 +61,7 @@ router.get("/api/my-progress", async (req, res) => {
       }
     }
 
-    // Reading completed attempts (as percentage)
+    // Reading completed attempts (as percentage). When classId set, only attempts for that class.
     const [reading] = await pool.query(
       `
       SELECT a.attempt_id, a.quiz_id, q.title AS quiz_name, q.subject_id,
@@ -70,12 +70,13 @@ router.get("/api/my-progress", async (req, res) => {
       JOIN reading_quizzes q ON q.quiz_id = a.quiz_id
       WHERE a.student_id = ? AND a.status = 'completed'
         AND (? IS NULL OR q.subject_id = ?)
+        AND (? IS NULL OR a.class_id = ?)
       ORDER BY a.end_time DESC
       `,
-      [studentId, subjectId, subjectId]
+      [studentId, subjectId, subjectId, classId, classId]
     );
 
-    // Pronunciation completed attempts
+    // Pronunciation completed attempts. When classId set, only attempts for that class.
     const [pronunciation] = await pool.query(
       `
       SELECT a.attempt_id, a.quiz_id, q.title AS quiz_name, q.subject_id,
@@ -84,9 +85,10 @@ router.get("/api/my-progress", async (req, res) => {
       JOIN pronunciation_quizzes q ON q.quiz_id = a.quiz_id
       WHERE a.student_id = ? AND a.status = 'completed'
         AND (? IS NULL OR q.subject_id = ?)
+        AND (? IS NULL OR a.class_id = ?)
       ORDER BY a.end_time DESC
       `,
-      [studentId, subjectId, subjectId]
+      [studentId, subjectId, subjectId, classId, classId]
     );
 
     const readingList = (reading || []).map((r) => ({
@@ -179,30 +181,30 @@ router.get("/api/class/:classId/average-scores", async (req, res) => {
 
     const studentIds = students.map((s) => s.student_id);
 
-    // 2) Reading quiz scores (convert points -> %)
+    // 2) Reading quiz scores (convert points -> %) — only attempts for this class
     const [reading] = await pool.query(
       `
       SELECT a.student_id, q.title AS quiz_name,
              ROUND((a.score / NULLIF(a.total_points, 0)) * 100, 1) AS score
       FROM reading_quiz_attempts a
       JOIN reading_quizzes q ON q.quiz_id = a.quiz_id
-      WHERE a.status = 'completed' AND a.student_id IN (?)
+      WHERE a.status = 'completed' AND a.student_id IN (?) AND a.class_id = ?
       ORDER BY a.end_time DESC
       `,
-      [studentIds]
+      [studentIds, classId]
     );
 
-    // 3) Pronunciation quiz scores (already stored as 0-100)
+    // 3) Pronunciation quiz scores (already stored as 0-100) — only attempts for this class
     const [pronunciation] = await pool.query(
       `
       SELECT a.student_id, q.title AS quiz_name,
              ROUND(a.score, 1) AS score
       FROM pronunciation_quiz_attempts a
       JOIN pronunciation_quizzes q ON q.quiz_id = a.quiz_id
-      WHERE a.status = 'completed' AND a.student_id IN (?)
+      WHERE a.status = 'completed' AND a.student_id IN (?) AND a.class_id = ?
       ORDER BY a.end_time DESC
       `,
-      [studentIds]
+      [studentIds, classId]
     );
 
     // 4) Group into UI-friendly shape
@@ -299,7 +301,7 @@ router.get("/api/class/:classId/completion-rate", async (req, res) => {
     const totalQuizzes = totalReading + totalPron;
     const totalPossible = totalQuizzes * totalStudents;
 
-    // Unique completed pairs (student_id + quiz_id) per track
+    // Unique completed pairs (student_id + quiz_id) per track, scoped to this class
     const [[readingDone]] = await pool.query(
       `
       SELECT COUNT(DISTINCT CONCAT(a.student_id,'-',a.quiz_id)) AS c
@@ -308,8 +310,9 @@ router.get("/api/class/:classId/completion-rate", async (req, res) => {
       WHERE a.status = 'completed'
         AND a.student_id IN (?)
         AND (? IS NULL OR q.subject_id = ?)
+        AND a.class_id = ?
       `,
-      [studentIds, subjectId, subjectId]
+      [studentIds, subjectId, subjectId, classId]
     );
     const [[pronDone]] = await pool.query(
       `
@@ -319,8 +322,9 @@ router.get("/api/class/:classId/completion-rate", async (req, res) => {
       WHERE a.status = 'completed'
         AND a.student_id IN (?)
         AND (? IS NULL OR q.subject_id = ?)
+        AND a.class_id = ?
       `,
-      [studentIds, subjectId, subjectId]
+      [studentIds, subjectId, subjectId, classId]
     );
     const completedPairs = Number(readingDone?.c || 0) + Number(pronDone?.c || 0);
 
@@ -331,15 +335,15 @@ router.get("/api/class/:classId/completion-rate", async (req, res) => {
         SELECT a.student_id
         FROM reading_quiz_attempts a
         JOIN reading_quizzes q ON q.quiz_id = a.quiz_id
-        WHERE a.status = 'completed' AND a.student_id IN (?) AND (? IS NULL OR q.subject_id = ?)
+        WHERE a.status = 'completed' AND a.student_id IN (?) AND (? IS NULL OR q.subject_id = ?) AND a.class_id = ?
         UNION ALL
         SELECT a.student_id
         FROM pronunciation_quiz_attempts a
         JOIN pronunciation_quizzes q ON q.quiz_id = a.quiz_id
-        WHERE a.status = 'completed' AND a.student_id IN (?) AND (? IS NULL OR q.subject_id = ?)
+        WHERE a.status = 'completed' AND a.student_id IN (?) AND (? IS NULL OR q.subject_id = ?) AND a.class_id = ?
       ) x
       `,
-      [studentIds, subjectId, subjectId, studentIds, subjectId, subjectId]
+      [studentIds, subjectId, subjectId, classId, studentIds, subjectId, subjectId, classId]
     );
     const engagedStudents = Number(engaged?.c || 0);
 

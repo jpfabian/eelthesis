@@ -34,18 +34,49 @@
     ensureCornerToggle();
   }
 
+  function renderThemeButton(btn, showLabel) {
+    if (!btn) return;
+    const resolved =
+      document.documentElement.dataset.theme || resolveTheme(getStoredTheme());
+    const isDark = resolved === "dark";
+    const icon = isDark ? "☾" : "☀";
+    const label = isDark ? "dark" : "light";
+    btn.setAttribute("aria-label", "Toggle dark/light mode (currently " + label + ")");
+    btn.innerHTML = "<span class=\"theme-icon\" aria-hidden=\"true\">" + icon + "</span>" +
+      (showLabel ? "<span class=\"theme-label\">" + label + "</span>" : "");
+  }
+
   function ensureCornerToggle() {
     if (!document.body) return;
 
+    const headerToggle = document.getElementById("eel-theme-header-toggle");
+    const mobileThemeBtn = document.getElementById("mobileNavThemeBtn");
+
+    if (headerToggle) {
+      renderThemeButton(headerToggle, true);
+      if (!headerToggle._eelThemeWired) {
+        headerToggle._eelThemeWired = true;
+        headerToggle.addEventListener("click", () => {
+          toggleTheme();
+          renderThemeButton(headerToggle, true);
+          if (mobileThemeBtn) renderThemeButton(mobileThemeBtn, false);
+        });
+      }
+    }
+
+    if (mobileThemeBtn && !mobileThemeBtn._eelThemeWired) {
+      mobileThemeBtn._eelThemeWired = true;
+      mobileThemeBtn.addEventListener("click", () => {
+        toggleTheme();
+        if (headerToggle) renderThemeButton(headerToggle, true);
+      });
+    }
+
+    if (headerToggle || mobileThemeBtn) return;
+
     const existing = document.getElementById("eel-theme-corner-toggle");
     if (existing) {
-      const resolved =
-        document.documentElement.dataset.theme || resolveTheme(getStoredTheme());
-      const isDark = resolved === "dark";
-      const icon = isDark ? "☾" : "☀";
-      const label = isDark ? "" : "";
-      existing.setAttribute("aria-label", `Switch theme (currently ${label})`);
-      existing.innerHTML = `<span class="theme-icon" aria-hidden="true">${icon}</span><span class="theme-label">${label}</span>`;
+      renderThemeButton(existing, true);
       return;
     }
 
@@ -54,22 +85,12 @@
     btn.type = "button";
     btn.className = "theme-corner-toggle";
 
-    function render() {
-      const resolved =
-        document.documentElement.dataset.theme || resolveTheme(getStoredTheme());
-      const isDark = resolved === "dark";
-      const icon = isDark ? "☾" : "☀";
-      const label = isDark ? "" : "";
-      btn.setAttribute("aria-label", `Switch theme (currently ${label})`);
-      btn.innerHTML = `<span class="theme-icon" aria-hidden="true">${icon}</span><span class="theme-label">${label}</span>`;
-    }
-
     btn.addEventListener("click", () => {
       toggleTheme();
-      render();
+      renderThemeButton(btn, true);
     });
 
-    render();
+    renderThemeButton(btn, true);
     document.body.appendChild(btn);
   }
 

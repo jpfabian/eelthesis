@@ -10,6 +10,10 @@
     <script src="js/theme.js"></script>
 </head>
 <body class="settings-page">
+    <div class="mobile-nav-header" id="mobileNavHeader" role="banner">
+        <button type="button" class="mobile-nav-btn mobile-nav-btn--menu" id="mobileNavMenuBtn" aria-label="Open menu"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+        <button type="button" id="eel-theme-header-toggle" class="theme-header-toggle" aria-label="Toggle dark/light mode"><span class="theme-icon" aria-hidden="true">☀</span><span class="theme-label">light</span></button>
+    </div>
     <!-- Loading Screen -->
     <div id="loading-screen" class="loading-screen">
         <div class="loading-content">
@@ -26,14 +30,6 @@
             <div class="p-6">
                 <h1 id="sidebar-title" class="text-xl font-semibold">EEL</h1>
                 <p id="sidebar-welcome" class="text-sm text-muted-foreground mt-1">Welcome</p>
-            </div>
-            
-            <!-- back to class Button -->
-            <div class="p-4">
-                <button id="back-class-btn" class="nav-button btn btn-side-bar w-full justify-start gap-3 p-3 rounded-md text-left transition-all flex items-center">
-                    <i data-lucide="arrow-left" class="size-5"></i>
-                    Back to Classes
-                </button>
             </div>
             
             <!-- Navigation -->

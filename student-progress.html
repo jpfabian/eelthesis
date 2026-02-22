@@ -11,6 +11,10 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="student-progress-page">
+    <div class="mobile-nav-header" id="mobileNavHeader" role="banner">
+        <button type="button" class="mobile-nav-btn mobile-nav-btn--menu" id="mobileNavMenuBtn" aria-label="Open menu"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+        <button type="button" id="eel-theme-header-toggle" class="theme-header-toggle" aria-label="Toggle dark/light mode"><span class="theme-icon" aria-hidden="true">☀</span><span class="theme-label">light</span></button>
+    </div>
     <!-- Loading Screen -->
     <div id="loading-screen" class="loading-screen">
         <div class="loading-content">
@@ -20,7 +24,7 @@
     </div>
 
     <!-- Main Application Layout -->
-    <div id="main-app" class="flex h-screen bg-background hidden">
+    <div id="main-app" class="flex h-screen2 bg-background hidden">
         <!-- Sidebar -->
         <div id="sidebar" class="w-64 bg-sidebar border-r border-sidebar-border h-full flex flex-col">
             <div class="p-6">
@@ -28,11 +32,15 @@
                 <p id="sidebar-welcome" class="text-sm text-muted-foreground mt-1">Welcome</p>
             </div>
             
-            <div class="p-4">
+            <div class="p-4 space-y-2">
                 <button id="back-class-btn" class="nav-button btn btn-side-bar w-full justify-start gap-3 p-3 rounded-md text-left transition-all flex items-center">
                     <i data-lucide="arrow-left" class="size-5"></i>
                     Back to Classes
                 </button>
+                <a href="settings.html" class="nav-button btn btn-side-bar w-full justify-start gap-3 p-3 rounded-md text-left transition-all flex items-center">
+                    <i data-lucide="settings" class="size-5"></i>
+                    Settings
+                </a>
             </div>
 
             <nav id="sidebar-nav" class="flex-1 px-4 space-y-2">
@@ -263,6 +271,7 @@
             const classId = selectedClass.id;
 
             await loadStudents(classId);
+            loadOverviewCards(classId);
 
             // Back button
             document.getElementById('back-class-btn')?.addEventListener('click', () => window.location.href = 'classes.html');
@@ -809,6 +818,44 @@
             } else {
                 showNotification('Failed to remove student', 'error');
             }
+        }
+    }
+
+    async function loadOverviewCards(classId) {
+        try {
+            const selectedClass = JSON.parse(localStorage.getItem("eel_selected_class"));
+            const subjectId = selectedClass?.subject_id || null;
+
+            const completionUrl = `${API_BASE}/class/${classId}/completion-rate${subjectId ? `?subject_id=${encodeURIComponent(subjectId)}` : ''}`;
+            const [scoresRes, completionRes] = await Promise.all([
+                fetch(`${API_BASE}/class/${classId}/average-scores`),
+                fetch(completionUrl)
+            ]);
+
+            const scores = scoresRes.ok ? await scoresRes.json() : [];
+            let completion = completionRes.ok ? await completionRes.json() : {};
+            if (subjectId && Number(completion?.total_quizzes || 0) === 0) {
+                const fallback = await fetch(`${API_BASE}/class/${classId}/completion-rate`).then(r => r.ok ? r.json() : {});
+                completion = fallback;
+            }
+
+            const overall = (scores || []).map(x => Number(x.overall_avg)).filter(Number.isFinite);
+            const overallAvg = overall.length ? (overall.reduce((a, b) => a + b, 0) / overall.length) : null;
+            const avgEl = document.getElementById('avg-score-value');
+            if (avgEl) avgEl.textContent = overallAvg == null ? '0%' : `${Math.round(overallAvg)}%`;
+
+            const rate = Number(completion?.completion_rate || 0);
+            const rateEl = document.getElementById('completion-rate-value');
+            if (rateEl) rateEl.textContent = `${rate}%`;
+
+            const subEl = document.getElementById('completion-rate-sub');
+            if (subEl) {
+                const completedPairs = Number(completion?.completed_pairs || 0);
+                const totalPossible = Number(completion?.total_possible || 0);
+                subEl.textContent = `${completedPairs}/${totalPossible} quiz completions`;
+            }
+        } catch (err) {
+            console.error('Error loading overview cards:', err);
         }
     }
 

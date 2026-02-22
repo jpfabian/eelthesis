@@ -300,6 +300,8 @@ async function saveLesson() {
     }
 
     try {
+        const selectedClass = JSON.parse(localStorage.getItem('eel_selected_class') || '{}');
+        const classId = localStorage.getItem('eel_selected_class_id') || selectedClass?.id;
         const res = await fetch((window.API_BASE || "") + "/api/teacher/reading-quizzes", {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -309,6 +311,7 @@ async function saveLesson() {
                 passage, 
                 subject_id: getSelectedSubjectId(), 
                 user_id: user.user_id, // ✅ include user_id here
+                class_id: classId || undefined,
                 questions 
             })
         });
@@ -412,8 +415,13 @@ async function openQuizModal(lessonId, isTeacherQuiz = false) {
         readonly = false;
 
         if (!isTeacherQuiz) {
-            // 2️⃣ Check for previous attempts (built-in quizzes only)
-            const attemptRes = await fetch(`${window.API_BASE || ""}/api/reading-quiz-attempts?quiz_id=${lessonId}&student_id=${user.user_id}`);
+            // 2️⃣ Check for previous attempts (built-in quizzes only), scoped to current class
+            const selectedClass = (() => {
+                try { return JSON.parse(localStorage.getItem("eel_selected_class")); } catch { return null; }
+            })();
+            const classId = selectedClass?.id != null ? selectedClass.id : (localStorage.getItem("eel_selected_class_id") || null);
+            const attemptParams = `quiz_id=${lessonId}&student_id=${user.user_id}` + (classId ? `&class_id=${classId}` : "");
+            const attemptRes = await fetch(`${window.API_BASE || ""}/api/reading-quiz-attempts?${attemptParams}`);
             const attempts = await attemptRes.json();
             const existingAttempt = attempts.find(a => Number(a.quiz_id) === Number(lessonId));
 
@@ -425,7 +433,7 @@ async function openQuizModal(lessonId, isTeacherQuiz = false) {
                 const newAttemptRes = await fetch((window.API_BASE || "") + "/api/reading-quiz-attempts", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ student_id: user.user_id, quiz_id: lessonId })
+                    body: JSON.stringify({ student_id: user.user_id, quiz_id: lessonId, class_id: classId || undefined })
                 });
                 const newAttempt = await newAttemptRes.json();
                 attemptId = newAttempt.attempt_id;
@@ -1539,6 +1547,8 @@ async function saveAIQuiz() {
   });
 
   try {
+    const selectedClass = JSON.parse(localStorage.getItem("eel_selected_class") || "{}");
+    const classId = localStorage.getItem("eel_selected_class_id") || selectedClass?.id;
     const res = await fetch((window.API_BASE || "") + "/api/teacher/reading-quizzes", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -1548,6 +1558,7 @@ async function saveAIQuiz() {
         passage: passage || "(No passage)",
         subject_id: getSelectedSubjectId(),
         user_id: user.user_id,
+        class_id: classId || undefined,
         questions
       })
     });
@@ -1665,10 +1676,12 @@ async function loadQuizzes(user = getCurrentUser()) {
         if (!res.ok) throw new Error("Failed to fetch quizzes");
         const quizzes = await res.json();
 
-        // ✅ Fetch student attempts if user is student
+        // ✅ Fetch student attempts if user is student, scoped to current class (no cross-class data)
         let studentAttempts = [];
         if (!isTeacher) {
-            const attemptsRes = await fetch(`${window.API_BASE || ""}/api/reading-quiz-attempts?student_id=${user.user_id}`);
+            const classId = selectedClass?.id != null ? selectedClass.id : (localStorage.getItem("eel_selected_class_id") || null);
+            const attemptParams = `student_id=${user.user_id}` + (classId ? `&class_id=${classId}` : "");
+            const attemptsRes = await fetch(`${window.API_BASE || ""}/api/reading-quiz-attempts?${attemptParams}`);
             studentAttempts = await attemptsRes.json();
         }
 
@@ -1886,16 +1899,19 @@ async function loadQuizzesTeacher() {
 
     try {
         const now = new Date();
+        const classId = selectedClass?.id != null ? selectedClass.id : (localStorage.getItem("eel_selected_class_id") || null);
         let url;
         if (isTeacher) {
             url = `${window.API_BASE || ""}/api/teacher/reading-quizzes?user_id=${user.user_id}`;
             if (subjectId) url += `&subject_id=${subjectId}`;
+            if (classId) url += `&class_id=${classId}`;
         } else {
             if (!subjectId) {
                 container.innerHTML = '<p class="text-center text-muted-foreground py-4">Select a class to see quizzes created by your teacher.</p>';
                 return;
             }
             url = `${window.API_BASE || ""}/api/teacher/reading-quizzes?subject_id=${subjectId}`;
+            if (classId) url += `&class_id=${classId}`;
         }
 
         const res = await fetch(url);

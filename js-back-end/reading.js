@@ -33,8 +33,9 @@ const { nowPhilippineDatetime } = require("./utils/datetime");
 // ================= CREATE TEACHER READING QUIZ =================
 router.post("/api/teacher/reading-quizzes", async (req, res) => {
     const pool = req.pool;
-    const { title, difficulty, passage, questions, subject_id, user_id } = req.body; // user_id from frontend
+    const { title, difficulty, passage, questions, subject_id, user_id, class_id } = req.body;
     const effectiveDifficulty = difficulty || "beginner";
+    const classIdParam = class_id != null && class_id !== "" ? Number(class_id) : null;
 
     if (!user_id) {
         return res.status(400).json({ success: false, message: "user_id is required" });
@@ -48,10 +49,10 @@ router.post("/api/teacher/reading-quizzes", async (req, res) => {
         conn = await pool.getConnection();
         await conn.beginTransaction();
 
-        // Insert quiz (difficulty defaults to beginner for AI-generated quizzes)
+        // Insert quiz (scoped to class when provided)
         const [quizResult] = await conn.query(
-            "INSERT INTO teacher_reading_quizzes (subject_id, user_id, title, difficulty, passage) VALUES (?, ?, ?, ?, ?)",
-            [subject_id, user_id, safeTitle, effectiveDifficulty, safePassage]
+            "INSERT INTO teacher_reading_quizzes (subject_id, user_id, class_id, title, difficulty, passage) VALUES (?, ?, ?, ?, ?, ?)",
+            [subject_id, user_id, classIdParam, safeTitle, effectiveDifficulty, safePassage]
         );
         const quizId = quizResult.insertId;
 
@@ -198,6 +199,7 @@ router.get("/api/teacher/reading-quizzes", async (req, res) => {
   const pool = req.pool;
   const userId = req.query.user_id;
   const subjectId = req.query.subject_id;
+  const classId = req.query.class_id != null && req.query.class_id !== "" ? Number(req.query.class_id) : null;
 
   try {
     let query, params;
@@ -208,9 +210,17 @@ router.get("/api/teacher/reading-quizzes", async (req, res) => {
         query += " AND subject_id = ?";
         params.push(subjectId);
       }
+      if (classId != null && Number.isFinite(classId)) {
+        query += " AND class_id = ?";
+        params.push(classId);
+      }
     } else if (subjectId) {
       query = "SELECT * FROM teacher_reading_quizzes WHERE subject_id = ?";
       params = [subjectId];
+      if (classId != null && Number.isFinite(classId)) {
+        query += " AND class_id = ?";
+        params.push(classId);
+      }
     } else {
       return res.status(400).json({ error: "Provide user_id (teacher) or subject_id (student view)" });
     }
@@ -243,13 +253,17 @@ router.get("/api/teacher/reading-quizzes", async (req, res) => {
 router.get("/api/teacher/reading-quizzes/completed-by-student", async (req, res) => {
   const pool = req.pool;
   const studentId = req.query.student_id ? Number(req.query.student_id) : null;
+  const classId = req.query.class_id != null && req.query.class_id !== "" ? Number(req.query.class_id) : null;
   if (!studentId) return res.status(400).json({ success: false, error: "student_id required" });
   try {
-    const [rows] = await pool.query(
-      `SELECT DISTINCT quiz_id FROM teacher_reading_quiz_attempts
-       WHERE student_id = ? AND status = 'completed'`,
-      [studentId]
-    );
+    let query = `SELECT DISTINCT quiz_id FROM teacher_reading_quiz_attempts
+       WHERE student_id = ? AND status = 'completed'`;
+    const params = [studentId];
+    if (classId != null && Number.isFinite(classId)) {
+      query += " AND class_id = ?";
+      params.push(classId);
+    }
+    const [rows] = await pool.query(query, params);
     res.json({ success: true, quiz_ids: rows.map((r) => r.quiz_id) });
   } catch (err) {
     console.error("❌ Completed-by-student error:", err);
@@ -481,9 +495,11 @@ router.patch("/api/teacher/reading-quizzes/:id/schedule", async (req, res) => {
 });
 
 // ================= START TEACHER / AI QUIZ ATTEMPT =================
+// class_id optional; when provided, attempt is scoped to that class.
 router.post("/api/teacher/reading-quiz-attempts", async (req, res) => {
   const pool = req.pool;
-  const { student_id, quiz_id } = req.body;
+  const { student_id, quiz_id, class_id } = req.body;
+  const classIdParam = class_id != null && class_id !== "" ? Number(class_id) : null;
   if (!student_id || !quiz_id) {
     return res.status(400).json({ success: false, error: "student_id and quiz_id are required" });
   }
@@ -502,8 +518,9 @@ router.post("/api/teacher/reading-quiz-attempts", async (req, res) => {
     const [[existing]] = await pool.query(
       `SELECT attempt_id FROM teacher_reading_quiz_attempts
        WHERE student_id = ? AND quiz_id = ? AND status = 'completed'
+         AND (class_id <=> ?)
        LIMIT 1`,
-      [student_id, quiz_id]
+      [student_id, quiz_id, classIdParam]
     );
     if (existing) {
       return res.status(403).json({ success: false, error: "You have already taken this quiz." });
@@ -511,9 +528,9 @@ router.post("/api/teacher/reading-quiz-attempts", async (req, res) => {
 
     const startTime = nowPhilippineDatetime();
     const [result] = await pool.query(
-      `INSERT INTO teacher_reading_quiz_attempts (student_id, quiz_id, start_time, status)
-       VALUES (?, ?, ?, 'in_progress')`,
-      [student_id, quiz_id, startTime]
+      `INSERT INTO teacher_reading_quiz_attempts (student_id, quiz_id, class_id, start_time, status)
+       VALUES (?, ?, ?, ?, 'in_progress')`,
+      [student_id, quiz_id, classIdParam, startTime]
     );
     res.status(201).json({
       success: true,
@@ -738,24 +755,32 @@ router.get("/api/reading-quizzes/:id", async (req, res) => {
 });
 
 // ================= GET QUIZ ATTEMPTS (with optional filters) =================
+// When class_id is provided, only attempts for that class are returned (no cross-class data).
 router.get("/api/reading-quiz-attempts", async (req, res) => {
   const pool = req.pool;
-  const { student_id, quiz_id } = req.query;
+  const { student_id, quiz_id, class_id } = req.query;
 
   try {
     let query = "SELECT * FROM reading_quiz_attempts";
     const params = [];
+    const conditions = [];
 
-    // ✅ Handle filters properly
-    if (student_id && quiz_id) {
-      query += " WHERE student_id = ? AND quiz_id = ?";
-      params.push(student_id, quiz_id);
-    } else if (student_id) {
-      query += " WHERE student_id = ?";
+    if (student_id) {
+      conditions.push("student_id = ?");
       params.push(student_id);
-    } else if (quiz_id) {
-      query += " WHERE quiz_id = ?";
+    }
+    if (quiz_id) {
+      conditions.push("quiz_id = ?");
       params.push(quiz_id);
+    }
+    // Scope by class: only show attempts for this classroom (exclude legacy NULL and other classes)
+    if (class_id != null && class_id !== "") {
+      conditions.push("class_id = ?");
+      params.push(class_id);
+    }
+
+    if (conditions.length) {
+      query += " WHERE " + conditions.join(" AND ");
     }
 
     const [rows] = await pool.query(query, params);
@@ -768,9 +793,11 @@ router.get("/api/reading-quiz-attempts", async (req, res) => {
 
 
 // ================= START STUDENT ATTEMPT =================
+// class_id optional; when provided, attempt is scoped to that class (no cross-class reuse).
 router.post("/api/reading-quiz-attempts", async (req, res) => {
   const pool = req.pool;
-  const { student_id, quiz_id } = req.body;
+  const { student_id, quiz_id, class_id } = req.body;
+  const classIdParam = class_id != null && class_id !== "" ? Number(class_id) : null;
 
   try {
     // Get quiz meta (used for time_limit + retakes)
@@ -780,13 +807,14 @@ router.post("/api/reading-quiz-attempts", async (req, res) => {
     );
     if (!quiz) return res.status(404).json({ error: "Quiz not found" });
 
-    // If there's an in-progress attempt, reuse it (prevent duplicates)
+    // If there's an in-progress attempt for this class, reuse it (prevent duplicates)
     const [[inProgress]] = await pool.query(
       `SELECT * FROM reading_quiz_attempts
        WHERE student_id = ? AND quiz_id = ? AND status = 'in_progress'
+         AND (class_id <=> ?)
        ORDER BY attempt_id DESC
        LIMIT 1`,
-      [student_id, quiz_id]
+      [student_id, quiz_id, classIdParam]
     );
 
     if (inProgress) {
@@ -799,13 +827,14 @@ router.post("/api/reading-quiz-attempts", async (req, res) => {
       });
     }
 
-    // If a completed attempt exists, allow retake unless retake_option === 'none'
+    // If a completed attempt exists for this class, allow retake unless retake_option === 'none'
     const [[latestCompleted]] = await pool.query(
       `SELECT * FROM reading_quiz_attempts
        WHERE student_id = ? AND quiz_id = ? AND status = 'completed'
+         AND (class_id <=> ?)
        ORDER BY attempt_id DESC
        LIMIT 1`,
-      [student_id, quiz_id]
+      [student_id, quiz_id, classIdParam]
     );
 
     if (latestCompleted && (quiz.retake_option === 'none')) {
@@ -818,16 +847,16 @@ router.post("/api/reading-quiz-attempts", async (req, res) => {
       });
     }
 
-    // Create a new attempt (first try or retake)
+    // Create a new attempt (first try or retake), scoped to class when provided
     const startTime = new Date();
     const endTime = quiz.time_limit
       ? new Date(startTime.getTime() + quiz.time_limit * 60000)
       : null;
 
     const [result] = await pool.query(
-      `INSERT INTO reading_quiz_attempts (student_id, quiz_id, start_time, end_time, status)
-       VALUES (?, ?, ?, ?, 'in_progress')`,
-      [student_id, quiz_id, startTime, endTime]
+      `INSERT INTO reading_quiz_attempts (student_id, quiz_id, class_id, start_time, end_time, status)
+       VALUES (?, ?, ?, ?, ?, 'in_progress')`,
+      [student_id, quiz_id, classIdParam, startTime, endTime]
     );
 
     res.json({ attempt_id: result.insertId, start_time: startTime, end_time: endTime });
@@ -1188,6 +1217,8 @@ router.get("/api/reading-quiz-attempts/:attemptId/answers", async (req, res) => 
 });
 
 // ================= TEACHER: LIST ATTEMPTS FOR A QUIZ (OPTIONAL CLASS FILTER) =================
+// Supports both built-in reading quizzes (reading_quiz_attempts) and teacher-created (teacher_reading_quiz_attempts).
+// When class_id is provided, only attempts for that class are returned (no cross-class data).
 router.get("/api/teacher/reading-attempts", async (req, res) => {
   const pool = req.pool;
   const quizId = req.query.quiz_id ? Number(req.query.quiz_id) : null;
@@ -1196,10 +1227,41 @@ router.get("/api/teacher/reading-attempts", async (req, res) => {
   if (!quizId) return res.status(400).json({ success: false, error: "quiz_id is required" });
 
   try {
-    // If class_id is provided, restrict to students who joined that class
-    // (include pending/accepted/rejected — teacher still needs to review submissions).
-    // If class_id is null, return all attempts for the quiz (no class filter, no duplicates).
-    const params = [classId || null, quizId, classId || null];
+    // Determine if this quiz is built-in (reading_quizzes) or teacher-created (teacher_reading_quizzes)
+    const [[builtIn]] = await pool.query("SELECT 1 FROM reading_quizzes WHERE quiz_id = ? LIMIT 1", [quizId]);
+
+    const classCondition = (classId != null && Number.isFinite(classId)) ? " AND a.class_id = ?" : "";
+    const params = [classId || null, quizId, classId || null, ...(classCondition ? [classId] : [])];
+
+    if (builtIn) {
+      // Built-in reading quiz: use reading_quiz_attempts (same shape as teacher attempts)
+      const [rows] = await pool.query(
+        `
+        SELECT 
+          a.attempt_id,
+          a.student_id,
+          CONCAT(u.fname, ' ', u.lname) AS student_name,
+          a.score,
+          a.total_points,
+          a.status,
+          a.start_time,
+          a.end_time,
+          sc.status AS class_status
+        FROM reading_quiz_attempts a
+        JOIN users u ON a.student_id = u.user_id
+        LEFT JOIN student_classes sc
+          ON sc.student_id = a.student_id
+          AND sc.class_id = ?
+        WHERE a.quiz_id = ?
+          AND (? IS NULL OR sc.class_id IS NOT NULL)${classCondition}
+        ORDER BY a.end_time DESC, a.attempt_id DESC
+        `,
+        params
+      );
+      return res.json({ success: true, attempts: rows });
+    }
+
+    // Teacher-created quiz: use teacher_reading_quiz_attempts
     const [rows] = await pool.query(
       `
       SELECT 
@@ -1212,13 +1274,13 @@ router.get("/api/teacher/reading-attempts", async (req, res) => {
         a.start_time,
         a.end_time,
         sc.status AS class_status
-      FROM reading_quiz_attempts a
+      FROM teacher_reading_quiz_attempts a
       JOIN users u ON a.student_id = u.user_id
       LEFT JOIN student_classes sc
         ON sc.student_id = a.student_id
         AND sc.class_id = ?
       WHERE a.quiz_id = ?
-        AND (? IS NULL OR sc.class_id IS NOT NULL)
+        AND (? IS NULL OR sc.class_id IS NOT NULL)${classCondition}
       ORDER BY a.end_time DESC, a.attempt_id DESC
       `,
       params

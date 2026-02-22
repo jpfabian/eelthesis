@@ -569,10 +569,15 @@
         studentAnswers = {};
         currentQuestionIndex = 0;
 
+        var selectedClass = null;
+        try {
+          selectedClass = JSON.parse(localStorage.getItem("eel_selected_class") || "null");
+        } catch (_) {}
+        var classId = (selectedClass && selectedClass.id != null) ? selectedClass.id : (localStorage.getItem("eel_selected_class_id") || null);
         fetch((window.API_BASE || "") + "/api/teacher/reading-quiz-attempts", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ student_id: user.user_id, quiz_id: quiz.quiz_id })
+          body: JSON.stringify({ student_id: user.user_id, quiz_id: quiz.quiz_id, class_id: classId || undefined })
         })
           .then(function (r) {
             return r.json().then(function (data) {

@@ -209,11 +209,13 @@ function setupSidebar(user, currentPage) {
 
         const classLine = currentPage === "classes"
             ? (user.role === "teacher" ? "Your classrooms" : "Your classes")
-            : (selectedClass
-                ? `${selectedClass.name ?? ""} ${selectedClass.section ?? ""}`.trim()
-                : "No class selected");
+            : currentPage === "settings"
+                ? "Account settings"
+                : (selectedClass
+                    ? `${selectedClass.name ?? ""} ${selectedClass.section ?? ""}`.trim()
+                    : "No class selected");
 
-        const classExtra = (currentPage === "classes")
+        const classExtra = (currentPage === "classes" || currentPage === "settings")
             ? ""
             : (selectedClass
                 ? (user.role === "teacher"
@@ -253,10 +255,10 @@ function setupSidebar(user, currentPage) {
                     <div id="sidebar-welcome" class="sidebar-user-meta">${classLine}</div>
                 </div>
             </div>
-            <div class="sidebar-badge">
+            ${currentPage !== "settings" ? `<div class="sidebar-badge">
                 <span class="sidebar-badge-label">Class details</span>
                 ${classExtra ? `<span class="sidebar-badge-value">${classExtra}</span>` : (classLine ? `<span class="sidebar-badge-value">${escapeHtml(classLine)}</span>` : "<span class=\"sidebar-badge-value\">No class selected</span>")}
-            </div>
+            </div>` : ""}
         `;
         setupProfilePopover(headerContainer, user);
     } else {
@@ -265,26 +267,21 @@ function setupSidebar(user, currentPage) {
         sidebarWelcome.textContent = selectedClass ? `${selectedClass.name ?? ""} ${selectedClass.section ?? ""}` : "No class selected";
     }
 
-    const classIdParam = selectedClass ? `?class_id=${selectedClass.id}` : '';
+    // Use clean URLs (no class_id in address bar); class is in localStorage.
+    const classIdParam = '';
 
     // Define pages + groupings for a friendlier nav
     const groups = [];
 
-    const accountGroup = {
-        title: "Account",
-        items: [
-            { id: 'settings', label: 'Settings', icon: 'settings', url: 'settings.html' },
-            { id: 'logout', label: 'Logout', icon: 'log-out', action: 'logout' },
-        ]
-    };
+    // Settings and Logout live in the sidebar HTML with Back to Classes, not in nav groups.
 
-    // Special case: on Classes page, keep navigation minimal
-    if (currentPage === "classes") {
+    // Special case: on Classes and Settings pages, show same minimal sidebar (Classroom + Settings)
+    if (currentPage === "classes" || currentPage === "settings") {
         groups.push({
             title: "Classroom",
             items: [
                 { id: 'classes', label: 'Classroom', icon: 'layers', url: 'classes.html' },
-                { id: 'logout', label: 'Logout', icon: 'log-out', action: 'logout' },
+                { id: 'settings', label: 'Settings', icon: 'settings', url: 'settings.html' },
             ]
         });
     } else
@@ -296,7 +293,6 @@ function setupSidebar(user, currentPage) {
                 { id: 'account-verification', label: 'Account Verification', icon: 'check-circle', url: 'account-verification.html' },
             ]
         });
-        groups.push(accountGroup);
     } else if (user.role === "teacher") {
         groups.push({
             title: "Learning",
@@ -319,7 +315,6 @@ function setupSidebar(user, currentPage) {
                 { id: 'student-progress', label: 'Student Progress', icon: 'users', url: 'student-progress.html' },
             ]
         });
-        groups.push(accountGroup);
     } else {
         groups.push({
             title: "Learning",
@@ -335,7 +330,6 @@ function setupSidebar(user, currentPage) {
                 { id: 'my-progress', label: 'My Progress', icon: 'trending-up', url: 'my-progress.html' },
             ]
         });
-        groups.push(accountGroup);
     }
 
     function renderItem(item) {
@@ -371,19 +365,19 @@ function setupSidebar(user, currentPage) {
         `;
     }).join('');
 
-    // Wire actions (logout) and hide legacy footer button to avoid duplicates
-    sidebarNav.querySelectorAll('[data-action="logout"]').forEach((btn) => {
-        btn.addEventListener('click', () => {
+    // Wire the sidebar Logout button (Settings and Logout are in HTML with Back to Classes)
+    const sidebarLogoutBtn = document.getElementById('logout-btn');
+    if (sidebarLogoutBtn) {
+        sidebarLogoutBtn.addEventListener('click', () => {
             logout();
             window.location.href = 'login.html';
         });
-    });
+    }
 
-    const legacyLogout = document.getElementById('logout-btn');
-    if (legacyLogout) {
-        const wrapper = legacyLogout.closest('div');
-        if (wrapper) wrapper.remove();
-        else legacyLogout.remove();
+    // Active state for Settings link (lives in sidebar HTML, not in nav groups)
+    const settingsLink = document.querySelector('#sidebar a[href="settings.html"]');
+    if (settingsLink && currentPage === 'settings') {
+        settingsLink.classList.add('active');
     }
 
     // Render lucide icons if available
@@ -396,46 +390,116 @@ function ensureMobileSidebarControls() {
     const sidebar = document.getElementById('sidebar');
     if (!sidebar) return;
 
-    // Overlay
     let overlay = document.getElementById('mobile-sidebar-overlay');
     if (!overlay) {
         overlay = document.createElement('div');
         overlay.id = 'mobile-sidebar-overlay';
         overlay.className = 'mobile-sidebar-overlay hidden';
-        overlay.addEventListener('click', () => {
-            sidebar.classList.remove('open');
-            overlay.classList.add('hidden');
-        });
         document.body.appendChild(overlay);
     }
 
-    // Toggle button
-    let toggle = document.getElementById('mobile-sidebar-toggle');
-    if (!toggle) {
+    // Persist sidebar open/closed across page navigations (sessionStorage)
+    const STORAGE_KEY = 'eel-sidebar-open';
+    const isDesktop = window.matchMedia && window.matchMedia('(min-width: 769px)').matches;
+    if (!sidebar._eelSidebarInitialized) {
+        const stored = sessionStorage.getItem(STORAGE_KEY);
+        if (stored !== null) {
+            const wantOpen = stored === 'true';
+            if (wantOpen) {
+                sidebar.classList.add('open');
+                overlay.classList.remove('hidden');
+            } else {
+                sidebar.classList.remove('open');
+                overlay.classList.add('hidden');
+            }
+        } else {
+            if (isDesktop) {
+                sidebar.classList.add('open');
+                overlay.classList.remove('hidden');
+                sessionStorage.setItem(STORAGE_KEY, 'true');
+            } else {
+                sidebar.classList.remove('open');
+                overlay.classList.add('hidden');
+                sessionStorage.setItem(STORAGE_KEY, 'false');
+            }
+        }
+    }
+    sidebar._eelSidebarInitialized = true;
+
+    const closeSidebar = () => {
+        sidebar.classList.remove('open');
+        overlay.classList.add('hidden');
+        updateBurgerIcon(false);
+        sessionStorage.setItem(STORAGE_KEY, 'false');
+    };
+    const openSidebar = () => {
+        sidebar.classList.add('open');
+        overlay.classList.remove('hidden');
+        updateBurgerIcon(true);
+        sessionStorage.setItem(STORAGE_KEY, 'true');
+    };
+    function updateBurgerIcon(isOpen) {
+        const btn = document.getElementById('mobileNavMenuBtn') || document.getElementById('mobile-sidebar-toggle');
+        if (!btn) return;
+        btn.setAttribute('aria-label', isOpen ? 'Close menu' : 'Open menu');
+        const menuSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>';
+        const closeSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>';
+        btn.innerHTML = isOpen ? closeSvg : menuSvg;
+    }
+    updateBurgerIcon(sidebar.classList.contains('open'));
+    const sidebarToggleHandler = () => {
+        const willOpen = !sidebar.classList.contains('open');
+        if (willOpen) {
+            openSidebar();
+        } else {
+            closeSidebar();
+        }
+        if (window.lucide && typeof window.lucide.createIcons === 'function') {
+            setTimeout(() => window.lucide.createIcons(), 0);
+        }
+    };
+    let toggle = document.getElementById('mobileNavMenuBtn') || document.getElementById('mobile-sidebar-toggle');
+    if (toggle && !toggle._eelSidebarWired) {
+        toggle._eelSidebarWired = true;
+        toggle.addEventListener('click', sidebarToggleHandler);
+        updateBurgerIcon(sidebar.classList.contains('open'));
+    } else if (!document.getElementById('mobileNavMenuBtn') && !document.getElementById('mobile-sidebar-toggle')) {
         toggle = document.createElement('button');
         toggle.id = 'mobile-sidebar-toggle';
         toggle.type = 'button';
         toggle.className = 'mobile-sidebar-toggle';
-        toggle.setAttribute('aria-label', 'Toggle sidebar');
-        toggle.innerHTML = `<i data-lucide="menu" class="size-5"></i>`;
-        toggle.addEventListener('click', () => {
-            const willOpen = !sidebar.classList.contains('open');
-            sidebar.classList.toggle('open', willOpen);
-            overlay.classList.toggle('hidden', !willOpen);
-            if (window.lucide && typeof window.lucide.createIcons === 'function') {
-                setTimeout(() => window.lucide.createIcons(), 0);
-            }
-        });
+        toggle.setAttribute('aria-label', 'Open sidebar');
+        toggle.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>';
+        toggle._eelSidebarWired = true;
+        toggle.addEventListener('click', sidebarToggleHandler);
         document.body.appendChild(toggle);
     }
 
-    // Close sidebar when a nav item is clicked (mobile UX)
-    sidebar.querySelectorAll('.nav-button').forEach(el => {
-        el.addEventListener('click', () => {
-            sidebar.classList.remove('open');
-            overlay.classList.add('hidden');
+    // On phone/tablet: close sidebar when navigating to another page (so it stays closed on load).
+    // On desktop: only close when logout is clicked.
+    const isPhoneOrTablet = () => window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
+    if (!sidebar._eelCloseOnNavWired) {
+        sidebar._eelCloseOnNavWired = true;
+        sidebar.addEventListener('click', function (e) {
+            if (e.target.closest('#logout-btn')) {
+                closeSidebar();
+                return;
+            }
+            if (isPhoneOrTablet()) {
+                const link = e.target.closest('a[href]');
+                if (link) {
+                    const href = (link.getAttribute('href') || '').trim();
+                    if (href && href !== '#' && !href.startsWith('javascript:')) {
+                        closeSidebar();
+                    }
+                }
+            }
         });
-    });
+    }
+    if (!overlay._eelCloseWired) {
+        overlay._eelCloseWired = true;
+        overlay.addEventListener('click', closeSidebar);
+    }
 
     // Ensure icons are rendered
     if (window.lucide && typeof window.lucide.createIcons === 'function') {
@@ -563,6 +627,17 @@ function validatePageAccess(user, pageId) {
 // Common page setup function
 function initializePage() {
     return new Promise((resolve, reject) => {
+        // Strip class_id from URL and store in localStorage (keep URLs clean)
+        const params = new URLSearchParams(window.location.search);
+        if (params.has('class_id')) {
+            const classId = params.get('class_id');
+            if (classId) localStorage.setItem('eel_selected_class_id', classId);
+            params.delete('class_id');
+            const newSearch = params.toString();
+            const newUrl = window.location.pathname + (newSearch ? '?' + newSearch : '');
+            window.history.replaceState({}, document.title, newUrl);
+        }
+
         // Check authentication
         if (!isAuthenticated()) {
             window.location.href = 'login.html';
@@ -587,6 +662,7 @@ function initializePage() {
         // Setup sidebar
         setupSidebar(user, currentPageId);
         ensureMobileSidebarControls();
+        setupHeaderHideWhenModalOpen();
         // Theme toggle is now the top-right corner button (js/theme.js)
 
         // Tutorial for new users (teacher or student)
@@ -603,6 +679,68 @@ function initializePage() {
 
         resolve(user);
     });
+}
+
+// ===================== Hide header when any modal is open (student + teacher) =====================
+// Profile popover (avatar dropdown) does not hide the header.
+function isModalElement(el) {
+    if (!el || !el.classList) return false;
+    if (el.id === "sidebar-profile-popover") return false;
+    return (
+        el.classList.contains("modal-overlay") ||
+        el.classList.contains("modal-quiz-overlay") ||
+        el.classList.contains("modal-create-overlay") ||
+        el.classList.contains("recitation-picker-overlay") ||
+        el.classList.contains("recitation-question-overlay") ||
+        el.classList.contains("join-class-modal-overlay") ||
+        el.classList.contains("create-class-modal-overlay") ||
+        el.classList.contains("eel-tutorial-overlay") ||
+        el.getAttribute("role") === "dialog" ||
+        el.id === "password-modal" ||
+        (el.id && String(el.id).toLowerCase().includes("modal"))
+    );
+}
+
+function isModalVisible(el) {
+    return isModalElement(el) && !el.classList.contains("hidden");
+}
+
+function countVisibleModals() {
+    const candidates = document.querySelectorAll(
+        ".modal-overlay, .modal-quiz-overlay, .modal-create-overlay, " +
+        ".recitation-picker-overlay, .recitation-question-overlay, " +
+        ".join-class-modal-overlay, .create-class-modal-overlay, " +
+        "#password-modal, #eel-tutorial-overlay, [role=dialog]"
+    );
+    return Array.from(candidates).filter((el) => {
+        if (el.id === "sidebar-profile-popover") return false;
+        return !el.classList.contains("hidden");
+    }).length;
+}
+
+function updateHeaderVisibilityForModals() {
+    const header = document.getElementById("mobileNavHeader") || document.querySelector(".mobile-nav-header");
+    const openCount = countVisibleModals();
+    if (openCount > 0) {
+        document.body.classList.add("eel-modal-open");
+        if (header) header.classList.add("hidden");
+    } else {
+        document.body.classList.remove("eel-modal-open");
+        if (header) header.classList.remove("hidden");
+    }
+}
+
+function setupHeaderHideWhenModalOpen() {
+    updateHeaderVisibilityForModals();
+    const observer = new MutationObserver((mutations) => {
+        for (const m of mutations) {
+            if (m.type === "attributes" && m.attributeName === "class" && isModalElement(m.target)) {
+                updateHeaderVisibilityForModals();
+                return;
+            }
+        }
+    });
+    observer.observe(document.body, { attributes: true, attributeFilter: ["class"], subtree: true });
 }
 
 // Loading screen helpers

@@ -372,15 +372,23 @@ router.put("/api/lock-pronunciation-quiz/:id", async (req, res) => {
 });
 
 // ================= GET STUDENT PRONUNCIATION ATTEMPTS =================
+// When class_id is provided, only attempts for that class are returned (no cross-class data).
 router.get("/api/pronunciation-attempts", async (req, res) => {
   const pool = req.pool;
-  const { student_id } = req.query;
+  const { student_id, class_id } = req.query;
 
   if (!student_id) {
     return res.status(400).json({ success: false, message: "Missing student_id" });
   }
 
   try {
+    const classIdParam = class_id != null && class_id !== "" ? Number(class_id) : null;
+    const conditions = ["pa.student_id = ?"];
+    const params = [student_id];
+    if (classIdParam != null && Number.isFinite(classIdParam)) {
+      conditions.push("pa.class_id = ?");
+      params.push(classIdParam);
+    }
     const [attempts] = await pool.query(
       `
       SELECT 
@@ -393,17 +401,17 @@ router.get("/api/pronunciation-attempts", async (req, res) => {
         pq.difficulty,
         pq.lock_time,
         pq.unlock_time,
-        ROUND(AVG(ans.pronunciation_score), 2) AS average_accuracy  -- ✅ average score from answers
+        ROUND(AVG(ans.pronunciation_score), 2) AS average_accuracy
       FROM pronunciation_quiz_attempts pa
       JOIN pronunciation_quizzes pq 
         ON pa.quiz_id = pq.quiz_id
       LEFT JOIN pronunciation_quiz_answers ans 
         ON pa.attempt_id = ans.attempt_id
-      WHERE pa.student_id = ?
+      WHERE ${conditions.join(" AND ")}
       GROUP BY pa.attempt_id
       ORDER BY pa.start_time DESC
       `,
-      [student_id]
+      params
     );
 
     res.json({ success: true, attempts });
@@ -418,8 +426,9 @@ router.post("/api/pronunciation-submit", upload.any(), async (req, res) => {
   const pool = req.pool;
 
   try {
-    const { student_id, quiz_id } = req.body;
+    const { student_id, quiz_id, class_id } = req.body;
     const files = req.files;
+    const classIdParam = class_id != null && class_id !== "" ? Number(class_id) : null;
 
     if (!files || files.length === 0) {
       return res.status(400).json({ success: false, message: "No audio files uploaded" });
@@ -435,13 +444,13 @@ router.post("/api/pronunciation-submit", upload.any(), async (req, res) => {
     }
     const quizDifficulty = quizRows[0].difficulty;
 
-    // 2️⃣ Create a new quiz attempt
+    // 2️⃣ Create a new quiz attempt (scoped to class when provided)
     const attemptNow = nowPhilippineDatetime();
     const [attemptResult] = await pool.query(
       `INSERT INTO pronunciation_quiz_attempts 
-         (student_id, quiz_id, start_time, end_time, status)
-       VALUES (?, ?, ?, ?, 'completed')`,
-      [student_id, quiz_id, attemptNow, attemptNow]
+         (student_id, quiz_id, class_id, start_time, end_time, status)
+       VALUES (?, ?, ?, ?, ?, 'completed')`,
+      [student_id, quiz_id, classIdParam, attemptNow, attemptNow]
     );
     const attempt_id = attemptResult.insertId;
 
@@ -598,10 +607,9 @@ router.get("/api/teacher/pronunciation-attempts", async (req, res) => {
   if (!quizId) return res.status(400).json({ success: false, error: "quiz_id is required" });
 
   try {
-    // If class_id is provided, restrict to students who joined that class
-    // (include pending/accepted/rejected — teacher still needs to review submissions).
-    // If class_id is null, return all attempts for the quiz (no class filter, no duplicates).
-    const params = [classId || null, quizId, classId || null];
+    // When class_id is provided, only show attempts for that class (no cross-class data).
+    const classCondition = (classId != null && Number.isFinite(classId)) ? " AND a.class_id = ?" : "";
+    const params = [classId || null, quizId, ...(classCondition ? [classId] : [])];
     const [rows] = await pool.query(
       `
       SELECT 
@@ -619,8 +627,7 @@ router.get("/api/teacher/pronunciation-attempts", async (req, res) => {
       LEFT JOIN student_classes sc
         ON sc.student_id = a.student_id
         AND sc.class_id = ?
-      WHERE a.quiz_id = ?
-        AND (? IS NULL OR sc.class_id IS NOT NULL)
+      WHERE a.quiz_id = ? ${classCondition}
       ORDER BY a.end_time DESC, a.attempt_id DESC
       `,
       params

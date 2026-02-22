@@ -403,9 +403,9 @@ function showExamPreview(examText, subject, selectedTopics, questionTypes) {
       return;
     }
 
-    // ✅ Get currently selected class from localStorage
+    // ✅ Use same source of truth as loadExams so we save to the current class (not a stale one)
     const selectedClass = JSON.parse(localStorage.getItem("eel_selected_class") || "{}");
-    const classId = selectedClass?.id;
+    const classId = localStorage.getItem("eel_selected_class_id") || selectedClass?.id;
     if (!classId) {
       showNotification("⚠️ Please select a class/section before saving.", "error");
       return;
@@ -465,7 +465,12 @@ document.addEventListener("DOMContentLoaded", () => {
 async function loadExams() {
   try {
     const selectedClass = JSON.parse(localStorage.getItem("eel_selected_class") || "{}");
-    const classId = selectedClass.id;
+    const classId = localStorage.getItem("eel_selected_class_id") || selectedClass?.id;
+    if (!classId) {
+      const examListContainer = document.getElementById("exam-list");
+      if (examListContainer) examListContainer.innerHTML = '<p class="empty-state">Select a class to view exams.</p>';
+      return;
+    }
 
     const res = await fetch(`${window.API_BASE || ""}/api/get-exams?class_id=${classId}`);
     const data = await res.json();

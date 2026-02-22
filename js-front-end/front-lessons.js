@@ -1156,9 +1156,11 @@ async function loadLessonsAIGeneratedList() {
   const container = document.getElementById("lessons-ai-quiz-list");
   if (!container) return;
   const selectedClass = JSON.parse(localStorage.getItem("eel_selected_class") || "{}");
+  const classId = localStorage.getItem("eel_selected_class_id") || selectedClass?.id;
   const subjectId = selectedClass?.subject_id != null ? Number(selectedClass.subject_id) : null;
   const queryParams = new URLSearchParams({ user_id: user.user_id });
   if (Number.isFinite(subjectId)) queryParams.set("subject_id", subjectId);
+  if (classId) queryParams.set("class_id", classId);
   try {
     const res = await fetch(`${window.API_BASE || ""}/api/teacher/reading-quizzes?${queryParams.toString()}`);
     if (!res.ok) throw new Error("Failed to fetch");
@@ -1296,14 +1298,18 @@ async function loadLessonsAIQuizzesForStudent() {
   try {
     const user = typeof getCurrentUser === "function" ? getCurrentUser() : null;
     const studentId = user && user.role === "student" ? user.user_id : null;
+    const selectedClass = (() => { try { return JSON.parse(localStorage.getItem("eel_selected_class")); } catch { return null; } })();
+    const classId = localStorage.getItem("eel_selected_class_id") || selectedClass?.id;
+    const quizUrl = `${window.API_BASE || ""}/api/teacher/reading-quizzes?subject_id=${subjectId}` + (classId ? `&class_id=${classId}` : "");
 
-    const res = await fetch(`${window.API_BASE || ""}/api/teacher/reading-quizzes?subject_id=${subjectId}`);
+    const res = await fetch(quizUrl);
     if (!res.ok) throw new Error("Failed to fetch quizzes");
     const quizzes = await res.json();
     let completedQuizIds = [];
     if (studentId) {
       try {
-        const cr = await fetch(`${window.API_BASE || ""}/api/teacher/reading-quizzes/completed-by-student?student_id=${studentId}`);
+        const crUrl = `${window.API_BASE || ""}/api/teacher/reading-quizzes/completed-by-student?student_id=${studentId}` + (classId ? `&class_id=${classId}` : "");
+        const cr = await fetch(crUrl);
         const crData = await cr.json();
         if (crData.success && Array.isArray(crData.quiz_ids)) completedQuizIds = crData.quiz_ids;
       } catch (_) {}
@@ -2121,6 +2127,8 @@ async function saveAIQuizLesson() {
     if (typeof showNotification === "function") showNotification("Select a class with a subject first.", "warning");
     return;
   }
+  const selectedClass = JSON.parse(localStorage.getItem("eel_selected_class") || "{}");
+  const classId = localStorage.getItem("eel_selected_class_id") || selectedClass?.id;
   try {
     const res = await fetch((window.API_BASE || "") + "/api/teacher/reading-quizzes", {
       method: "POST",
@@ -2131,6 +2139,7 @@ async function saveAIQuizLesson() {
         passage: passage || "(No passage)",
         subject_id: subjectId,
         user_id: user.user_id,
+        class_id: classId || undefined,
         questions,
       }),
     });

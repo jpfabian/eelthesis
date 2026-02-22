@@ -270,8 +270,14 @@
         }
     }
 
+    function setupBackToClassesButton() {
+        const backBtn = document.getElementById("back-class-btn");
+        if (backBtn) backBtn.addEventListener("click", function () { window.location.href = "classes.html"; });
+    }
+
     if (document.readyState === "loading") {
         document.addEventListener("DOMContentLoaded", function () {
+            setupBackToClassesButton();
             if (typeof initializePage === "function") {
                 initializePage().then(function () {
                     const userStr = localStorage.getItem("eel_user");
@@ -292,6 +298,7 @@
             }
         });
     } else {
+        setupBackToClassesButton();
         if (typeof initializePage === "function") {
             initializePage().then(function () {
                 const userStr = localStorage.getItem("eel_user");

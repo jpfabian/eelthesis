@@ -98,12 +98,51 @@ body.auth-page {
     var(--background);
 }
 
-/* Auth back button: always clickable + theme-friendly */
+/* Auth header: back (left) + theme toggle (right) */
+body.auth-page .auth-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2600;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  gap: 1rem;
+  pointer-events: none;
+}
+body.auth-page .auth-header > * {
+  pointer-events: auto;
+}
+
+body.auth-page .auth-header .back-button {
+  position: static;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.85rem;
+  border-radius: 9999px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--card) 72%, transparent);
+  color: var(--foreground);
+  text-decoration: none;
+  box-shadow: 0 10px 25px -10px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(10px);
+}
+body.auth-page .auth-header .back-button:hover {
+  background: color-mix(in srgb, var(--card) 86%, transparent);
+  border-color: color-mix(in srgb, var(--border) 75%, var(--primary) 25%);
+  color: var(--foreground);
+  text-decoration: none;
+}
+
+/* Auth back button when not in header (fallback) */
 body.auth-page .back-button {
   position: fixed;
   top: 0.9rem;
   left: 0.9rem;
-  z-index: 2600; /* above theme toggle */
+  z-index: 2600;
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
@@ -117,7 +156,6 @@ body.auth-page .back-button {
   backdrop-filter: blur(10px);
   pointer-events: auto;
 }
-
 body.auth-page .back-button:hover {
   background: color-mix(in srgb, var(--card) 86%, transparent);
   border-color: color-mix(in srgb, var(--border) 75%, var(--primary) 25%);
@@ -318,6 +356,7 @@ body,
 }
 
 .theme-corner-toggle .theme-label {
+  display: none; /* icon only, same as header toggle */
   font-size: 13px;
   font-weight: 600;
 }
@@ -327,9 +366,41 @@ body,
     top: 0.75rem;
     right: 0.75rem;
   }
-  .theme-corner-toggle .theme-label {
-    display: none;
-  }
+}
+
+/* Header theme toggle (in nav-actions) */
+.theme-header-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  height: 36px;
+  min-width: 36px;
+  padding: 0 0.5rem;
+  border-radius: 9999px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--card) 72%, transparent);
+  color: var(--foreground);
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.2s, border-color 0.2s;
+}
+.theme-header-toggle:hover {
+  background: color-mix(in srgb, var(--card) 86%, transparent);
+  border-color: color-mix(in srgb, var(--border) 75%, var(--primary) 25%);
+}
+.theme-header-toggle:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 35%, transparent);
+}
+.theme-header-toggle .theme-icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+.theme-header-toggle .theme-label {
+  display: none; /* icon only in header */
+  font-size: 0.75rem;
+  font-weight: 600;
 }
 
 /* Better dark-mode rendering for scrollbars (supported browsers) */
@@ -687,7 +758,125 @@ body,
   flex-direction: column;
   height: 100vh;
   min-height: 100vh;
-  overflow: hidden; /* keep header fixed; nav scrolls */
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  transition: width 0.28s ease, min-width 0.28s ease, border-color 0.2s ease;
+}
+
+/* Desktop/laptop: sidebar can be closed via burger – collapses to icon-only strip */
+@media (min-width: 769px) {
+  #main-app #sidebar:not(.open) {
+    width: 5rem;
+    min-width: 5rem;
+    overflow: hidden;
+    padding-left: 0;
+    padding-right: 0;
+  }
+  /* First block (header or profile): compact and icon-only when closed */
+  #main-app #sidebar:not(.open) > .p-6:first-child,
+  #main-app #sidebar:not(.open) > div:first-child {
+    padding: 0.75rem 0.5rem;
+    text-align: center;
+  }
+  /* Hide all text in header when closed */
+  #main-app #sidebar:not(.open) #sidebar-title,
+  #main-app #sidebar:not(.open) #sidebar-welcome,
+  #main-app #sidebar:not(.open) .sidebar-name-row,
+  #main-app #sidebar:not(.open) .sidebar-user-meta,
+  #main-app #sidebar:not(.open) .sidebar-user-name,
+  #main-app #sidebar:not(.open) .sidebar-user-role {
+    display: none !important;
+  }
+  /* Hide "Class details" / "Your classroom" badge when closed */
+  #main-app #sidebar:not(.open) .sidebar-badge {
+    display: none !important;
+  }
+  /* Profile: show only avatar, centered */
+  #main-app #sidebar:not(.open) .sidebar-profile-top {
+    justify-content: center;
+    flex-direction: column;
+    gap: 0;
+  }
+  #main-app #sidebar:not(.open) .sidebar-profile-top > div:last-child {
+    display: none !important;
+  }
+  /* Show small "E" only when first child is simple .p-6 (no profile yet) */
+  #main-app #sidebar:not(.open) > .p-6:first-child::before {
+    content: "E";
+    display: block;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--sidebar-primary);
+    line-height: 1;
+  }
+  /* Hide section titles (Classroom, Learning, etc.) when closed */
+  #main-app #sidebar:not(.open) .sidebar-section-title {
+    display: none !important;
+  }
+  /* Nav area: less horizontal padding when closed */
+  #main-app #sidebar:not(.open) #sidebar-nav,
+  #main-app #sidebar:not(.open) .px-4 {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  /* Nav buttons + Back button: icon only, centered */
+  #main-app #sidebar:not(.open) .nav-button,
+  #main-app #sidebar:not(.open) .btn-side-bar.nav-button {
+    justify-content: center;
+    padding: 0.75rem;
+    font-size: 0;
+  }
+  #main-app #sidebar:not(.open) .nav-button span {
+    display: none !important;
+  }
+  #main-app #sidebar:not(.open) .nav-button i,
+  #main-app #sidebar:not(.open) .nav-button [data-lucide] {
+    font-size: 1.25rem;
+    width: 1.25rem;
+    height: 1.25rem;
+    margin: 0;
+    flex-shrink: 0;
+  }
+  /* Logout button: icon only, centered */
+  #main-app #sidebar:not(.open) .logout-button {
+    justify-content: center;
+    padding: 0.75rem;
+    font-size: 0;
+  }
+  #main-app #sidebar:not(.open) .logout-button i,
+  #main-app #sidebar:not(.open) .logout-button [data-lucide] {
+    font-size: 1.25rem;
+    width: 1.25rem;
+    height: 1.25rem;
+    margin: 0;
+  }
+  #main-app #sidebar:not(.open) > .p-4:last-child {
+    padding: 0.5rem;
+  }
+  #main-app #sidebar:not(.open) .sidebar-divider {
+    margin: 0.25rem 0.5rem;
+  }
+  #main-app #sidebar.open {
+    width: 16rem;
+    min-width: 16rem;
+  }
+  /* Profile popover: when sidebar is closed, use fixed position so it isn't clipped by sidebar overflow */
+  #main-app #sidebar:not(.open) .sidebar-profile-popover:not(.hidden) {
+    position: fixed;
+    left: 5rem;
+    top: calc(var(--app-header-height, 4rem) + 0.5rem);
+    z-index: 2200;
+  }
+  /* Lessons page: main content expands to full width when sidebar is closed */
+  body.lessons-page #main-app #sidebar:not(.open) ~ #main-content .lessons-tabs-wrap,
+  body.lessons-page #main-app #sidebar:not(.open) ~ #main-content .lessons-shell,
+  body.lessons-page #main-app #sidebar:not(.open) ~ #main-content .lessons-ai-quiz-card {
+    max-width: 100%;
+  }
+  /* Recitation page: main content expands to full width when sidebar is closed */
+  body.recitation-page #main-app #sidebar:not(.open) ~ #main-content .recitation-main-wrap {
+    max-width: 100%;
+  }
 }
 
 .sidebar-header {
@@ -697,14 +886,26 @@ body,
 
 .sidebar-header h1 {
   font-size: 1.25rem;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--sidebar-primary);
   margin-bottom: 0.25rem;
+  letter-spacing: -0.02em;
 }
 
 .sidebar-header p {
   font-size: 0.875rem;
   color: var(--muted-foreground);
+}
+
+/* Sidebar main block (logo + welcome) when using .p-6 */
+#sidebar > .p-6:first-child {
+  padding: 1.5rem 1.5rem 1rem;
+  border-bottom: 1px solid var(--sidebar-border);
+}
+#sidebar .text-xl.font-semibold {
+  font-weight: 600;
+  color: var(--sidebar-primary);
+  letter-spacing: -0.02em;
 }
 
 .user-info {
@@ -732,10 +933,16 @@ body,
 
 /* Most pages use id="sidebar-nav" + utility classes */
 #sidebar-nav {
-  min-height: 0;      /* allow it to shrink in flex column */
+  flex: 1 1 0%;      /* take remaining space so footer (logout) stays at bottom */
+  min-height: 0;     /* allow it to shrink in flex column */
   overflow-y: auto;   /* scroll when many buttons */
   overscroll-behavior: contain;
   padding-bottom: 1rem;
+}
+
+/* Keep logout footer at bottom and visible (no shrink) */
+#main-app #sidebar > .p-4:last-child {
+  flex-shrink: 0;
 }
 
 @supports (height: 100dvh) {
@@ -755,7 +962,7 @@ body,
   text-align: left;
   border-radius: calc(var(--radius) - 2px);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.15s ease;
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -767,11 +974,30 @@ body,
 .nav-item:hover {
   background: var(--sidebar-accent);
   color: var(--sidebar-accent-foreground);
+  transform: translateX(2px);
 }
 
 .nav-item.active {
   background: var(--sidebar-primary);
   color: var(--sidebar-primary-foreground);
+  font-weight: 600;
+}
+
+/* Sidebar nav buttons (shared with .nav-item look) */
+#sidebar-nav .nav-button,
+#sidebar-nav .btn-side-bar.nav-button {
+  padding: 0.75rem 1rem;
+  border-radius: calc(var(--radius) - 2px);
+  transition: background 0.2s ease, color 0.2s ease, transform 0.15s ease;
+  border: none;
+  font-size: 0.875rem;
+}
+#sidebar-nav .nav-button:hover,
+#sidebar-nav .btn-side-bar.nav-button:hover {
+  transform: translateX(2px);
+}
+#sidebar-nav .nav-button.active {
+  font-weight: 600;
 }
 
 .sidebar-footer {
@@ -787,12 +1013,18 @@ body,
   color: var(--sidebar-foreground);
   border-radius: calc(var(--radius) - 2px);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
   display: flex;
   align-items: center;
   gap: 0.5rem;
   justify-content: center;
   font-weight: 500;
+}
+#sidebar .logout-button:hover {
+  background: color-mix(in srgb, var(--destructive, #dc2626) 12%, transparent);
+  border-color: color-mix(in srgb, var(--destructive, #dc2626) 35%, var(--sidebar-border));
+  color: var(--destructive, #dc2626);
+  transform: translateX(2px);
 }
 
 .logout-button:hover {
@@ -956,6 +1188,11 @@ body,
   display: flex;
   align-items: center;
   gap: 0.75rem;
+}
+
+#main-app #sidebar .sidebar-profile-top > div:last-child {
+  min-width: 0;
+  overflow: hidden;
 }
 
 .sidebar-avatar-wrap {
@@ -1251,6 +1488,9 @@ body,
 .sidebar-user-name {
   font-weight: 700;
   line-height: 1.1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .sidebar-user-role {
@@ -1267,6 +1507,9 @@ body,
   margin-top: 0.25rem;
   font-size: 0.8rem;
   color: var(--muted-foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .sidebar-badge {
@@ -1281,6 +1524,8 @@ body,
   color: var(--sidebar-accent-foreground);
   border: 1px solid var(--sidebar-border);
   font-size: 0.75rem;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .sidebar-badge-label {
@@ -1289,11 +1534,17 @@ body,
   text-transform: uppercase;
   letter-spacing: 0.04em;
   opacity: 0.95;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .sidebar-badge-value {
   opacity: 0.9;
   line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .sidebar-section-title {
@@ -2272,8 +2523,11 @@ body.lessons-page #main-content {
 
 @media (max-width: 768px) {
   body.lessons-page #main-content > div {
-    padding: 1rem 1rem 1.5rem;
-    padding-left: max(1rem, calc(0.75rem + 2.75rem + 0.5rem)); /* clear mobile menu button */
+    padding: 1.5rem;
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 100%;
+    box-sizing: border-box;
   }
   body.lessons-page .lessons-page-header h2 {
     font-size: 1.375rem;
@@ -2338,8 +2592,7 @@ body.lessons-page #main-content {
 
 @media (max-width: 640px) {
   body.lessons-page #main-content > div {
-    padding: 0.75rem 0.75rem 1.25rem;
-    padding-left: max(0.75rem, calc(0.75rem + 2.75rem + 0.35rem));
+    padding: 1.5rem;
   }
   body.lessons-page .lessons-page-header h2 {
     font-size: 1.25rem;
@@ -2355,8 +2608,7 @@ body.lessons-page #main-content {
 
 @media (max-width: 520px) {
   body.lessons-page #main-content > div {
-    padding: 0.5rem 0.5rem 1rem;
-    padding-left: max(0.5rem, calc(0.5rem + 2.75rem + 0.25rem));
+    padding: 1.5rem;
   }
   body.lessons-page .lessons-page-header {
     flex-direction: column;
@@ -2847,9 +3099,22 @@ body.settings-page #main-content .card:hover {
     0 28px 70px -58px color-mix(in srgb, var(--secondary) 28%, transparent);
 }
 
+/* Exam generator: same-width quantity inputs on all devices */
+body.exam-generator-page .exam-quantity-wrap {
+  flex-shrink: 0;
+  min-width: 6.5rem;
+}
+body.exam-generator-page .exam-quantity-input {
+  width: 5.5rem;
+  min-width: 3.5rem;
+  height: 2rem;
+  box-sizing: border-box;
+  text-align: center;
+}
+
 /* Recitation main content layout */
 .recitation-main-wrap {
-  padding: 1.5rem 1.5rem 2rem;
+  padding: 1.5rem;
   max-width: 1100px;
   margin: 0 auto;
 }
@@ -2986,7 +3251,7 @@ body.classes-page #classes-grid-student {
     grid-template-columns: 1fr;
   }
   .recitation-main-wrap {
-    padding: 1rem;
+    padding: 1.5rem;
   }
   .recitation-page-header,
   .page-header {
@@ -3837,6 +4102,108 @@ body.classes-page #classes-grid-student {
   background: color-mix(in srgb, var(--secondary) 25%, var(--card));
 }
 
+/* Result section: responsive for mobile L, M, S */
+@media (max-width: 640px) {
+  .recitation-result-section {
+    padding: 1.25rem 1rem;
+    border-radius: 0.75rem;
+  }
+  .recitation-result-content {
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    text-align: center;
+  }
+  .recitation-result-content .recitation-result-character {
+    width: 6.5rem;
+  }
+  .recitation-result-content .recitation-result-body {
+    width: 100%;
+  }
+  .recitation-result-content .recitation-result-header {
+    justify-content: center;
+    margin-bottom: 0.75rem;
+  }
+  .recitation-result-answers {
+    gap: 0.5rem;
+    text-align: left;
+  }
+  .recitation-result-content .recitation-result-title {
+    font-size: 1.125rem;
+  }
+  .recitation-result-content .recitation-result-message {
+    font-size: 0.875rem;
+  }
+  .recitation-result-answer-value {
+    padding: 0.45rem 0.6rem;
+    font-size: 0.875rem;
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+}
+
+@media (max-width: 480px) {
+  .recitation-result-section {
+    padding: 1rem 0.75rem;
+    border-radius: 0.625rem;
+  }
+  .recitation-result-content {
+    gap: 0.75rem;
+  }
+  .recitation-result-content .recitation-result-character {
+    width: 5.5rem;
+  }
+  .recitation-result-content .recitation-result-title {
+    font-size: 1.0625rem;
+  }
+  .recitation-result-content .recitation-result-message {
+    font-size: 0.8125rem;
+  }
+  .recitation-result-answer-label {
+    font-size: 0.6875rem;
+  }
+  .recitation-result-answer-value {
+    padding: 0.4rem 0.5rem;
+    font-size: 0.8125rem;
+  }
+}
+
+@media (max-width: 380px) {
+  .recitation-result-section {
+    padding: 0.75rem 0.5rem;
+    border-radius: 0.5rem;
+  }
+  .recitation-result-content {
+    gap: 0.5rem;
+  }
+  .recitation-result-content .recitation-result-character {
+    width: 4.5rem;
+  }
+  .recitation-result-content .recitation-result-header {
+    margin-bottom: 0.5rem;
+    gap: 0.5rem;
+  }
+  .recitation-result-content .result-icon {
+    font-size: 1.5rem;
+  }
+  .recitation-result-content .recitation-result-title {
+    font-size: 1rem;
+  }
+  .recitation-result-content .recitation-result-message {
+    font-size: 0.75rem;
+  }
+  .recitation-result-answers {
+    gap: 0.4rem;
+  }
+  .recitation-result-answer-label {
+    font-size: 0.625rem;
+  }
+  .recitation-result-answer-value {
+    padding: 0.35rem 0.45rem;
+    font-size: 0.75rem;
+  }
+}
+
 .recitation-question-footer {
   padding: 1rem 1.5rem;
   border-top: 1px solid var(--border);
@@ -4241,6 +4608,149 @@ select.form-input optgroup {
     height: auto;
 }
 
+/* App header bar: burger (left) + theme (right) – works on all devices */
+.mobile-nav-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 0.75rem;
+  padding-top: calc(0.6rem + env(safe-area-inset-top, 0px));
+  padding-left: calc(0.75rem + env(safe-area-inset-left, 0px));
+  padding-right: calc(0.75rem + env(safe-area-inset-right, 0px));
+  gap: 0.5rem;
+  min-height: 4rem;
+  box-sizing: border-box;
+  background: color-mix(in srgb, var(--card) 92%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* Push main-app and loading screen below the fixed header – all viewports */
+body:has(.mobile-nav-header) {
+  --app-header-height: calc(4rem + env(safe-area-inset-top, 0px));
+  padding-top: var(--app-header-height);
+}
+body:has(.mobile-nav-header) #main-app {
+  height: calc(100vh - var(--app-header-height) - env(safe-area-inset-bottom, 0px));
+  min-height: calc(100vh - var(--app-header-height) - env(safe-area-inset-bottom, 0px));
+  box-sizing: border-box;
+}
+/* Sidebar must fit inside main-app so logout stays visible on short viewports (e.g. 1366x768) */
+body:has(.mobile-nav-header) #main-app #sidebar {
+  height: 100%;
+  min-height: 0;
+}
+body:has(.mobile-nav-header) #loading-screen {
+  min-height: calc(100vh - var(--app-header-height) - env(safe-area-inset-bottom, 0px));
+  box-sizing: border-box;
+}
+
+/* All modals sit below the fixed header when the app header is present */
+body:has(.mobile-nav-header) .modal-overlay,
+body:has(.mobile-nav-header) .modal-quiz-overlay,
+body:has(.mobile-nav-header) .modal-create-overlay,
+body:has(.mobile-nav-header) .recitation-picker-overlay,
+body:has(.mobile-nav-header) .recitation-question-overlay,
+body:has(.mobile-nav-header) .lesson-slideshow-overlay,
+body:has(.mobile-nav-header) .take-quiz-fullscreen-gate,
+body:has(.mobile-nav-header) .eel-tutorial-overlay,
+body:has(.mobile-nav-header) #password-modal {
+  top: var(--app-header-height);
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: auto;
+}
+
+/* When any modal is open: hide the header and let modals use full viewport */
+body.eel-modal-open .mobile-nav-header {
+  display: none !important;
+}
+body.eel-modal-open {
+  padding-top: 0 !important;
+}
+body.eel-modal-open .modal-overlay,
+body.eel-modal-open .modal-quiz-overlay,
+body.eel-modal-open .modal-create-overlay,
+body.eel-modal-open .recitation-picker-overlay,
+body.eel-modal-open .recitation-question-overlay,
+body.eel-modal-open .lesson-slideshow-overlay,
+body.eel-modal-open .take-quiz-fullscreen-gate,
+body.eel-modal-open .eel-tutorial-overlay,
+body.eel-modal-open #password-modal {
+  top: 0 !important;
+  height: 100% !important;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* Dynamic viewport (mobile address bar, etc.) */
+@supports (height: 100dvh) {
+  body:has(.mobile-nav-header) #main-app {
+    height: calc(100dvh - var(--app-header-height) - env(safe-area-inset-bottom, 0px));
+    min-height: calc(100dvh - var(--app-header-height) - env(safe-area-inset-bottom, 0px));
+  }
+  body:has(.mobile-nav-header) #loading-screen {
+    min-height: calc(100dvh - var(--app-header-height) - env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* Small phones: slightly smaller header so more content fits */
+@media (max-width: 380px) {
+  .mobile-nav-header {
+    min-height: 3.5rem;
+    padding: 0.5rem 0.6rem;
+    padding-top: calc(0.5rem + env(safe-area-inset-top, 0px));
+    padding-left: calc(0.6rem + env(safe-area-inset-left, 0px));
+    padding-right: calc(0.6rem + env(safe-area-inset-right, 0px));
+  }
+  body:has(.mobile-nav-header) {
+    --app-header-height: calc(3.5rem + env(safe-area-inset-top, 0px));
+  }
+  .mobile-nav-btn {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+  .mobile-nav-header .theme-header-toggle {
+    min-width: 2.5rem;
+    height: 2.5rem;
+  }
+}
+.mobile-nav-btn {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 9999px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--card) 72%, transparent);
+  color: var(--foreground);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.mobile-nav-btn:hover {
+  background: color-mix(in srgb, var(--card) 86%, transparent);
+  border-color: color-mix(in srgb, var(--border) 75%, var(--primary) 25%);
+}
+.mobile-nav-btn svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  fill: none;
+}
+.mobile-nav-header .theme-header-toggle {
+  flex-shrink: 0;
+}
+
 /* Responsive Design */
 /* Mobile sidebar controls are injected by JS; hide by default (desktop). */
 .mobile-sidebar-toggle { display: none; }
@@ -4280,22 +4790,43 @@ select.form-input optgroup {
     grid-template-columns: repeat(1, minmax(0, 1fr));
   }
 
-  /* Sidebar becomes off-canvas on mobile (works for both `.sidebar` and `#sidebar`) */
+  /* Sidebar becomes off-canvas on mobile – below app header when present */
   .sidebar,
   #sidebar {
-      position: fixed;
-      top: 0;
-    left: -110%;
+    position: fixed;
+    top: 0;
+    left: 0;
     width: min(85vw, 20rem);
+    max-width: 20rem;
     height: 100vh;
-    z-index: 1000;
-      transition: left 0.3s ease;
+    min-height: 100vh;
+    z-index: 1050;
+    transform: translateX(-100%);
+    transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1), box-shadow 0.28s ease;
     overflow-y: auto;
+    overflow-x: hidden;
+    box-shadow: none;
+    border-radius: 0;
   }
-  
+  body:has(.mobile-nav-header) .sidebar,
+  body:has(.mobile-nav-header) #sidebar {
+    top: var(--app-header-height, 4rem);
+    height: calc(100vh - var(--app-header-height, 4rem));
+    min-height: calc(100vh - var(--app-header-height, 4rem));
+    border-radius: 0 1rem 1rem 0;
+    box-shadow: 0 0 0 1px var(--sidebar-border), 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  }
+  @supports (height: 100dvh) {
+    body:has(.mobile-nav-header) .sidebar,
+    body:has(.mobile-nav-header) #sidebar {
+      height: calc(100dvh - var(--app-header-height, 4rem));
+      min-height: calc(100dvh - var(--app-header-height, 4rem));
+    }
+  }
   .sidebar.open,
   #sidebar.open {
-      left: 0;
+    transform: translateX(0);
+    box-shadow: 0 0 0 1px var(--sidebar-border), 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   }
 
   /* Mobile toggle button injected by navigation.js */
@@ -4322,15 +4853,22 @@ select.form-input optgroup {
   .mobile-sidebar-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.45);
-    z-index: 900;
+    top: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 1040;
     display: block;
     pointer-events: auto;
+    opacity: 1;
+    transition: opacity 0.25s ease;
   }
-
+  body:has(.mobile-nav-header) .mobile-sidebar-overlay {
+    top: var(--app-header-height, 4rem);
+  }
   .mobile-sidebar-overlay.hidden {
-    display: none !important;
+    opacity: 0;
     pointer-events: none;
+    visibility: hidden;
+    transition: opacity 0.25s ease, visibility 0.25s;
   }
 
   /* Prevent main content from being hidden under the toggle button */
@@ -4347,6 +4885,65 @@ select.form-input optgroup {
 
 .table-scroll table {
   min-width: 600px;
+}
+
+/* My Progress: Quiz history table – aligned columns, scrollable */
+#quiz-history-wrap {
+  overflow: auto;
+  max-height: 24rem;
+  -webkit-overflow-scrolling: touch;
+}
+#quiz-history-table {
+  table-layout: fixed;
+  width: 100%;
+}
+#quiz-history-table thead th,
+#quiz-history-table tbody td {
+  padding: 0.75rem 1rem;
+  vertical-align: middle;
+}
+#quiz-history-table thead th:nth-child(1),
+#quiz-history-table tbody td:nth-child(1) {
+  width: 55%;
+  min-width: 0;
+  word-break: break-word;
+}
+#quiz-history-table thead th:nth-child(2),
+#quiz-history-table tbody td:nth-child(2) {
+  width: 25%;
+  white-space: nowrap;
+}
+#quiz-history-table thead th:nth-child(3),
+#quiz-history-table tbody td:nth-child(3) {
+  width: 20%;
+  white-space: nowrap;
+}
+#quiz-history-table thead th:nth-child(4),
+#quiz-history-table tbody td:nth-child(4) {
+  width: 30%;
+  white-space: nowrap;
+}
+#quiz-history-table tbody td:nth-child(2) .inline-flex {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+/* Mobile: Quiz history – min width so horizontal scroll shows full content, no truncation */
+@media (max-width: 768px) {
+  #quiz-history-wrap {
+    overflow-x: auto;
+    overflow-y: auto;
+    max-height: 20rem;
+    margin-left: -1.5rem;
+    margin-right: -1.5rem;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+    -webkit-overflow-scrolling: touch;
+  }
+  #quiz-history-table {
+    min-width: 560px;
+  }
 }
 
 .login-screen {
@@ -15526,7 +16123,7 @@ body.take-quiz-page .take-quiz-questions .mt-4.p-4 .grid > div {
             font-size: 0.875rem;
         }
         #student-picker .recitation-picker-footer {
-            padding: 0.6rem 1rem;
+            padding: 0.6rem 1rem !important;
         }
         #student-picker .recitation-play-btn {
             min-height: 2.5rem;
