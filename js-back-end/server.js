@@ -166,7 +166,6 @@ app.use(express.static(path.join(__dirname, '../')));
 
 // 7️⃣ Start server
 const PORT = Number(process.env.PORT || 3000);
-app.listen(PORT, () => {
+app.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📁 Uploads directory: ${uploadsDir}`);
 });
