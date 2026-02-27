@@ -116,8 +116,8 @@
                             <i data-lucide="key-round" class="size-8"></i>
                         </div>
                         <div class="join-class-modal-header-text">
-                            <h2 id="join-class-modal-title" class="join-class-modal-title">Join a class</h2>
-                            <p class="join-class-modal-subtitle">Enter the code your teacher gave you to join their class.</p>
+                            <h2 id="join-class-modal-title" class="join-class-modal-title">Enroll in the Class</h2>
+                            <p class="join-class-modal-subtitle">Enter the class code provided by your teacher to enroll.</p>
                         </div>
                         <button type="button" class="join-class-modal-close" onclick="closeJoinModal()" aria-label="Close">
                             <i data-lucide="x" class="size-5"></i>
@@ -141,7 +141,7 @@
                         <button type="button" class="btn btn-outline" onclick="closeJoinModal()">Cancel</button>
                         <button type="button" class="btn btn-primary" onclick="joinClass()">
                             <i data-lucide="log-in" class="size-4"></i>
-                            Join class
+                            Confirm
                         </button>
                     </footer>
                 </div>
@@ -155,8 +155,8 @@
                             <i data-lucide="graduation-cap" class="size-8"></i>
                         </div>
                         <div class="create-class-modal-header-text">
-                            <h2 id="create-class-modal-title" class="create-class-modal-title">Create new class</h2>
-                            <p class="create-class-modal-subtitle">Add a class so students can join and you can assign lessons.</p>
+                            <h2 id="create-class-modal-title" class="create-class-modal-title">Create Class</h2>
+                            <p class="create-class-modal-subtitle">Add a class to manage your students and lessons.</p>
                         </div>
                         <button type="button" class="create-class-modal-close" onclick="closeClassModal()" aria-label="Close">
                             <i data-lucide="x" class="size-5"></i>
@@ -191,18 +191,13 @@
                                 <option value="english for academic and professional purposes">English for Academic and Professional Purposes</option>
                             </select>
                         </div>
-
-                        <div class="create-class-tip">
-                            <i data-lucide="lightbulb" class="create-class-tip-icon" aria-hidden="true"></i>
-                            <p class="create-class-tip-text">Use clear and consistent class names for easier management.</p>
-                        </div>
                     </div>
 
                     <footer class="create-class-modal-footer">
                         <button type="button" class="btn btn-outline" onclick="closeClassModal()">Cancel</button>
                         <button type="button" id="save-class-btn" class="btn btn-primary" onclick="saveClass()">
                             <i data-lucide="save" class="size-4"></i>
-                            Save class
+                            Save
                         </button>
                     </footer>
                 </div>

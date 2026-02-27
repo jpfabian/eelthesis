@@ -948,8 +948,8 @@ body,
 @supports (height: 100dvh) {
   .sidebar,
   #sidebar {
-    height: 100dvh;
-    min-height: 100dvh;
+    height: 91dvh;
+    min-height: 91dvh;
   }
 }
 
@@ -3112,6 +3112,80 @@ body.exam-generator-page .exam-quantity-input {
   text-align: center;
 }
 
+/* Exam generator + Recitation: Question Types & Quantity – mobile M and S */
+@media (max-width: 480px) {
+  body.exam-generator-page .exam-quantity-row {
+    flex-wrap: wrap !important;
+    gap: 0.5rem !important;
+  }
+  body.exam-generator-page .exam-quantity-row .exam-quantity-wrap {
+    width: 100% !important;
+    min-width: 0 !important;
+    margin-top: 0.25rem;
+    padding-left: 1.75rem;
+    justify-content: flex-start;
+  }
+  body.exam-generator-page .exam-quantity-row label {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+  body.exam-generator-page .exam-quantity-input {
+    min-width: 3.5rem;
+  }
+  /* Recitation: stack label and input row on small screens */
+  .ai-quiz-type-qty-row {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-rows: auto auto;
+    gap: 0.5rem 0.75rem;
+    align-items: center;
+  }
+  .ai-quiz-type-qty-row .ai-quiz-type-cb {
+    grid-column: 1;
+    grid-row: 1;
+    align-self: center;
+  }
+  .ai-quiz-type-qty-row .ai-quiz-type-qty-label {
+    grid-column: 2;
+    grid-row: 1;
+    min-width: 0;
+    flex: none;
+  }
+  .ai-quiz-type-qty-row .ai-quiz-type-qty-input {
+    grid-column: 1;
+    grid-row: 2;
+    width: 4rem;
+    min-width: 4rem;
+    justify-self: start;
+  }
+  .ai-quiz-type-qty-row .ai-quiz-type-qty-unit {
+    grid-column: 2;
+    grid-row: 2;
+    align-self: center;
+    justify-self: start;
+  }
+}
+
+@media (max-width: 360px) {
+  body.exam-generator-page .exam-quantity-row {
+    padding: 0.6rem 0.75rem !important;
+  }
+  body.exam-generator-page .exam-quantity-row .exam-quantity-wrap {
+    padding-left: 1.5rem;
+  }
+  .ai-quiz-type-qty-row {
+    padding: 0.6rem 0.75rem !important;
+  }
+  .ai-quiz-type-qty-label {
+    font-size: 0.875rem;
+  }
+  .ai-quiz-type-qty-input {
+    width: 3.5rem;
+    min-width: 3.5rem;
+    font-size: 0.875rem;
+  }
+}
+
 /* Recitation main content layout */
 .recitation-main-wrap {
   padding: 1.5rem;
@@ -4642,10 +4716,7 @@ body:has(.mobile-nav-header) #main-app {
   box-sizing: border-box;
 }
 /* Sidebar must fit inside main-app so logout stays visible on short viewports (e.g. 1366x768) */
-body:has(.mobile-nav-header) #main-app #sidebar {
-  height: 100%;
-  min-height: 0;
-}
+
 body:has(.mobile-nav-header) #loading-screen {
   min-height: calc(100vh - var(--app-header-height) - env(safe-area-inset-bottom, 0px));
   box-sizing: border-box;
@@ -4943,6 +5014,161 @@ body.eel-modal-open #password-modal {
   }
   #quiz-history-table {
     min-width: 560px;
+  }
+}
+
+/* ========== Mobile M (≤480px) ========== */
+@media (max-width: 480px) {
+  /* Prevent horizontal overflow */
+  body {
+    overflow-x: hidden;
+  }
+  #main-app,
+  #main-content {
+    min-width: 0;
+  }
+  /* App main content – reduce padding for more usable width */
+  #main-app #main-content > div.p-6,
+  #main-app #main-content > div[class*="p-6"],
+  body.classes-page #main-content .classes-header-wrap,
+  body.lessons-page #main-content > div,
+  body.recitation-page #main-content .recitation-main-wrap,
+  body.student-progress-page #main-content > div,
+  body.settings-page #main-content > div,
+  body.exam-generator-page #main-content > div,
+  body.my-progress-page #main-content > div,
+  body.dashboard-page #main-content > div {
+    padding-left: 1rem;
+    padding-right: 1rem;
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+  }
+  .page-header,
+  .recitation-page-header {
+    padding: 1rem;
+    gap: 0.75rem;
+  }
+  .page-header-title {
+    font-size: 1.375rem;
+  }
+  .page-header-subtitle {
+    font-size: 0.875rem;
+  }
+  .page-header-icon {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+  .page-header-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+  /* Cards – tighter padding */
+  .card-content.p-6,
+  .card-content.p-5 {
+    padding: 1rem !important;
+  }
+  /* Quiz/lesson cards – actions wrap */
+  .created-quiz-card__actions,
+  .quiz-actions {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .created-quiz-card__actions .btn,
+  .quiz-actions .btn {
+    min-width: calc(50% - 0.25rem);
+    flex: 1 1 calc(50% - 0.25rem);
+  }
+  /* Stats grids – single column on small */
+  .grid.grid-cols-3,
+  .grid.grid-cols-4 {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+  /* Landing */
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  .hero-container .hero-inner {
+    padding: 1rem 0;
+  }
+  .hero-title {
+    font-size: 1.75rem;
+  }
+  .hero-description {
+    font-size: 0.9375rem;
+  }
+  /* Auth */
+  body.auth-page .auth-header {
+    padding: 0.5rem 0.75rem;
+  }
+  .login-screen {
+    padding: 1rem;
+  }
+  /* Touch-friendly tap targets */
+  .btn:not(.btn-sm) {
+    min-height: 2.75rem;
+  }
+  .nav-button.btn,
+  .btn-side-bar {
+    min-height: 2.75rem;
+    padding: 0.65rem 0.75rem;
+  }
+}
+
+/* ========== Mobile S (≤360px) ========== */
+@media (max-width: 360px) {
+  body {
+    overflow-x: hidden;
+  }
+  #main-app #main-content > div.p-6,
+  #main-app #main-content > div[class*="p-6"],
+  body.classes-page #main-content .classes-header-wrap,
+  body.lessons-page #main-content > div,
+  body.recitation-page #main-content .recitation-main-wrap,
+  body.student-progress-page #main-content > div,
+  body.settings-page #main-content > div,
+  body.exam-generator-page #main-content > div,
+  body.my-progress-page #main-content > div,
+  body.dashboard-page #main-content > div {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+  }
+  .page-header,
+  .recitation-page-header {
+    padding: 0.75rem;
+  }
+  .page-header-title {
+    font-size: 1.25rem;
+  }
+  .page-header-subtitle {
+    font-size: 0.8125rem;
+  }
+  .page-header-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+  /* Sidebar a bit narrower on very small screens */
+  @media (max-width: 768px) {
+    .sidebar,
+    #sidebar {
+      width: min(92vw, 18rem);
+      max-width: 18rem;
+    }
+  }
+  .created-quiz-card__actions .btn,
+  .quiz-actions .btn {
+    min-width: 100%;
+    flex: 1 1 100%;
+  }
+  .hero-title {
+    font-size: 1.5rem;
+  }
+  .container {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
   }
 }
 
@@ -8867,6 +9093,13 @@ body.auth-page .login-screen .btn.btn-primary:hover {
   }
 }
 
+@media (max-width: 360px) {
+  .sidebar, #sidebar {
+    height: 100%;
+    min-height: 0;
+  }
+}
+
 .form-divider {
     display: flex;
     align-items: center;
@@ -11554,8 +11787,8 @@ body.take-quiz-page .take-quiz-questions .mt-4.p-4 .grid > div {
   }
 
   .join-class-modal-title {
-    font-size: 1.25rem;
-    font-weight: 600;
+    font-size: 1.50rem;
+    font-weight: 700;
     color: var(--foreground);
     margin: 0 0 0.25rem 0;
     line-height: 1.3;
@@ -11745,8 +11978,8 @@ body.take-quiz-page .take-quiz-questions .mt-4.p-4 .grid > div {
   }
 
   .create-class-modal-title {
-    font-size: 1.25rem;
-    font-weight: 600;
+    font-size: 1.50rem;
+    font-weight: 700;
     color: var(--foreground);
     margin: 0 0 0.25rem 0;
     line-height: 1.3;

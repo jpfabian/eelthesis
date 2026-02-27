@@ -288,7 +288,7 @@ async function loadStudentClasses() {
                     <i data-lucide="plus" class="size-5 card-join-class__icon-svg"></i>
                 </div>
                 <div class="class-card__header-text">
-                    <div class="class-card__title">Join a class</div>
+                    <div class="class-card__title">Enroll in the class</div>
                     <div class="class-card__subtitle">
                         <span class="class-pill class-pill--muted">Enter the class code from your teacher</span>
                     </div>
@@ -297,7 +297,7 @@ async function loadStudentClasses() {
             <div class="class-card__footer">
                 <button class="btn btn-join-class w-full" type="button">
                     <i data-lucide="log-in" class="size-4"></i>
-                    Join
+                    Enroll
                 </button>
             </div>
         `;

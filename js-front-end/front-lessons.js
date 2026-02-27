@@ -1186,9 +1186,10 @@ async function loadLessonsAIGeneratedList() {
         const start = quiz.unlock_time ? new Date(quiz.unlock_time.replace(" ", "T")) : null;
         const end = quiz.lock_time ? new Date(quiz.lock_time.replace(" ", "T")) : null;
         const hasSchedule = !!(start && end);
+        const notYetOpen = hasSchedule && start && now < start;
         const isCurrentlyLocked = hasSchedule && end && now > end;
-        const statusLabel = !hasSchedule ? "Not scheduled" : isCurrentlyLocked ? "Unpublished" : "Open";
-        const statusClass = !hasSchedule ? "created-quiz-status--none" : isCurrentlyLocked ? "created-quiz-status--closed" : "created-quiz-status--open";
+        const statusLabel = !hasSchedule ? "Not scheduled" : notYetOpen ? "Not yet open" : isCurrentlyLocked ? "Closed" : "Open";
+        const statusClass = !hasSchedule ? "created-quiz-status--none" : notYetOpen ? "created-quiz-status--pending" : isCurrentlyLocked ? "created-quiz-status--closed" : "created-quiz-status--open";
         const scheduleLabel = hasSchedule
           ? `Opens ${formatLessonQuizDate(quiz.unlock_time)} · Due ${formatLessonQuizDate(quiz.lock_time)}`
           : "Not scheduled";

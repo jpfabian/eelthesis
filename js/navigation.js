@@ -210,7 +210,7 @@ function setupSidebar(user, currentPage) {
         const classLine = currentPage === "classes"
             ? (user.role === "teacher" ? "Your classrooms" : "Your classes")
             : currentPage === "settings"
-                ? "Account settings"
+                ? "Account Settings"
                 : (selectedClass
                     ? `${selectedClass.name ?? ""} ${selectedClass.section ?? ""}`.trim()
                     : "No class selected");
@@ -312,7 +312,7 @@ function setupSidebar(user, currentPage) {
         groups.push({
             title: "Reports",
             items: [
-                { id: 'student-progress', label: 'Student Progress', icon: 'users', url: 'student-progress.html' },
+                { id: 'student-progress', label: 'Student Statistics', icon: 'users', url: 'student-progress.html' },
             ]
         });
     } else {

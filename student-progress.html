@@ -58,13 +58,13 @@
                         <i data-lucide="users" class="size-8"></i>
                     </div>
                     <div>
-                        <h1 class="page-header-title">Student Progress</h1>
+                        <h1 class="page-header-title">Student Statistics</h1>
                         <p class="page-header-subtitle">Monitor and analyze your students' learning progress and performance.</p>
                     </div>
                     <div class="page-header-actions">
                         <button type="button" id="export-progress-btn" class="btn btn-primary flex items-center gap-2" title="Export to CSV">
                             <i data-lucide="download" class="size-4"></i>
-                            Export to CSV
+                            Export
                         </button>
                     </div>
                 </header>
@@ -78,7 +78,7 @@
                                 <i data-lucide="users" class="size-4 text-primary"></i>
                             </div>
                             <div class="text-2xl font-bold text-primary" id="student-count">0</div>
-                            <p class="text-xs text-muted-foreground">Student Joined</p>
+                            <p class="text-xs text-muted-foreground">Students Enrolled</p>
                         </div>
                     </div>
 
@@ -89,14 +89,14 @@
                                 <i data-lucide="trending-up" class="size-4 text-secondary"></i>
                             </div>
                             <div class="text-2xl font-bold text-secondary" id="avg-score-value">—</div>
-                            <p class="text-xs text-muted-foreground" id="avg-score-sub">Across Reading + Pronunciation</p>
+                            <p class="text-xs text-muted-foreground" id="avg-score-sub">Average score across reading and pronunciation</p>
                         </div>
                     </div>
 
                     <div id="completion-rate-card" class="card bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20 cursor-pointer hover:shadow-lg transition">
                         <div class="card-content p-6">
                             <div class="flex items-center justify-between mb-2">
-                                <h3 class="text-sm font-medium">Quiz Completion</h3>
+                                <h3 class="text-sm font-medium">Quiz Completion Rate</h3>
                                 <i data-lucide="check-circle" class="size-4 text-primary"></i>
                             </div>
                             <div class="text-2xl font-bold text-primary" id="completion-rate-value">—</div>
@@ -114,8 +114,8 @@
                                     <i data-lucide="clock" class="size-5"></i>
                                 </div>
                                 <div class="students-section-header-text">
-                                    <h2 id="pending-heading" class="students-section-title">Waiting for acceptance</h2>
-                                    <p class="students-section-desc">Accept or reject students who requested to join this class.</p>
+                                    <h2 id="pending-heading" class="students-section-title">Pending Students</h2>
+                                    <p class="students-section-desc">Students awaiting approval to join the class.</p>
                                 </div>
                                 <span id="pending-count" class="students-section-count">0</span>
                             </header>
@@ -134,8 +134,8 @@
                                     <i data-lucide="users" class="size-5"></i>
                                 </div>
                                 <div class="students-section-header-text">
-                                    <h2 id="enrolled-heading" class="students-section-title">Joined students</h2>
-                                    <p class="students-section-desc">Students in this class who can access lessons and quizzes.</p>
+                                    <h2 id="enrolled-heading" class="students-section-title">Students Enrolled</h2>
+                                    <p class="students-section-desc">Students approved to join the class.</p>
                                 </div>
                                 <span id="enrolled-count" class="students-section-count">0</span>
                             </header>
@@ -156,15 +156,15 @@
                                 <i data-lucide="trending-up" class="size-6"></i>
                             </div>
                             <div class="scores-section-header-text">
-                                <h2 class="scores-section-title">Student quiz scores</h2>
+                                <h2 class="scores-section-title">Assessment Scores</h2>
                                 <p class="scores-section-desc">Reading and Pronunciation performance overview.</p>
                             </div>
                         </header>
 
                         <div class="scores-section-body">
                             <section class="scores-chart-block" aria-labelledby="scores-chart-title">
-                                <h3 id="scores-chart-title" class="scores-chart-title">Average score by student</h3>
-                                <p class="scores-chart-desc">Overall average (%) per student</p>
+                                <h3 id="scores-chart-title" class="scores-chart-title">Student Average</h3>
+                                <p class="scores-chart-desc">Overall Percentage per Student</p>
                                 <div class="scores-chart-wrap">
                                     <canvas id="avg-score-chart" height="180"></canvas>
                                 </div>
@@ -177,7 +177,7 @@
                                 </button>
                                 <button type="button" class="scores-view-btn scores-view-btn--breakdown" id="scores-show-breakdown" role="tab" aria-selected="false" aria-controls="scores-table-block">
                                     <i data-lucide="table" class="scores-view-btn-icon"></i>
-                                    Score breakdown
+                                    Assessment Scores
                                 </button>
                             </div>
 
@@ -187,7 +187,7 @@
                             </section>
 
                             <section class="scores-table-block scores-section-panel-hidden" id="scores-table-block" aria-labelledby="scores-table-title" role="tabpanel">
-                                <h3 id="scores-table-title" class="scores-table-title">Score breakdown</h3>
+                                <h3 id="scores-table-title" class="scores-table-title">Assessment Scores</h3>
                                 <div class="scores-table-scroll table-scroll">
                                     <table class="scores-table" id="scores-data-table">
                                         <thead id="average-table-head"></thead>
@@ -336,7 +336,7 @@
                         const allQuizNames = Array.from(new Set(data.flatMap(s => s.quizzes.map(q => q.quiz_name))));
                         document.getElementById("average-table-head").innerHTML = `
                             <tr>
-                                <th>Student name</th>
+                                <th>Student Name</th>
                                 ${allQuizNames.map(q => `<th>${q}</th>`).join('')}
                                 <th>Total</th>
                             </tr>
