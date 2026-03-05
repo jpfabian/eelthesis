@@ -14,7 +14,40 @@
 <body class="lessons-page">
     <div class="mobile-nav-header" id="mobileNavHeader" role="banner">
         <button type="button" class="mobile-nav-btn mobile-nav-btn--menu" id="mobileNavMenuBtn" aria-label="Open menu"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
-        <button type="button" id="eel-theme-header-toggle" class="theme-header-toggle" aria-label="Toggle dark/light mode"><span class="theme-icon" aria-hidden="true">☀</span><span class="theme-label">light</span></button>
+        <div class="mobile-nav-actions-right">
+            <button type="button" class="mobile-nav-btn mobile-nav-vocab-btn" id="mobileNavVocabBtn" aria-label="Open vocabulary search" aria-expanded="false">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+            </button>
+            <button type="button" class="mobile-nav-btn mobile-nav-notification-btn" id="mobileNavNotificationBtn" aria-label="Open notifications" aria-expanded="false">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 17h5l-1.4-1.4a2 2 0 0 1-.6-1.4V11a6 6 0 1 0-12 0v3.2a2 2 0 0 1-.6 1.4L4 17h5"/><path d="M9 17a3 3 0 0 0 6 0"/></svg>
+                <span id="mobileNavNotificationBadge" class="mobile-nav-notification-badge hidden" aria-hidden="true">0</span>
+            </button>
+            <button type="button" id="eel-theme-header-toggle" class="theme-header-toggle" aria-label="Toggle dark/light mode"><span class="theme-icon" aria-hidden="true">☀</span><span class="theme-label">light</span></button>
+        </div>
+    </div>
+    <div id="mobileNavVocabPanel" class="mobile-nav-vocab-panel hidden" role="region" aria-label="Vocabulary search">
+        <div class="mobile-nav-vocab-panel__header">
+            <strong>Vocabulary</strong>
+        </div>
+        <form id="mobileNavVocabForm" class="mobile-nav-vocab-form">
+            <div class="mobile-nav-vocab-input-wrap">
+                <input id="mobileNavVocabInput" type="search" class="mobile-nav-vocab-input" placeholder="Search a word..." autocomplete="off" />
+                <button type="submit" class="mobile-nav-vocab-submit">Search</button>
+            </div>
+            <p class="mobile-nav-vocab-ref">Reference links: <a href="https://www.oxfordlearnersdictionaries.com/" target="_blank" rel="noopener noreferrer">Oxford</a> · <a href="https://dictionary.cambridge.org/" target="_blank" rel="noopener noreferrer">Cambridge</a></p>
+        </form>
+        <div id="mobileNavVocabResult" class="mobile-nav-vocab-result">
+            <p class="mobile-nav-vocab-empty">Type a word to search its meaning.</p>
+        </div>
+    </div>
+    <div id="mobileNavNotificationPanel" class="mobile-nav-notification-panel hidden" role="region" aria-label="Classroom notifications">
+        <div class="mobile-nav-notification-panel__header">
+            <strong id="mobileNavNotificationTitle">Notifications</strong>
+            <button type="button" id="mobileNavNotificationMarkAll" class="mobile-nav-notification-mark-read">Mark all read</button>
+        </div>
+        <div id="mobileNavNotificationList" class="mobile-nav-notification-list">
+            <p class="mobile-nav-notification-empty">No notifications yet for this classroom.</p>
+        </div>
     </div>
     <!-- Loading Screen -->
     <div id="loading-screen" class="loading-screen">
@@ -578,6 +611,7 @@
     </div>
 
     <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="js/auth.js"></script>
     <script src="js/navigation.js"></script>

@@ -61,12 +61,6 @@
                         <h1 class="page-header-title">Student Statistics</h1>
                         <p class="page-header-subtitle">Monitor and analyze your students' learning progress and performance.</p>
                     </div>
-                    <div class="page-header-actions">
-                        <button type="button" id="export-progress-btn" class="btn btn-primary flex items-center gap-2" title="Export to CSV">
-                            <i data-lucide="download" class="size-4"></i>
-                            Export
-                        </button>
-                    </div>
                 </header>
 
                 <!-- Class Overview Stats -->
@@ -664,6 +658,9 @@
 
             const enrolledContainer = document.getElementById('enrolled-students');
             const pendingContainer = document.getElementById('pending-students');
+            const pendingSection = document.querySelector('.students-section-pending');
+            const pendingDivider = document.querySelector('.students-section-divider');
+            const pendingEmpty = document.getElementById('pending-empty');
             enrolledContainer.innerHTML = '';
             pendingContainer.innerHTML = '';
 
@@ -673,6 +670,10 @@
             document.getElementById('enrolled-count').textContent = `(${enrolled.length})`;
             document.getElementById('pending-count').textContent = `(${pending.length})`;
             document.getElementById('student-count').textContent = enrolled.length;
+
+            if (pendingSection) pendingSection.classList.toggle('hidden', pending.length === 0);
+            if (pendingDivider) pendingDivider.classList.toggle('hidden', pending.length === 0);
+            if (pendingEmpty) pendingEmpty.classList.toggle('hidden', pending.length > 0);
 
             function capitalizeName(name) {
                 if (!name) return "";

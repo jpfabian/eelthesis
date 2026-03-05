@@ -28,7 +28,7 @@ function capitalizeFirst(s) {
 }
 
 router.post("/api/generate-exam", async (req, res) => {
-  const { subject, selectedTopics, questionTypes } = req.body;
+  const { subject, selectedTopics, questionTypes, tos_levels } = req.body;
 
   try {
     const client = requireGroq(res);
@@ -40,6 +40,25 @@ router.post("/api/generate-exam", async (req, res) => {
     const questionTypeDetails = questionTypes
       .map(q => `${q.type.replace("-", " ").toUpperCase()} – ${q.count} questions`)
       .join("\n");
+
+    const tosLevels = Array.isArray(tos_levels) ? tos_levels.map((v) => String(v || "").trim().toLowerCase()).filter(Boolean) : [];
+    const tosLabelMap = {
+      remembering: "Remembering",
+      understanding: "Understanding",
+      applying: "Applying",
+      analyzing: "Analyzing",
+      evaluating: "Evaluating",
+      creating: "Creating"
+    };
+    const tosLabels = tosLevels.map((v) => tosLabelMap[v]).filter(Boolean);
+    const tosInstruction = tosLabels.length > 0
+      ? `
+TOS requirement (Bloom's cognitive levels):
+- Include ONLY these cognitive levels: ${tosLabels.join(", ")}.
+- Distribute items as evenly as possible across the selected levels.
+- Vary item difficulty according to the selected levels.
+`
+      : "";
 
     // Helper to get count easily by type
     const getCount = type => {
@@ -110,6 +129,8 @@ ${topicsList}
 
 Include the following question types and quantities (only these):
 ${questionTypeDetails}
+
+${tosInstruction}
 
 Each question must:
 - Strictly match the given topic(s)

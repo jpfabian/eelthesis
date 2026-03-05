@@ -96,7 +96,7 @@
               <!-- Question Types with Count -->
               <div class="space-y-4">
                 <label class="form-label">Question Types & Quantity</label>
-                <div class="space-y-3">
+                <div class="grid grid-cols-2 gap-3">
                   <!-- Multiple Choice -->
                   <div class="exam-quantity-row" style="width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.75rem 1rem; background: rgba(99, 102, 241, 0.05); color: #6366f1; border: 1px solid #6366f1; border-radius: 0.5rem;">
                     <input type="checkbox" name="questionTypes" value="multiple-choice" class="form-checkbox"
@@ -152,6 +152,38 @@
                       <span class="text-sm text-muted-foreground">questions</span>
                     </div>
                   </div>
+                </div>
+              </div>
+
+              <!-- Table of Specification (TOS) -->
+              <div class="ai-tos-wrap">
+                <h4 class="ai-tos-title">Table of Specification (TOS) — Cognitive levels</h4>
+                <p class="ai-tos-hint">Check the levels to include; questions will be distributed evenly across selected levels.</p>
+                <div class="ai-tos-checkboxes" role="group" aria-label="Cognitive levels">
+                  <label class="ai-tos-cb-label">
+                    <input type="checkbox" name="exam-tos-level" class="ai-tos-cb" value="remembering">
+                    <span class="ai-tos-cb-text">Remembering</span>
+                  </label>
+                  <label class="ai-tos-cb-label">
+                    <input type="checkbox" name="exam-tos-level" class="ai-tos-cb" value="understanding">
+                    <span class="ai-tos-cb-text">Understanding</span>
+                  </label>
+                  <label class="ai-tos-cb-label">
+                    <input type="checkbox" name="exam-tos-level" class="ai-tos-cb" value="applying">
+                    <span class="ai-tos-cb-text">Applying</span>
+                  </label>
+                  <label class="ai-tos-cb-label">
+                    <input type="checkbox" name="exam-tos-level" class="ai-tos-cb" value="analyzing">
+                    <span class="ai-tos-cb-text">Analyzing</span>
+                  </label>
+                  <label class="ai-tos-cb-label">
+                    <input type="checkbox" name="exam-tos-level" class="ai-tos-cb" value="evaluating">
+                    <span class="ai-tos-cb-text">Evaluating</span>
+                  </label>
+                  <label class="ai-tos-cb-label">
+                    <input type="checkbox" name="exam-tos-level" class="ai-tos-cb" value="creating">
+                    <span class="ai-tos-cb-text">Creating</span>
+                  </label>
                 </div>
               </div>
 

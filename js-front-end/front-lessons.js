@@ -1,6 +1,10 @@
 // Lessons page UI (accordions + search) — theme-friendly
 
 let __eelLessonsSubject = null;
+const LESSONS_NOTIF_ITEMS_KEY = "eel_lessons_class_notifications_v1";
+const LESSONS_NOTIF_STATE_KEY = "eel_lessons_class_notifications_state_v1";
+let __lessonsNotifPollHandle = null;
+const LESSONS_USER_NAME_CACHE = {};
 
 document.addEventListener("DOMContentLoaded", async () => {
   try {
@@ -41,14 +45,18 @@ document.addEventListener("DOMContentLoaded", async () => {
       document.querySelectorAll(".student-only").forEach((btn) => btn.classList.remove("hidden"));
       if (tabQuizzes) tabQuizzes.classList.remove("hidden");
       if (quizSubtitle) quizSubtitle.textContent = "Quizzes from your teacher. Take them and view the leaderboard.";
-      loadLessonsAIQuizzesForStudent();
+      await loadLessonsAIQuizzesForStudent();
     } else {
       document.querySelectorAll(".student-only").forEach((el) => (el.style.display = "none"));
       if (tabQuizzes) tabQuizzes.classList.remove("hidden");
       if (quizSubtitle) quizSubtitle.textContent = "Quizzes you created. Set schedule and view leaderboard here.";
-      loadLessonsAIGeneratedList();
+      await loadLessonsAIGeneratedList();
     }
+    const initialView = new URLSearchParams(window.location.search).get("view");
+    if (initialView === "quizzes") switchLessonsView("quizzes");
 
+    await initLessonsClassNotifications(user);
+    initLessonsVocabularySearch();
     hideLoading();
   } catch (err) {
     console.error("Error initializing lessons page:", err);
@@ -590,6 +598,640 @@ function switchLessonsView(view) {
     }
   }
   if (window.lucide && typeof window.lucide.createIcons === "function") window.lucide.createIcons();
+}
+
+function readLessonsNotifStore(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    const parsed = raw ? JSON.parse(raw) : {};
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeLessonsNotifStore(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value || {}));
+  } catch {}
+}
+
+function renderLessonsVocabularyState(html) {
+  const resultEl = document.getElementById("mobileNavVocabResult");
+  if (!resultEl) return;
+  resultEl.innerHTML = html;
+}
+
+async function searchLessonsVocabulary(word) {
+  const q = String(word || "").trim().toLowerCase();
+  if (!q) {
+    renderLessonsVocabularyState("<p class=\"mobile-nav-vocab-empty\">Type a word to search its meaning.</p>");
+    return;
+  }
+  renderLessonsVocabularyState("<p class=\"mobile-nav-vocab-empty\">Searching...</p>");
+  try {
+    const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(q)}`);
+    if (!res.ok) throw new Error("Word not found");
+    const data = await res.json();
+    const entry = Array.isArray(data) ? data[0] : null;
+    if (!entry) throw new Error("Word not found");
+    const phonetic = entry.phonetic || (Array.isArray(entry.phonetics) ? (entry.phonetics.find((p) => p && p.text)?.text || "") : "");
+    const meanings = Array.isArray(entry.meanings) ? entry.meanings.slice(0, 4) : [];
+    if (meanings.length === 0) throw new Error("No meaning available");
+
+    const meaningsHtml = meanings.map((m) => {
+      const defs = Array.isArray(m.definitions) ? m.definitions.slice(0, 2) : [];
+      const topDef = defs[0] || {};
+      return (
+        `<div class="mobile-nav-vocab-entry">` +
+          `<div class="mobile-nav-vocab-pos">${escapeHtml(m.partOfSpeech || "meaning")}</div>` +
+          `<p class="mobile-nav-vocab-def">${escapeHtml(topDef.definition || "No definition available.")}</p>` +
+          (topDef.example ? `<p class="mobile-nav-vocab-example">"${escapeHtml(topDef.example)}"</p>` : "") +
+        `</div>`
+      );
+    }).join("");
+
+    renderLessonsVocabularyState(
+      `<div class="mobile-nav-vocab-word">${escapeHtml(entry.word || q)}</div>` +
+      (phonetic ? `<div class="mobile-nav-vocab-phonetic">${escapeHtml(phonetic)}</div>` : "") +
+      meaningsHtml
+    );
+  } catch (_) {
+    renderLessonsVocabularyState("<p class=\"mobile-nav-vocab-empty\">No result found. Try another word or check Oxford/Cambridge reference links above.</p>");
+  }
+}
+
+function initLessonsVocabularySearch() {
+  const vocabBtn = document.getElementById("mobileNavVocabBtn");
+  const vocabPanel = document.getElementById("mobileNavVocabPanel");
+  const notifPanel = document.getElementById("mobileNavNotificationPanel");
+  const notifBtn = document.getElementById("mobileNavNotificationBtn");
+  const form = document.getElementById("mobileNavVocabForm");
+  const input = document.getElementById("mobileNavVocabInput");
+  if (!vocabBtn || !vocabPanel || !form || !input) return;
+
+  vocabBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const willOpen = vocabPanel.classList.contains("hidden");
+    vocabPanel.classList.toggle("hidden", !willOpen);
+    vocabBtn.setAttribute("aria-expanded", willOpen ? "true" : "false");
+    if (willOpen) {
+      if (notifPanel) notifPanel.classList.add("hidden");
+      if (notifBtn) notifBtn.setAttribute("aria-expanded", "false");
+      input.focus();
+    }
+  });
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    await searchLessonsVocabulary(input.value);
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!vocabPanel.classList.contains("hidden") && !vocabPanel.contains(e.target) && !vocabBtn.contains(e.target)) {
+      vocabPanel.classList.add("hidden");
+      vocabBtn.setAttribute("aria-expanded", "false");
+    }
+  });
+}
+
+function buildLessonsNotificationUrl(type, classId) {
+  const encodedClassId = encodeURIComponent(String(classId || ""));
+  if (type === "quiz-open") return `lessons.html?class_id=${encodedClassId}&view=quizzes`;
+  if (type === "enroll") return `student-progress.html?class_id=${encodedClassId}`;
+  return "";
+}
+
+function getLessonsClassContext() {
+  const selectedClass = (() => {
+    try {
+      return JSON.parse(localStorage.getItem("eel_selected_class") || "null");
+    } catch {
+      return null;
+    }
+  })();
+  const classId = localStorage.getItem("eel_selected_class_id") || selectedClass?.id || selectedClass?.class_id || null;
+  const className = selectedClass?.name ? String(selectedClass.name) : "this class";
+  const subjectId = selectedClass?.subject_id != null ? Number(selectedClass.subject_id) : null;
+  return { classId: classId ? String(classId) : "", className, subjectId, selectedClass };
+}
+
+function getLessonsNotifItems(classId) {
+  if (!classId) return [];
+  const allItems = readLessonsNotifStore(LESSONS_NOTIF_ITEMS_KEY);
+  return Array.isArray(allItems[classId]) ? allItems[classId] : [];
+}
+
+function setLessonsNotifItems(classId, items) {
+  if (!classId) return;
+  const allItems = readLessonsNotifStore(LESSONS_NOTIF_ITEMS_KEY);
+  allItems[classId] = Array.isArray(items) ? items.slice(0, 40) : [];
+  writeLessonsNotifStore(LESSONS_NOTIF_ITEMS_KEY, allItems);
+}
+
+function markLessonsNotificationItemRead(classId, itemId) {
+  if (!classId || !itemId) return;
+  const items = getLessonsNotifItems(classId).map((item) =>
+    String(item.id) === String(itemId) ? { ...item, read: true } : item
+  );
+  setLessonsNotifItems(classId, items);
+}
+
+function deleteLessonsNotificationItem(classId, itemId) {
+  if (!classId || !itemId) return;
+  const items = getLessonsNotifItems(classId).filter((item) => String(item.id) !== String(itemId));
+  setLessonsNotifItems(classId, items);
+}
+
+function getLessonsNotifState(classId) {
+  if (!classId) return { initialized: false, knownStudentIds: [], seenOpenQuizIds: [], seenClosingQuizIds: [], seenClosedQuizIds: [] };
+  const allState = readLessonsNotifStore(LESSONS_NOTIF_STATE_KEY);
+  const value = allState[classId] || {};
+  return {
+    initialized: !!value.initialized,
+    knownStudentIds: Array.isArray(value.knownStudentIds) ? value.knownStudentIds.map((v) => String(v)) : [],
+    seenOpenQuizIds: Array.isArray(value.seenOpenQuizIds) ? value.seenOpenQuizIds.map((v) => String(v)) : [],
+    seenClosingQuizIds: Array.isArray(value.seenClosingQuizIds) ? value.seenClosingQuizIds.map((v) => String(v)) : [],
+    seenClosedQuizIds: Array.isArray(value.seenClosedQuizIds) ? value.seenClosedQuizIds.map((v) => String(v)) : [],
+  };
+}
+
+function setLessonsNotifState(classId, stateValue) {
+  if (!classId) return;
+  const allState = readLessonsNotifStore(LESSONS_NOTIF_STATE_KEY);
+  allState[classId] = {
+    initialized: !!stateValue?.initialized,
+    knownStudentIds: Array.isArray(stateValue?.knownStudentIds) ? stateValue.knownStudentIds.map((v) => String(v)) : [],
+    seenOpenQuizIds: Array.isArray(stateValue?.seenOpenQuizIds) ? stateValue.seenOpenQuizIds.map((v) => String(v)) : [],
+    seenClosingQuizIds: Array.isArray(stateValue?.seenClosingQuizIds) ? stateValue.seenClosingQuizIds.map((v) => String(v)) : [],
+    seenClosedQuizIds: Array.isArray(stateValue?.seenClosedQuizIds) ? stateValue.seenClosedQuizIds.map((v) => String(v)) : [],
+  };
+  writeLessonsNotifStore(LESSONS_NOTIF_STATE_KEY, allState);
+}
+
+function formatLessonsNotifTime(ts) {
+  if (!ts) return "";
+  try {
+    const date = new Date(ts);
+    const diffMs = Date.now() - date.getTime();
+    if (diffMs < 60 * 1000) return "just now";
+    const mins = Math.floor(diffMs / (60 * 1000));
+    if (mins < 60) return `${mins}m ago`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    if (days < 7) return `${days}d ago`;
+    return date.toLocaleString("en-PH", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  } catch {
+    return "";
+  }
+}
+
+function getLessonsNotificationInitials(name) {
+  const n = String(name || "").trim();
+  if (!n) return "?";
+  const parts = n.split(/\s+/).filter(Boolean);
+  return parts.slice(0, 2).map((p) => p[0]?.toUpperCase() || "").join("") || "?";
+}
+
+function inferLessonsActorName(item) {
+  const explicit = String(item?.actor_name || "").trim();
+  if (explicit) return explicit;
+  const message = String(item?.message || "").trim();
+  if (!message) return "";
+  const enrollMatch = message.match(/^(.+?)\s+(requested to join|enrolled in)\b/i);
+  if (enrollMatch && enrollMatch[1]) return String(enrollMatch[1]).trim();
+  if (/^Quiz is (now open|closing soon|closed):/i.test(message)) return "Teacher";
+  return "";
+}
+
+function getLessonsNotificationAvatarHtml(item) {
+  const name = inferLessonsActorName(item);
+  const avatarUrl = String(item?.actor_avatar_url || "").trim();
+  if (avatarUrl) {
+    return `<img class="mobile-nav-notification-avatar-img" src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(name || "Profile")}" />`;
+  }
+  return `<span class="mobile-nav-notification-avatar-initials" aria-hidden="true">${escapeHtml(getLessonsNotificationInitials(name || "Teacher"))}</span>`;
+}
+
+async function fetchLessonsUserName(userId) {
+  const key = String(userId || "").trim();
+  if (!key) return "";
+  if (LESSONS_USER_NAME_CACHE[key]) return LESSONS_USER_NAME_CACHE[key];
+  try {
+    const res = await fetch(`${window.API_BASE || ""}/api/users/me?user_id=${encodeURIComponent(key)}`);
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.success && data.user) {
+      const fullName = `${data.user.fname || ""} ${data.user.lname || ""}`.trim();
+      LESSONS_USER_NAME_CACHE[key] = fullName || "";
+      return LESSONS_USER_NAME_CACHE[key];
+    }
+  } catch {}
+  LESSONS_USER_NAME_CACHE[key] = "";
+  return "";
+}
+
+async function backfillLessonsQuizOpenActors(classId, quizList, role, user) {
+  const items = getLessonsNotifItems(classId);
+  if (!items.length) return;
+  const ownerByQuizId = new Map(
+    (Array.isArray(quizList) ? quizList : [])
+      .map((q) => [String(q?.quiz_id ?? ""), q?.user_id != null ? String(q.user_id) : ""])
+      .filter(([id]) => !!id)
+  );
+  let changed = false;
+  for (const item of items) {
+    const key = String(item?.eventKey || "");
+    if (!(key.startsWith("quiz-open:") || key.startsWith("quiz-closing:") || key.startsWith("quiz-closed:"))) continue;
+    const needsActor = !String(item.actor_name || "").trim() || String(item.actor_name).trim() === "Teacher";
+    if (!needsActor) continue;
+    const quizId = key.split(":")[1] || "";
+    if (!quizId) continue;
+    if (role === "teacher") {
+      const myName = `${user?.fname || ""} ${user?.lname || ""}`.trim();
+      if (myName) {
+        item.actor_name = myName;
+        item.actor_avatar_url = localStorage.getItem("eel_avatar_url") || item.actor_avatar_url || "";
+        changed = true;
+      }
+      continue;
+    }
+    const ownerId = ownerByQuizId.get(quizId);
+    if (!ownerId) continue;
+    const teacherName = await fetchLessonsUserName(ownerId);
+    if (teacherName) {
+      item.actor_name = teacherName;
+      changed = true;
+    }
+  }
+  if (changed) setLessonsNotifItems(classId, items);
+}
+
+function renderLessonsNotificationPanel(classId) {
+  const listEl = document.getElementById("mobileNavNotificationList");
+  const badgeEl = document.getElementById("mobileNavNotificationBadge");
+  const titleEl = document.getElementById("mobileNavNotificationTitle");
+  const btn = document.getElementById("mobileNavNotificationBtn");
+  if (!listEl || !badgeEl || !classId) return;
+  const items = getLessonsNotifItems(classId);
+  const unreadCount = items.filter((item) => !item.read).length;
+  if (unreadCount > 0) {
+    badgeEl.classList.remove("hidden");
+    badgeEl.textContent = unreadCount > 9 ? "9+" : String(unreadCount);
+  } else {
+    badgeEl.classList.add("hidden");
+    badgeEl.textContent = "0";
+  }
+  if (titleEl) {
+    titleEl.textContent = unreadCount > 0 ? `Notifications (${unreadCount})` : "Notifications";
+  }
+  if (btn) {
+    btn.setAttribute("aria-label", unreadCount > 0 ? `Open notifications (${unreadCount} unread)` : "Open notifications");
+  }
+  if (items.length === 0) {
+    listEl.innerHTML = "<p class=\"mobile-nav-notification-empty\">No notifications yet for this classroom.</p>";
+    listEl.style.maxHeight = "none";
+    listEl.style.overflowY = "hidden";
+    return;
+  }
+  listEl.innerHTML = items
+    .slice()
+    .reverse()
+    .map((item) => {
+      const unreadClass = item.read ? "" : " mobile-nav-notification-item--unread";
+      const targetUrl = resolveLessonsNotificationTarget(item, classId);
+      const targetAttr = targetUrl ? ` data-target-url="${escapeHtml(targetUrl)}"` : "";
+      const itemIdAttr = ` data-item-id="${escapeHtml(String(item.id || ""))}"`;
+      return (
+        `<div class="mobile-nav-notification-item${unreadClass}"${itemIdAttr}>` +
+          `<button type="button" class="mobile-nav-notification-main"${targetAttr}>` +
+            `<span class="mobile-nav-notification-avatar">${getLessonsNotificationAvatarHtml(item)}</span>` +
+            `<span class="mobile-nav-notification-content">` +
+              `<span class="mobile-nav-notification-item-title">${escapeHtml(item.message || "Notification")}</span>` +
+              `<span class="mobile-nav-notification-item-meta">${escapeHtml(formatLessonsNotifTime(item.ts))}</span>` +
+            `</span>` +
+          `</button>` +
+          `<button type="button" class="mobile-nav-notification-more" aria-label="More actions">⋮</button>` +
+          `<div class="mobile-nav-notification-actions hidden">` +
+            `<button type="button" class="mobile-nav-notification-action mobile-nav-notification-action--read">Mark as read</button>` +
+            `<button type="button" class="mobile-nav-notification-action mobile-nav-notification-action--delete">Delete</button>` +
+          `</div>` +
+        `</div>`
+      );
+    })
+    .join("");
+
+  const rows = Array.from(listEl.querySelectorAll(".mobile-nav-notification-item"));
+  if (rows.length > 5) {
+    const firstFiveHeight = rows.slice(0, 5).reduce((sum, row) => sum + row.offsetHeight, 0);
+    listEl.style.maxHeight = `${firstFiveHeight}px`;
+    listEl.style.overflowY = "auto";
+  } else {
+    listEl.style.maxHeight = "none";
+    listEl.style.overflowY = "hidden";
+  }
+}
+
+function resolveLessonsNotificationTarget(item, classId) {
+  if (item && item.targetUrl) return String(item.targetUrl);
+  const key = String(item?.eventKey || "");
+  if (key.startsWith("quiz-open:")) return buildLessonsNotificationUrl("quiz-open", classId);
+  if (key.startsWith("quiz-closing:")) return buildLessonsNotificationUrl("quiz-open", classId);
+  if (key.startsWith("quiz-closed:")) return buildLessonsNotificationUrl("quiz-open", classId);
+  if (key.startsWith("enroll:")) return buildLessonsNotificationUrl("enroll", classId);
+  return "";
+}
+
+function pushLessonsNotification(classId, message, eventKey, targetUrl, actorName, actorAvatarUrl) {
+  if (!classId || !message || !eventKey) return;
+  const items = getLessonsNotifItems(classId);
+  if (items.some((item) => item.eventKey === eventKey)) return;
+  items.push({
+    id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    message: String(message),
+    eventKey: String(eventKey),
+    targetUrl: targetUrl ? String(targetUrl) : "",
+    actor_name: actorName ? String(actorName) : "",
+    actor_avatar_url: actorAvatarUrl ? String(actorAvatarUrl) : "",
+    ts: new Date().toISOString(),
+    read: false,
+  });
+  setLessonsNotifItems(classId, items);
+}
+
+function markLessonsNotificationsRead(classId) {
+  if (!classId) return;
+  const items = getLessonsNotifItems(classId).map((item) => ({ ...item, read: true }));
+  setLessonsNotifItems(classId, items);
+}
+
+function getLessonQuizStatuses(quizzes) {
+  return (Array.isArray(quizzes) ? quizzes : [])
+    .map((quiz) => {
+      const id = quiz?.quiz_id != null ? String(quiz.quiz_id) : "";
+      if (!id) return null;
+      const start = quiz.unlock_time ? new Date(String(quiz.unlock_time).replace(" ", "T")).getTime() : NaN;
+      const end = quiz.lock_time ? new Date(String(quiz.lock_time).replace(" ", "T")).getTime() : NaN;
+      return {
+        id,
+        title: quiz.title ? String(quiz.title) : "Quiz",
+        opened_by_user_id: quiz.user_id != null ? String(quiz.user_id) : "",
+        start_ms: start,
+        end_ms: end,
+      };
+    })
+    .filter(Boolean);
+}
+
+async function fetchLessonsQuizListForNotifications(user, classInfo) {
+  const classId = classInfo.classId;
+  const subjectId = classInfo.subjectId;
+  if (!classId) return [];
+  if (String(user?.role || "").toLowerCase() === "teacher") {
+    const params = new URLSearchParams({ user_id: String(user.user_id) });
+    if (Number.isFinite(subjectId)) params.set("subject_id", String(subjectId));
+    params.set("class_id", classId);
+    const res = await fetch(`${window.API_BASE || ""}/api/teacher/reading-quizzes?${params.toString()}`);
+    if (!res.ok) throw new Error("Failed to load teacher quizzes");
+    return await res.json();
+  }
+  if (!Number.isFinite(subjectId)) return [];
+  const res = await fetch(`${window.API_BASE || ""}/api/teacher/reading-quizzes?subject_id=${encodeURIComponent(subjectId)}&class_id=${encodeURIComponent(classId)}`);
+  if (!res.ok) throw new Error("Failed to load student quizzes");
+  return await res.json();
+}
+
+async function pollLessonsNotifications(user) {
+  const role = String(user?.role || "").toLowerCase();
+  if (!user || !["teacher", "student"].includes(role)) return;
+  const classInfo = getLessonsClassContext();
+  if (!classInfo.classId) return;
+  const state = getLessonsNotifState(classInfo.classId);
+  let nextState = { ...state };
+  const quizList = await fetchLessonsQuizListForNotifications(user, classInfo);
+  await backfillLessonsQuizOpenActors(classInfo.classId, quizList, role, user);
+  const quizStatuses = getLessonQuizStatuses(quizList);
+  const now = Date.now();
+  const THIRTY_MIN_MS = 30 * 60 * 1000;
+  const openQuizzes = quizStatuses.filter((q) => Number.isFinite(q.start_ms) && Number.isFinite(q.end_ms) && now >= q.start_ms && now <= q.end_ms);
+  const closingQuizzes = openQuizzes.filter((q) => q.end_ms - now <= THIRTY_MIN_MS);
+  const closedQuizzes = quizStatuses.filter((q) => Number.isFinite(q.end_ms) && now > q.end_ms);
+  const openQuizIds = openQuizzes.map((q) => q.id);
+  const closingQuizIds = closingQuizzes.map((q) => q.id);
+  const closedQuizIds = closedQuizzes.map((q) => q.id);
+  const seenSet = new Set((nextState.seenOpenQuizIds || []).map((v) => String(v)));
+  const seenClosingSet = new Set((nextState.seenClosingQuizIds || []).map((v) => String(v)));
+  const seenClosedSet = new Set((nextState.seenClosedQuizIds || []).map((v) => String(v)));
+
+  // First visit to a class still gets open-quiz reminders, then marks them as seen.
+  for (const quiz of openQuizzes) {
+    const key = `quiz-open:${quiz.id}`;
+    if (!seenSet.has(quiz.id)) {
+      let actorName = "";
+      let actorAvatarUrl = "";
+      if (role === "teacher") {
+        actorName = `${user?.fname || ""} ${user?.lname || ""}`.trim() || "You";
+        actorAvatarUrl = localStorage.getItem("eel_avatar_url") || "";
+      } else if (quiz.opened_by_user_id) {
+        actorName = await fetchLessonsUserName(quiz.opened_by_user_id);
+      }
+      pushLessonsNotification(
+        classInfo.classId,
+        `Quiz is now open: ${quiz.title}`,
+        key,
+        buildLessonsNotificationUrl("quiz-open", classInfo.classId),
+        actorName || "Teacher",
+        actorAvatarUrl
+      );
+      seenSet.add(quiz.id);
+    }
+  }
+  for (const quiz of closingQuizzes) {
+    const key = `quiz-closing:${quiz.id}`;
+    if (!seenClosingSet.has(quiz.id)) {
+      let actorName = "";
+      let actorAvatarUrl = "";
+      if (role === "teacher") {
+        actorName = `${user?.fname || ""} ${user?.lname || ""}`.trim() || "You";
+        actorAvatarUrl = localStorage.getItem("eel_avatar_url") || "";
+      } else if (quiz.opened_by_user_id) {
+        actorName = await fetchLessonsUserName(quiz.opened_by_user_id);
+      }
+      pushLessonsNotification(
+        classInfo.classId,
+        `Quiz is closing soon: ${quiz.title}`,
+        key,
+        buildLessonsNotificationUrl("quiz-open", classInfo.classId),
+        actorName || "Teacher",
+        actorAvatarUrl
+      );
+      seenClosingSet.add(quiz.id);
+    }
+  }
+  for (const quiz of closedQuizzes) {
+    const key = `quiz-closed:${quiz.id}`;
+    if (!seenClosedSet.has(quiz.id)) {
+      let actorName = "";
+      let actorAvatarUrl = "";
+      if (role === "teacher") {
+        actorName = `${user?.fname || ""} ${user?.lname || ""}`.trim() || "You";
+        actorAvatarUrl = localStorage.getItem("eel_avatar_url") || "";
+      } else if (quiz.opened_by_user_id) {
+        actorName = await fetchLessonsUserName(quiz.opened_by_user_id);
+      }
+      pushLessonsNotification(
+        classInfo.classId,
+        `Quiz is closed: ${quiz.title}`,
+        key,
+        buildLessonsNotificationUrl("quiz-open", classInfo.classId),
+        actorName || "Teacher",
+        actorAvatarUrl
+      );
+      seenClosedSet.add(quiz.id);
+    }
+  }
+  nextState.seenOpenQuizIds = Array.from(new Set([...Array.from(seenSet), ...openQuizIds])).slice(-200);
+  nextState.seenClosingQuizIds = Array.from(new Set([...Array.from(seenClosingSet), ...closingQuizIds])).slice(-200);
+  nextState.seenClosedQuizIds = Array.from(new Set([...Array.from(seenClosedSet), ...closedQuizIds])).slice(-200);
+
+  if (role === "teacher") {
+    try {
+      // Includes pending + accepted students so teachers get join/enroll updates.
+      const res = await fetch(`${window.API_BASE || ""}/api/class/${encodeURIComponent(classInfo.classId)}/students`);
+      if (res.ok) {
+        const data = await res.json();
+        const students = Array.isArray(data) ? data : [];
+        const currentEnrollIds = students
+          .map((s) => (s?.id != null ? String(s.id) : ""))
+          .filter(Boolean);
+        currentEnrollIds.sort();
+        const knownIds = Array.isArray(nextState.knownStudentIds) ? nextState.knownStudentIds : [];
+        if (knownIds.length > 0) {
+          const knownSet = new Set(knownIds);
+          students
+            .filter((s) => {
+              const enrollId = s?.id != null ? String(s.id) : "";
+              return enrollId && !knownSet.has(enrollId);
+            })
+            .forEach((s) => {
+              const enrollId = String(s.id);
+              const fullName = `${s?.student_fname || ""} ${s?.student_lname || ""}`.trim() || "A student";
+              const status = String(s?.status || "").toLowerCase();
+              const msg = status === "pending"
+                ? `${fullName} requested to join ${classInfo.className}.`
+                : `${fullName} enrolled in ${classInfo.className}.`;
+              pushLessonsNotification(
+                classInfo.classId,
+                msg,
+                `enroll:${enrollId}:${status || "unknown"}`,
+                buildLessonsNotificationUrl("enroll", classInfo.classId),
+                fullName
+              );
+            });
+        }
+        nextState.knownStudentIds = currentEnrollIds.slice(-500);
+      }
+    } catch {
+      // Keep notifications resilient even if student-list endpoint is unavailable.
+    }
+  }
+
+  nextState.initialized = true;
+  setLessonsNotifState(classInfo.classId, nextState);
+  renderLessonsNotificationPanel(classInfo.classId);
+}
+
+async function initLessonsClassNotifications(user) {
+  const classInfo = getLessonsClassContext();
+  if (!classInfo.classId) return;
+  const btn = document.getElementById("mobileNavNotificationBtn");
+  const panel = document.getElementById("mobileNavNotificationPanel");
+  const vocabBtn = document.getElementById("mobileNavVocabBtn");
+  const vocabPanel = document.getElementById("mobileNavVocabPanel");
+  const markAllBtn = document.getElementById("mobileNavNotificationMarkAll");
+  if (!btn || !panel || !markAllBtn) return;
+
+  renderLessonsNotificationPanel(classInfo.classId);
+
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const isHidden = panel.classList.contains("hidden");
+    panel.classList.toggle("hidden", !isHidden);
+    btn.setAttribute("aria-expanded", isHidden ? "true" : "false");
+    if (isHidden && vocabPanel) {
+      vocabPanel.classList.add("hidden");
+      if (vocabBtn) vocabBtn.setAttribute("aria-expanded", "false");
+    }
+    if (isHidden) {
+      markLessonsNotificationsRead(classInfo.classId);
+      renderLessonsNotificationPanel(classInfo.classId);
+    }
+  });
+  markAllBtn.addEventListener("click", () => {
+    markLessonsNotificationsRead(classInfo.classId);
+    renderLessonsNotificationPanel(classInfo.classId);
+  });
+  document.addEventListener("click", (e) => {
+    if (!panel.classList.contains("hidden") && !panel.contains(e.target) && !btn.contains(e.target)) {
+      panel.classList.add("hidden");
+      btn.setAttribute("aria-expanded", "false");
+    }
+  });
+  const listEl = document.getElementById("mobileNavNotificationList");
+  if (listEl && !listEl.__lessonsNotifClickBound) {
+    listEl.__lessonsNotifClickBound = true;
+    listEl.addEventListener("click", (e) => {
+      const row = e.target && e.target.closest ? e.target.closest(".mobile-nav-notification-item") : null;
+      if (!row) return;
+      const itemId = row.getAttribute("data-item-id");
+      const moreBtn = e.target.closest(".mobile-nav-notification-more");
+      const readBtn = e.target.closest(".mobile-nav-notification-action--read");
+      const deleteBtn = e.target.closest(".mobile-nav-notification-action--delete");
+      const mainBtn = e.target.closest(".mobile-nav-notification-main");
+
+      if (moreBtn) {
+        e.stopPropagation();
+        const willOpen = !!row.querySelector(".mobile-nav-notification-actions.hidden");
+        listEl.querySelectorAll(".mobile-nav-notification-actions").forEach((menu) => menu.classList.add("hidden"));
+        listEl.querySelectorAll(".mobile-nav-notification-item--menu-open").forEach((r) => r.classList.remove("mobile-nav-notification-item--menu-open"));
+        const menu = row.querySelector(".mobile-nav-notification-actions");
+        if (menu && willOpen) {
+          menu.classList.remove("hidden");
+          row.classList.add("mobile-nav-notification-item--menu-open");
+        }
+        return;
+      }
+      if (readBtn) {
+        e.stopPropagation();
+        markLessonsNotificationItemRead(classInfo.classId, itemId);
+        renderLessonsNotificationPanel(classInfo.classId);
+        return;
+      }
+      if (deleteBtn) {
+        e.stopPropagation();
+        deleteLessonsNotificationItem(classInfo.classId, itemId);
+        renderLessonsNotificationPanel(classInfo.classId);
+        return;
+      }
+      if (mainBtn) {
+        const url = mainBtn.getAttribute("data-target-url");
+        markLessonsNotificationItemRead(classInfo.classId, itemId);
+        renderLessonsNotificationPanel(classInfo.classId);
+        if (url) window.location.href = url;
+      }
+    });
+  }
+
+  try {
+    await pollLessonsNotifications(user);
+  } catch {}
+  if (__lessonsNotifPollHandle) clearInterval(__lessonsNotifPollHandle);
+  __lessonsNotifPollHandle = setInterval(() => {
+    pollLessonsNotifications(user).catch(() => {});
+  }, 30000);
+  window.addEventListener("beforeunload", () => {
+    if (__lessonsNotifPollHandle) clearInterval(__lessonsNotifPollHandle);
+  });
 }
 
 // ========== AI Quiz list (Lessons page) — schedule, lock, leaderboard ==========

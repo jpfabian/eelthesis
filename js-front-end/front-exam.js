@@ -169,6 +169,11 @@ function getSelectedTopics() {
   return Array.from(checkboxes).map(cb => cb.nextSibling.textContent.trim());
 }
 
+function getTOSSelectedLevelsExam() {
+  const nodes = document.querySelectorAll('input[name="exam-tos-level"].ai-tos-cb:checked');
+  return Array.from(nodes).map((el) => String(el.value || "").trim()).filter(Boolean);
+}
+
 // Toggle Topic/Text input
 const methodRadios = document.querySelectorAll('input[name="method"]');
 const topicInput = document.getElementById('topic-input');
@@ -220,6 +225,7 @@ function setupExamGenerator() {
 
     const method = methodInput.value;
     const selectedTopics = getSelectedTopics();
+    const tosLevels = getTOSSelectedLevelsExam();
     const textArea = textInputDiv?.querySelector("textarea");
     const text = textArea ? textArea.value.trim() : "";
 
@@ -276,6 +282,7 @@ function setupExamGenerator() {
       content: method === "topic" ? selectedTopics.join(", ") : text,
       questionTypes,
     };
+    if (tosLevels.length > 0) bodyData.tos_levels = tosLevels;
 
     try {
       const res = await fetch((window.API_BASE || "") + "/api/generate-exam", {
