@@ -48,7 +48,7 @@ function buildAccountStatusEmail({ name, status, reason }) {
   const title =
     safeStatus === "pending" ? "Account Pending Verification" :
     safeStatus === "approved" ? "Account Approved" :
-    safeStatus === "rejected" ? "Account Rejected" :
+    safeStatus === "rejected" ? "Account Declined" :
     safeStatus === "deactivated" ? "Account Deactivated" :
     safeStatus === "activated" ? "Account Reactivated" :
     "Account Update";
@@ -56,7 +56,7 @@ function buildAccountStatusEmail({ name, status, reason }) {
   const message =
     safeStatus === "pending" ? "Your account was created successfully and is now pending admin verification." :
     safeStatus === "approved" ? "Good news! Your account has been approved. You can now log in." :
-    safeStatus === "rejected" ? "Your account was rejected by the admin." :
+    safeStatus === "rejected" ? "Your account was declined by the admin." :
     safeStatus === "deactivated" ? "Your account was deactivated by the admin. You will not be able to log in." :
     safeStatus === "activated" ? "Your account has been reactivated. You can log in again." :
     "Your account status was updated.";

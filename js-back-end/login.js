@@ -77,8 +77,8 @@ router.post("/api/auth/login", async (req, res) => {
         return res.status(403).json({
           success: false,
           error: user.rejected_reason
-            ? `Your account was rejected: ${user.rejected_reason}`
-            : "Your account was rejected by admin."
+            ? `Your account was declined: ${user.rejected_reason}`
+            : "Your account was declined by admin."
         });
       }
     }

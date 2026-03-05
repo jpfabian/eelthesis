@@ -4390,6 +4390,52 @@ body.student-progress-page #main-content .card:hover {
     0 28px 70px -62px color-mix(in srgb, var(--secondary) 24%, transparent);
 }
 
+body.student-progress-page #main-content .stat-action-card {
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+}
+
+body.student-progress-page #main-content .stat-action-card .card-content {
+  position: relative;
+}
+
+body.student-progress-page #main-content .stat-action-card .stat-action-hint {
+  margin-top: 0.7rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: color-mix(in srgb, var(--primary) 68%, var(--muted-foreground));
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 9999px;
+  border: 1px solid color-mix(in srgb, var(--primary) 28%, var(--border));
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+}
+
+body.student-progress-page #main-content .stat-action-card:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--primary) 40%, var(--border));
+}
+
+body.student-progress-page #main-content .stat-action-card:hover .stat-action-hint i {
+  transform: translateX(2px);
+}
+
+body.student-progress-page #main-content .stat-action-card .stat-action-hint i {
+  transition: transform 0.16s ease;
+}
+
+body.student-progress-page #main-content .stat-action-card:active {
+  transform: translateY(0);
+}
+
+body.student-progress-page #main-content .stat-action-card:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--primary) 42%, transparent);
+  outline-offset: 2px;
+}
+
 @media (max-width: 768px) {
   #lesson-modal .modal-card {
     width: 98vw !important;
@@ -8912,6 +8958,16 @@ body.auth-page .login-screen .btn.btn-primary:hover {
   max-width: 100%;
 }
 
+#avg-score-chart-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+#avg-score-chart-groups .scores-chart-wrap {
+  min-height: 160px;
+}
+
 .scores-view-toggle {
   display: flex;
   align-items: center;
@@ -9019,6 +9075,25 @@ body.auth-page .login-screen .btn.btn-primary:hover {
 
 .scores-table-block {
   overflow: hidden;
+}
+
+.scores-subtable-group + .scores-subtable-group {
+  margin-top: 1rem;
+}
+
+.scores-subtable-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.6rem;
+}
+
+.scores-subtable-title {
+  font-size: 0.875rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--foreground);
 }
 
 .scores-table-scroll {

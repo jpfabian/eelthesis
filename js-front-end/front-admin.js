@@ -226,6 +226,7 @@ function buildAdminUserRow(u, isStudent) {
   const created = formatDateTime(u.created_at);
   const status = String(u.verification_status || "").toLowerCase();
   const statusLabel = status || "pending";
+  const statusText = statusLabel === "rejected" ? "declined" : statusLabel;
   const isActive = Number(u.is_active ?? 1) === 1;
   const statusColor =
     statusLabel === "approved" ? "bg-secondary/10 text-secondary" :
@@ -260,14 +261,14 @@ function buildAdminUserRow(u, isStudent) {
       <td class="text-muted-foreground">${escapeHtml(maskEmailForDisplay(u.email))}</td>
       ${sectionStrandCells}
       <td class="admin-dashboard-status-cell">
-        <span class="admin-dashboard-status-pill px-2 py-1 text-xs rounded capitalize ${statusColor}" title="${escapeHtml(u.rejected_reason || "")}">${escapeHtml(statusLabel)}</span>
+        <span class="admin-dashboard-status-pill px-2 py-1 text-xs rounded capitalize ${statusColor}" title="${escapeHtml(u.rejected_reason || "")}">${escapeHtml(statusText)}</span>
         ${activeBadge ? `<span class="admin-dashboard-status-badge">${activeBadge}</span>` : ""}
       </td>
       <td class="text-muted-foreground">${escapeHtml(created)}</td>
       <td style="text-align:right;">
         <div class="admin-actions">
           ${showApprove ? `<button class="btn btn-primary btn-sm" onclick="window.__adminApprove(${u.user_id})"><i data-lucide="check" class="size-4"></i> Approve</button>` : `<span class="text-xs text-muted-foreground" style="padding:0.4rem 0.6rem; border:1px solid var(--border); border-radius:9999px;">Approved</span>`}
-          ${showReject ? `<button class="btn btn-outline btn-sm" onclick="window.__adminReject(${u.user_id})"><i data-lucide="x" class="size-4"></i> Reject</button>` : ""}
+          ${showReject ? `<button class="btn btn-outline btn-sm" onclick="window.__adminReject(${u.user_id})"><i data-lucide="x" class="size-4"></i> Decline</button>` : ""}
           ${showDeactivate ? `<button class="btn btn-destructive btn-sm" onclick="window.__adminDeactivate(${u.user_id})"><i data-lucide="ban" class="size-4"></i> Deactivate</button>` : ""}
           ${showActivate ? `<button class="btn btn-primary btn-sm" onclick="window.__adminActivate(${u.user_id})"><i data-lucide="power" class="size-4"></i> Activate</button>` : ""}
         </div>
@@ -453,22 +454,22 @@ async function initAdminDashboardPage() {
     const name = `${u?.fname || ""} ${u?.lname || ""}`.trim() || `User #${id}`;
     const result = await Swal.fire({
       icon: "warning",
-      title: "Reject account?",
+      title: "Decline account?",
       text: name,
       input: "text",
       inputLabel: "Reason (optional)",
       inputPlaceholder: "e.g. Duplicate account / invalid details",
       showCancelButton: true,
-      confirmButtonText: "Reject",
+      confirmButtonText: "Decline",
       confirmButtonColor: "#ef4444",
     });
     if (!result.isConfirmed) return;
     try {
       await rejectUser(id, result.value || "");
       await refresh();
-      Swal.fire({ icon: "success", title: "Rejected", text: `${name} was rejected.` });
+      Swal.fire({ icon: "success", title: "Declined", text: `${name} was declined.` });
     } catch (err) {
-      Swal.fire({ icon: "error", title: "Failed", text: err?.message || "Reject failed" });
+      Swal.fire({ icon: "error", title: "Failed", text: err?.message || "Decline failed" });
     }
   };
 

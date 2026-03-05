@@ -65,7 +65,7 @@
 
                 <!-- Class Overview Stats -->
                 <div class="grid grid-cols-3 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div id="total-students-card" class="card bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20 cursor-pointer hover:shadow-lg transition">
+                    <div id="total-students-card" class="card stat-action-card bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20 cursor-pointer hover:shadow-lg transition" role="button" tabindex="0" aria-label="Open students list">
                         <div class="card-content p-6">
                             <div class="flex items-center justify-between mb-2">
                                 <h3 class="text-sm font-medium">Total Students</h3>
@@ -73,10 +73,11 @@
                             </div>
                             <div class="text-2xl font-bold text-primary" id="student-count">0</div>
                             <p class="text-xs text-muted-foreground">Students Enrolled</p>
+                            <p class="stat-action-hint"><span>Tap to open</span><i data-lucide="chevron-right" class="size-4" aria-hidden="true"></i></p>
                         </div>
                     </div>
 
-                    <div id="average-score-card" class="card bg-gradient-to-br from-secondary/5 to-secondary/10 border-secondary/20 cursor-pointer hover:shadow-lg transition">
+                    <div id="average-score-card" class="card stat-action-card bg-gradient-to-br from-secondary/5 to-secondary/10 border-secondary/20 cursor-pointer hover:shadow-lg transition" role="button" tabindex="0" aria-label="Open average score details">
                         <div class="card-content p-6">
                             <div class="flex items-center justify-between mb-2">
                                 <h3 class="text-sm font-medium">Average Score</h3>
@@ -84,10 +85,11 @@
                             </div>
                             <div class="text-2xl font-bold text-secondary" id="avg-score-value">—</div>
                             <p class="text-xs text-muted-foreground" id="avg-score-sub">Average score across reading and pronunciation</p>
+                            <p class="stat-action-hint"><span>Tap to open</span><i data-lucide="chevron-right" class="size-4" aria-hidden="true"></i></p>
                         </div>
                     </div>
 
-                    <div id="completion-rate-card" class="card bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20 cursor-pointer hover:shadow-lg transition">
+                    <div id="completion-rate-card" class="card stat-action-card bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20 cursor-pointer hover:shadow-lg transition" role="button" tabindex="0" aria-label="Open completion details">
                         <div class="card-content p-6">
                             <div class="flex items-center justify-between mb-2">
                                 <h3 class="text-sm font-medium">Quiz Completion Rate</h3>
@@ -95,6 +97,7 @@
                             </div>
                             <div class="text-2xl font-bold text-primary" id="completion-rate-value">—</div>
                             <p class="text-xs text-muted-foreground" id="completion-rate-sub">Quizzes completed</p>
+                            <p class="stat-action-hint"><span>Tap to open</span><i data-lucide="chevron-right" class="size-4" aria-hidden="true"></i></p>
                         </div>
                     </div>
                 </div>
@@ -156,16 +159,8 @@
                         </header>
 
                         <div class="scores-section-body">
-                            <section class="scores-chart-block" aria-labelledby="scores-chart-title">
-                                <h3 id="scores-chart-title" class="scores-chart-title">Student Average</h3>
-                                <p class="scores-chart-desc">Overall Percentage per Student</p>
-                                <div class="scores-chart-wrap">
-                                    <canvas id="avg-score-chart" height="180"></canvas>
-                                </div>
-                            </section>
-
                             <div class="scores-view-toggle" role="tablist" aria-label="Choose view">
-                                <button type="button" class="scores-view-btn scores-view-btn--summary is-active" id="scores-show-summary" role="tab" aria-selected="true" aria-controls="scores-summary-block">
+                                <button type="button" class="scores-view-btn scores-view-btn--summary is-active" id="scores-show-summary" role="tab" aria-selected="true" aria-controls="scores-chart-block">
                                     <i data-lucide="list" class="scores-view-btn-icon"></i>
                                     Summary
                                 </button>
@@ -175,19 +170,15 @@
                                 </button>
                             </div>
 
-                            <section class="scores-summary-block" id="scores-summary-block" aria-labelledby="scores-summary-title" role="tabpanel">
-                                <h3 id="scores-summary-title" class="scores-summary-title">Summary</h3>
-                                <div id="average-score-list" class="scores-summary-list"></div>
+                            <section class="scores-chart-block" id="scores-chart-block" aria-labelledby="scores-chart-title" role="tabpanel">
+                                <h3 id="scores-chart-title" class="scores-chart-title">Student Average</h3>
+                                <p class="scores-chart-desc">Separated by AI, Reading, and Pronunciation</p>
+                                <div id="avg-score-chart-groups"></div>
                             </section>
 
                             <section class="scores-table-block scores-section-panel-hidden" id="scores-table-block" aria-labelledby="scores-table-title" role="tabpanel">
                                 <h3 id="scores-table-title" class="scores-table-title">Assessment Scores</h3>
-                                <div class="scores-table-scroll table-scroll">
-                                    <table class="scores-table" id="scores-data-table">
-                                        <thead id="average-table-head"></thead>
-                                        <tbody id="average-table-body"></tbody>
-                                    </table>
-                                </div>
+                                <div id="scores-breakdown-groups"></div>
                             </section>
                         </div>
                     </div>
@@ -281,6 +272,20 @@
 
             const totalStudentsCard = document.getElementById('total-students-card');
             const studentsSection = document.getElementById('students-section');
+            const overviewCards = [
+                document.getElementById('total-students-card'),
+                document.getElementById('average-score-card'),
+                document.getElementById('completion-rate-card')
+            ].filter(Boolean);
+
+            overviewCards.forEach((card) => {
+                card.addEventListener('keydown', (event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        card.click();
+                    }
+                });
+            });
 
             totalStudentsCard?.addEventListener('click', () => {
                 toggleSection(studentsSection, () => loadStudents(classId));
@@ -288,8 +293,8 @@
 
             const avgScoreCard = document.getElementById('average-score-card');
             const scoresSection = document.getElementById('scores-section');
-            const avgList = document.getElementById('average-score-list');
-            const tableBody = document.getElementById('average-table-body');
+            const avgChartGroups = document.getElementById('avg-score-chart-groups');
+            const breakdownGroups = document.getElementById('scores-breakdown-groups');
 
             const completionCard = document.getElementById('completion-rate-card');
             const completionSection = document.getElementById('completion-section');
@@ -297,8 +302,8 @@
             avgScoreCard?.addEventListener('click', async () => {
                 toggleSection(scoresSection, async () => {
                     if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
-                    avgList.innerHTML = `<p class="scores-section-message">Loading...</p>`;
-                    tableBody.innerHTML = `<tr><td colspan="99" class="scores-section-message">Loading...</td></tr>`;
+                    if (avgChartGroups) avgChartGroups.innerHTML = `<p class="scores-section-message">Loading...</p>`;
+                    if (breakdownGroups) breakdownGroups.innerHTML = `<p class="scores-section-message">Loading...</p>`;
 
                     try {
                         const res = await fetch(`${API_BASE}/class/${classId}/average-scores`);
@@ -312,59 +317,214 @@
                         if (avgEl) avgEl.textContent = overallAvg == null ? '0%' : `${Math.round(overallAvg)}%`;
 
                         if (!data.length) {
-                            avgList.innerHTML = `<p class="scores-section-message">No quiz records found.</p>`;
-                            tableBody.innerHTML = `<tr><td colspan="99" class="scores-section-message">No quiz data found</td></tr>`;
+                            if (avgChartGroups) avgChartGroups.innerHTML = `<p class="scores-section-message">No quiz records found.</p>`;
+                            if (breakdownGroups) breakdownGroups.innerHTML = `<p class="scores-section-message">No quiz data found</p>`;
                             return;
                         }
 
-                        avgList.innerHTML = data.map(s => `
-                            <div class="scores-summary-item">
-                                <div>
-                                    <div class="scores-summary-item-name">${s.student_fname} ${s.student_lname}</div>
-                                    <div class="scores-summary-item-detail">Reading: ${s.reading_avg ?? 0}% · Pronunciation: ${s.pronunciation_avg ?? 0}%</div>
-                                </div>
-                                <span class="scores-summary-item-value">${s.overall_avg ?? 0}%</span>
-                            </div>
-                        `).join('');
+                        const formatPoints = (value) => {
+                            const n = Number(value);
+                            if (!Number.isFinite(n)) return '';
+                            return Number.isInteger(n) ? String(n) : n.toFixed(1).replace(/\.0$/, '');
+                        };
+                        const toScoreFraction = (quiz) => {
+                            if (!quiz) return '—';
+                            const displayScore = Number(quiz.display_score);
+                            const displayTotal = Number(quiz.display_total);
+                            if (Number.isFinite(displayScore) && Number.isFinite(displayTotal) && displayTotal > 0) {
+                                return `${formatPoints(displayScore)}/${formatPoints(displayTotal)}`;
+                            }
+                            const raw = Number(quiz.raw_score);
+                            const total = Number(quiz.total_points);
+                            if (Number.isFinite(raw) && Number.isFinite(total) && total > 0) {
+                                return `${formatPoints(raw)}/${formatPoints(total)}`;
+                            }
+                            if (quiz.score != null && quiz.score !== '') {
+                                return `${formatPoints(quiz.score)}/100`;
+                            }
+                            return '—';
+                        };
+                        const groups = [
+                            { key: 'ai', title: 'AI Quiz Generated Results', empty: 'No AI-generated quiz records yet.' },
+                            { key: 'reading', title: 'Reading Quiz Result Data', empty: 'No reading quiz records yet.' },
+                            { key: 'pronunciation', title: 'Pronunciation Quiz Result Data', empty: 'No pronunciation quiz records yet.' }
+                        ];
 
-                        const allQuizNames = Array.from(new Set(data.flatMap(s => s.quizzes.map(q => q.quiz_name))));
-                        document.getElementById("average-table-head").innerHTML = `
-                            <tr>
-                                <th>Student Name</th>
-                                ${allQuizNames.map(q => `<th>${q}</th>`).join('')}
-                                <th>Total</th>
-                            </tr>
-                        `;
+                        function getQuizNamesByType(typeKey) {
+                            const orderMap = new Map();
+                            data.forEach((s) => {
+                                (s.quizzes || [])
+                                    .filter(q => String(q.source_type || '').toLowerCase() === typeKey)
+                                    .forEach((q) => {
+                                        const name = String(q.quiz_name || '').trim();
+                                        if (!name) return;
+                                        const order = Number(q.quiz_order);
+                                        const safeOrder = Number.isFinite(order) ? order : Number.MAX_SAFE_INTEGER;
+                                        const prev = orderMap.get(name);
+                                        if (!prev || safeOrder < prev.order) {
+                                            orderMap.set(name, { name, order: safeOrder });
+                                        }
+                                    });
+                            });
+                            return Array.from(orderMap.values())
+                                .sort((a, b) => (a.order - b.order) || a.name.localeCompare(b.name))
+                                .map((item) => item.name);
+                        }
 
-                        tableBody.innerHTML = data.map(s => {
-                            const scores = allQuizNames.map(qName => {
-                                const q = s.quizzes.find(quiz => quiz.quiz_name === qName);
-                                return `<td>${q ? q.score : '—'}</td>`;
+                        function exportBreakdownByType(typeKey, title) {
+                            const quizNames = getQuizNamesByType(typeKey);
+                            if (!quizNames.length) {
+                                showNotification('No data to export for this table.', 'warning');
+                                return;
+                            }
+
+                            const rows = [];
+                            rows.push([title]);
+                            rows.push(['Student Name', ...quizNames, 'Total']);
+
+                            data.forEach((s) => {
+                                let totalScore = 0;
+                                let totalPossible = 0;
+                                const scoreCells = quizNames.map((qName) => {
+                                    const q = (s.quizzes || []).find((quiz) =>
+                                        String(quiz.source_type || '').toLowerCase() === typeKey &&
+                                        quiz.quiz_name === qName
+                                    );
+                                    const shownScore = Number(q?.display_score);
+                                    const shownTotal = Number(q?.display_total);
+                                    const fallbackScore = Number(q?.raw_score);
+                                    const fallbackTotal = Number(q?.total_points);
+                                    const usedScore = Number.isFinite(shownScore) ? shownScore : fallbackScore;
+                                    const usedTotal = Number.isFinite(shownTotal) ? shownTotal : fallbackTotal;
+                                    if (Number.isFinite(usedScore) && Number.isFinite(usedTotal) && usedTotal > 0) {
+                                        totalScore += usedScore;
+                                        totalPossible += usedTotal;
+                                    }
+                                    return toScoreFraction(q);
+                                });
+
+                                const totalDisplay = totalPossible > 0
+                                    ? `${formatPoints(totalScore)}/${formatPoints(totalPossible)}`
+                                    : '—';
+                                rows.push([`${s.student_lname}, ${s.student_fname}`, ...scoreCells, totalDisplay]);
+                            });
+
+                            const csv = rows.map((r) => r.map(csvEscape).join(',')).join('\r\n');
+                            const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+                            const fileName = `${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${new Date().toISOString().slice(0, 10)}.csv`;
+                            const a = document.createElement('a');
+                            a.href = URL.createObjectURL(blob);
+                            a.download = fileName;
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                            URL.revokeObjectURL(a.href);
+                        }
+
+                        function renderBreakdownTableByType(typeKey, title, emptyMessage) {
+                            const quizNames = getQuizNamesByType(typeKey);
+
+                            if (!quizNames.length) {
+                                return `
+                                  <section class="scores-subtable-group">
+                                    <div class="scores-subtable-head">
+                                      <h4 class="scores-subtable-title">${title}</h4>
+                                    </div>
+                                    <p class="scores-section-message">${emptyMessage}</p>
+                                  </section>
+                                `;
+                            }
+
+                            const rows = data.map(s => {
+                                let totalScore = 0;
+                                let totalPossible = 0;
+                                const scores = quizNames.map(qName => {
+                                    const q = (s.quizzes || []).find(quiz =>
+                                        String(quiz.source_type || '').toLowerCase() === typeKey &&
+                                        quiz.quiz_name === qName
+                                    );
+                                    const shownScore = Number(q?.display_score);
+                                    const shownTotal = Number(q?.display_total);
+                                    const fallbackScore = Number(q?.raw_score);
+                                    const fallbackTotal = Number(q?.total_points);
+                                    const usedScore = Number.isFinite(shownScore) ? shownScore : fallbackScore;
+                                    const usedTotal = Number.isFinite(shownTotal) ? shownTotal : fallbackTotal;
+                                    if (Number.isFinite(usedScore) && Number.isFinite(usedTotal) && usedTotal > 0) {
+                                        totalScore += usedScore;
+                                        totalPossible += usedTotal;
+                                    }
+                                    return `<td>${toScoreFraction(q)}</td>`;
+                                }).join('');
+
+                                const totalDisplay = totalPossible > 0
+                                    ? `${formatPoints(totalScore)}/${formatPoints(totalPossible)}`
+                                    : '—';
+
+                                return `
+                                  <tr>
+                                    <td>${s.student_lname}, ${s.student_fname}</td>
+                                    ${scores}
+                                    <td>${totalDisplay}</td>
+                                  </tr>
+                                `;
                             }).join('');
 
                             return `
-                                <tr>
-                                    <td>${s.student_lname}, ${s.student_fname}</td>
-                                    ${scores}
-                                    <td>${s.total || 0}</td>
-                                </tr>
+                              <section class="scores-subtable-group">
+                                <div class="scores-subtable-head">
+                                  <h4 class="scores-subtable-title">${title}</h4>
+                                  <button type="button" class="btn btn-outline btn-sm scores-export-btn" data-type="${typeKey}" data-title="${title}">
+                                    <i data-lucide="download" class="size-4"></i>
+                                    Export
+                                  </button>
+                                </div>
+                                <div class="scores-table-scroll table-scroll">
+                                  <table class="scores-table">
+                                    <thead>
+                                      <tr>
+                                        <th>Student Name</th>
+                                        ${quizNames.map(q => `<th>${q}</th>`).join('')}
+                                        <th>Total</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      ${rows}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </section>
                             `;
-                        }).join('');
+                        }
+
+                        if (breakdownGroups) {
+                            breakdownGroups.innerHTML = groups
+                                .map(g => renderBreakdownTableByType(g.key, g.title, g.empty))
+                                .join('');
+
+                            breakdownGroups.querySelectorAll('.scores-export-btn').forEach((btn) => {
+                                btn.addEventListener('click', () => {
+                                    const type = String(btn.getAttribute('data-type') || '').toLowerCase();
+                                    const title = btn.getAttribute('data-title') || 'scores';
+                                    exportBreakdownByType(type, title);
+                                });
+                            });
+                        }
 
                         renderAvgScoreChart(data);
                         lucide.createIcons({ icons: lucide.icons });
                     } catch (err) {
-                        avgList.innerHTML = `<p class="text-sm text-red-500">Failed to load scores.</p>`;
+                        if (avgChartGroups) avgChartGroups.innerHTML = `<p class="text-sm text-red-500">Failed to load summary charts.</p>`;
+                        if (breakdownGroups) breakdownGroups.innerHTML = `<p class="text-sm text-red-500">Failed to load score table.</p>`;
                     }
                 });
             });
 
             const scoresShowSummary = document.getElementById('scores-show-summary');
             const scoresShowBreakdown = document.getElementById('scores-show-breakdown');
-            const scoresSummaryBlock = document.getElementById('scores-summary-block');
+            const scoresChartBlock = document.getElementById('scores-chart-block');
             const scoresTableBlock = document.getElementById('scores-table-block');
             function showScoresSummary() {
-                scoresSummaryBlock?.classList.remove('scores-section-panel-hidden');
+                scoresChartBlock?.classList.remove('scores-section-panel-hidden');
                 scoresTableBlock?.classList.add('scores-section-panel-hidden');
                 scoresShowSummary?.classList.add('is-active');
                 scoresShowBreakdown?.classList.remove('is-active');
@@ -373,7 +533,7 @@
             }
             function showScoresBreakdown() {
                 scoresTableBlock?.classList.remove('scores-section-panel-hidden');
-                scoresSummaryBlock?.classList.add('scores-section-panel-hidden');
+                scoresChartBlock?.classList.add('scores-section-panel-hidden');
                 scoresShowBreakdown?.classList.add('is-active');
                 scoresShowSummary?.classList.remove('is-active');
                 scoresShowBreakdown?.setAttribute('aria-selected', 'true');
@@ -411,7 +571,14 @@
     }
 
     function csvEscape(val) {
-        const s = String(val ?? "").replace(/"/g, '""');
+        let s = String(val ?? "");
+        // Keep plain ASCII dash in CSV to avoid mojibake in some spreadsheet apps.
+        s = s.replace(/\u2014/g, '-');
+        // Prevent spreadsheet auto-conversion of score fractions (e.g. 8/27 -> date).
+        if (/^-?\d+(?:\.\d+)?\/\d+(?:\.\d+)?$/.test(s.trim())) {
+            s = `="${s.trim()}"`;
+        }
+        s = s.replace(/"/g, '""');
         return /[",\r\n]/.test(s) ? `"${s}"` : s;
     }
 
@@ -504,7 +671,7 @@
     }
 
     // ===================== Charts (Chart.js) =====================
-    let __avgScoreChart = null;
+    let __avgScoreCharts = [];
     let __completionChart = null;
 
     function cssVar(name, fallback = "") {
@@ -525,62 +692,83 @@
     }
 
     function renderAvgScoreChart(rows) {
-        const canvas = document.getElementById('avg-score-chart');
-        if (!canvas || typeof Chart === 'undefined') return;
+        const chartGroups = document.getElementById('avg-score-chart-groups');
+        if (!chartGroups || typeof Chart === 'undefined') return;
 
-        const data = (rows || [])
-            .map(r => ({
-                label: `${r.student_lname || ''}, ${r.student_fname || ''}`.replace(/^,\s*/, '').trim(),
-                value: Number(r.overall_avg ?? 0)
-            }))
-            .filter(x => x.label)
-            .sort((a, b) => (b.value || 0) - (a.value || 0));
+        __avgScoreCharts.forEach(destroyChart);
+        __avgScoreCharts = [];
 
-        const labels = data.map(x => x.label);
-        const values = data.map(x => (Number.isFinite(x.value) ? Math.round(x.value) : 0));
+        const groups = [
+            { key: 'ai_avg', title: 'AI Quiz Generated Average', colorVar: '--primary' },
+            { key: 'reading_avg', title: 'Reading Quiz Average', colorVar: '--secondary' },
+            { key: 'pronunciation_avg', title: 'Pronunciation Quiz Average', colorVar: '--foreground' }
+        ];
 
-        destroyChart(__avgScoreChart);
-        __avgScoreChart = new Chart(canvas.getContext('2d'), {
-            type: 'bar',
-            data: {
-                labels,
-                datasets: [{
-                    label: 'Overall average (%)',
-                    data: values,
-                    borderRadius: 10,
-                    backgroundColor: cssVar('--secondary', '#22c55e'),
-                    borderColor: cssVar('--secondary', '#22c55e'),
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                indexAxis: 'y',
-                scales: {
-                    x: {
-                        beginAtZero: true,
-                        max: 100,
-                        grid: { color: chartGridColor() },
-                        ticks: {
-                            color: chartTextColor(),
-                            callback: (v) => `${v}%`
+        chartGroups.innerHTML = groups.map((g, idx) => `
+          <section class="scores-subtable-group">
+            <h4 class="scores-subtable-title">${g.title}</h4>
+            <div class="scores-chart-wrap">
+              <canvas id="avg-score-chart-${idx}" height="170"></canvas>
+            </div>
+          </section>
+        `).join('');
+
+        groups.forEach((g, idx) => {
+            const canvas = document.getElementById(`avg-score-chart-${idx}`);
+            if (!canvas) return;
+            const data = (rows || [])
+                .map(r => ({
+                    label: `${r.student_lname || ''}, ${r.student_fname || ''}`.replace(/^,\s*/, '').trim(),
+                    value: Number(r[g.key])
+                }))
+                .filter(x => x.label && Number.isFinite(x.value))
+                .sort((a, b) => (b.value || 0) - (a.value || 0));
+
+            const labels = data.map(x => x.label);
+            const values = data.map(x => Math.round(x.value));
+            const chart = new Chart(canvas.getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: `${g.title} (%)`,
+                        data: values,
+                        borderRadius: 10,
+                        backgroundColor: cssVar(g.colorVar, '#22c55e'),
+                        borderColor: cssVar(g.colorVar, '#22c55e'),
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            max: 100,
+                            grid: { color: chartGridColor() },
+                            ticks: {
+                                color: chartTextColor(),
+                                callback: (v) => `${v}%`
+                            }
+                        },
+                        y: {
+                            grid: { display: false },
+                            ticks: { color: chartTextColor() }
                         }
                     },
-                    y: {
-                        grid: { display: false },
-                        ticks: { color: chartTextColor() }
-                    }
-                },
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            label: (ctx) => ` ${ctx.parsed.x}%`
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: (ctx) => ` ${ctx.parsed.x}%`
+                            }
                         }
                     }
                 }
-            }
+            });
+            __avgScoreCharts.push(chart);
         });
     }
 
@@ -633,14 +821,14 @@
 
     // Re-theme charts when switching dark/light
     const __themeObserver = new MutationObserver(() => {
-        if (__avgScoreChart) {
+        (__avgScoreCharts || []).forEach((chart) => {
             try {
-                __avgScoreChart.options.scales.x.ticks.color = chartTextColor();
-                __avgScoreChart.options.scales.y.ticks.color = chartTextColor();
-                __avgScoreChart.options.scales.x.grid.color = chartGridColor();
-                __avgScoreChart.update();
+                chart.options.scales.x.ticks.color = chartTextColor();
+                chart.options.scales.y.ticks.color = chartTextColor();
+                chart.options.scales.x.grid.color = chartGridColor();
+                chart.update();
             } catch (_) {}
-        }
+        });
         if (__completionChart) {
             try {
                 __completionChart.options.plugins.legend.labels.color = chartTextColor();
@@ -738,9 +926,9 @@
                                     <i data-lucide="check" class="sp-btn-icon" aria-hidden="true"></i>
                                     <span class="sp-btn-label">Accept</span>
                                 </button>
-                                <button type="button" title="Reject student" aria-label="Reject student" onclick="updateStudentStatus('${s.id}', 'rejected')" class="sp-btn-reject">
+                                <button type="button" title="Decline student" aria-label="Decline student" onclick="updateStudentStatus('${s.id}', 'rejected')" class="sp-btn-reject">
                                     <i data-lucide="x" class="sp-btn-icon" aria-hidden="true"></i>
-                                    <span class="sp-btn-label">Reject</span>
+                                    <span class="sp-btn-label">Decline</span>
                                 </button>
                             </div>
                         </div>
@@ -847,9 +1035,11 @@
 
             const subEl = document.getElementById('completion-rate-sub');
             if (subEl) {
-                const completedPairs = Number(completion?.completed_pairs || 0);
-                const totalPossible = Number(completion?.total_possible || 0);
-                subEl.textContent = `${completedPairs}/${totalPossible} quiz completions`;
+                const byType = completion?.completion_by_type || {};
+                const aiText = `${Number(byType?.ai?.completed_pairs || 0)}/${Number(byType?.ai?.total_possible || 0)} AI`;
+                const readingText = `${Number(byType?.reading?.completed_pairs || 0)}/${Number(byType?.reading?.total_possible || 0)} Reading`;
+                const pronText = `${Number(byType?.pronunciation?.completed_pairs || 0)}/${Number(byType?.pronunciation?.total_possible || 0)} Pronunciation`;
+                subEl.textContent = `${aiText} · ${readingText} · ${pronText}`;
             }
         } catch (err) {
             console.error('Error loading overview cards:', err);
@@ -879,44 +1069,41 @@
 
             const subEl = document.getElementById('completion-rate-sub');
             if (subEl) {
-                const completedPairs = Number(data?.completed_pairs || 0);
-                const totalPossible = Number(data?.total_possible || 0);
-                subEl.textContent = `${completedPairs}/${totalPossible} quiz completions`;
+                const byType = data?.completion_by_type || {};
+                const aiText = `${Number(byType?.ai?.completed_pairs || 0)}/${Number(byType?.ai?.total_possible || 0)} AI`;
+                const readingText = `${Number(byType?.reading?.completed_pairs || 0)}/${Number(byType?.reading?.total_possible || 0)} Reading`;
+                const pronText = `${Number(byType?.pronunciation?.completed_pairs || 0)}/${Number(byType?.pronunciation?.total_possible || 0)} Pronunciation`;
+                subEl.textContent = `${aiText} · ${readingText} · ${pronText}`;
             }
 
             const details = document.getElementById('completion-details');
             if (details) {
-                const totalQuizzes = Number(data?.total_quizzes || 0);
-                const completedPairs = Number(data?.completed_pairs || 0);
-                const totalPossible = Number(data?.total_possible || 0);
-                const engagedStudents = Number(data?.engaged_students || 0);
+                const byType = data?.completion_by_type || {};
                 const totalStudents = Number(data?.total_students || 0);
-                details.innerHTML = `
-                  <div class="completion-stat-card">
-                    <div class="completion-stat-header">
-                      <span class="completion-stat-label">Track size</span>
-                      <span class="completion-stat-desc">Total quizzes available</span>
+                const groups = [
+                  { key: 'ai', title: 'AI quiz generated' },
+                  { key: 'reading', title: 'Reading quiz' },
+                  { key: 'pronunciation', title: 'Pronunciation quiz' }
+                ];
+                details.innerHTML = groups.map((g) => {
+                  const payload = byType[g.key] || {};
+                  const quizzes = Number(payload.total_quizzes || 0);
+                  const completed = Number(payload.completed_pairs || 0);
+                  const totalPossible = Number(payload.total_possible || 0);
+                  const engaged = Number(payload.engaged_students || 0);
+                  const percent = Number(payload.completion_rate || 0);
+                  return `
+                    <div class="completion-stat-card">
+                      <div class="completion-stat-header">
+                        <span class="completion-stat-label">${g.title}</span>
+                        <span class="completion-stat-desc">Separated completion data</span>
+                      </div>
+                      <div class="completion-stat-value completion-stat-value--rate">${percent}%</div>
+                      <div class="completion-stat-meta">Completed: ${completed}/${totalPossible}</div>
+                      <div class="completion-stat-meta">Quizzes: ${quizzes} · Engaged students: ${engaged}/${totalStudents}</div>
                     </div>
-                    <div class="completion-stat-value">${totalQuizzes}</div>
-                    <div class="completion-stat-meta">Reading: ${Number(data?.reading_quizzes || 0)} · Pronunciation: ${Number(data?.pronunciation_quizzes || 0)}</div>
-                  </div>
-                  <div class="completion-stat-card">
-                    <div class="completion-stat-header">
-                      <span class="completion-stat-label">Completed</span>
-                      <span class="completion-stat-desc">Student × quiz completions</span>
-                    </div>
-                    <div class="completion-stat-value">${completedPairs}</div>
-                    <div class="completion-stat-meta">Out of ${totalPossible}</div>
-                  </div>
-                  <div class="completion-stat-card">
-                    <div class="completion-stat-header">
-                      <span class="completion-stat-label">Completion rate</span>
-                      <span class="completion-stat-desc">Class-wide progress</span>
-                    </div>
-                    <div class="completion-stat-value completion-stat-value--rate">${rate}%</div>
-                    <div class="completion-stat-meta">${engagedStudents}/${totalStudents} students completed at least one quiz</div>
-                  </div>
-                `;
+                  `;
+                }).join('');
             }
 
             renderCompletionDoughnut(data);
