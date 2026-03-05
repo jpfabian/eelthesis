@@ -128,13 +128,13 @@ async function handleGenerateRecitationQuestions(req, res) {
     const typeDescriptions = {
       'multiple-choice': 'multiple choice with 4 options (A, B, C, D) and one correct answer',
       'true-false': 'true or false: statement with options ["True","False"] and correctAnswer "True" or "False"',
-      'identification': 'identification: short answer question, options null, correctAnswer the expected word or phrase'
+      'identification': 'identification: short answer question that clearly expects a one-word response, options null, correctAnswer must be exactly one word'
     };
     const typeList = question_types.map(t => typeDescriptions[t] || t).join('; ');
 
-    const systemPrompt = `You are a recitation question generator for high school English. Reply with ONLY a single valid JSON array. Do not use markdown, code blocks, or any text outside the array. Each element must be an object with: "type" (one of: multiple-choice, true-false, identification), "question" (string), "options" (for multiple-choice: array of exactly 4 strings, each string is the full choice text that will be shown to the user, e.g. "The correct answer here"; for true-false: ["True","False"]; for identification: null), "correctAnswer" (string; for multiple-choice must match one of the option strings exactly). Use double quotes for all JSON keys and strings. No trailing commas.`;
+    const systemPrompt = `You are a recitation question generator for high school English. Reply with ONLY a single valid JSON array. Do not use markdown, code blocks, or any text outside the array. Each element must be an object with: "type" (one of: multiple-choice, true-false, identification), "question" (string), "options" (for multiple-choice: array of exactly 4 strings, each string is the full choice text that will be shown to the user, e.g. "The correct answer here"; for true-false: ["True","False"]; for identification: null), "correctAnswer" (string; for multiple-choice must match one of the option strings exactly; for identification it must be exactly one word only). Identification questions must be phrased so they clearly require one-word answers (for example, "Give one word that..."). Use double quotes for all JSON keys and strings. No trailing commas.`;
 
-    const userPrompt = `Topic: "${topicTitle}". Generate exactly ${question_count} recitation questions. Distribute across these types: ${typeList}. For multiple-choice, "options" must be an array of exactly 4 strings (the full text of each choice). Example: [{"type":"multiple-choice","question":"What is the past tense of go?","options":["goed","went","gone","going"],"correctAnswer":"went"},{"type":"true-false","question":"Water is H2O.","options":["True","False"],"correctAnswer":"True"},{"type":"identification","question":"Name the verb.","options":null,"correctAnswer":"run"}]`;
+    const userPrompt = `Topic: "${topicTitle}". Generate exactly ${question_count} recitation questions. Distribute across these types: ${typeList}. For multiple-choice, "options" must be an array of exactly 4 strings (the full text of each choice). For identification questions, both rules are required: (1) "correctAnswer" must be one word only (no spaces), and (2) the "question" should clearly ask for one-word responses. Example: [{"type":"multiple-choice","question":"What is the past tense of go?","options":["goed","went","gone","going"],"correctAnswer":"went"},{"type":"true-false","question":"Water is H2O.","options":["True","False"],"correctAnswer":"True"},{"type":"identification","question":"Give one word for the opposite of hot.","options":null,"correctAnswer":"cold"}]`;
 
     const completion = await client.chat.completions.create({
       model: 'llama-3.1-8b-instant',
@@ -189,24 +189,34 @@ async function handleGenerateRecitationQuestions(req, res) {
     const normalized = questions.slice(0, question_count).map((q, i) => {
       const type = (q.type && question_types.includes(q.type)) ? q.type : question_types[0];
       let options = null;
-      if (Array.isArray(q.options) && q.options.length > 0) {
-        options = q.options.map(opt => {
-          if (opt == null) return '';
-          if (typeof opt === 'string') return String(opt).trim();
-          if (typeof opt === 'object' && (opt.text != null || opt.value != null || opt.label != null)) return String(opt.text ?? opt.value ?? opt.label ?? '').trim();
-          return String(opt).trim();
-        }).filter(Boolean);
-        if (options.length === 0) options = null;
-      } else if (q.options && typeof q.options === 'object' && !Array.isArray(q.options)) {
-        options = Object.values(q.options).map(v => (v != null ? String(v).trim() : '')).filter(Boolean);
-        if (options.length === 0) options = null;
+      if (type === 'true-false') {
+        options = ['True', 'False'];
+      } else if (type !== 'identification') {
+        if (Array.isArray(q.options) && q.options.length > 0) {
+          options = q.options.map(opt => {
+            if (opt == null) return '';
+            if (typeof opt === 'string') return String(opt).trim();
+            if (typeof opt === 'object' && (opt.text != null || opt.value != null || opt.label != null)) return String(opt.text ?? opt.value ?? opt.label ?? '').trim();
+            return String(opt).trim();
+          }).filter(Boolean);
+          if (options.length === 0) options = null;
+        } else if (q.options && typeof q.options === 'object' && !Array.isArray(q.options)) {
+          options = Object.values(q.options).map(v => (v != null ? String(v).trim() : '')).filter(Boolean);
+          if (options.length === 0) options = null;
+        }
       }
+      const rawCorrectAnswer = String(q.correctAnswer != null ? q.correctAnswer : q.answer != null ? q.answer : '').trim();
+      const normalizedCorrectAnswer = type === 'identification'
+        ? (rawCorrectAnswer.split(/\s+/)[0] || '')
+        : type === 'true-false'
+          ? (String(rawCorrectAnswer).toLowerCase() === 'false' ? 'False' : 'True')
+        : rawCorrectAnswer;
       return {
         id: 'q' + (i + 1),
         type,
         question: String(q.question || ''),
         options,
-        correctAnswer: String(q.correctAnswer != null ? q.correctAnswer : q.answer != null ? q.answer : '')
+        correctAnswer: normalizedCorrectAnswer
       };
     });
 

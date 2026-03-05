@@ -903,7 +903,10 @@ function showQuestionModal() {
         const pct = totalSeconds > 0 ? Math.max(0, (remaining / totalSeconds) * 100) : 0;
         timerFill.style.width = pct + '%';
         timerValue.textContent = isUp ? "Time's up!" : formatTime(remaining);
-        if (timerLabel) timerLabel.textContent = isUp ? '' : 'left';
+        if (timerLabel) {
+            const dynamicUnitLabel = remaining > 59 ? 'minutes left' : 'seconds left';
+            timerLabel.textContent = isUp ? '' : dynamicUnitLabel;
+        }
         timerWrap.setAttribute('data-state', isUp ? 'up' : (remaining <= 5 ? 'critical' : (remaining <= 10 ? 'low' : 'normal')));
     }
 
@@ -954,7 +957,31 @@ function renderAnswerInput(question) {
     if (!container) return;
     container.innerHTML = '';
 
-    if (question.options && question.options.length > 0) {
+    if (question.type === 'true-false') {
+        const radioGroup = document.createElement('div');
+        radioGroup.className = 'radio-group';
+        radioGroup.style.display = 'flex';
+        radioGroup.style.flexDirection = 'column';
+        radioGroup.style.gap = '0.75rem';
+        radioGroup.style.marginTop = '0.5rem';
+
+        ['True', 'False'].forEach(function (optionText, idx) {
+            const label = document.createElement('label');
+            label.className = 'radio-label';
+            label.style.display = 'flex';
+            label.style.alignItems = 'center';
+            label.style.padding = '0.5rem 0.75rem';
+            label.style.border = '1px solid var(--border)';
+            label.style.borderRadius = '0.5rem';
+            label.style.cursor = 'pointer';
+            label.style.transition = 'all 0.2s ease';
+            var optVal = escapeForAttr(optionText);
+            label.innerHTML = '<input type="radio" name="answer" value="' + optVal + '" id="option-' + idx + '" style="margin-right: 0.5rem;"><span>' + escapeForAttr(optionText) + '</span>';
+            radioGroup.appendChild(label);
+        });
+
+        container.appendChild(radioGroup);
+    } else if (question.type === 'multiple-choice' && question.options && question.options.length > 0) {
         const radioGroup = document.createElement('div');
         radioGroup.className = 'radio-group';
         radioGroup.style.display = 'flex';
@@ -990,9 +1017,19 @@ function renderAnswerInput(question) {
         const input = document.createElement('input');
         input.type = 'text';
         input.className = 'form-input';
-        input.placeholder = 'Type your answer here...';
+        input.placeholder = question.type === 'identification'
+            ? 'Type one word only...'
+            : 'Type your answer here...';
         input.id = 'text-answer';
         container.appendChild(input);
+        if (question.type === 'identification') {
+            const hint = document.createElement('small');
+            hint.textContent = 'One word answer only.';
+            hint.style.display = 'block';
+            hint.style.marginTop = '0.5rem';
+            hint.style.color = 'var(--muted-foreground)';
+            container.appendChild(hint);
+        }
     }
 }
 
@@ -1041,7 +1078,7 @@ function submitAnswer() {
 
     let userAnswer = '';
 
-    if (currentQuestion.options && currentQuestion.options.length) {
+    if (currentQuestion.type === 'multiple-choice' || currentQuestion.type === 'true-false') {
         const selected = document.querySelector('input[name="answer"]:checked');
         if (!selected) return; // no selection
         userAnswer = selected.value;
@@ -1049,6 +1086,10 @@ function submitAnswer() {
         const input = document.getElementById('text-answer');
         if (!input || !input.value.trim()) return;
         userAnswer = input.value.trim();
+        if (currentQuestion.type === 'identification' && /\s+/.test(userAnswer)) {
+            showNotification('Identification answer must be one word only.', 'warning');
+            return;
+        }
     }
 
     // mark answered and clear timer to avoid race
@@ -1064,11 +1105,16 @@ function submitAnswer() {
 
     // compare with correctAnswer (normalize: trim and case-insensitive)
     const correct = (currentQuestion.correctAnswer || '').toString().trim();
-    const normalizedUser = userAnswer.trim();
-    const isCorrect = normalizedUser.toLowerCase() === correct.toLowerCase();
+    const normalizedUser = currentQuestion.type === 'identification'
+        ? userAnswer.trim().split(/\s+/)[0]
+        : userAnswer.trim();
+    const normalizedCorrect = currentQuestion.type === 'identification'
+        ? correct.split(/\s+/)[0]
+        : correct;
+    const isCorrect = normalizedUser.toLowerCase() === normalizedCorrect.toLowerCase();
 
     // show result and allow auto-continue if desired
-    showResult(isCorrect, userAnswer, correct);
+    showResult(isCorrect, userAnswer, normalizedCorrect);
 }
 
 
