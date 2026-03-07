@@ -4,6 +4,15 @@ const bcrypt = require("bcryptjs");
 const router = express.Router();
 const { nowPhilippineDatetime } = require("./utils/datetime");
 
+function toNameCase(input) {
+  if (input == null || typeof input !== "string") return input;
+  return String(input)
+    .trim()
+    .split(/\s+/)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+}
+
 // GET current user profile (by user_id from query; no session auth)
 router.get("/api/users/me", async (req, res) => {
   const userId = req.query.user_id ? Number(req.query.user_id) : null;
@@ -24,8 +33,8 @@ router.get("/api/users/me", async (req, res) => {
       success: true,
       user: {
         user_id: u.user_id,
-        fname: u.fname,
-        lname: u.lname,
+        fname: toNameCase(u.fname),
+        lname: toNameCase(u.lname),
         email: u.email,
         role: u.role,
       },
@@ -50,9 +59,11 @@ router.patch("/api/users/me", async (req, res) => {
   }
   const pool = req.pool;
   try {
+    const safeFname = toNameCase(String(fname).trim());
+    const safeLname = toNameCase(String(lname).trim());
     const [r] = await pool.execute(
       "UPDATE users SET fname = ?, lname = ?, email = ? WHERE user_id = ?",
-      [String(fname).trim(), String(lname).trim(), String(email).trim(), userId]
+      [safeFname, safeLname, String(email).trim(), userId]
     );
     if (r.affectedRows === 0) {
       return res.status(404).json({ success: false, error: "User not found" });

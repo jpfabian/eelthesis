@@ -2,6 +2,15 @@ const express = require("express");
 const router = express.Router();
 
 const { sendAccountStatusEmail, isEmailEnabled } = require("./mailer");
+
+function toNameCase(input) {
+  if (input == null || typeof input !== "string") return input;
+  return String(input)
+    .trim()
+    .split(/\s+/)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+}
 const { nowPhilippineDatetime } = require("./utils/datetime");
 
 const ADMIN_USER = "admin";
@@ -88,7 +97,12 @@ router.get("/api/admin/pending-users", requireAdmin, async (req, res) => {
       `
     );
 
-    res.json({ success: true, enabled: true, users: rows });
+    const users = rows.map((u) => ({
+      ...u,
+      fname: toNameCase(u.fname),
+      lname: toNameCase(u.lname),
+    }));
+    res.json({ success: true, enabled: true, users });
   } catch (err) {
     console.error("❌ Admin pending-users error:", err);
     res.status(500).json({ success: false, error: "Server error" });
@@ -157,7 +171,12 @@ router.get("/api/admin/users", requireAdmin, async (req, res) => {
       rows = r;
     }
 
-    res.json({ success: true, enabled: true, deactivation_enabled: deactivationEnabled, users: rows, status: effective });
+    const users = rows.map((u) => ({
+      ...u,
+      fname: toNameCase(u.fname),
+      lname: toNameCase(u.lname),
+    }));
+    res.json({ success: true, enabled: true, deactivation_enabled: deactivationEnabled, users, status: effective });
   } catch (err) {
     console.error("❌ Admin users list error:", err);
     res.status(500).json({
@@ -214,7 +233,7 @@ router.patch("/api/admin/users/:id/approve", requireAdmin, async (req, res) => {
       if (u?.email) {
         sendAccountStatusEmail({
           to: u.email,
-          name: `${u.fname || ""} ${u.lname || ""}`.trim(),
+          name: toNameCase(`${u.fname || ""} ${u.lname || ""}`.trim()),
           status: "approved",
         }).catch((e) => console.warn("Email send (approved) failed:", e?.message || e));
       }
@@ -259,7 +278,7 @@ router.patch("/api/admin/users/:id/reject", requireAdmin, async (req, res) => {
       if (u?.email) {
         sendAccountStatusEmail({
           to: u.email,
-          name: `${u.fname || ""} ${u.lname || ""}`.trim(),
+          name: toNameCase(`${u.fname || ""} ${u.lname || ""}`.trim()),
           status: "rejected",
           reason: reason || "",
         }).catch((e) => console.warn("Email send (rejected) failed:", e?.message || e));
@@ -321,7 +340,7 @@ router.patch("/api/admin/users/:id/deactivate", requireAdmin, async (req, res) =
       if (u?.email) {
         sendAccountStatusEmail({
           to: u.email,
-          name: `${u.fname || ""} ${u.lname || ""}`.trim(),
+          name: toNameCase(`${u.fname || ""} ${u.lname || ""}`.trim()),
           status: "deactivated",
           reason: reason || "",
         }).catch((e) => console.warn("Email send (deactivated) failed:", e?.message || e));
@@ -374,7 +393,7 @@ router.patch("/api/admin/users/:id/activate", requireAdmin, async (req, res) => 
       if (u?.email) {
         sendAccountStatusEmail({
           to: u.email,
-          name: `${u.fname || ""} ${u.lname || ""}`.trim(),
+          name: toNameCase(`${u.fname || ""} ${u.lname || ""}`.trim()),
           status: "activated",
         }).catch((e) => console.warn("Email send (activated) failed:", e?.message || e));
       }

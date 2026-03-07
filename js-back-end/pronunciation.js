@@ -35,6 +35,15 @@ function capitalizeFirst(s) {
   return t.charAt(0).toUpperCase() + t.slice(1);
 }
 
+function toNameCase(input) {
+  if (input == null || typeof input !== "string") return input;
+  return String(input)
+    .trim()
+    .split(/\s+/)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+}
+
 // Multer storage (S3 if configured, otherwise local disk)
 const hasS3 =
   String(process.env.AWS_BUCKET_NAME || "").trim() &&
@@ -832,7 +841,7 @@ router.get("/api/leaderboard", async (req, res) => {
       return {
         rank,
         student_id: r.student_id,
-        name: `${r.fname} ${r.lname}`,
+        name: toNameCase(`${r.fname || ""} ${r.lname || ""}`.trim()),
         score: r.score,
         status: r.status,
         start_time: r.start_time,

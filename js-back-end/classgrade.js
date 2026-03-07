@@ -1,6 +1,15 @@
 const express = require("express");
 const router = express.Router();
 
+function toNameCase(input) {
+  if (input == null || typeof input !== "string") return input;
+  return String(input)
+    .trim()
+    .split(/\s+/)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+}
+
 function avg(nums) {
   if (!nums.length) return null;
   const sum = nums.reduce((a, b) => a + b, 0);
@@ -546,8 +555,8 @@ router.get("/api/class/:classId/average-scores", async (req, res) => {
 
       return {
         student_id: s.student_id,
-        student_fname: s.student_fname,
-        student_lname: s.student_lname,
+        student_fname: toNameCase(s.student_fname),
+        student_lname: toNameCase(s.student_lname),
         quizzes: [
           ...(aiByStudent.get(s.student_id) || []),
           ...(readingByStudent.get(s.student_id) || []),

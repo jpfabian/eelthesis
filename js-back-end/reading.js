@@ -28,6 +28,16 @@ function capitalizeFirst(s) {
   return t.charAt(0).toUpperCase() + t.slice(1);
 }
 
+/** Ensure first letter of each word is uppercase (for names). */
+function toNameCase(input) {
+  if (input == null || typeof input !== "string") return input;
+  return String(input)
+    .trim()
+    .split(/\s+/)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+}
+
 const { nowPhilippineDatetime } = require("./utils/datetime");
 
 // ================= CREATE TEACHER READING QUIZ =================
@@ -1337,7 +1347,11 @@ router.get("/api/teacher/reading-attempts", async (req, res) => {
       }
     }
 
-    res.json({ success: true, attempts: rows });
+    const attempts = rows.map((r) => ({
+      ...r,
+      student_name: toNameCase(r.student_name || ""),
+    }));
+    res.json({ success: true, attempts });
   } catch (err) {
     console.error("❌ Teacher reading attempts error:", err);
     res.status(500).json({ success: false, error: "Database error" });
@@ -1597,6 +1611,7 @@ router.get("/api/reading-quiz-leaderboard", async (req, res) => {
 
       return {
         ...r,
+        student_name: toNameCase(r.student_name || ""),
         score: Math.round(r.score),
         total_points: Math.round(r.total_points),
         time_taken_seconds: seconds,

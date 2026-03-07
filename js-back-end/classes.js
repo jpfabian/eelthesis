@@ -3,6 +3,15 @@ const router = express.Router();
 const pool = require("./db"); // ✅ Import your pool
 const { nowPhilippineDatetime } = require("./utils/datetime");
 
+function toNameCase(input) {
+  if (input == null || typeof input !== "string") return input;
+  return String(input)
+    .trim()
+    .split(/\s+/)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+}
+
 // Function to generate class code
 function generateClassCode(length = 8) {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -106,9 +115,11 @@ router.post("/api/join-class", async (req, res) => {
       return res.status(404).json({ success: false, message: "Student not found" });
     }
 
-    const { fname: student_fname, lname: student_lname } = users[0];
+    const { fname, lname } = users[0];
+    const student_fname = toNameCase(fname);
+    const student_lname = toNameCase(lname);
 
-    // 3. Insert both names into student_classes
+    // 3. Insert both names into student_classes (capitalized)
     await pool.query(
       `INSERT INTO student_classes (student_id, student_fname, student_lname, class_id, status, joined_at)
       VALUES (?, ?, ?, ?, 'pending', ?)`,
@@ -170,7 +181,11 @@ router.get("/api/class/:classId/pending-students", async (req, res) => {
        WHERE sc.class_id = ? AND sc.status = 'pending'`,
       [classId]
     );
-    res.json(rows);
+    res.json((rows || []).map((r) => ({
+      ...r,
+      student_fname: toNameCase(r.student_fname),
+      student_lname: toNameCase(r.student_lname),
+    })));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Database error" });
@@ -196,7 +211,11 @@ router.get("/api/class/:classId/students", async (req, res) => {
       [classId]
     );
 
-    res.json(rows);
+    res.json((rows || []).map((r) => ({
+      ...r,
+      student_fname: toNameCase(r.student_fname),
+      student_lname: toNameCase(r.student_lname),
+    })));
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Database error" });

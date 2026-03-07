@@ -3,6 +3,15 @@ const router = express.Router();
 require("dotenv").config();
 const Groq = require("groq-sdk");
 
+function toNameCase(input) {
+  if (input == null || typeof input !== "string") return input;
+  return String(input)
+    .trim()
+    .split(/\s+/)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+}
+
 let groq = null;
 try {
   const key = String(process.env.GROQ_API_KEY || "").trim();
@@ -91,7 +100,7 @@ router.get('/api/recitation/class/:classId/students', async (req, res) => {
     );
     const students = rows.map(s => ({
       id: s.student_id,
-      name: `${s.student_fname} ${s.student_lname}`,
+      name: toNameCase(`${s.student_fname} ${s.student_lname}`),
       answered: false
     }));
     res.json(students);

@@ -3,6 +3,15 @@ const express = require("express");
 const bcrypt = require("bcryptjs");
 const router = express.Router();
 
+function toNameCase(input) {
+  if (input == null || typeof input !== "string") return input;
+  return String(input)
+    .trim()
+    .split(/\s+/)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+}
+
 // LOGIN route
 router.post("/api/auth/login", async (req, res) => {
   const { email, password } = req.body;
@@ -101,8 +110,8 @@ router.post("/api/auth/login", async (req, res) => {
       message: "Login successful",
       user: {
         user_id: user.user_id,
-        fname: user.fname,
-        lname: user.lname,
+        fname: toNameCase(user.fname),
+        lname: toNameCase(user.lname),
         email: user.email,
         role: user.role,
       },
