@@ -48,8 +48,8 @@
 
         <!-- Main Content -->
         <main id="main-content" class="flex-1 overflow-auto">
-            <div class="p-6 space-y-6">
-                <header class="page-header">
+            <div class="my-progress-content p-6 space-y-8">
+                <header class="my-progress-header page-header">
                     <div class="page-header-icon" aria-hidden="true">
                         <i data-lucide="trending-up" class="size-8"></i>
                     </div>
@@ -59,98 +59,84 @@
                     </div>
                 </header>
 
-                <!-- Stats Cards (2 per row) -->
-                <div class="grid grid-cols-4 sm:grid-cols-2 gap-4">
-                    <div class="card bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20">
-                        <div class="card-content p-5">
-                            <div class="flex items-center justify-between mb-2">
-                                <h3 class="text-sm font-medium text-muted-foreground">Quizzes Completed</h3>
-                                <i data-lucide="check-circle" class="size-5 text-primary"></i>
-                            </div>
-                            <div class="text-2xl font-bold text-primary" id="stat-completed">0</div>
-                            <p class="text-xs text-muted-foreground" id="stat-completed-sub">of 0 total</p>
-                        </div>
-                    </div>
-                    <div class="card bg-gradient-to-br from-secondary/5 to-secondary/10 border border-secondary/20">
-                        <div class="card-content p-5">
-                            <div class="flex items-center justify-between mb-2">
-                                <h3 class="text-sm font-medium text-muted-foreground">Overall Average</h3>
-                                <i data-lucide="trending-up" class="size-5 text-secondary"></i>
-                            </div>
-                            <div class="text-2xl font-bold text-secondary" id="stat-overall">—</div>
-                            <p class="text-xs text-muted-foreground">Average across Reading and Pronunciation</p>
-                        </div>
-                    </div>
-                    <div class="card border border-border">
-                        <div class="card-content p-5">
-                            <div class="flex items-center justify-between mb-2">
-                                <h3 class="text-sm font-medium text-muted-foreground">Reading Average</h3>
-                                <i data-lucide="book-open" class="size-5 text-muted-foreground"></i>
-                            </div>
-                            <div class="text-2xl font-bold" id="stat-reading">—</div>
-                            <p class="text-xs text-muted-foreground">Average score for Reading</p>
-                        </div>
-                    </div>
-                    <div class="card border border-border">
-                        <div class="card-content p-5">
-                            <div class="flex items-center justify-between mb-2">
-                                <h3 class="text-sm font-medium text-muted-foreground">Pronunciation Average</h3>
-                                <i data-lucide="mic" class="size-5 text-muted-foreground"></i>
-                            </div>
-                            <div class="text-2xl font-bold" id="stat-pronunciation">—</div>
-                            <p class="text-xs text-muted-foreground">Average score for Pronunciation</p>
-                        </div>
-                    </div>
+                <!-- Assessment Scores -->
+                <div class="my-progress-assessment-card card">
+                    <h3 class="my-progress-assessment-title"><i data-lucide="clipboard-list" class="size-5"></i>Assessment Scores</h3>
+                    <div id="my-progress-breakdown-groups"></div>
                 </div>
 
-                <!-- Completion rate -->
-                <div class="card border border-border">
-                    <div class="card-content p-5">
-                        <div class="flex items-center gap-3 flex-nowrap">
-                            <i data-lucide="percent" class="size-5 text-muted-foreground flex-shrink-0"></i>
-                            <span class="font-medium whitespace-nowrap">Completion rate</span>
-                            <span class="text-2xl font-bold text-primary" id="stat-completion-rate">0</span>
-                            <span class="text-muted-foreground">%</span>
+                <!-- Stats Cards -->
+                <div class="my-progress-stats grid grid-cols-4 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                    <div class="my-progress-stat-card my-progress-stat-overall card">
+                        <div class="card-content p-5">
+                            <div class="my-progress-stat-icon-wrap my-progress-stat-icon-overall">
+                                <i data-lucide="trending-up" class="size-5"></i>
+                            </div>
+                            <h3 class="my-progress-stat-label">Overall Average</h3>
+                            <div class="my-progress-stat-value text-secondary" id="stat-overall">—</div>
+                            <p class="my-progress-stat-desc">Average across Reading, Pronunciation, and AI quizzes</p>
                         </div>
-                        <p class="text-sm text-muted-foreground mt-2" id="stat-completion-sub">You have completed 0 of 0 available quizzes.</p>
+                    </div>
+                    <div class="my-progress-stat-card my-progress-stat-reading card">
+                        <div class="card-content p-5">
+                            <div class="my-progress-stat-icon-wrap my-progress-stat-icon-reading">
+                                <i data-lucide="book-open" class="size-5"></i>
+                            </div>
+                            <h3 class="my-progress-stat-label">Reading Average</h3>
+                            <div class="my-progress-stat-value" id="stat-reading">—</div>
+                            <p class="my-progress-stat-desc">Average score for Reading</p>
+                        </div>
+                    </div>
+                    <div class="my-progress-stat-card my-progress-stat-pronunciation card">
+                        <div class="card-content p-5">
+                            <div class="my-progress-stat-icon-wrap my-progress-stat-icon-pronunciation">
+                                <i data-lucide="mic" class="size-5"></i>
+                            </div>
+                            <h3 class="my-progress-stat-label">Pronunciation Average</h3>
+                            <div class="my-progress-stat-value" id="stat-pronunciation">—</div>
+                            <p class="my-progress-stat-desc">Average score for Pronunciation</p>
+                        </div>
+                    </div>
+                    <div class="my-progress-stat-card my-progress-stat-ai card">
+                        <div class="card-content p-5">
+                            <div class="my-progress-stat-icon-wrap my-progress-stat-icon-ai">
+                                <i data-lucide="sparkles" class="size-5"></i>
+                            </div>
+                            <h3 class="my-progress-stat-label">AI Quiz Average</h3>
+                            <div class="my-progress-stat-value" id="stat-ai">—</div>
+                            <p class="my-progress-stat-desc">Average score for AI-generated quizzes</p>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Charts -->
-                <div class="my-progress-charts grid grid-cols-2 sm:grid-cols-2 gap-4">
-                    <div class="card border border-border my-progress-chart-card">
-                        <h3 class="text-lg font-semibold mb-4">Completion progress</h3>
+                <div class="my-progress-charts grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                    <div class="my-progress-chart-card card">
+                        <h3 class="my-progress-chart-title"><i data-lucide="pie-chart" class="size-5"></i>Completion progress</h3>
                         <div class="my-progress-chart-wrap h-64">
                             <canvas id="my-progress-completion-chart"></canvas>
                         </div>
                     </div>
-                    <div class="card border border-border my-progress-chart-card">
-                        <h3 class="text-lg font-semibold mb-4">Quiz scores</h3>
+                    <div class="my-progress-chart-card card">
+                        <h3 class="my-progress-chart-title"><i data-lucide="sparkles" class="size-5"></i>AI Quiz scores</h3>
                         <div class="my-progress-chart-wrap h-64">
-                            <canvas id="my-progress-scores-chart"></canvas>
+                            <canvas id="my-progress-ai-scores-chart"></canvas>
                         </div>
+                        <p id="my-progress-ai-scores-empty" class="my-progress-chart-empty hidden">No AI quizzes completed yet.</p>
                     </div>
-                </div>
-
-                <!-- Quiz history -->
-                <div class="card p-6">
-                    <h3 class="text-lg font-semibold mb-4">Assessment Scores</h3>
-                    <div id="quiz-history-empty" class="hidden text-center py-8 text-muted-foreground">
-                        <i data-lucide="inbox" class="size-12 mx-auto mb-2 opacity-50"></i>
-                        <p>No quizzes completed yet. Start with Reading or Pronunciation to see your progress here.</p>
+                    <div class="my-progress-chart-card card">
+                        <h3 class="my-progress-chart-title"><i data-lucide="book-open" class="size-5"></i>Reading Quiz scores</h3>
+                        <div class="my-progress-chart-wrap h-64">
+                            <canvas id="my-progress-reading-scores-chart"></canvas>
+                        </div>
+                        <p id="my-progress-reading-scores-empty" class="my-progress-chart-empty hidden">No Reading quizzes completed yet.</p>
                     </div>
-                    <div id="quiz-history-wrap" class="overflow-x-auto">
-                        <table class="w-full text-left border-collapse" id="quiz-history-table">
-                            <thead>
-                                <tr class="border-b border-border">
-                                    <th class="pb-3 font-medium text-muted-foreground">Quiz</th>
-                                    <th class="pb-3 font-medium text-muted-foreground">Type</th>
-                                    <th class="pb-3 font-medium text-muted-foreground">Score</th>
-                                    <th class="pb-3 font-medium text-muted-foreground">Completed</th>
-                                </tr>
-                            </thead>
-                            <tbody id="quiz-history-body"></tbody>
-                        </table>
+                    <div class="my-progress-chart-card card">
+                        <h3 class="my-progress-chart-title"><i data-lucide="mic" class="size-5"></i>Pronunciation Quiz scores</h3>
+                        <div class="my-progress-chart-wrap h-64">
+                            <canvas id="my-progress-pronunciation-scores-chart"></canvas>
+                        </div>
+                        <p id="my-progress-pronunciation-scores-empty" class="my-progress-chart-empty hidden">No Pronunciation quizzes completed yet.</p>
                     </div>
                 </div>
             </div>

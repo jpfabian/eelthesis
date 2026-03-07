@@ -349,6 +349,9 @@
                             { key: 'reading', title: 'Reading Quiz Result Data', empty: 'No reading quiz records yet.' },
                             { key: 'pronunciation', title: 'Pronunciation Quiz Result Data', empty: 'No pronunciation quiz records yet.' }
                         ];
+                        const pageSize = 5;
+                        const pageState = { ai: 1, reading: 1, pronunciation: 1 };
+                        const tableState = {};
 
                         function getQuizNamesByType(typeKey) {
                             const orderMap = new Map();
@@ -435,7 +438,7 @@
                                 `;
                             }
 
-                            const rows = data.map(s => {
+                            const rowsData = data.map(s => {
                                 let totalScore = 0;
                                 let totalPossible = 0;
                                 const scores = quizNames.map(qName => {
@@ -460,14 +463,29 @@
                                     ? `${formatPoints(totalScore)}/${formatPoints(totalPossible)}`
                                     : '—';
 
-                                return `
+                                return {
+                                    studentName: `${s.student_lname}, ${s.student_fname}`,
+                                    scoreCells: scores,
+                                    totalDisplay
+                                };
+                            });
+
+                            tableState[typeKey] = { title, quizNames, rowsData };
+
+                            const totalPages = Math.max(1, Math.ceil(rowsData.length / pageSize));
+                            const currentPage = Math.min(pageState[typeKey] || 1, totalPages);
+                            pageState[typeKey] = currentPage;
+
+                            const pageRows = rowsData
+                                .slice((currentPage - 1) * pageSize, currentPage * pageSize)
+                                .map((row) => `
                                   <tr>
-                                    <td>${s.student_lname}, ${s.student_fname}</td>
-                                    ${scores}
-                                    <td>${totalDisplay}</td>
+                                    <td>${row.studentName}</td>
+                                    ${row.scoreCells}
+                                    <td>${row.totalDisplay}</td>
                                   </tr>
-                                `;
-                            }).join('');
+                                `)
+                                .join('');
 
                             return `
                               <section class="scores-subtable-group">
@@ -488,12 +506,49 @@
                                       </tr>
                                     </thead>
                                     <tbody>
-                                      ${rows}
+                                      ${pageRows}
                                     </tbody>
                                   </table>
                                 </div>
+                                <div class="scores-table-pager" data-type="${typeKey}">
+                                  <button type="button" class="btn btn-outline btn-sm scores-page-prev" data-type="${typeKey}" ${currentPage <= 1 ? 'disabled' : ''}>Previous</button>
+                                  <span class="scores-page-info">Page ${currentPage} of ${totalPages}</span>
+                                  <button type="button" class="btn btn-outline btn-sm scores-page-next" data-type="${typeKey}" ${currentPage >= totalPages ? 'disabled' : ''}>Next</button>
+                                </div>
                               </section>
                             `;
+                        }
+
+                        function updateTablePage(typeKey) {
+                            const state = tableState[typeKey];
+                            if (!state || !breakdownGroups) return;
+                            const groupEl = breakdownGroups.querySelector(`.scores-table-pager[data-type="${typeKey}"]`)?.closest('.scores-subtable-group');
+                            if (!groupEl) return;
+                            const tbody = groupEl.querySelector('tbody');
+                            const pageInfo = groupEl.querySelector('.scores-page-info');
+                            const prevBtn = groupEl.querySelector('.scores-page-prev');
+                            const nextBtn = groupEl.querySelector('.scores-page-next');
+                            if (!tbody || !pageInfo || !prevBtn || !nextBtn) return;
+
+                            const totalPages = Math.max(1, Math.ceil(state.rowsData.length / pageSize));
+                            const currentPage = Math.max(1, Math.min(pageState[typeKey] || 1, totalPages));
+                            pageState[typeKey] = currentPage;
+
+                            const pageRowsHtml = state.rowsData
+                                .slice((currentPage - 1) * pageSize, currentPage * pageSize)
+                                .map((row) => `
+                                  <tr>
+                                    <td>${row.studentName}</td>
+                                    ${row.scoreCells}
+                                    <td>${row.totalDisplay}</td>
+                                  </tr>
+                                `)
+                                .join('');
+
+                            tbody.innerHTML = pageRowsHtml;
+                            pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
+                            prevBtn.disabled = currentPage <= 1;
+                            nextBtn.disabled = currentPage >= totalPages;
                         }
 
                         if (breakdownGroups) {
@@ -506,6 +561,21 @@
                                     const type = String(btn.getAttribute('data-type') || '').toLowerCase();
                                     const title = btn.getAttribute('data-title') || 'scores';
                                     exportBreakdownByType(type, title);
+                                });
+                            });
+
+                            breakdownGroups.querySelectorAll('.scores-page-prev').forEach((btn) => {
+                                btn.addEventListener('click', () => {
+                                    const type = String(btn.getAttribute('data-type') || '').toLowerCase();
+                                    pageState[type] = Math.max(1, Number(pageState[type] || 1) - 1);
+                                    updateTablePage(type);
+                                });
+                            });
+                            breakdownGroups.querySelectorAll('.scores-page-next').forEach((btn) => {
+                                btn.addEventListener('click', () => {
+                                    const type = String(btn.getAttribute('data-type') || '').toLowerCase();
+                                    pageState[type] = Number(pageState[type] || 1) + 1;
+                                    updateTablePage(type);
                                 });
                             });
                         }

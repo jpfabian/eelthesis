@@ -3,6 +3,29 @@ function getCurrentUser() {
     return user ? JSON.parse(user) : null;
 }
 
+const DELETED_CLASSES_CACHE_KEY = "eel_deleted_classes_cache_v1";
+
+function cacheDeletedClass(cls, userId) {
+    if (!cls) return;
+    try {
+        const raw = localStorage.getItem(DELETED_CLASSES_CACHE_KEY);
+        const parsed = JSON.parse(raw || "[]");
+        const list = Array.isArray(parsed) ? parsed : [];
+        list.push({
+            deleted_event_id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+            id: cls.id ?? cls.class_id ?? null,
+            name: cls.name ?? "",
+            section: cls.section ?? "",
+            subject: cls.subject ?? "",
+            class_code: cls.class_code ?? "",
+            deleted_at: new Date().toISOString(),
+            deleted_by: userId ?? null
+        });
+        // Keep latest 200 cache entries max.
+        localStorage.setItem(DELETED_CLASSES_CACHE_KEY, JSON.stringify(list.slice(-200)));
+    } catch (_) {}
+}
+
 
 document.addEventListener('DOMContentLoaded', async function() {
     try {
@@ -139,6 +162,62 @@ async function saveClass() {
     }
 }
 
+async function deleteClassById(cls) {
+    const user = getCurrentUser();
+    if (!user || user.role !== "teacher") return;
+    const classId = cls?.id != null ? cls.id : cls?.class_id;
+    if (!classId) return;
+
+    const classLabel = `${cls?.name || "Class"}${cls?.section ? ` (${cls.section})` : ""}`;
+    let confirmed = false;
+    if (typeof Swal !== "undefined" && Swal && typeof Swal.fire === "function") {
+        const result = await Swal.fire({
+            icon: "warning",
+            title: "Delete class?",
+            text: `${classLabel} will be permanently deleted.`,
+            showCancelButton: true,
+            confirmButtonText: "Delete",
+            cancelButtonText: "Cancel",
+            confirmButtonColor: "#dc2626",
+        });
+        confirmed = !!result.isConfirmed;
+    } else {
+        confirmed = window.confirm(`Delete ${classLabel}? This cannot be undone.`);
+    }
+    if (!confirmed) return;
+
+    try {
+        const teacherId = encodeURIComponent(user.user_id);
+        let response = await fetch(`${window.API_BASE || ""}/api/classes/${encodeURIComponent(classId)}?teacher_id=${teacherId}`, {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ teacher_id: user.user_id })
+        });
+        let data = await response.json().catch(() => ({}));
+
+        // Fallback for environments where DELETE route is not available yet.
+        if (response.status === 404) {
+            response = await fetch(`${window.API_BASE || ""}/api/classes/${encodeURIComponent(classId)}/delete?teacher_id=${teacherId}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ teacher_id: user.user_id })
+            });
+            data = await response.json().catch(() => ({}));
+        }
+
+        if (!response.ok || !data.success) {
+            showNotification(data.message || "Failed to delete class.", "error");
+            return;
+        }
+        cacheDeletedClass(cls, user.user_id);
+        showNotification("Class deleted successfully.", "success");
+        await loadTeacherClasses();
+    } catch (err) {
+        console.error("Delete class error:", err);
+        showNotification("Server error while deleting class.", "error");
+    }
+}
+
 async function loadTeacherClasses() {
     const user = getCurrentUser();
     if (!user || user.role !== "teacher") return;
@@ -175,6 +254,12 @@ async function loadTeacherClasses() {
                             ${subject ? `<span class="class-pill class-pill--muted">${escapeHtml(subject)}</span>` : ''}
                         </div>
                     </div>
+                    <div class="class-card__menu-wrap">
+                        <button type="button" class="class-card__menu-btn" aria-label="Class actions" aria-expanded="false">⋮</button>
+                        <div class="class-card__menu hidden">
+                            <button type="button" class="class-card__menu-item class-card__menu-item--delete">Delete</button>
+                        </div>
+                    </div>
                 </div>
                 <div class="class-card__meta">
                     <div class="class-meta-row">
@@ -191,10 +276,32 @@ async function loadTeacherClasses() {
             `;
 
             const openBtn = card.querySelector('.class-open-btn');
+            const menuBtn = card.querySelector('.class-card__menu-btn');
+            const menuEl = card.querySelector('.class-card__menu');
+            const deleteBtn = card.querySelector('.class-card__menu-item--delete');
             if (openBtn) {
                 openBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
                     selectClass(cls);
+                });
+            }
+            if (menuBtn && menuEl) {
+                menuBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    document.querySelectorAll('.class-card__menu').forEach((m) => {
+                        if (m !== menuEl) m.classList.add('hidden');
+                    });
+                    const willOpen = menuEl.classList.contains('hidden');
+                    menuEl.classList.toggle('hidden', !willOpen);
+                    menuBtn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+                });
+            }
+            if (deleteBtn) {
+                deleteBtn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    if (menuEl) menuEl.classList.add('hidden');
+                    if (menuBtn) menuBtn.setAttribute('aria-expanded', 'false');
+                    await deleteClassById(cls);
                 });
             }
             card.addEventListener('click', () => selectClass(cls));
@@ -209,6 +316,14 @@ async function loadTeacherClasses() {
         });
 
         grid.appendChild(createClassCard);
+
+        if (!document.body._classCardMenuOutsideBound) {
+            document.body._classCardMenuOutsideBound = true;
+            document.addEventListener('click', () => {
+                document.querySelectorAll('.class-card__menu').forEach((m) => m.classList.add('hidden'));
+                document.querySelectorAll('.class-card__menu-btn[aria-expanded="true"]').forEach((b) => b.setAttribute('aria-expanded', 'false'));
+            });
+        }
 
         lucide.createIcons({ icons: lucide.icons });
     } catch (err) {

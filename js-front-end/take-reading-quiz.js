@@ -10,8 +10,22 @@
       .replaceAll("'", "&#39;");
   }
 
+  function formatPassageHTML(text) {
+    if (!text || typeof text !== "string") return "<p>(No passage provided)</p>";
+    var escaped = String(text)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+    var paras = escaped.split(/\n\n+/).map(function (p) { return p.trim(); }).filter(Boolean);
+    return "<div class=\"reading-passage__label\"><span class=\"reading-passage__icon\" aria-hidden=\"true\">📖</span> Reading</div><div class=\"reading-passage__content\">" +
+      (paras.length ? paras.map(function (p) { return "<p>" + p + "</p>"; }).join("") : "<p>" + escaped + "</p>") +
+      "</div>";
+  }
+
   let quizData = null;
-  let currentQuestionIndex = 0;
+  let currentQuestionIndex = -1;
   let studentAnswers = {};
   let countdownInterval = null;
   let teacherQuizAttemptId = null;
@@ -23,8 +37,8 @@
     if (q.question_type === "fill_blank") return "Fill in the blank";
     if (q.question_type === "essay") return "Essay";
     if (q.question_type !== "mcq" || !q.options || !q.options.length) return null;
-    const opts = q.options.map(function (o) { return String(o.option_text || "").trim(); });
-    const hasOther = opts.some(function (t) { return t === "(Other)"; });
+    var opts = q.options.map(function (o) { return String(o.option_text || "").trim(); });
+    var hasOther = opts.some(function (t) { return t === "(Other)"; });
     if (q.options.length === 2 && hasOther) return "Identification";
     var isTrueFalse = opts.length === 2 && opts.indexOf("True") !== -1 && opts.indexOf("False") !== -1;
     if (isTrueFalse) return "True or False";
@@ -34,21 +48,18 @@
   function renderQuestion(q, index) {
     var div = document.createElement("div");
     div.classList.add("question-item");
-
     var headerRow = document.createElement("div");
     headerRow.style.display = "flex";
     headerRow.style.alignItems = "center";
     headerRow.style.gap = "0.5rem";
     headerRow.style.flexWrap = "wrap";
     headerRow.style.marginBottom = "0.5rem";
-
     var header = document.createElement("h4");
     header.textContent = "Question " + (index + 1) + " of " + quizData.questions.length;
     header.style.fontWeight = "600";
     header.style.margin = "0";
     header.style.fontSize = "1.125rem";
     headerRow.appendChild(header);
-
     var typeLabel = getQuestionTypeLabel(q);
     if (typeLabel) {
       var badge = document.createElement("span");
@@ -57,20 +68,14 @@
       headerRow.appendChild(badge);
     }
     div.appendChild(headerRow);
-
     var p = document.createElement("p");
     p.textContent = q.question_text || "";
     p.style.marginBottom = "1rem";
     p.classList.add("quiz-question-text");
     div.appendChild(p);
-
     var studentAnswer = studentAnswers[q.question_id];
-    var isIdentification =
-      q.question_type === "mcq" &&
-      q.options &&
-      q.options.length === 2 &&
+    var isIdentification = q.question_type === "mcq" && q.options && q.options.length === 2 &&
       q.options.some(function (o) { return String(o.option_text || "").trim() === "(Other)"; });
-
     if (isIdentification) {
       var input = document.createElement("input");
       input.type = "text";
@@ -100,12 +105,9 @@
       var realAnswers = q.blanks.map(function (b) { return (b.correct_answer || b.answer_text || "").trim(); }).filter(Boolean);
       var randomDistractors = ["understanding", "tone", "message", "feedback", "interpretation", "receiver", "barrier", "context", "emotion", "transmission", "clarity", "listening", "expression", "meaning", "perception"];
       var combined = realAnswers.slice();
-      randomDistractors.forEach(function (w) {
-        if (combined.indexOf(w) === -1) combined.push(w);
-      });
+      randomDistractors.forEach(function (w) { if (combined.indexOf(w) === -1) combined.push(w); });
       var shuffledExtras = combined.filter(function (w) { return realAnswers.indexOf(w) === -1; }).sort(function () { return Math.random() - 0.5; }).slice(0, Math.max(0, 10 - realAnswers.length));
       var finalWords = realAnswers.concat(shuffledExtras).sort(function () { return Math.random() - 0.5; });
-
       q.blanks.forEach(function (blank) {
         var blankDiv = document.createElement("div");
         blankDiv.style.marginBottom = "1rem";
@@ -144,28 +146,51 @@
     var progressBar = document.getElementById("take-quiz-progress");
     if (!quizData || !quizData.questions || !quizData.questions.length) return;
     var total = quizData.questions.length;
-    var pct = ((currentQuestionIndex + 1) / total) * 100;
+    var pct = currentQuestionIndex < 0 ? 0 : ((currentQuestionIndex + 1) / total) * 100;
     progressBar.style.width = pct + "%";
   }
 
-  function showSingleQuestion(question) {
+  function showPassageOnlyView() {
+    var passageEl = document.getElementById("take-quiz-passage");
+    if (passageEl) passageEl.classList.remove("hidden");
     var container = document.getElementById("take-quiz-questions");
     var nextBtn = document.getElementById("take-quiz-next-btn");
     var submitBtn = document.getElementById("take-quiz-submit-btn");
     var prevBtn = document.getElementById("take-quiz-prev-btn");
     if (!container) return;
+    container.innerHTML = "";
+    var prompt = document.createElement("p");
+    prompt.className = "text-muted-foreground text-center py-6";
+    prompt.textContent = "Read the passage above. Click Next when you're ready to answer the questions.";
+    container.appendChild(prompt);
+    if (prevBtn) {
+      prevBtn.disabled = true;
+      prevBtn.style.opacity = "0.5";
+      prevBtn.classList.remove("hidden");
+    }
+    if (submitBtn) submitBtn.classList.add("hidden");
+    if (nextBtn) {
+      nextBtn.classList.remove("hidden");
+      nextBtn.style.display = "inline-flex";
+      nextBtn.innerHTML = "Continue to Questions <i data-lucide=\"chevron-right\" class=\"size-4\"></i>";
+    }
+    updateProgressBar();
+    if (window.lucide && typeof window.lucide.createIcons === "function") window.lucide.createIcons();
+  }
 
+  function showSingleQuestion(question) {
+    var passageEl = document.getElementById("take-quiz-passage");
+    if (passageEl) passageEl.classList.add("hidden");
+    var container = document.getElementById("take-quiz-questions");
+    var nextBtn = document.getElementById("take-quiz-next-btn");
+    var submitBtn = document.getElementById("take-quiz-submit-btn");
+    var prevBtn = document.getElementById("take-quiz-prev-btn");
+    if (!container) return;
     container.innerHTML = "";
     container.appendChild(renderQuestion(question, currentQuestionIndex));
-
     if (!question) return;
-
-    var isIdentification =
-      question.question_type === "mcq" &&
-      question.options &&
-      question.options.length === 2 &&
+    var isIdentification = question.question_type === "mcq" && question.options && question.options.length === 2 &&
       question.options.some(function (o) { return String(o.option_text || "").trim() === "(Other)"; });
-
     container.querySelectorAll("input, textarea").forEach(function (el) {
       el.addEventListener("input", function () {
         if (question.question_type === "fill_blank") {
@@ -182,7 +207,6 @@
         if (question.question_type === "mcq" && !isIdentification) studentAnswers[question.question_id] = el.value;
       });
     });
-
     var savedAnswer = studentAnswers[question.question_id];
     if (savedAnswer !== undefined) {
       if (isIdentification) {
@@ -201,12 +225,15 @@
         if (ta) ta.value = savedAnswer;
       }
     }
-
     var total = quizData ? quizData.questions.length : 0;
     if (prevBtn) {
-      prevBtn.disabled = currentQuestionIndex === 0;
-      prevBtn.style.opacity = currentQuestionIndex === 0 ? "0.5" : "1";
+      prevBtn.disabled = false;
+      prevBtn.style.opacity = "1";
       prevBtn.classList.remove("hidden");
+      prevBtn.innerHTML = "<i data-lucide=\"chevron-left\" class=\"size-4\"></i> Previous";
+    }
+    if (nextBtn) {
+      nextBtn.innerHTML = "Next <i data-lucide=\"chevron-right\" class=\"size-4\"></i>";
     }
     if (currentQuestionIndex >= total - 1) {
       if (submitBtn) { submitBtn.classList.remove("hidden"); submitBtn.style.display = "inline-flex"; }
@@ -220,16 +247,11 @@
   }
 
   function saveCurrentAnswer() {
-    if (!quizData || !quizData.questions) return;
+    if (!quizData || !quizData.questions || currentQuestionIndex < 0) return;
     var question = quizData.questions[currentQuestionIndex];
     if (!question) return;
-
-    var isIdentification =
-      question.question_type === "mcq" &&
-      question.options &&
-      question.options.length === 2 &&
+    var isIdentification = question.question_type === "mcq" && question.options && question.options.length === 2 &&
       question.options.some(function (o) { return String(o.option_text || "").trim() === "(Other)"; });
-
     if (isIdentification) {
       var input = document.querySelector("input[name=\"take_identification_" + question.question_id + "\"]");
       if (input) studentAnswers[question.question_id] = input.value || "";
@@ -251,14 +273,26 @@
 
   function prevQuestion() {
     if (!quizData || !quizData.questions.length) return;
-    if (currentQuestionIndex <= 0) return;
-    saveCurrentAnswer();
-    currentQuestionIndex--;
-    showSingleQuestion(quizData.questions[currentQuestionIndex]);
+    if (currentQuestionIndex === 0) {
+      saveCurrentAnswer();
+      currentQuestionIndex = -1;
+      showPassageOnlyView();
+      return;
+    }
+    if (currentQuestionIndex > 0) {
+      saveCurrentAnswer();
+      currentQuestionIndex--;
+      showSingleQuestion(quizData.questions[currentQuestionIndex]);
+    }
   }
 
   function nextQuestion() {
     if (!quizData || !quizData.questions.length) return;
+    if (currentQuestionIndex === -1) {
+      currentQuestionIndex = 0;
+      showSingleQuestion(quizData.questions[0]);
+      return;
+    }
     saveCurrentAnswer();
     if (currentQuestionIndex < quizData.questions.length - 1) {
       currentQuestionIndex++;
@@ -268,8 +302,7 @@
 
   function hasAnswerForQuestion(q, answer) {
     if (answer === undefined || answer === null) return false;
-    var isIdentification =
-      q.question_type === "mcq" && q.options && q.options.length === 2 &&
+    var isIdentification = q.question_type === "mcq" && q.options && q.options.length === 2 &&
       q.options.some(function (o) { return String(o.option_text || "").trim() === "(Other)"; });
     if (q.question_type === "mcq" && !isIdentification) return true;
     if (typeof answer === "string") return String(answer).trim().length > 0;
@@ -284,8 +317,7 @@
 
   function getAnswerDisplayText(q, answer) {
     if (answer === undefined || answer === null) return "—";
-    var isIdentification =
-      q.question_type === "mcq" && q.options && q.options.length === 2 &&
+    var isIdentification = q.question_type === "mcq" && q.options && q.options.length === 2 &&
       q.options.some(function (o) { return String(o.option_text || "").trim() === "(Other)"; });
     if (q.question_type === "mcq" && !isIdentification && q.options && q.options.length) {
       var optId = Number(answer);
@@ -385,14 +417,10 @@
     var percentEl = doneEl ? document.getElementById("quiz-done-percent") : null;
 
     function renderDone(score, totalPoints, success) {
-      if (card) {
-        card.classList.remove("quiz-done--high", "quiz-done--low");
-      }
+      if (card) card.classList.remove("quiz-done--high", "quiz-done--low");
       if (scoreWrap) scoreWrap.classList.add("hidden");
       if (doneMsg) doneMsg.textContent = "Quiz completed. Your attempt has been saved.";
-      if (charImg) charImg.src = "image/eel-character-celebrate.png";
-      if (charImg) charImg.alt = "EEL character celebrating";
-
+      if (charImg) { charImg.src = "image/eel-character-celebrate.png"; charImg.alt = "EEL character celebrating"; }
       if (success && score != null && totalPoints != null && totalPoints > 0) {
         var pct = Math.round((score / totalPoints) * 100);
         var isHigh = pct >= 70;
@@ -407,11 +435,7 @@
           if (scoreTotal) scoreTotal.textContent = String(totalPoints);
           if (percentEl) percentEl.textContent = pct + "%";
         }
-        if (doneMsg) {
-          doneMsg.textContent = isHigh
-            ? "Great job! Your attempt has been saved."
-            : "Keep practicing! Your attempt has been saved.";
-        }
+        if (doneMsg) doneMsg.textContent = isHigh ? "Great job! Your attempt has been saved." : "Keep practicing! Your attempt has been saved.";
       } else if (doneMsg && !success) {
         doneMsg.textContent = "Quiz completed. There was a problem saving your attempt.";
       }
@@ -426,12 +450,7 @@
       })
         .then(function (r) { return r.json(); })
         .then(function (data) {
-          submitResult = data;
-          renderDone(
-            data.score != null ? data.score : null,
-            data.total_points != null ? data.total_points : null,
-            !!data.success
-          );
+          renderDone(data.score != null ? data.score : null, data.total_points != null ? data.total_points : null, !!data.success);
         })
         .catch(function () {
           renderDone(null, null, false);
@@ -448,16 +467,10 @@
         .then(function (r) { return r.json(); })
         .then(function (saveData) {
           if (!saveData.success) throw new Error("Failed to save answers");
-          return fetch((window.API_BASE || "") + "/api/reading-quiz-attempts/" + builtinAttemptId + "/submit", { method: "PATCH" })
-            .then(function (r) { return r.json(); });
+          return fetch((window.API_BASE || "") + "/api/reading-quiz-attempts/" + builtinAttemptId + "/submit", { method: "PATCH" }).then(function (r) { return r.json(); });
         })
         .then(function (data) {
-          submitResult = data;
-          renderDone(
-            data.totalScore != null ? data.totalScore : null,
-            data.totalPoints != null ? data.totalPoints : null,
-            !!data.success
-          );
+          renderDone(data.totalScore != null ? data.totalScore : null, data.totalPoints != null ? data.totalPoints : null, !!data.success);
         })
         .catch(function () {
           renderDone(null, null, false);
@@ -479,8 +492,8 @@
       return;
     }
     nav.classList.remove("hidden");
-    currentQuestionIndex = 0;
-    showSingleQuestion(questions[0]);
+    currentQuestionIndex = -1;
+    showPassageOnlyView();
   }
 
   function requestFullscreen() {
@@ -533,7 +546,7 @@
             if (existing) {
               builtinAttemptId = existing.attempt_id;
               if (existing.status === "completed") {
-                window.location.href = "take-quiz.html?quiz_id=" + encodeURIComponent(quizId) + "&source=builtin&review=1&return=reading-lessons.html";
+                window.location.href = "take-reading-quiz.html?quiz_id=" + encodeURIComponent(quizId) + "&source=builtin&review=1&return=reading-lessons.html";
                 return Promise.reject({ redirect: true });
               }
               return fetch((window.API_BASE || "") + "/api/reading-quiz-attempts/" + existing.attempt_id + "/answers")
@@ -574,8 +587,8 @@
               document.getElementById("take-quiz-title").textContent = quiz.title || "Quiz";
               var passageEl = document.getElementById("take-quiz-passage");
               if (passageEl) {
-                var paras = (quiz.passage || "(No passage provided)").split(/\n\n+/).map(function (p) { return p.trim(); }).filter(Boolean);
-                passageEl.innerHTML = paras.length ? paras.map(function (p) { return "<p>" + escapeHtml(p) + "</p>"; }).join("") : "<p>" + escapeHtml(quiz.passage || "(No passage provided)") + "</p>";
+                passageEl.className = "quiz-passage take-quiz-passage reading-passage";
+                passageEl.innerHTML = formatPassageHTML(quiz.passage || "(No passage provided)");
               }
               document.getElementById("take-quiz-timer-wrap").style.display = "none";
               loadQuestions(quiz.questions || []);
@@ -665,7 +678,6 @@
       .catch(function (err) { showError(err.message || "Failed to load review."); });
   }
 
-  /** If opened from lessons (window.opener), reload opener, focus it, and close this tab; else navigate to lessons. */
   function goBackToLessons() {
     if (window.opener && !window.opener.closed) {
       window.opener.location.reload();
@@ -673,7 +685,7 @@
       window.close();
     } else {
       var params = new URLSearchParams(window.location.search);
-      var returnUrl = params.get("return") || "lessons.html";
+      var returnUrl = params.get("return") || "reading-lessons.html";
       window.location.href = returnUrl;
     }
   }
@@ -701,7 +713,7 @@
     var source = params.get("source") || "teacher";
     var isReviewMode = params.get("review") === "1";
     if (!quizId) {
-      showError("Missing quiz. Open the quiz from Lessons.");
+      showError("Missing quiz. Open the quiz from Reading Lessons.");
       return;
     }
 
@@ -742,25 +754,13 @@
               var correctText = a.correct_answer_text != null ? escapeHtml(String(a.correct_answer_text)) : "—";
               var badgeClass = a.is_correct ? "quiz-review-badge--correct" : "quiz-review-badge--incorrect";
               var badgeText = a.is_correct ? "Correct" : "Incorrect";
-              return (
-                "<div class=\"quiz-review-item\">" +
-                  "<div class=\"quiz-review-item__header\">" +
-                    "<span class=\"quiz-review-item__num\">Question " + (i + 1) + "</span>" +
-                    "<span class=\"quiz-review-badge " + badgeClass + "\">" + badgeText + "</span>" +
-                  "</div>" +
-                  "<p class=\"quiz-review-item__q\">" + escapeHtml(a.question_text || "") + "</p>" +
-                  "<div class=\"quiz-review-item__row\"><strong>Your answer:</strong> " + yourAnswerText + "</div>" +
-                  "<div class=\"quiz-review-item__row\"><strong>Correct answer:</strong> " + correctText + "</div>" +
-                "</div>"
-              );
+              return "<div class=\"quiz-review-item\"><div class=\"quiz-review-item__header\"><span class=\"quiz-review-item__num\">Question " + (i + 1) + "</span><span class=\"quiz-review-badge " + badgeClass + "\">" + badgeText + "</span></div><p class=\"quiz-review-item__q\">" + escapeHtml(a.question_text || "") + "</p><div class=\"quiz-review-item__row\"><strong>Your answer:</strong> " + yourAnswerText + "</div><div class=\"quiz-review-item__row\"><strong>Correct answer:</strong> " + correctText + "</div></div>";
             }).join("");
           }
           if (reviewWrap) reviewWrap.classList.remove("hidden");
           if (window.lucide && typeof window.lucide.createIcons === "function") window.lucide.createIcons();
         })
-        .catch(function (err) {
-          showError(err.message || "Failed to load review.");
-        });
+        .catch(function (err) { showError(err.message || "Failed to load review."); });
       return;
     }
 
@@ -784,12 +784,10 @@
 
         quizData = quiz;
         studentAnswers = {};
-        currentQuestionIndex = 0;
+        currentQuestionIndex = -1;
 
         var selectedClass = null;
-        try {
-          selectedClass = JSON.parse(localStorage.getItem("eel_selected_class") || "null");
-        } catch (_) {}
+        try { selectedClass = JSON.parse(localStorage.getItem("eel_selected_class") || "null"); } catch (_) {}
         var classId = (selectedClass && selectedClass.id != null) ? selectedClass.id : (localStorage.getItem("eel_selected_class_id") || null);
         fetch((window.API_BASE || "") + "/api/teacher/reading-quiz-attempts", {
           method: "POST",
@@ -800,7 +798,7 @@
             return r.json().then(function (data) {
               if (r.status === 403 && data.error && data.error.indexOf("already taken") !== -1) {
                 var e = new Error("ALREADY_TAKEN");
-                e.reviewUrl = "take-quiz.html?quiz_id=" + encodeURIComponent(quizId) + "&review=1";
+                e.reviewUrl = "take-reading-quiz.html?quiz_id=" + encodeURIComponent(quizId) + "&review=1&return=reading-lessons.html";
                 throw e;
               }
               if (!r.ok) throw new Error(data.error || "Could not start quiz");
@@ -819,7 +817,11 @@
               if (quizPageEl) quizPageEl.classList.remove("hidden");
 
               document.getElementById("take-quiz-title").textContent = quiz.title || "Quiz";
-              document.getElementById("take-quiz-passage").textContent = quiz.passage || "(No passage provided)";
+              var passageEl = document.getElementById("take-quiz-passage");
+              if (passageEl) {
+                passageEl.className = "quiz-passage take-quiz-passage reading-passage";
+                passageEl.innerHTML = formatPassageHTML(quiz.passage || "(No passage provided)");
+              }
 
               var countdownEl = document.getElementById("take-quiz-countdown");
               var timerWrap = document.getElementById("take-quiz-timer-wrap");
@@ -883,8 +885,6 @@
             }
           });
       })
-      .catch(function (err) {
-        showError(err.message || "Failed to load quiz.");
-      });
+      .catch(function (err) { showError(err.message || "Failed to load quiz."); });
   });
 })();

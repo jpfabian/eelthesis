@@ -315,7 +315,37 @@
     </div>
 
     <!-- ============================================
-        🎙️ TAKE PRONUNCIATION QUIZ MODAL (Student View)
+        ✍️ TERMS & CONDITIONS – Before opening quiz in new tab
+        ============================================ -->
+    <div id="pronunciation-quiz-terms-modal" class="modal-overlay hidden">
+        <div class="quiz-card lesson-quiz-terms-card" style="width: 90%; max-width: 600px;">
+            <button type="button" onclick="closePronunciationQuizTermsModal()" class="close-btn" aria-label="Close">&times;</button>
+
+            <h2 id="pronunciation-quiz-terms-title" class="quiz-title">Before you start</h2>
+            <p class="lesson-quiz-terms-quiz-name text-muted-foreground" id="pronunciation-quiz-terms-quiz-name" style="margin-top: -0.5rem; margin-bottom: 1rem;">—</p>
+
+            <div class="lesson-quiz-terms-text">
+                <p>By clicking <strong>Proceed</strong>, you agree to the following:</p>
+                <ul style="margin: 1rem 0; padding-left: 1.5rem; line-height: 1.7;">
+                    <li>You will complete this quiz on your own without external help.</li>
+                    <li>You will not share quiz questions or answers with others during the quiz period.</li>
+                    <li>Your teacher may use your results for grading and feedback.</li>
+                    <li>Once you start, the time limit (if any) applies until you submit.</li>
+                </ul>
+                <p class="text-muted-foreground" style="font-size: 0.9rem;">Click <strong>Proceed</strong> to open the quiz in a new tab.</p>
+            </div>
+
+            <div class="lesson-quiz-terms-actions" style="display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem; flex-wrap: wrap;">
+                <button type="button" onclick="closePronunciationQuizTermsModal()" class="btn btn-outline">Cancel</button>
+                <button type="button" id="pronunciation-quiz-proceed-btn" onclick="proceedToPronunciationQuizPage()" class="btn btn-primary">
+                    Proceed <i data-lucide="arrow-right" class="size-4"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================
+        🎙️ TAKE PRONUNCIATION QUIZ MODAL (Student View – legacy)
         ============================================ -->
     <div id="take-pronunciation-modal" class="modal-quiz-overlay hidden">
         <div class="quiz-card"  style="width: 90%; max-width: 1000px;">

@@ -15,6 +15,9 @@
   --secondary-foreground: #ffffff;
   --muted: #e8e8ec;
   --muted-foreground: #5c5c66;
+  /* Chart colors – theme-aware */
+  --chart-remaining: #e2e8f0;
+  --chart-grid: rgba(0, 0, 0, 0.1);
   --accent: #ede9fe;
   --accent-foreground: #6d28d9;
   --destructive: #d4183d;
@@ -42,6 +45,8 @@
   --card-foreground: #e5e7eb;
   --muted: rgba(255, 255, 255, 0.06);
   --muted-foreground: #9ca3af;
+  --chart-remaining: rgba(255, 255, 255, 0.14);
+  --chart-grid: rgba(255, 255, 255, 0.08);
   --accent: rgba(139, 92, 246, 0.18);
   --accent-foreground: #ddd6fe;
   --border: rgba(255, 255, 255, 0.14);
@@ -1693,6 +1698,66 @@ body.classes-page #student-classes-grid > .card {
   gap: 0.75rem;
 }
 
+.class-card__menu-wrap {
+  position: relative;
+  margin-left: auto;
+  flex: 0 0 auto;
+}
+
+.class-card__menu-btn {
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 9999px;
+  border: 1px solid color-mix(in srgb, var(--border) 92%, transparent);
+  background: color-mix(in srgb, var(--card) 92%, transparent);
+  color: var(--muted-foreground);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.class-card__menu-btn:hover {
+  color: var(--primary);
+  border-color: color-mix(in srgb, var(--primary) 30%, var(--border));
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+}
+
+.class-card__menu {
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  right: 0;
+  min-width: 7rem;
+  border-radius: 0.6rem;
+  border: 1px solid color-mix(in srgb, var(--primary) 18%, var(--border));
+  background: color-mix(in srgb, var(--card) 97%, transparent);
+  box-shadow: 0 14px 24px -16px rgba(0, 0, 0, 0.5);
+  z-index: 8;
+  padding: 0.25rem;
+}
+
+.class-card__menu-item {
+  width: 100%;
+  border: none;
+  border-radius: 0.45rem;
+  background: transparent;
+  color: var(--foreground);
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.82rem;
+  padding: 0.45rem 0.55rem;
+}
+
+.class-card__menu-item:hover {
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+}
+
+.class-card__menu-item--delete {
+  color: var(--destructive);
+}
+
 .class-card__icon {
   width: 42px;
   height: 42px;
@@ -2351,8 +2416,13 @@ body.lessons-page .topic-row:hover {
 .lessons-ai-quiz-list .lessons-ai-quiz-item {
   border-radius: 0.75rem;
   border: 1px solid var(--border);
-  overflow: hidden;
+  overflow: visible;
+  position: relative;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.lessons-ai-quiz-list .lessons-ai-quiz-item.lessons-ai-quiz-item--menu-open {
+  z-index: 30;
 }
 
 .lessons-ai-quiz-list .lessons-ai-quiz-item:hover {
@@ -2882,6 +2952,229 @@ body.lessons-page #main-content {
 
 @keyframes lesson-viewer-spin {
   to { transform: rotate(360deg); }
+}
+
+/* ============================================
+   Lesson Presentation Modal — Beautiful & Engaging
+   ============================================ */
+.lesson-presentation-card {
+  width: 100% !important;
+  max-width: 1400px !important;
+  max-height: 88vh !important;
+  overflow: hidden;
+  border-radius: 1rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px var(--border);
+}
+
+.lesson-presentation-header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.5rem;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 12%, transparent), color-mix(in srgb, var(--secondary) 8%, transparent));
+  border-bottom: 1px solid var(--border);
+}
+
+.lesson-presentation-header-inner {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.lesson-presentation-icon {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.75rem;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  color: white;
+  flex-shrink: 0;
+}
+
+.lesson-presentation-icon-svg {
+  width: 24px;
+  height: 24px;
+}
+
+.lesson-presentation-title-wrap {
+  min-width: 0;
+}
+
+.lesson-presentation-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--foreground);
+  margin: 0;
+  line-height: 1.3;
+}
+
+.lesson-presentation-subtitle {
+  font-size: 0.8rem;
+  color: var(--muted-foreground);
+  margin: 0.2rem 0 0;
+}
+
+.lesson-presentation-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.lesson-download-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.lesson-presentation-close {
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  color: var(--muted-foreground);
+  transition: color 0.2s, background 0.2s;
+}
+
+.lesson-presentation-close:hover {
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+}
+
+.lesson-presentation-body {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.lesson-presentation-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 320px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--primary) 4%, transparent) 0%, transparent 100%);
+}
+
+.lesson-presentation-loading-content {
+  text-align: center;
+}
+
+.lesson-presentation-loading-dots {
+  display: flex;
+  justify-content: center;
+  gap: 0.35rem;
+  margin-top: 1rem;
+}
+
+.lesson-presentation-loading-dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--primary);
+  animation: lesson-loading-dot 1.4s ease-in-out infinite both;
+}
+
+.lesson-presentation-loading-dots span:nth-child(1) { animation-delay: -0.32s; }
+.lesson-presentation-loading-dots span:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes lesson-loading-dot {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.5; }
+  40% { transform: scale(1); opacity: 1; }
+}
+
+/* AI-generated topic presentation content */
+.lesson-topic-content {
+  padding: 1.5rem 1.75rem;
+  max-height: 65vh;
+  overflow-y: auto;
+  line-height: 1.7;
+  color: var(--foreground);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--primary) 3%, transparent) 0%, transparent 100%);
+  animation: lesson-content-fade-in 0.35s ease-out;
+}
+
+@keyframes lesson-content-fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.lesson-topic-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.lesson-topic-content::-webkit-scrollbar-track {
+  background: var(--muted);
+  border-radius: 4px;
+}
+
+.lesson-topic-content::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--primary) 40%, transparent);
+  border-radius: 4px;
+}
+
+.lesson-topic-content::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--primary) 55%, transparent);
+}
+
+.lesson-topic-content h2 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin: 1.5rem 0 0.75rem;
+  padding: 0.75rem 1rem;
+  padding-left: 1rem;
+  border-left: 4px solid var(--primary);
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+  border-radius: 0 0.5rem 0.5rem 0;
+  color: var(--foreground);
+}
+
+.lesson-topic-content h2:first-child {
+  margin-top: 0;
+}
+
+.lesson-topic-content h3 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 1.25rem 0 0.5rem;
+  color: var(--primary);
+}
+
+.lesson-topic-content p {
+  margin: 0.5rem 0;
+  color: var(--muted-foreground);
+  font-size: 0.95rem;
+}
+
+.lesson-topic-content ul {
+  margin: 0.75rem 0;
+  padding-left: 1.5rem;
+  list-style: none;
+}
+
+.lesson-topic-content ul li {
+  position: relative;
+  margin: 0.4rem 0;
+  padding-left: 1.25rem;
+  color: var(--muted-foreground);
+  font-size: 0.95rem;
+}
+
+.lesson-topic-content ul li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+}
+
+.lesson-topic-content strong {
+  color: var(--foreground);
+  font-weight: 600;
 }
 
 /* Fullscreen presentation (slideshow) overlay */
@@ -5118,8 +5411,8 @@ body.eel-modal-open #password-modal {
   gap: 0.5rem;
   margin-bottom: 0.35rem;
   padding: 0.45rem;
-  background: #ffffff;
-  color: #1f2937;
+  background: var(--card);
+  color: var(--foreground);
   border: 1px solid color-mix(in srgb, var(--primary) 12%, var(--border));
   border-radius: 0.75rem;
   box-shadow: 0 4px 12px -10px rgba(0, 0, 0, 0.55);
@@ -5130,7 +5423,7 @@ body.eel-modal-open #password-modal {
 }
 .mobile-nav-notification-item:hover {
   transform: translateY(-1px);
-  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  background: color-mix(in srgb, var(--muted) 52%, var(--card));
   border-color: color-mix(in srgb, var(--primary) 32%, var(--border));
 }
 .mobile-nav-notification-item:focus-visible {
@@ -5238,16 +5531,23 @@ body.eel-modal-open #password-modal {
 .mobile-nav-notification-item-meta {
   margin-top: 0.25rem;
   font-size: 0.74rem;
-  color: #6b7280;
+  color: var(--muted-foreground);
 }
 .mobile-nav-notification-item--unread {
   background: linear-gradient(
     135deg,
-    color-mix(in srgb, var(--primary) 14%, transparent) 0%,
-    color-mix(in srgb, var(--secondary) 8%, transparent) 100%
+    color-mix(in srgb, var(--primary) 14%, var(--card)) 0%,
+    color-mix(in srgb, var(--secondary) 8%, var(--card)) 100%
   );
   border-color: color-mix(in srgb, var(--primary) 34%, var(--border));
   color: var(--foreground);
+}
+.mobile-nav-notification-item--unread:hover {
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--primary) 20%, var(--card)) 0%,
+    color-mix(in srgb, var(--secondary) 12%, var(--card)) 100%
+  );
 }
 .mobile-nav-notification-empty {
   margin: 0;
@@ -9165,6 +9465,44 @@ body.auth-page .login-screen .btn.btn-primary:hover {
   color: var(--secondary);
 }
 
+.scores-table-pager {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.65rem;
+}
+
+.scores-table-pager .btn {
+  min-width: 5.75rem;
+}
+
+.scores-table-pager .btn-outline {
+  border-color: color-mix(in srgb, var(--primary) 38%, var(--border)) !important;
+  color: var(--primary) !important;
+  background: color-mix(in srgb, var(--primary) 8%, var(--card)) !important;
+}
+
+.scores-table-pager .btn-outline:hover:not(:disabled) {
+  border-color: var(--primary) !important;
+  color: var(--primary) !important;
+  background: color-mix(in srgb, var(--primary) 18%, var(--card)) !important;
+}
+
+.scores-table-pager .btn-outline:disabled {
+  border-color: color-mix(in srgb, var(--border) 92%, transparent) !important;
+  color: var(--muted-foreground) !important;
+  background: color-mix(in srgb, var(--muted) 58%, var(--card)) !important;
+  opacity: 0.75;
+}
+
+.scores-page-info {
+  font-size: 0.8125rem !important;
+  color: var(--muted-foreground) !important;
+  min-width: 5.5rem !important;
+  text-align: center;
+}
+
 @media (min-width: 640px) {
   .scores-section-body {
     padding: 1.75rem;
@@ -10721,6 +11059,47 @@ body.pronunciation-lessons-page #created-lessons-grid .card:hover {
   flex: 0 0 auto;
 }
 
+#teacher-reading-review-modal .teacher-attempt-item .student-chip {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+#teacher-reading-review-modal .teacher-attempt-item .teacher-attempt-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+#teacher-reading-review-modal .teacher-attempt-item .teacher-attempt-name-block {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+#teacher-reading-review-modal .teacher-attempt-item .teacher-attempt-name {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+#teacher-reading-review-modal .teacher-attempt-item .teacher-attempt-time-inline {
+  font-size: 0.72rem;
+  color: var(--muted-foreground);
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 11rem;
+}
+
+#teacher-reading-review-modal .teacher-attempt-item .teacher-attempt-score {
+  margin-left: 0.35rem;
+  flex: 0 0 auto;
+}
+
 #lesson-teacher-review-modal .teacher-attempt-score,
 #teacher-reading-review-modal .teacher-attempt-score,
 #teacher-pronunciation-review-modal .teacher-attempt-score {
@@ -11332,6 +11711,69 @@ body.pronunciation-lessons-page #created-lessons-grid .card:hover {
   transition: transform 0.25s ease, color 0.2s ease;
 }
 
+.created-quiz-card__header-actions-right {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.lessons-quiz-item-menu-wrap {
+  position: relative;
+}
+
+.lessons-quiz-item-menu-btn {
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 9999px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--muted-foreground);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.lessons-quiz-item-menu-btn:hover {
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--muted) 35%, transparent);
+}
+
+.lessons-quiz-item-menu {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  right: 0;
+  min-width: 8rem;
+  padding: 0.35rem;
+  border-radius: 0.65rem;
+  border: 1px solid var(--border);
+  background: var(--card);
+  box-shadow: 0 10px 20px color-mix(in srgb, var(--foreground) 12%, transparent);
+  z-index: 20;
+}
+
+.lessons-quiz-item-menu.hidden {
+  display: none;
+}
+
+.lessons-quiz-item-menu-delete {
+  width: 100%;
+  border: 0;
+  border-radius: 0.45rem;
+  background: transparent;
+  color: var(--destructive);
+  text-align: left;
+  font-size: 0.875rem;
+  font-weight: 600;
+  padding: 0.45rem 0.6rem;
+}
+
+.lessons-quiz-item-menu-delete:hover {
+  background: color-mix(in srgb, var(--destructive) 12%, transparent);
+}
+
 .created-quiz-card__header:hover .created-quiz-card__chevron {
   color: var(--primary);
 }
@@ -11829,10 +12271,24 @@ body.take-quiz-page .take-quiz-header {
   align-items: center;
   gap: 0.5rem;
 }
+
+body.take-quiz-page .take-quiz-header1 {
+  flex-shrink: 0;
+  padding: 1rem 4rem 1rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--card);
+  display: flex;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 body.take-quiz-page .take-quiz-title {
   margin: 0;
   font-size: 1.5rem;
   justify-self: start;
+  max-width: 100%;
+  word-wrap: break-word;
 }
 body.take-quiz-page .take-quiz-timer-center {
   display: flex;
@@ -11878,6 +12334,11 @@ body.take-quiz-page .take-quiz-passage {
   max-height: 220px;
   overflow-y: auto;
   border-radius: 12px;
+}
+body.take-quiz-page .take-quiz-passage.reading-passage {
+  max-height: none;
+  overflow: visible;
+  padding: 0 !important;
 }
 body.take-quiz-page .take-quiz-questions .question-item {
   padding: 1rem 1.25rem !important;
@@ -11986,6 +12447,125 @@ body.take-quiz-page .take-quiz-questions .mt-4.p-4 .grid > div {
   margin-bottom: 25px;
   box-shadow: inset 0 0 12px rgba(0,0,0,0.06);
   line-height: 1.6;
+}
+
+/* ============================================================
+   📖 Reading Passage — Beautiful, engaging layout for students
+   ============================================================ */
+.quiz-passage.reading-passage {
+  position: relative;
+  padding: 0 0 1.5rem; /* label has its own padding */
+  margin-bottom: 2rem;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  font-style: normal;
+}
+
+/* Remove duplicate book icon from generic .quiz-passage::before */
+.quiz-passage.reading-passage::before {
+  content: none !important;
+  display: none !important;
+}
+
+.quiz-passage.reading-passage .reading-passage__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--primary);
+  margin-bottom: 1.25rem;
+  padding: 0.5rem 1rem;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--primary) 12%, transparent),
+    color-mix(in srgb, var(--secondary) 10%, transparent)
+  );
+  border-radius: 9999px;
+  border: 1px solid color-mix(in srgb, var(--primary) 25%, transparent);
+}
+
+.quiz-passage.reading-passage .reading-passage__icon {
+  font-size: 1.125rem;
+}
+
+.quiz-passage.reading-passage .reading-passage__content {
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--muted) 40%, var(--card)),
+    color-mix(in srgb, var(--muted) 25%, var(--card))
+  );
+  border: 1px solid color-mix(in srgb, var(--primary) 15%, var(--border));
+  border-radius: 1rem;
+  padding: 0.5rem 1.75rem 1.75rem;
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  position: relative;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.quiz-passage.reading-passage .reading-passage__content::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: linear-gradient(180deg, var(--primary), var(--secondary));
+  border-radius: 4px 0 0 4px;
+}
+
+.quiz-passage.reading-passage .reading-passage__content p {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.0625rem;
+  line-height: 1.85;
+  color: var(--foreground);
+  margin: 0 0 1.25rem;
+  text-align: justify;
+  hyphens: auto;
+}
+
+.quiz-passage.reading-passage .reading-passage__content p:last-child {
+  margin-bottom: 0;
+}
+
+/* Drop cap on first paragraph for a storybook feel */
+.quiz-passage.reading-passage .reading-passage__content p:first-of-type::first-letter {
+  font-size: 3rem;
+  font-weight: 700;
+  float: left;
+  line-height: 1;
+  margin-right: 0.5rem;
+  margin-top: 0.15rem;
+  color: var(--primary);
+  font-family: Georgia, 'Times New Roman', serif;
+}
+
+/* Dark mode: softer, richer background */
+:root[data-theme="dark"] .quiz-passage.reading-passage .reading-passage__content {
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--muted) 35%, var(--card)),
+    color-mix(in srgb, var(--muted) 20%, var(--card))
+  );
+  border-color: color-mix(in srgb, var(--primary) 20%, var(--border));
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+:root[data-theme="dark"] .quiz-passage.reading-passage .reading-passage__label {
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--primary) 20%, transparent),
+    color-mix(in srgb, var(--secondary) 15%, transparent)
+  );
+  border-color: color-mix(in srgb, var(--primary) 35%, transparent);
 }
 
 .quiz-questions .question {
@@ -16988,15 +17568,463 @@ body.take-quiz-page .take-quiz-questions .mt-4.p-4 .grid > div {
 
 }
 
-/* My Progress – chart section padding */
+/* ============================================
+   My Progress – Beautiful & Engaging Display
+   ============================================ */
+body.my-progress-page #main-content {
+    background: linear-gradient(180deg, color-mix(in srgb, var(--primary) 4%, var(--background)) 0%, var(--background) 20%);
+}
+
+.my-progress-content {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* Page header */
+.my-progress-page .my-progress-header {
+    background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 12%, var(--card)), color-mix(in srgb, var(--secondary) 8%, var(--card)));
+    border: 1px solid color-mix(in srgb, var(--primary) 18%, var(--border));
+    border-radius: 1rem;
+    padding: 1.5rem 1.75rem;
+    box-shadow: 0 4px 20px -4px color-mix(in srgb, var(--primary) 15%, transparent);
+}
+
+.my-progress-page .my-progress-header .page-header-icon {
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--primary) 35%, transparent);
+}
+
+.my-progress-page .my-progress-header .page-header-title {
+    font-size: 1.875rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+}
+
+.my-progress-page .my-progress-header .page-header-subtitle {
+    font-size: 0.9375rem;
+    opacity: 0.9;
+}
+
+/* Stats cards */
+.my-progress-stats {
+    margin-top: 0.5rem;
+}
+
+.my-progress-stat-card {
+    position: relative;
+    overflow: hidden;
+    border-radius: 1rem;
+    transition: transform 0.2s ease, box-shadow 0.25s ease;
+}
+
+.my-progress-stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 28px -8px rgba(0, 0, 0, 0.15), 0 8px 24px -12px color-mix(in srgb, var(--primary) 20%, transparent);
+}
+
+.my-progress-stat-card .card-content {
+    position: relative;
+    z-index: 1;
+}
+
+.my-progress-stat-icon-wrap {
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1rem;
+}
+
+.my-progress-stat-overall .my-progress-stat-icon-wrap {
+    background: linear-gradient(135deg, color-mix(in srgb, var(--secondary) 25%, var(--card)), color-mix(in srgb, var(--secondary) 15%, var(--card)));
+    color: var(--secondary);
+}
+
+.my-progress-stat-reading .my-progress-stat-icon-wrap {
+    background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 22%, var(--card)), color-mix(in srgb, var(--primary) 12%, var(--card)));
+    color: var(--primary);
+}
+
+.my-progress-stat-pronunciation .my-progress-stat-icon-wrap {
+    background: linear-gradient(135deg, color-mix(in srgb, #0ea5e9 22%, var(--card)), color-mix(in srgb, #0ea5e9 12%, var(--card)));
+    color: #0284c7;
+}
+
+.my-progress-stat-ai .my-progress-stat-icon-wrap {
+    background: linear-gradient(135deg, color-mix(in srgb, #a855f7 22%, var(--card)), color-mix(in srgb, #a855f7 12%, var(--card)));
+    color: #9333ea;
+}
+
+.my-progress-stat-overall {
+    border: 1px solid color-mix(in srgb, var(--secondary) 25%, var(--border));
+    background: linear-gradient(145deg, color-mix(in srgb, var(--secondary) 8%, var(--card)), var(--card));
+}
+
+.my-progress-stat-reading,
+.my-progress-stat-pronunciation,
+.my-progress-stat-ai {
+    border: 1px solid color-mix(in srgb, var(--border) 90%, var(--primary) 10%);
+    background: var(--card);
+}
+
+.my-progress-stat-label {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--muted-foreground);
+    margin: 0 0 0.25rem 0;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.my-progress-stat-value {
+    font-size: 1.75rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin: 0.25rem 0;
+}
+
+.my-progress-stat-desc {
+    font-size: 0.75rem;
+    color: var(--muted-foreground);
+    margin: 0;
+    line-height: 1.4;
+}
+
+/* Chart cards */
 .my-progress-page .my-progress-charts {
-    padding: 1rem 0 !important;
+    padding: 0.5rem 0;
 }
-.my-progress-page .my-progress-chart-card {
+
+.my-progress-chart-card {
     padding: 1.5rem !important;
+    border-radius: 1rem;
+    border: 1px solid color-mix(in srgb, var(--border) 85%, var(--primary) 15%);
+    background: var(--card);
+    transition: box-shadow 0.25s ease, transform 0.2s ease;
 }
+
+.my-progress-chart-card:hover {
+    box-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.12), 0 4px 16px -8px color-mix(in srgb, var(--primary) 15%, transparent);
+}
+
+.my-progress-chart-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1rem;
+    font-weight: 700;
+    margin: 0 0 1rem 0;
+    color: var(--foreground);
+}
+
+.my-progress-chart-title i {
+    color: var(--primary);
+}
+
 .my-progress-page .my-progress-chart-wrap {
-    padding: 1rem !important;
+    padding: 1rem 0;
+}
+
+.my-progress-chart-empty {
+    font-size: 0.875rem;
+    color: var(--muted-foreground);
+    text-align: center;
+    padding: 2rem 1rem;
+}
+
+/* Assessment Scores card */
+.my-progress-assessment-card {
+    border-radius: 1rem;
+    padding: 1.75rem !important;
+    border: 1px solid color-mix(in srgb, var(--border) 85%, var(--primary) 15%);
+    box-shadow: 0 4px 20px -8px rgba(0, 0, 0, 0.08);
+}
+
+.my-progress-assessment-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin: 0 0 1.5rem 0;
+    color: var(--foreground);
+}
+
+.my-progress-assessment-title i {
+    color: var(--primary);
+}
+
+/* Breakdown sections & table */
+.my-progress-page .my-progress-breakdown-section {
+    margin-top: 1.5rem;
+    padding: 1.25rem;
+    background: color-mix(in srgb, var(--muted) 20%, var(--card));
+    border-radius: 0.75rem;
+    border: 1px solid var(--border);
+}
+
+.my-progress-page .my-progress-breakdown-section:first-of-type {
+    margin-top: 0;
+}
+
+.my-progress-page .my-progress-breakdown-title {
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.my-progress-page .my-progress-table-scroll {
+    border-radius: 0.5rem;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--border) 90%, transparent);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.my-progress-page .scores-table thead {
+    background: linear-gradient(180deg, color-mix(in srgb, var(--primary) 8%, var(--card)), color-mix(in srgb, var(--muted) 40%, var(--card)));
+}
+
+.my-progress-page .scores-table tbody tr:hover {
+    background: color-mix(in srgb, var(--secondary) 6%, var(--card));
+}
+
+.my-progress-page .scores-table td:last-child {
+    font-weight: 700;
+    color: var(--secondary);
+}
+
+.my-progress-page .scores-section-message {
+    padding: 1.5rem;
+    text-align: center;
+    color: var(--muted-foreground);
+    font-size: 0.9375rem;
+}
+
+/* My Progress – dark mode overrides */
+:root[data-theme="dark"] body.my-progress-page #main-content {
+    background: linear-gradient(180deg, color-mix(in srgb, var(--primary) 8%, var(--background)) 0%, var(--background) 25%);
+}
+
+:root[data-theme="dark"] body.my-progress-page .my-progress-header {
+    background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 18%, var(--card)), color-mix(in srgb, var(--secondary) 12%, var(--card)));
+    border-color: color-mix(in srgb, var(--primary) 25%, var(--border));
+}
+
+:root[data-theme="dark"] body.my-progress-page .my-progress-stat-card:hover {
+    box-shadow: 0 12px 28px -8px rgba(0, 0, 0, 0.4), 0 8px 24px -12px color-mix(in srgb, var(--primary) 25%, transparent);
+}
+
+:root[data-theme="dark"] body.my-progress-page .my-progress-chart-card:hover {
+    box-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.3), 0 4px 16px -8px color-mix(in srgb, var(--primary) 20%, transparent);
+}
+
+:root[data-theme="dark"] body.my-progress-page .my-progress-breakdown-section {
+    background: color-mix(in srgb, var(--muted) 40%, var(--card));
+}
+
+/* ============================================
+   Take Pronunciation Quiz – Beautiful Display
+   ============================================ */
+body.take-pronunciation-page .pronunciation-prompt-card {
+    background: linear-gradient(145deg, rgba(99, 102, 241, 0.08), rgba(168, 85, 247, 0.06));
+    border: 1px solid rgba(99, 102, 241, 0.2);
+    border-radius: 1rem;
+    padding: 2rem 2.5rem;
+    margin-bottom: 2rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 4px 24px rgba(99, 102, 241, 0.08);
+}
+
+body.take-pronunciation-page .pronunciation-prompt-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #6366f1, #a855f7, #ec4899);
+    border-radius: 1rem 1rem 0 0;
+}
+
+body.take-pronunciation-page .pronunciation-prompt-label {
+    display: block;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--muted-foreground);
+    margin-bottom: 1rem;
+}
+
+body.take-pronunciation-page .pronunciation-word-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+body.take-pronunciation-page .pronunciation-prompt-card .word-large {
+    font-size: 3.5rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #ec4899, #f43f5e, #a855f7);
+    background-size: 200% 200%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: 0.02em;
+    animation: pronunciation-gradient-shift 4s ease infinite;
+}
+
+@keyframes pronunciation-gradient-shift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+}
+
+body.take-pronunciation-page .pronunciation-ipa {
+    font-size: 1.5rem;
+    font-weight: 600;
+    font-family: 'Georgia', 'Times New Roman', serif;
+    color: var(--muted-foreground);
+    background: rgba(168, 85, 247, 0.15);
+    padding: 0.5rem 1.25rem;
+    border-radius: 0.5rem;
+    letter-spacing: 0.08em;
+}
+
+:root[data-theme="dark"] body.take-pronunciation-page .pronunciation-ipa {
+    background: rgba(168, 85, 247, 0.2);
+}
+
+body.take-pronunciation-page .recording-interface {
+    background: color-mix(in srgb, var(--card) 95%, var(--background));
+    border: 1px solid var(--border);
+    border-radius: 1.25rem;
+    padding: 2.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+}
+
+:root[data-theme="dark"] body.take-pronunciation-page .recording-interface {
+    background: linear-gradient(180deg, rgba(30, 41, 59, 0.5), rgba(15, 23, 42, 0.6));
+    border-color: rgba(99, 102, 241, 0.2);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+body.take-pronunciation-page .recording-idle {
+    padding: 1rem 0;
+}
+
+body.take-pronunciation-page .recording-idle svg {
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+}
+
+body.take-pronunciation-page .recording-idle:hover svg {
+    opacity: 1;
+}
+
+body.take-pronunciation-page .recording-idle p {
+    font-size: 0.9375rem;
+    color: var(--muted-foreground);
+    margin-top: 0.75rem;
+}
+
+body.take-pronunciation-page .record-button {
+    background: linear-gradient(135deg, #ec4899, #f43f5e);
+    padding: 1rem 2rem;
+    font-size: 1rem;
+    font-weight: 600;
+    border-radius: 0.75rem;
+    box-shadow: 0 4px 14px rgba(236, 72, 153, 0.35);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+body.take-pronunciation-page .record-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(236, 72, 153, 0.45);
+}
+
+body.take-pronunciation-page #pronunciation-question-num {
+    font-size: 0.9375rem;
+    color: var(--muted-foreground);
+    font-weight: 500;
+}
+
+body.take-pronunciation-page .pronunciation-prompt-card .sentence-display {
+    margin: 0;
+}
+
+body.take-pronunciation-page .pronunciation-prompt-card .sentence-text {
+    font-size: 1.375rem;
+    font-weight: 600;
+    line-height: 1.5;
+    color: var(--foreground);
+}
+
+.recording-feedback {
+    margin-top: 1.25rem;
+    padding: 1rem 1.5rem;
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    border-radius: 0.75rem;
+    text-align: center;
+}
+
+.recording-feedback-character {
+    width: 100px;
+    height: auto;
+    margin: 0 auto 1rem;
+    display: block;
+}
+
+.recording-score {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #10b981;
+}
+
+.recording-feedback-msg {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--foreground);
+    margin: 0.5rem 0 0;
+}
+
+body.take-pronunciation-page .recording-feedback {
+    margin-top: 1.25rem;
+    padding: 1rem 1.5rem;
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(6, 182, 212, 0.08));
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    border-radius: 0.75rem;
+    text-align: center;
+}
+
+body.take-pronunciation-page .recording-score {
+    font-size: 2rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #10b981, #06b6d4);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+body.take-pronunciation-page .recording-feedback-msg {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--foreground);
+    margin: 0.5rem 0 0;
+}
+
+body.take-pronunciation-page #pronunciation-content {
+    animation: pronunciation-fadeIn 0.4s ease-out;
+}
+
+@keyframes pronunciation-fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 

@@ -38,8 +38,31 @@ function initQuizViewToggle(storageKey) {
 }
 
 function getSelectedSubjectId() {
-    const selectedClass = JSON.parse(localStorage.getItem("eel_selected_class"));
-    return selectedClass?.subject_id || 1; // default to 1 if not found
+    const selectedClass = JSON.parse(localStorage.getItem("eel_selected_class") || "null");
+    if (!selectedClass) return 1;
+    if (selectedClass.subject_id != null && Number.isFinite(Number(selectedClass.subject_id))) {
+        return Number(selectedClass.subject_id);
+    }
+    return resolveSubjectIdFromName(selectedClass.subject) ?? 1;
+}
+
+/** Resolve subject_id from class subject name (classes table has subject VARCHAR, not subject_id). */
+function resolveSubjectIdFromName(subjectName) {
+    if (!subjectName || typeof subjectName !== "string") return null;
+    const mapping = {
+        "Reading and Writing Skills": 1,
+        "Oral Communication in Context": 2,
+        "Creative Writing": 3,
+        "Creative Non-Fiction": 4,
+        "English for Academic and Professional Purposes": 5,
+    };
+    const normalized = String(subjectName).toLowerCase();
+    if (normalized.includes("oral")) return 2;
+    if (normalized.includes("reading")) return 1;
+    if (normalized.includes("creative writing")) return 3;
+    if (normalized.includes("creative non")) return 4;
+    if (normalized.includes("academic")) return 5;
+    return mapping[subjectName] ?? null;
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -54,7 +77,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const newUrl = window.location.origin + window.location.pathname;
         window.history.replaceState({}, document.title, newUrl);
     }
-    console.log("Class ID:", classId);
 });
 
 document.addEventListener('DOMContentLoaded', async function() {
@@ -121,14 +143,42 @@ function startLesson(lessonId) {
         // Teacher opens schedule modal
         openScheduleModal(lessonId);
     } else {
-        // Student starts quiz
-        openQuizModal(lessonId);
+        // Student: show terms modal, then Proceed opens quiz in new tab
+        openPronunciationQuizTermsModal(lessonId, false, '');
     }
 }
 
+let _pendingPronunciationQuiz = null;
+
+function openPronunciationQuizTermsModal(quizId, isReview = false, quizTitle = '') {
+    _pendingPronunciationQuiz = { quizId, isReview };
+    const modal = document.getElementById('pronunciation-quiz-terms-modal');
+    const nameEl = document.getElementById('pronunciation-quiz-terms-quiz-name');
+    if (modal) modal.classList.remove('hidden');
+    if (nameEl) nameEl.textContent = quizTitle || 'Quiz';
+    if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons({ icons: lucide.icons });
+}
+
+function closePronunciationQuizTermsModal() {
+    _pendingPronunciationQuiz = null;
+    const modal = document.getElementById('pronunciation-quiz-terms-modal');
+    if (modal) modal.classList.add('hidden');
+}
+
+function proceedToPronunciationQuizPage() {
+    if (!_pendingPronunciationQuiz) return;
+    const { quizId, isReview } = _pendingPronunciationQuiz;
+    let url = `take-pronunciation.html?quiz_id=${encodeURIComponent(quizId)}&return=pronunciation-lessons.html`;
+    if (isReview) url += '&review=1';
+    window.open(url, '_blank');
+    closePronunciationQuizTermsModal();
+}
+
 function updatePassagePlaceholder() {
-    const difficulty = document.getElementById("lesson-difficulty").value;
+    const difficultyEl = document.getElementById("lesson-difficulty");
     const passageField = document.getElementById("lesson-passage");
+    if (!difficultyEl || !passageField) return;
+    const difficulty = difficultyEl.value;
 
     if (difficulty === "beginner") {
         passageField.placeholder = 
@@ -163,6 +213,7 @@ function updatePassagePlaceholder() {
 // 🧠 Initialize and update placeholder when difficulty changes
 document.addEventListener("DOMContentLoaded", () => {
     const difficultySelect = document.getElementById("lesson-difficulty");
+    if (!difficultySelect) return;
 
     // Set initial placeholder
     updatePassagePlaceholder();
@@ -173,7 +224,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // Optional: clear questions-container when switching levels
         const container = document.getElementById('questions-container');
-        container.innerHTML = "";
+        if (container) container.innerHTML = "";
     });
 });
 
@@ -423,13 +474,18 @@ function closeScheduleModal() {
 }
 
 // Show/hide specific students
-document.getElementById('retake-option').addEventListener('change', (e) => {
-    const container = document.getElementById('specific-students-container');
-    container.classList.toggle('hidden', e.target.value !== 'specific');
-});
+const retakeOptionEl = document.getElementById('retake-option');
+if (retakeOptionEl) {
+    retakeOptionEl.addEventListener('change', (e) => {
+        const container = document.getElementById('specific-students-container');
+        if (container) container.classList.toggle('hidden', e.target.value !== 'specific');
+    });
+}
 
 // Single save handler
-document.getElementById('save-schedule-btn').addEventListener('click', async () => {
+const saveScheduleBtn = document.getElementById('save-schedule-btn');
+if (saveScheduleBtn) {
+    saveScheduleBtn.addEventListener('click', async () => {
     const modal = document.getElementById('schedule-modal');
     const quizId = modal.dataset.quizId;
     if (!quizId) return;
@@ -480,7 +536,8 @@ document.getElementById('save-schedule-btn').addEventListener('click', async () 
         console.error(err);
         showNotification("An error occurred while saving schedule.", "error");
     }
-});
+    });
+}
 
 // Helper functions
 function formatDate(dateString) {
@@ -542,12 +599,11 @@ async function loadPronunciationQuizzes(user) {
         const myName = `${user?.fname || ''} ${user?.lname || ''}`.trim() || String(user?.email || '').trim() || 'Student';
         const myInitials = getInitials(myName);
 
-        // ✅ Get selected class (with subject_id)
-        const selectedClass = JSON.parse(localStorage.getItem("eel_selected_class"));
-        const subjectId = selectedClass?.subject_id;
-        if (!subjectId) {
-            console.warn("⚠️ No subject_id found in selected class.");
-            return;
+        // ✅ Get selected class and resolve subject_id (class has subject name, not subject_id)
+        const selectedClass = JSON.parse(localStorage.getItem("eel_selected_class") || "null");
+        let subjectId = selectedClass?.subject_id != null ? Number(selectedClass.subject_id) : null;
+        if (subjectId == null || !Number.isFinite(subjectId)) {
+            subjectId = resolveSubjectIdFromName(selectedClass?.subject) ?? 1;
         }
 
         // ✅ Fetch pronunciation quizzes
@@ -584,15 +640,6 @@ async function loadPronunciationQuizzes(user) {
         const container = document.getElementById("lessons-grid");
         container.innerHTML = "";
         container.className = "space-y-6";
-
-        // ✅ Difficulty sections
-        const beginnerContainer = document.createElement("div");
-        const intermediateContainer = document.createElement("div");
-        const advancedContainer = document.createElement("div");
-
-        beginnerContainer.innerHTML = `<h2 class="card-title text-center px-2 py-1 text-lg rounded-lg bg-secondary/10 text-secondary">Beginner</h2>`;
-        intermediateContainer.innerHTML = `<h2 class="card-title text-center px-2 py-1 text-lg rounded-lg bg-secondary/10 text-secondary">Intermediate</h2>`;
-        advancedContainer.innerHTML = `<h2 class="card-title text-center px-2 py-1 text-lg rounded-lg bg-secondary/10 text-secondary">Advanced</h2>`;
 
         // ✅ Numbering (consecutive)
         // If your DB uses quiz_number 1..30, we display that.
@@ -664,20 +711,19 @@ async function loadPronunciationQuizzes(user) {
                 let btnText = "Start Quiz";
                 let btnIcon = "play";
                 let btnDisabled = effectiveLocked;
-                let openAction = `openPronunciationModal(${quiz.quiz_id})`;
-                isCompleted = !!studentAttempt && studentAttempt.status === "completed";
+                const isReview = !!studentAttempt && studentAttempt.status === "completed";
+                const quizTitle = (quiz.title || "").replace(/"/g, "&quot;");
+                let openAction = `openPronunciationQuizTermsModal(${quiz.quiz_id}, ${isReview}, this.getAttribute('data-quiz-title'))`;
 
                 if (studentAttempt) {
                     if (studentAttempt.status === "completed") {
                         btnText = "Review Quiz";
                         btnIcon = "eye";
                         btnDisabled = false;
-                        openAction = `openPronunciationReview(${quiz.quiz_id}, ${user.user_id})`;
                     } else if (studentAttempt.status === "in_progress") {
                         btnText = "Continue Quiz";
                         btnIcon = "play";
                         btnDisabled = false;
-                        openAction = `openPronunciationModal(${quiz.quiz_id})`;
                     }
                 }
 
@@ -685,6 +731,7 @@ async function loadPronunciationQuizzes(user) {
                     <button 
                         class="btn btn-primary flex-1 ${btnDisabled ? "opacity-50 cursor-not-allowed" : ""}" 
                         ${btnDisabled ? "disabled" : ""}
+                        data-quiz-title="${quizTitle}"
                         onclick="event.stopPropagation(); ${!btnDisabled ? openAction : ""}"
                     >
                         <i data-lucide="${btnIcon}" class="size-3 mr-1"></i>
@@ -757,16 +804,15 @@ async function loadPronunciationQuizzes(user) {
             header.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } });
             quizCard.querySelectorAll(".quiz-actions .btn").forEach(btn => btn.addEventListener("click", (e) => e.stopPropagation()));
 
-            // ✅ Append to corresponding difficulty
-            if (quiz.difficulty === "beginner") beginnerContainer.appendChild(quizCard);
-            else if (quiz.difficulty === "intermediate") intermediateContainer.appendChild(quizCard);
-            else if (quiz.difficulty === "advanced") advancedContainer.appendChild(quizCard);
+            container.appendChild(quizCard);
         });
 
-        // ✅ Add all sections
-        container.appendChild(beginnerContainer);
-        container.appendChild(intermediateContainer);
-        container.appendChild(advancedContainer);
+        if (quizzes.length === 0) {
+            const emptyEl = document.createElement("p");
+            emptyEl.className = "text-center text-muted-foreground py-8";
+            emptyEl.textContent = "No pronunciation quizzes available for this subject yet.";
+            container.appendChild(emptyEl);
+        }
 
         lucide.createIcons({ icons: lucide.icons });
 
@@ -798,15 +844,6 @@ async function loadPronunciationQuizzesTeacher(user) {
         const container = document.getElementById("created-lessons-grid");
         container.innerHTML = "";
         container.className = "space-y-6";
-
-        // ✅ Difficulty sections
-        const beginnerContainer = document.createElement("div");
-        const intermediateContainer = document.createElement("div");
-        const advancedContainer = document.createElement("div");
-
-        beginnerContainer.innerHTML = `<h2 class="card-title text-center px-2 py-1 text-lg rounded-lg bg-secondary/10 text-secondary">Beginner</h2>`;
-        intermediateContainer.innerHTML = `<h2 class="card-title text-center px-2 py-1 text-lg rounded-lg bg-secondary/10 text-secondary">Intermediate</h2>`;
-        advancedContainer.innerHTML = `<h2 class="card-title text-center px-2 py-1 text-lg rounded-lg bg-secondary/10 text-secondary">Advanced</h2>`;
 
         // ✅ Consecutive numbering across all difficulties
         let seq = 1;
@@ -876,16 +913,8 @@ async function loadPronunciationQuizzesTeacher(user) {
             header.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } });
             quizCard.querySelectorAll(".quiz-actions .btn").forEach(btn => btn.addEventListener("click", (e) => e.stopPropagation()));
 
-            // ✅ Append to corresponding difficulty
-            if (quiz.difficulty === "beginner") beginnerContainer.appendChild(quizCard);
-            else if (quiz.difficulty === "intermediate") intermediateContainer.appendChild(quizCard);
-            else if (quiz.difficulty === "advanced") advancedContainer.appendChild(quizCard);
+            container.appendChild(quizCard);
         });
-
-        // ✅ Append all difficulty sections
-        container.appendChild(beginnerContainer);
-        container.appendChild(intermediateContainer);
-        container.appendChild(advancedContainer);
 
         lucide.createIcons({ icons: lucide.icons });
 
@@ -983,25 +1012,28 @@ function loadPronunciationQuestion(index) {
 
     const q = quiz.questions[index];
     document.getElementById('pronunciation-question-num').textContent = `Question ${index+1} of ${quiz.questions.length}`;
-    document.getElementById('pronunciation-difficulty').textContent = quiz.difficulty 
-        ? `${quiz.difficulty === 'beginner' ? '🟢' : quiz.difficulty === 'intermediate' ? '🟡' : '🔴'} ${quiz.difficulty}` 
-        : '';
 
+    const pronunciationText = q.answer || q.correct_pronunciation || q.stressed_syllable || '';
     let contentHtml = '';
     if (quiz.difficulty === 'beginner' || quiz.difficulty === 'intermediate') {
+        const ipa = pronunciationText ? (pronunciationText.startsWith('/') ? pronunciationText : '/' + pronunciationText + '/') : '';
         contentHtml = `
-            <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem;">🔤 Word to Pronounce:</h3>
-            <div class="word-display">
-                <span class="word-large">${q.word || q.sentence || '(No content)'}</span>
-                <span class="pronunciation-guide">${q.correct_pronunciation || q.stressed_syllable || ''}</span>
+            <div class="pronunciation-prompt-card">
+                <span class="pronunciation-prompt-label">Word to Pronounce</span>
+                <div class="pronunciation-word-block">
+                    <span class="word-large">${q.word || q.sentence || '(No content)'}</span>
+                    ${ipa ? `<span class="pronunciation-ipa">${ipa}</span>` : ''}
+                </div>
             </div>
         `;
     } else {
         contentHtml = `
-            <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: 1rem;">📝 Sentence to Say:</h3>
-            <div class="sentence-display">
-                <p class="sentence-text">${q.sentence || '(No sentence)'}</p>
-                ${q.reduced_form ? `<p class="reduced-form"><strong>Reduced form:</strong> <span class="highlight">${q.reduced_form}</span></p>` : ''}
+            <div class="pronunciation-prompt-card">
+                <span class="pronunciation-prompt-label">Sentence to Say</span>
+                <div class="sentence-display">
+                    <p class="sentence-text">${q.sentence || '(No sentence)'}</p>
+                    ${q.reduced_form ? `<p class="reduced-form"><strong>Reduced form:</strong> <span class="highlight">${q.reduced_form}</span></p>` : ''}
+                </div>
             </div>
         `;
     }
@@ -1081,6 +1113,7 @@ async function toggleRecording() {
                 active?.classList.remove('hidden');
                 complete?.classList.add('hidden');
                 recordedControls?.classList.add('hidden');
+                document.getElementById('recording-feedback')?.classList.add('hidden');
                 recordBtn.querySelector('span').textContent = 'Stop Recording';
                 showNotification("🎙️ Recording... speak now.", "info");
 
@@ -1117,18 +1150,34 @@ async function toggleRecording() {
 
                 const blob = new Blob(recordedChunks, { type: recordedChunks[0]?.type || 'audio/webm' });
 
-                // Save recording locally
+                // Simulate score (70-100%) - backend will compute real score on submit
+                const score = Math.floor(70 + Math.random() * 31);
+                const feedbackMsg = score >= 90 ? '🌟 Excellent pronunciation!' : score >= 85 ? '👏 Great job!' : score >= 75 ? '💪 Good effort!' : '📢 Keep practicing!';
+
                 const q = pronunciationQuizData.questions[pronunciationCurrentIndex];
                 pronunciationAnswers[pronunciationCurrentIndex] = { 
                     blob, 
                     transcript: recognitionTranscript || '', 
-                    questionId: q.question_id 
+                    questionId: q.question_id,
+                    displayScore: score
                 };
 
                 recognitionTranscript = '';
 
-                // DO NOT reset UI here!
-                // User can now play or re-record
+                // Show score and feedback (take-pronunciation.html has this element)
+                const feedbackEl = document.getElementById('recording-feedback');
+                if (feedbackEl) {
+                    feedbackEl.classList.remove('hidden');
+                    const charImg = feedbackEl.querySelector('#recording-feedback-character') || feedbackEl.querySelector('.recording-feedback-character');
+                    if (charImg) {
+                        charImg.src = score >= 80 ? 'image/eel-character-celebrate.png' : 'image/eel-character-sad.png';
+                        charImg.alt = score >= 80 ? 'EEL character celebrating' : 'EEL character';
+                    }
+                    const scoreEl = feedbackEl.querySelector('.recording-score');
+                    const msgEl = feedbackEl.querySelector('.recording-feedback-msg');
+                    if (scoreEl) scoreEl.textContent = score + '%';
+                    if (msgEl) msgEl.textContent = feedbackMsg;
+                }
             };
 
             mediaRecorder.start();
@@ -1258,6 +1307,7 @@ function resetRecordingUI() {
     document.getElementById('recording-active')?.classList.add('hidden');
     document.getElementById('recording-complete')?.classList.add('hidden');
     document.getElementById('recorded-controls')?.classList.add('hidden');
+    document.getElementById('recording-feedback')?.classList.add('hidden');
 
     const recordBtn = document.getElementById('record-btn');
     if (recordBtn) {

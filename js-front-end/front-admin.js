@@ -377,7 +377,17 @@ async function initAdminDashboardPage() {
   };
 
   document.getElementById("admin-refresh-btn")?.addEventListener("click", refresh);
-  document.getElementById("admin-logout-btn")?.addEventListener("click", () => {
+  document.getElementById("admin-logout-btn")?.addEventListener("click", async () => {
+    const result = await Swal.fire({
+      icon: "question",
+      title: "Log out?",
+      text: "Are you sure you want to log out?",
+      showCancelButton: true,
+      confirmButtonText: "Yes",
+      cancelButtonText: "No",
+      confirmButtonColor: "#8b5cf6",
+    });
+    if (!result.isConfirmed) return;
     clearAdminToken();
     try { localStorage.removeItem("eel_token"); localStorage.removeItem("eel_user"); } catch (_) {}
     window.location.href = "login.html";

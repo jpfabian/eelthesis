@@ -1,6 +1,7 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
+const { sendPasswordResetCode } = require("./mailer");
 
 const router = express.Router();
 const { nowPhilippineDatetime, formatPhilippineDatetime } = require("./utils/datetime");
@@ -9,8 +10,8 @@ function sha256Hex(input) {
   return crypto.createHash("sha256").update(String(input || "")).digest("hex");
 }
 
-function randomToken() {
-  return crypto.randomBytes(24).toString("hex"); // 48 chars
+function randomSixDigitCode() {
+  return String(Math.floor(100000 + Math.random() * 900000));
 }
 
 function addMinutes(date, minutes) {
@@ -35,17 +36,72 @@ router.get("/api/auth/forgot-password", (req, res) => {
 router.get("/api/auth/reset-password", (req, res) => {
   res.status(405).json({
     success: false,
-    error: "Use POST /api/auth/reset-password with JSON body: { email, token, new_password }",
+    error: "Use POST /api/auth/reset-password with JSON body: { email, token (6-digit code), new_password }",
   });
 });
 
-// Request a password reset token (demo: returns link on-screen)
+router.get("/api/auth/verify-reset-code", (req, res) => {
+  res.status(405).json({
+    success: false,
+    error: "Use POST /api/auth/verify-reset-code with JSON body: { email, code }",
+  });
+});
+
+// Verify the 6-digit code before allowing password change
+router.post("/api/auth/verify-reset-code", async (req, res) => {
+  const email = String(req.body?.email || "").trim();
+  const code = String(req.body?.code || "").trim();
+
+  if (!email || !code) {
+    return res.status(400).json({ success: false, error: "Email and code are required" });
+  }
+  if (!/^\d{6}$/.test(code)) {
+    return res.status(400).json({ success: false, error: "Code must be 6 digits" });
+  }
+
+  let conn;
+  try {
+    const pool = req.pool;
+    conn = await pool.getConnection();
+
+    const [users] = await conn.execute("SELECT user_id FROM users WHERE email = ? LIMIT 1", [email]);
+    const userId = users?.[0]?.user_id ? Number(users[0].user_id) : null;
+    if (!userId) {
+      return res.status(400).json({ success: false, error: "Invalid or expired code" });
+    }
+
+    const tokenHash = sha256Hex(code);
+    const now = nowPhilippineDatetime();
+    const [rows] = await conn.execute(
+      `SELECT reset_id
+       FROM password_reset_tokens
+       WHERE user_id = ?
+         AND token_hash = ?
+         AND used_at IS NULL
+         AND expires_at > ?
+       LIMIT 1`,
+      [userId, tokenHash, now]
+    );
+
+    if (!rows.length) {
+      return res.status(400).json({ success: false, error: "Invalid or expired code" });
+    }
+
+    return res.json({ success: true, message: "Code verified" });
+  } catch (err) {
+    console.error("❌ Verify reset code error:", err);
+    return res.status(500).json({ success: false, error: "Server error" });
+  } finally {
+    if (conn) conn.release();
+  }
+});
+
+// Request a password reset: sends 6-digit code via email
 router.post("/api/auth/forgot-password", async (req, res) => {
   const email = String(req.body?.email || "").trim();
   if (!email) return res.status(400).json({ success: false, error: "Email is required" });
 
-  const token = randomToken();
-  const resetLink = `${req.protocol}://${req.get("host")}/reset-password.html?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`;
+  const token = randomSixDigitCode();
 
   let conn;
   try {
@@ -85,13 +141,20 @@ router.post("/api/auth/forgot-password", async (req, res) => {
         "INSERT INTO password_reset_tokens (user_id, token_hash, expires_at, created_at) VALUES (?, ?, ?, ?)",
         [userId, tokenHash, expiresAt, nowPhilippineDatetime()]
       );
+
+      const emailResult = await sendPasswordResetCode({ to: email, code: token });
+      if (emailResult.skipped) {
+        return res.status(500).json({
+          success: false,
+          error: "Email is not configured. Contact your administrator.",
+        });
+      }
     }
 
     // Always return success to avoid email enumeration.
     return res.json({
       success: true,
-      message: "If your email exists, a reset link has been generated.",
-      resetLink, // Demo: show link on-screen (production: email this)
+      message: "If an account exists, a verification code was sent to your email.",
     });
   } catch (err) {
     console.error("❌ Forgot password error:", err);
@@ -110,8 +173,17 @@ router.post("/api/auth/reset-password", async (req, res) => {
   if (!email || !token || !newPassword) {
     return res.status(400).json({ success: false, error: "Email, token, and new_password are required" });
   }
-  if (newPassword.length < 6) {
-    return res.status(400).json({ success: false, error: "Password must be at least 6 characters" });
+  if (newPassword.length < 8 || newPassword.length > 30) {
+    return res.status(400).json({ success: false, error: "Password must be 8–30 characters" });
+  }
+  if (!/[A-Z]/.test(newPassword)) {
+    return res.status(400).json({ success: false, error: "Password must include at least one capital letter" });
+  }
+  if (!/[0-9]/.test(newPassword)) {
+    return res.status(400).json({ success: false, error: "Password must include at least one number" });
+  }
+  if (!/[^A-Za-z0-9]/.test(newPassword)) {
+    return res.status(400).json({ success: false, error: "Password must include at least one special character" });
   }
 
   let conn;

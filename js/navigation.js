@@ -211,6 +211,8 @@ function setupSidebar(user, currentPage) {
             ? (user.role === "teacher" ? "Your classrooms" : "Your classes")
             : currentPage === "settings"
                 ? "Account Settings"
+                : currentPage === "deleted-classes"
+                    ? "Deleted Classes Cache"
                 : (selectedClass
                     ? `${selectedClass.name ?? ""} ${selectedClass.section ?? ""}`.trim()
                     : "No class selected");
@@ -237,6 +239,11 @@ function setupSidebar(user, currentPage) {
         const popoverAvatarHtml = avatarUrl
             ? `<img class="sidebar-profile-popover-avatar-img" src="${escapeHtml(avatarUrl)}" alt="">`
             : initials;
+        const showClassDetailsBadge =
+            currentPage !== "settings" &&
+            currentPage !== "classes" &&
+            currentPage !== "deleted-classes";
+
         headerContainer.innerHTML = `
             <div class="sidebar-profile-top">
                 <div class="sidebar-avatar-wrap">
@@ -261,7 +268,7 @@ function setupSidebar(user, currentPage) {
                     <div id="sidebar-welcome" class="sidebar-user-meta">${classLine}</div>
                 </div>
             </div>
-            ${currentPage !== "settings" ? `<div class="sidebar-badge">
+            ${showClassDetailsBadge ? `<div class="sidebar-badge">
                 <span class="sidebar-badge-label">Class details</span>
                 ${classExtra ? `<span class="sidebar-badge-value">${classExtra}</span>` : (classLine ? `<span class="sidebar-badge-value">${escapeHtml(classLine)}</span>` : "<span class=\"sidebar-badge-value\">No class selected</span>")}
             </div>` : ""}
@@ -319,13 +326,19 @@ function setupSidebar(user, currentPage) {
 
     // Settings and Logout live in the sidebar HTML with Back to Classes, not in nav groups.
 
-    // Special case: on Classes and Settings pages, show same minimal sidebar (Classroom + Settings)
-    if (currentPage === "classes" || currentPage === "settings") {
+    // Special case: on Classes/Settings/Deleted Classes pages, show minimal sidebar.
+    if (currentPage === "classes" || currentPage === "settings" || currentPage === "deleted-classes") {
+        const teacherExtra = user.role === "teacher"
+            ? [
+                { id: 'deleted-classes', label: 'Deleted Classes', icon: 'trash-2', url: 'deleted-classes.html' }
+              ]
+            : [];
         groups.push({
             title: "Classroom",
             items: [
                 { id: 'classes', label: 'Classroom', icon: 'layers', url: 'classes.html' },
                 { id: 'settings', label: 'Settings', icon: 'settings', url: 'settings.html' },
+                ...teacherExtra
             ]
         });
     } else
@@ -357,6 +370,7 @@ function setupSidebar(user, currentPage) {
             title: "Reports",
             items: [
                 { id: 'student-progress', label: 'Student Statistics', icon: 'users', url: 'student-progress.html' },
+                { id: 'deleted-ai-quizzes', label: 'Deleted AI Quizzes', icon: 'archive', url: 'deleted-ai-quizzes.html' },
             ]
         });
     } else {
@@ -411,10 +425,11 @@ function setupSidebar(user, currentPage) {
 
     // Wire the sidebar Logout button (Settings and Logout are in HTML with Back to Classes)
     const sidebarLogoutBtn = document.getElementById('logout-btn');
-    if (sidebarLogoutBtn) {
-        sidebarLogoutBtn.addEventListener('click', () => {
-            logout();
-            window.location.href = 'login.html';
+    if (sidebarLogoutBtn && !sidebarLogoutBtn._eelLogoutWired) {
+        sidebarLogoutBtn._eelLogoutWired = true;
+        sidebarLogoutBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            await handleLogoutWithConfirm();
         });
     }
 
@@ -520,15 +535,11 @@ function ensureMobileSidebarControls() {
     }
 
     // On phone/tablet: close sidebar when navigating to another page (so it stays closed on load).
-    // On desktop: only close when logout is clicked.
+    // Keep sidebar state on logout click until user confirms in the dialog.
     const isPhoneOrTablet = () => window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
     if (!sidebar._eelCloseOnNavWired) {
         sidebar._eelCloseOnNavWired = true;
         sidebar.addEventListener('click', function (e) {
-            if (e.target.closest('#logout-btn')) {
-                closeSidebar();
-                return;
-            }
             if (isPhoneOrTablet()) {
                 const link = e.target.closest('a[href]');
                 if (link) {
@@ -626,6 +637,36 @@ function showNotification(message, type = 'info') {
     }, 5000);
 }
 
+async function confirmLogout() {
+    const hasSwal = typeof Swal !== 'undefined' && Swal && typeof Swal.fire === 'function';
+    if (hasSwal) {
+        const result = await Swal.fire({
+            icon: 'question',
+            title: 'Log out?',
+            text: 'Are you sure you want to log out?',
+            showCancelButton: true,
+            confirmButtonText: 'Yes',
+            cancelButtonText: 'No',
+            confirmButtonColor: '#8b5cf6',
+        });
+        return !!result.isConfirmed;
+    }
+    return window.confirm('Are you sure you want to log out?');
+}
+
+async function handleLogoutWithConfirm() {
+    const ok = await confirmLogout();
+    if (!ok) return;
+    if (typeof logout === 'function') {
+        await logout();
+        return;
+    }
+    try {
+        localStorage.removeItem('eel_user');
+    } catch (_) {}
+    window.location.href = 'login.html';
+}
+
 function getCurrentPageId() {
     const path = window.location.pathname;
     const filename = path.split('/').pop().split('?')[0].replace('.html', '');
@@ -639,6 +680,8 @@ function getCurrentPageId() {
         'recitation': 'recitation',
         'student-progress': 'student-progress',
         'my-progress': 'my-progress',
+        'deleted-classes': 'deleted-classes',
+        'deleted-ai-quizzes': 'deleted-ai-quizzes',
         'settings': 'settings',
         'classes': 'classes'
     };
@@ -652,7 +695,7 @@ function validatePageAccess(user, pageId) {
         'classes', // ➕ dito
         'dashboard', 'lessons', 'reading-lessons', 'pronunciation-lessons', 
         'exam-generator', 'recitation',
-        'student-progress', 'settings'
+        'student-progress', 'settings', 'deleted-classes', 'deleted-ai-quizzes'
     ];
 
     const studentPages = [
@@ -712,15 +755,6 @@ function initializePage() {
 
         // Tutorial for new users (teacher or student)
         showTutorialIfNew(user, currentPageId);
-
-        // Setup logout
-        const logoutBtn = document.getElementById('logout-btn');
-        if (logoutBtn) {
-            logoutBtn.addEventListener('click', function() {
-                logout();
-                window.location.href = 'login.html';
-            });
-        }
 
         resolve(user);
     });
@@ -1449,7 +1483,8 @@ function setupSharedClassNotifications(user, currentPageId) {
 function isModalElement(el) {
     if (!el || !el.classList) return false;
     if (el.id === "sidebar-profile-popover") return false;
-    if (el.classList.contains("swal2-container")) return false;
+    if (el.classList.contains("swal2-container") || el.classList.contains("swal2-popup")) return false;
+    if (typeof el.closest === "function" && el.closest(".swal2-container")) return false;
     return (
         el.classList.contains("modal-overlay") ||
         el.classList.contains("modal-quiz-overlay") ||
@@ -1478,7 +1513,8 @@ function countVisibleModals() {
     );
     return Array.from(candidates).filter((el) => {
         if (el.id === "sidebar-profile-popover") return false;
-        if (el.classList && el.classList.contains("swal2-container")) return false;
+        if (el.classList && (el.classList.contains("swal2-container") || el.classList.contains("swal2-popup"))) return false;
+        if (typeof el.closest === "function" && el.closest(".swal2-container")) return false;
         return !el.classList.contains("hidden");
     }).length;
 }

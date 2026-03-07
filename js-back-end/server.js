@@ -4,6 +4,7 @@ const bodyParser = require("body-parser");
 const mysql = require("mysql2/promise");
 const path = require("path");
 const fs = require("fs");
+require("dotenv").config();
 const loginRoutes = require("./login");
 const signupRoutes = require("./signup");
 const readingRoutes = require("./reading");
@@ -22,6 +23,7 @@ const { getTeachersDashboardStats } = require("./teachers-dashboard");
 
 // 1️⃣ Create Express app first
 const app = express();
+let pool = null;
 
 // 2️⃣ Middlewares — CORS: localhost (dev) + ALLOWED_ORIGINS for EC2 (e.g. http://your-ec2-ip:3000)
 const allowedOriginsEnv = (process.env.ALLOWED_ORIGINS || "").trim().split(",").filter(Boolean);
@@ -39,21 +41,52 @@ app.use(cors({
 }));
 app.use(bodyParser.json());
 
-// 4️⃣ MySQL pool (must be before API routes that use it)
-const pool = mysql.createPool({
-  host: "eeldatabse.cnuayk8m8zwm.ap-southeast-1.rds.amazonaws.com",
-  user: "admin",
-  password: "Thesiseel12345",
-  database: "eel_db",
-  port: 3306,
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
-  connectTimeout: 10000,
-  dateStrings: ["DATE", "DATETIME"],
-});
+const DB_CONFIG = {
+  host: process.env.DB_HOST || "eeldatabse.cnuayk8m8zwm.ap-southeast-1.rds.amazonaws.com",
+  user: process.env.DB_USER || "admin",
+  password: process.env.DB_PASSWORD || "Thesiseel12345",
+  database: process.env.DB_NAME || "eel_db",
+  port: Number(process.env.DB_PORT || 3306),
+};
+
+async function initializeDatabase() {
+  const schemaPath = path.join(__dirname, "database.sql");
+  const schemaSql = fs.readFileSync(schemaPath, "utf8");
+
+  const bootstrapConn = await mysql.createConnection({
+    host: DB_CONFIG.host,
+    user: DB_CONFIG.user,
+    password: DB_CONFIG.password,
+    port: DB_CONFIG.port,
+    multipleStatements: true,
+    connectTimeout: 10000,
+  });
+
+  try {
+    // Create DB first so first-time setup works without manual SQL.
+    await bootstrapConn.query(`CREATE DATABASE IF NOT EXISTS \`${DB_CONFIG.database}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
+    await bootstrapConn.query(`USE \`${DB_CONFIG.database}\``);
+    await bootstrapConn.query(schemaSql);
+  } finally {
+    await bootstrapConn.end();
+  }
+
+  pool = mysql.createPool({
+    host: DB_CONFIG.host,
+    user: DB_CONFIG.user,
+    password: DB_CONFIG.password,
+    database: DB_CONFIG.database,
+    port: DB_CONFIG.port,
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0,
+    connectTimeout: 10000,
+    dateStrings: ["DATE", "DATETIME"],
+  });
+}
 
 app.use((req, res, next) => {
+  if (!pool) return res.status(503).json({ error: "Database is not ready yet" });
   req.pool = pool;
   next();
 });
@@ -166,8 +199,16 @@ app.use('/css', express.static(path.join(__dirname, '../css')));
 app.use('/js', express.static(path.join(__dirname, '../js-front-end')));
 app.use(express.static(path.join(__dirname, '../')));
 
-// 7️⃣ Start server
+// 7️⃣ Initialize DB and start server
 const PORT = Number(process.env.PORT || 3000);
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-});
+initializeDatabase()
+  .then(() => {
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`🚀 Server running on port ${PORT}`);
+      console.log(`🗄️  Database ready: ${DB_CONFIG.database}`);
+    });
+  })
+  .catch((err) => {
+    console.error("❌ Failed to initialize database:", err?.message || err);
+    process.exit(1);
+  });

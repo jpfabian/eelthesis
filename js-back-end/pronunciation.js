@@ -142,15 +142,24 @@ router.get("/api/pronunciation-quizzes", async (req, res) => {
   const pool = req.pool;
   const studentId = req.query.student_id; // optional
   const subjectId = req.query.subject_id;
+  const category = req.query.category; // optional: alphabet, numbers, flowers, animals, colors, food, nature, family, body, home
 
   try {
     let query = "SELECT * FROM pronunciation_quizzes";
     const params = [];
+    const conditions = [];
 
-    // ✅ Add WHERE clause if subjectId exists
     if (subjectId) {
-      query += " WHERE subject_id = ?";
+      // Include built-in quizzes (subject_id IS NULL) for all subjects, like reading API
+      conditions.push("(subject_id = ? OR subject_id IS NULL)");
       params.push(subjectId);
+    }
+    if (category) {
+      conditions.push("category = ?");
+      params.push(category);
+    }
+    if (conditions.length) {
+      query += " WHERE " + conditions.join(" AND ");
     }
 
     // Prefer track order if present

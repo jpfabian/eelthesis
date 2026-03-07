@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deleted AI Quizzes - EEL</title>
+    <link rel="icon" href="image/eel-character.png" type="image/png">
+    <link rel="stylesheet" href="css/styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.1/lucide.min.css" rel="stylesheet">
+    <script src="js/theme.js"></script>
+</head>
+<body class="classes-page">
+    <div class="mobile-nav-header" id="mobileNavHeader" role="banner">
+        <button type="button" class="mobile-nav-btn mobile-nav-btn--menu" id="mobileNavMenuBtn" aria-label="Open menu"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+        <button type="button" id="eel-theme-header-toggle" class="theme-header-toggle" aria-label="Toggle dark/light mode"><span class="theme-icon" aria-hidden="true">☀</span><span class="theme-label">light</span></button>
+    </div>
+
+    <div id="loading-screen" class="loading-screen">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <p>Loading deleted AI quizzes...</p>
+        </div>
+    </div>
+
+    <div id="main-app" class="flex h-screen2 bg-background hidden">
+        <div id="sidebar" class="w-64 bg-sidebar border-r border-sidebar-border h-full flex flex-col">
+            <div class="p-6">
+                <h1 id="sidebar-title" class="text-xl font-semibold">EEL</h1>
+                <p id="sidebar-welcome" class="text-sm text-muted-foreground mt-1">Welcome</p>
+            </div>
+            <div class="p-4 space-y-2">
+                <button id="back-class-btn" class="nav-button btn btn-side-bar w-full justify-start gap-3 p-3 rounded-md text-left transition-all flex items-center" type="button" style="padding: 0.75rem !important;">
+                    <i data-lucide="arrow-left" class="size-5"></i>
+                    Back to Classes
+                </button>
+            </div>
+            <nav id="sidebar-nav" class="flex-1 px-4 space-y-2"></nav>
+            <div class="p-4">
+                <button id="logout-btn" class="w-full p-3 logout-button btn-side-bar border">
+                    <i data-lucide="log-out"></i>
+                    Logout
+                </button>
+            </div>
+        </div>
+
+        <main id="main-content" class="flex-1 overflow-auto">
+            <div class="p-6 space-y-6">
+                <header class="page-header">
+                    <div class="page-header-icon" aria-hidden="true">
+                        <i data-lucide="archive" class="size-8"></i>
+                    </div>
+                    <div>
+                        <h1 class="page-header-title">Deleted AI Quizzes Cache</h1>
+                        <p class="page-header-subtitle">Cached records of deleted AI-generated quizzes from this browser.</p>
+                    </div>
+                </header>
+
+                <div class="card">
+                    <div class="card-content p-4 flex flex-wrap items-center gap-3">
+                        <input id="deleted-ai-quiz-search" class="form-input" type="search" placeholder="Search title, class, subject..." style="min-width: 340px; flex: 1.6;">
+                        <select id="deleted-ai-quiz-sort" class="form-input" style="min-width: 170px; max-width: 220px; flex: 0.7;">
+                            <option value="deleted_desc">Sort: Latest deleted</option>
+                            <option value="deleted_asc">Sort: Oldest deleted</option>
+                            <option value="title_asc">Sort: Title A-Z</option>
+                            <option value="title_desc">Sort: Title Z-A</option>
+                        </select>
+                        <button id="deleted-ai-quiz-clear" type="button" class="btn btn-outline">
+                            <i data-lucide="trash" class="size-4"></i>
+                            Clear Cache
+                        </button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-content p-0">
+                        <div class="scores-table-scroll table-scroll">
+                            <table class="scores-table" id="deleted-ai-quizzes-table">
+                                <thead>
+                                    <tr>
+                                        <th>Deleted At</th>
+                                        <th>Quiz Title</th>
+                                        <th>Class</th>
+                                        <th>Subject</th>
+                                        <th>Schedule</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="deleted-ai-quizzes-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/navigation.js"></script>
+    <script src="js-front-end/api-config.js"></script>
+    <script>
+        const DELETED_AI_QUIZZES_CACHE_KEY = "eel_deleted_ai_quizzes_cache_v1";
+        let __deletedAIQuizRows = [];
+        let __deletedAIQuizUser = null;
+
+        function escapeHtml(value) {
+            return String(value ?? "")
+                .replaceAll("&", "&amp;")
+                .replaceAll("<", "&lt;")
+                .replaceAll(">", "&gt;")
+                .replaceAll('"', "&quot;")
+                .replaceAll("'", "&#39;");
+        }
+
+        function formatDateTime(iso) {
+            if (!iso) return "-";
+            try {
+                const d = new Date(iso);
+                if (Number.isNaN(d.getTime())) return "-";
+                return d.toLocaleString("en-PH", {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit"
+                });
+            } catch (_) {
+                return "-";
+            }
+        }
+
+        function readDeletedAIQuizCache() {
+            try {
+                const raw = localStorage.getItem(DELETED_AI_QUIZZES_CACHE_KEY);
+                const list = JSON.parse(raw || "[]");
+                return Array.isArray(list) ? list : [];
+            } catch (_) {
+                return [];
+            }
+        }
+
+        function getCurrentClassScope() {
+            let selectedClass = null;
+            try {
+                selectedClass = JSON.parse(localStorage.getItem("eel_selected_class") || "null");
+            } catch (_) {
+                selectedClass = null;
+            }
+            const classId = localStorage.getItem("eel_selected_class_id") || selectedClass?.id || selectedClass?.class_id || "";
+            return {
+                classId: String(classId || "").trim(),
+                className: String(selectedClass?.name || "").trim().toLowerCase(),
+                section: String(selectedClass?.section || "").trim().toLowerCase(),
+                subject: String(selectedClass?.subject || "").trim().toLowerCase()
+            };
+        }
+
+        function isRowInCurrentClass(row, scope) {
+            if (!row || !scope) return false;
+            const rowClassId = String(row.class_id || "").trim();
+            if (scope.classId && rowClassId) return rowClassId === scope.classId;
+            // Fallback for older cache records without class_id.
+            const rowName = String(row.class_name || "").trim().toLowerCase();
+            const rowSection = String(row.section || "").trim().toLowerCase();
+            const rowSubject = String(row.subject_name || "").trim().toLowerCase();
+            return (
+                !!scope.className &&
+                rowName === scope.className &&
+                rowSection === scope.section &&
+                rowSubject === scope.subject
+            );
+        }
+
+        function getDeletedAIQuizRowKey(row) {
+            const explicit = String(row?.deleted_event_id || "").trim();
+            if (explicit) return explicit;
+            return [
+                row?.quiz_id ?? "",
+                row?.title ?? "",
+                row?.deleted_at ?? "",
+                row?.deleted_by ?? ""
+            ].join("|");
+        }
+
+        function removeDeletedAIQuizFromCache(targetRow) {
+            const list = readDeletedAIQuizCache();
+            if (!Array.isArray(list) || !list.length) return [];
+            const targetKey = getDeletedAIQuizRowKey(targetRow);
+            let removed = false;
+            const next = list.filter((item) => {
+                if (removed) return true;
+                const isMatch = getDeletedAIQuizRowKey(item) === targetKey;
+                if (isMatch) {
+                    removed = true;
+                    return false;
+                }
+                return true;
+            });
+            localStorage.setItem(DELETED_AI_QUIZZES_CACHE_KEY, JSON.stringify(next));
+            return next;
+        }
+
+        function inferSubjectIdFromName(name) {
+            const n = String(name || "").toLowerCase().trim();
+            if (!n) return null;
+            if (n.includes("reading and writing")) return 1;
+            if (n.includes("oral communication")) return 2;
+            if (n.includes("creative non")) return 4;
+            if (n.includes("creative writing")) return 3;
+            if (n.includes("academic and professional")) return 5;
+            return null;
+        }
+
+        function buildFallbackRestoreQuestions(row) {
+            const difficulty = String(row?.difficulty || "beginner").toLowerCase();
+            const title = String(row?.title || "Restored Quiz").trim();
+            if (difficulty === "intermediate") {
+                return [{
+                    question_text: `Complete the statement from "${title}": Communication is a ____ process.`,
+                    question_type: "fill_blank",
+                    blanks: [{
+                        blank_number: 1,
+                        answer_text: "dynamic",
+                        points: 1
+                    }]
+                }];
+            }
+            if (difficulty === "advanced") {
+                return [{
+                    question_text: `In 4-6 sentences, explain the importance of "${title}" in effective communication.`,
+                    question_type: "essay",
+                    points: 1
+                }];
+            }
+            return [{
+                question_text: `What best describes "${title}"?`,
+                question_type: "mcq",
+                options: [
+                    { option_text: "A core concept in communication", is_correct: true },
+                    { option_text: "A type of physical exercise", is_correct: false },
+                    { option_text: "A mathematical formula", is_correct: false },
+                    { option_text: "A weather pattern", is_correct: false }
+                ]
+            }];
+        }
+
+        function canRestoreRow(row) {
+            const hasSnapshot = !!(row?.quiz_snapshot && Array.isArray(row.quiz_snapshot.questions) && row.quiz_snapshot.questions.length > 0);
+            if (hasSnapshot) return true;
+            const subjectId = Number(row?.subject_id || 0) || inferSubjectIdFromName(row?.subject_name);
+            const classId = Number(row?.class_id || 0);
+            const hasTitle = !!String(row?.title || "").trim();
+            return !!(hasTitle && classId && subjectId);
+        }
+
+        function normalizeRestoreQuestions(snapshot) {
+            const difficulty = String(snapshot?.difficulty || "").toLowerCase();
+            const questions = Array.isArray(snapshot?.questions) ? snapshot.questions : [];
+            if (difficulty === "beginner") {
+                return questions.map((q) => ({
+                    question_text: String(q?.question_text || "").trim(),
+                    question_type: "mcq",
+                    options: Array.isArray(q?.options)
+                        ? q.options.map((o) => ({
+                            option_text: String(o?.option_text || "").trim(),
+                            is_correct: !!o?.is_correct
+                        }))
+                        : []
+                })).filter((q) => q.question_text && q.options.length > 0);
+            }
+            if (difficulty === "intermediate") {
+                return questions.map((q) => ({
+                    question_text: String(q?.question_text || "").trim(),
+                    question_type: "fill_blank",
+                    blanks: Array.isArray(q?.blanks)
+                        ? q.blanks.map((b, i) => ({
+                            blank_number: Number(b?.blank_number || (i + 1)),
+                            answer_text: String(b?.answer_text || b?.correct_answer || "").trim(),
+                            points: Number(b?.points || 1) || 1
+                        }))
+                        : []
+                })).filter((q) => q.question_text && q.blanks.length > 0);
+            }
+            return questions.map((q) => ({
+                question_text: String(q?.question_text || "").trim(),
+                question_type: "essay",
+                points: Number(q?.points || 1) || 1
+            })).filter((q) => q.question_text);
+        }
+
+        async function restoreDeletedAIQuiz(rowKey) {
+            if (!rowKey || !__deletedAIQuizUser) return;
+            const row = __deletedAIQuizRows.find((r) => getDeletedAIQuizRowKey(r) === String(rowKey));
+            if (!row) return;
+            const snapshot = row.quiz_snapshot && typeof row.quiz_snapshot === "object" ? row.quiz_snapshot : null;
+            const hasSnapshot = !!(snapshot && Array.isArray(snapshot.questions) && snapshot.questions.length > 0);
+
+            const quizLabel = row.title || "this quiz";
+            let confirmed = false;
+            if (typeof Swal !== "undefined" && Swal && typeof Swal.fire === "function") {
+                const result = await Swal.fire({
+                    icon: "question",
+                    title: "Restore quiz?",
+                    text: `Restore "${quizLabel}" as a new AI quiz?`,
+                    showCancelButton: true,
+                    confirmButtonText: "Restore",
+                    cancelButtonText: "Cancel",
+                    confirmButtonColor: "#16a34a"
+                });
+                confirmed = !!result.isConfirmed;
+            } else {
+                confirmed = window.confirm(`Restore "${quizLabel}" as a new AI quiz?`);
+            }
+            if (!confirmed) return;
+
+            try {
+                const payload = {
+                    title: (hasSnapshot ? snapshot.title : row.title) || "Restored Quiz",
+                    difficulty: (hasSnapshot ? snapshot.difficulty : row.difficulty) || "beginner",
+                    passage: (hasSnapshot ? snapshot.passage : "") || "",
+                    questions: hasSnapshot ? normalizeRestoreQuestions(snapshot) : buildFallbackRestoreQuestions(row),
+                    subject_id: Number(hasSnapshot ? snapshot.subject_id : row.subject_id) || inferSubjectIdFromName(row.subject_name) || null,
+                    user_id: __deletedAIQuizUser.user_id,
+                    class_id: Number(hasSnapshot ? snapshot.class_id : row.class_id) || null
+                };
+                if (!payload.subject_id || !payload.class_id || !Array.isArray(payload.questions) || payload.questions.length === 0) {
+                    showNotification("Cannot restore this record. Missing class/subject context.", "error");
+                    return;
+                }
+
+                const createRes = await fetch(`${window.API_BASE || ""}/api/teacher/reading-quizzes`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+                const createData = await createRes.json().catch(() => ({}));
+                if (!createRes.ok || !createData.success) {
+                    showNotification(createData.message || "Failed to restore quiz.", "error");
+                    return;
+                }
+
+                const newQuizId = Number(createData.quizId || createData.quiz_id || 0) || null;
+                const unlockTime = hasSnapshot ? snapshot.unlock_time : row.unlock_time;
+                const lockTime = hasSnapshot ? snapshot.lock_time : row.lock_time;
+                const timeLimit = hasSnapshot ? snapshot.time_limit : row.time_limit;
+                if (newQuizId && (unlockTime || lockTime || timeLimit != null)) {
+                    await fetch(`${window.API_BASE || ""}/api/teacher/reading-quizzes/${encodeURIComponent(newQuizId)}/schedule`, {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            unlock_time: unlockTime || null,
+                            lock_time: lockTime || null,
+                            time_limit: timeLimit != null ? Number(timeLimit) : null
+                        })
+                    }).catch(() => {});
+                }
+
+                const next = removeDeletedAIQuizFromCache(row);
+                __deletedAIQuizRows = next;
+                renderDeletedAIQuizCache();
+                showNotification("AI quiz restored successfully.", "success");
+            } catch (err) {
+                console.error("Restore AI quiz error:", err);
+                showNotification("Server error while restoring quiz.", "error");
+            }
+        }
+
+        function getSortValue(row, sortKey) {
+            if (sortKey === "deleted_asc" || sortKey === "deleted_desc") {
+                const t = new Date(row.deleted_at || 0).getTime();
+                return Number.isFinite(t) ? t : 0;
+            }
+            if (sortKey === "title_desc" || sortKey === "title_asc") {
+                return String(row.title || "").toLowerCase();
+            }
+            return 0;
+        }
+
+        function sortDeletedAIQuizRows(rows, sortKey) {
+            const copy = rows.slice();
+            copy.sort((a, b) => {
+                const va = getSortValue(a, sortKey);
+                const vb = getSortValue(b, sortKey);
+                if (sortKey === "deleted_asc" || sortKey === "title_asc") return va > vb ? 1 : va < vb ? -1 : 0;
+                return va < vb ? 1 : va > vb ? -1 : 0;
+            });
+            return copy;
+        }
+
+        function renderDeletedAIQuizCache() {
+            const tbody = document.getElementById("deleted-ai-quizzes-body");
+            const searchInput = document.getElementById("deleted-ai-quiz-search");
+            const sortSelect = document.getElementById("deleted-ai-quiz-sort");
+            if (!tbody || !searchInput || !sortSelect) return;
+
+            const q = String(searchInput.value || "").trim().toLowerCase();
+            const sortKey = String(sortSelect.value || "deleted_desc");
+            const scope = getCurrentClassScope();
+
+            const filtered = __deletedAIQuizRows.filter((row) => {
+                if (!isRowInCurrentClass(row, scope)) return false;
+                if (!q) return true;
+                return [
+                    row.title,
+                    row.class_name,
+                    row.section,
+                    row.subject_name,
+                    row.difficulty
+                ].some((v) => String(v || "").toLowerCase().includes(q));
+            });
+
+            const rows = sortDeletedAIQuizRows(filtered, sortKey);
+            if (!rows.length) {
+                tbody.innerHTML = `<tr><td colspan="6" class="scores-section-message">No deleted AI quiz records found.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = rows.map((row) => {
+                const classLabel = [row.class_name, row.section].filter(Boolean).join(" ").trim() || "-";
+                const scheduleLabel = (row.unlock_time || row.lock_time)
+                    ? `Opens ${formatDateTime(row.unlock_time)} · Closes ${formatDateTime(row.lock_time)}`
+                    : "Not scheduled";
+                const rowKey = getDeletedAIQuizRowKey(row);
+                const canRestore = canRestoreRow(row);
+                return `
+                    <tr>
+                        <td>${escapeHtml(formatDateTime(row.deleted_at))}</td>
+                        <td>${escapeHtml(row.title || "-")}</td>
+                        <td>${escapeHtml(classLabel)}</td>
+                        <td>${escapeHtml(row.subject_name || "-")}</td>
+                        <td>${escapeHtml(scheduleLabel)}</td>
+                        <td>
+                            <button
+                                type="button"
+                                class="btn btn-outline btn-sm deleted-ai-quiz-restore-btn"
+                                data-row-key="${escapeHtml(rowKey)}"
+                                data-can-restore="${canRestore ? "1" : "0"}"
+                                title="${canRestore ? "Restore this AI quiz" : "Cannot restore: missing class/subject context"}"
+                            >
+                                <i data-lucide="rotate-ccw" class="size-4"></i>
+                                Restore
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join("");
+            if (window.lucide && typeof window.lucide.createIcons === "function") {
+                window.lucide.createIcons();
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", async () => {
+            try {
+                const user = await initializePage();
+                if (!user) {
+                    window.location.href = "login.html";
+                    return;
+                }
+                if (String(user.role || "").toLowerCase() !== "teacher") {
+                    window.location.href = "classes.html";
+                    return;
+                }
+                __deletedAIQuizUser = user;
+
+                __deletedAIQuizRows = readDeletedAIQuizCache();
+                renderDeletedAIQuizCache();
+                hideLoading();
+
+                const backBtn = document.getElementById("back-class-btn");
+                if (backBtn) {
+                    backBtn.addEventListener("click", () => {
+                        window.location.href = "classes.html";
+                    });
+                }
+
+                const searchInput = document.getElementById("deleted-ai-quiz-search");
+                if (searchInput) searchInput.addEventListener("input", renderDeletedAIQuizCache);
+
+                const sortSelect = document.getElementById("deleted-ai-quiz-sort");
+                if (sortSelect) sortSelect.addEventListener("change", renderDeletedAIQuizCache);
+
+                const tbody = document.getElementById("deleted-ai-quizzes-body");
+                if (tbody) {
+                    tbody.addEventListener("click", async (e) => {
+                        const btn = e.target.closest(".deleted-ai-quiz-restore-btn");
+                        if (!btn) return;
+                        const rowKey = btn.getAttribute("data-row-key");
+                        const canRestore = btn.getAttribute("data-can-restore") === "1";
+                        if (!canRestore) {
+                            showNotification("Cannot restore this record. Missing class/subject context.", "warning");
+                            return;
+                        }
+                        await restoreDeletedAIQuiz(rowKey);
+                    });
+                }
+
+                const clearBtn = document.getElementById("deleted-ai-quiz-clear");
+                if (clearBtn) {
+                    clearBtn.addEventListener("click", async () => {
+                        const result = await Swal.fire({
+                            icon: "warning",
+                            title: "Clear deleted AI quiz cache?",
+                            text: "This will remove all deleted AI quiz records in this browser.",
+                            showCancelButton: true,
+                            confirmButtonText: "Clear",
+                            cancelButtonText: "Cancel",
+                            confirmButtonColor: "#dc2626"
+                        });
+                        if (!result.isConfirmed) return;
+                        localStorage.removeItem(DELETED_AI_QUIZZES_CACHE_KEY);
+                        __deletedAIQuizRows = [];
+                        renderDeletedAIQuizCache();
+                        if (typeof showNotification === "function") showNotification("Deleted AI quiz cache cleared.", "success");
+                    });
+                }
+            } catch (err) {
+                console.error("Error initializing deleted AI quizzes page:", err);
+                hideLoading();
+            }
+        });
+    </script>
+</body>
+</html>

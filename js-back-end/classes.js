@@ -50,6 +50,34 @@ router.get("/api/classes/:teacherId", async (req, res) => {
   }
 });
 
+// Delete class (teacher-owned)
+async function handleDeleteClass(req, res) {
+  const { classId } = req.params;
+  const teacherId = Number(req.body?.teacher_id || req.query?.teacher_id || 0);
+  if (!classId || !teacherId) {
+    return res.status(400).json({ success: false, message: "Missing class or teacher" });
+  }
+  try {
+    const [rows] = await pool.query(
+      "SELECT id FROM classes WHERE id = ? AND teacher_id = ? LIMIT 1",
+      [classId, teacherId]
+    );
+    if (!rows.length) {
+      return res.status(404).json({ success: false, message: "Class not found or access denied" });
+    }
+
+    await pool.query("DELETE FROM classes WHERE id = ? AND teacher_id = ?", [classId, teacherId]);
+    res.json({ success: true, message: "Class deleted successfully" });
+  } catch (err) {
+    console.error("❌ Delete class error:", err);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+}
+
+router.delete("/api/classes/:classId", handleDeleteClass);
+// Backward-compatible alias in case DELETE route is blocked/unsupported.
+router.post("/api/classes/:classId/delete", handleDeleteClass);
+
 
 // Join class 
 router.post("/api/join-class", async (req, res) => {

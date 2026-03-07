@@ -35,7 +35,10 @@
     }
 
     var __completionChart = null;
-    var __scoresChart = null;
+    var __aiScoresChart = null;
+    var __readingScoresChart = null;
+    var __pronunciationScoresChart = null;
+    var __lastProgressData = null;
 
     function cssVar(name, fallback) {
         if (typeof fallback === "undefined") fallback = "";
@@ -48,7 +51,7 @@
     }
 
     function chartGridColor() {
-        return cssVar("--border", "rgba(0,0,0,0.1)");
+        return cssVar("--chart-grid", cssVar("--border", "rgba(0,0,0,0.1)"));
     }
 
     function destroyChart(ch) {
@@ -70,7 +73,7 @@
                     labels: ["Completed", "Remaining"],
                     datasets: [{
                         data: [completed, remaining],
-                        backgroundColor: [cssVar("--primary", "#8b5cf6"), cssVar("--muted", "#f1f5f9")],
+                        backgroundColor: [cssVar("--primary", "#8b5cf6"), cssVar("--chart-remaining", "#e2e8f0")],
                         borderColor: cssVar("--card", "#ffffff"),
                         borderWidth: 2,
                         hoverOffset: 6,
@@ -96,16 +99,26 @@
             });
         }
 
-        const scoresCanvas = document.getElementById("my-progress-scores-chart");
-        if (scoresCanvas && typeof Chart !== "undefined") {
-            destroyChart(__scoresChart);
-            const recent = quizzes.slice(0, 12);
-            const labels = recent.map(function (q, i) {
+        const aiQuizzes = quizzes.filter(function (q) { return q.type === "ai"; });
+        const readingQuizzes = quizzes.filter(function (q) { return q.type === "reading"; });
+        const pronunciationQuizzes = quizzes.filter(function (q) { return q.type === "pronunciation"; });
+
+        function renderScoresChart(canvasId, emptyId, quizList, color, chartRef) {
+            const canvas = document.getElementById(canvasId);
+            const emptyEl = document.getElementById(emptyId);
+            if (!canvas || typeof Chart === "undefined") return;
+            destroyChart(chartRef);
+            const recent = quizList.slice(0, 12);
+            if (emptyEl) emptyEl.classList.toggle("hidden", recent.length > 0);
+            const wrapEl = canvas.closest(".my-progress-chart-wrap");
+            if (wrapEl) wrapEl.classList.toggle("hidden", recent.length === 0);
+            if (recent.length === 0) return;
+            const labels = recent.map(function (q) {
                 const name = (q.quiz_name || "Quiz").toString();
                 return name.length > 18 ? name.slice(0, 15) + "…" : name;
             });
             const values = recent.map(function (q) { return Number.isFinite(q.score) ? q.score : 0; });
-            __scoresChart = new Chart(scoresCanvas.getContext("2d"), {
+            return new Chart(canvas.getContext("2d"), {
                 type: "bar",
                 data: {
                     labels: labels,
@@ -113,8 +126,8 @@
                         label: "Score (%)",
                         data: values,
                         borderRadius: 6,
-                        backgroundColor: cssVar("--secondary", "#22c55e"),
-                        borderColor: cssVar("--secondary", "#22c55e"),
+                        backgroundColor: color,
+                        borderColor: color,
                         borderWidth: 1
                     }]
                 },
@@ -145,20 +158,26 @@
                 }
             });
         }
+
+        __aiScoresChart = renderScoresChart(
+            "my-progress-ai-scores-chart", "my-progress-ai-scores-empty",
+            aiQuizzes, cssVar("--primary", "#8b5cf6"), __aiScoresChart
+        );
+        __readingScoresChart = renderScoresChart(
+            "my-progress-reading-scores-chart", "my-progress-reading-scores-empty",
+            readingQuizzes, cssVar("--primary", "#8b5cf6"), __readingScoresChart
+        );
+        __pronunciationScoresChart = renderScoresChart(
+            "my-progress-pronunciation-scores-chart", "my-progress-pronunciation-scores-empty",
+            pronunciationQuizzes, cssVar("--secondary", "#22c55e"), __pronunciationScoresChart
+        );
     }
 
     function renderStats(data) {
-        const completed = Number(data.completed_count ?? 0);
-        const total = Number(data.total_quizzes ?? 0);
         const overall = data.overall_avg != null ? Number(data.overall_avg) : null;
         const reading = data.reading_avg != null ? Number(data.reading_avg) : null;
         const pronunciation = data.pronunciation_avg != null ? Number(data.pronunciation_avg) : null;
-        const completionRate = Number(data.completion_rate ?? 0);
-
-        const elCompleted = document.getElementById("stat-completed");
-        const elCompletedSub = document.getElementById("stat-completed-sub");
-        if (elCompleted) elCompleted.textContent = String(completed);
-        if (elCompletedSub) elCompletedSub.textContent = "of " + total + " total";
+        const ai = data.ai_avg != null ? Number(data.ai_avg) : null;
 
         const elOverall = document.getElementById("stat-overall");
         if (elOverall) elOverall.textContent = overall != null ? overall + "%" : "—";
@@ -169,41 +188,111 @@
         const elPronunciation = document.getElementById("stat-pronunciation");
         if (elPronunciation) elPronunciation.textContent = pronunciation != null ? pronunciation + "%" : "—";
 
-        const elRate = document.getElementById("stat-completion-rate");
-        if (elRate) elRate.textContent = String(completionRate);
-        const elRateSub = document.getElementById("stat-completion-sub");
-        if (elRateSub) elRateSub.textContent = "You have completed " + completed + " of " + total + " available quizzes.";
+        const elAi = document.getElementById("stat-ai");
+        if (elAi) elAi.textContent = ai != null ? ai + "%" : "—";
+    }
+
+    function formatPoints(value) {
+        const n = Number(value);
+        if (!Number.isFinite(n)) return "";
+        return Number.isInteger(n) ? String(n) : n.toFixed(1).replace(/\.0$/, "");
+    }
+
+    function toScoreFraction(quiz) {
+        if (!quiz) return "—";
+        const displayScore = Number(quiz.display_score);
+        const displayTotal = Number(quiz.display_total);
+        if (Number.isFinite(displayScore) && Number.isFinite(displayTotal) && displayTotal > 0) {
+            return formatPoints(displayScore) + "/" + formatPoints(displayTotal);
+        }
+        const raw = Number(quiz.raw_score);
+        const total = Number(quiz.total_points);
+        if (Number.isFinite(raw) && Number.isFinite(total) && total > 0) {
+            return formatPoints(raw) + "/" + formatPoints(total);
+        }
+        if (quiz.score != null && quiz.score !== "") {
+            return formatPoints(quiz.score) + "/100";
+        }
+        return "—";
     }
 
     function renderQuizHistory(quizzes) {
-        const emptyEl = document.getElementById("quiz-history-empty");
-        const wrapEl = document.getElementById("quiz-history-wrap");
-        const tbody = document.getElementById("quiz-history-body");
-        if (!tbody) return;
+        const container = document.getElementById("my-progress-breakdown-groups");
+        if (!container) return;
 
-        if (!quizzes || quizzes.length === 0) {
-            if (emptyEl) emptyEl.classList.remove("hidden");
-            if (wrapEl) wrapEl.classList.add("hidden");
-            tbody.innerHTML = "";
-            return;
+        const groups = [
+            { key: "ai", title: "AI Quiz Generated Results", empty: "No AI-generated quiz records yet." },
+            { key: "reading", title: "Reading Quiz Result Data", empty: "No reading quiz records yet." },
+            { key: "pronunciation", title: "Pronunciation Quiz Result Data", empty: "No pronunciation quiz records yet." }
+        ];
+
+        function getQuizNamesByType(typeKey) {
+            var seen = {};
+            var result = [];
+            (quizzes || []).forEach(function (q) {
+                if (String(q.type || "").toLowerCase() !== typeKey) return;
+                var name = String(q.quiz_name || "").trim();
+                if (!name || seen[name]) return;
+                seen[name] = true;
+                var order = Number(q.quiz_order);
+                result.push({ name: name, order: Number.isFinite(order) ? order : 999999 });
+            });
+            return result
+                .sort(function (a, b) { return (a.order - b.order) || a.name.localeCompare(b.name); })
+                .map(function (item) { return item.name; });
         }
 
-        if (emptyEl) emptyEl.classList.add("hidden");
-        if (wrapEl) wrapEl.classList.remove("hidden");
-        tbody.innerHTML = quizzes
-            .map(function (q) {
-                const typeLabel = q.type === "reading" ? "Reading" : "Pronunciation";
-                const typeIcon = q.type === "reading" ? "book-open" : "mic";
+        function renderBreakdownTableByType(typeKey, title, emptyMessage) {
+            var quizNames = getQuizNamesByType(typeKey);
+            if (!quizNames.length) {
                 return (
-                    "<tr class=\"border-b border-border\">" +
-                    "<td class=\"py-3\">" + escapeHtml(q.quiz_name || "—") + "</td>" +
-                    "<td class=\"py-3\"><span class=\"inline-flex items-center gap-1\"><i data-lucide=\"" + typeIcon + "\" class=\"size-4\"></i>" + escapeHtml(typeLabel) + "</span></td>" +
-                    "<td class=\"py-3 font-medium\">" + (Number.isFinite(q.score) ? q.score + "%" : "—") + "</td>" +
-                    "<td class=\"py-3 text-muted-foreground text-sm\">" + escapeHtml(formatDate(q.end_time)) + "</td>" +
-                    "</tr>"
+                    "<section class=\"scores-subtable-group my-progress-breakdown-section\">" +
+                    "<div class=\"scores-subtable-head\"><h4 class=\"scores-subtable-title my-progress-breakdown-title\">" + escapeHtml(title) + "</h4></div>" +
+                    "<p class=\"scores-section-message\">" + escapeHtml(emptyMessage) + "</p>" +
+                    "</section>"
                 );
-            })
-            .join("");
+            }
+            var totalScore = 0, totalPossible = 0;
+            var scoreCells = quizNames.map(function (qName) {
+                var q = (quizzes || []).find(function (quiz) {
+                    return String(quiz.type || "").toLowerCase() === typeKey && quiz.quiz_name === qName;
+                });
+                var shownScore = Number(q && q.display_score);
+                var shownTotal = Number(q && q.display_total);
+                var fallbackScore = Number(q && q.raw_score);
+                var fallbackTotal = Number(q && q.total_points);
+                var usedScore = Number.isFinite(shownScore) ? shownScore : fallbackScore;
+                var usedTotal = Number.isFinite(shownTotal) ? shownTotal : fallbackTotal;
+                if (Number.isFinite(usedScore) && Number.isFinite(usedTotal) && usedTotal > 0) {
+                    totalScore += usedScore;
+                    totalPossible += usedTotal;
+                }
+                return "<td>" + escapeHtml(toScoreFraction(q)) + "</td>";
+            }).join("");
+            var totalDisplay = totalPossible > 0 ? formatPoints(totalScore) + "/" + formatPoints(totalPossible) : "—";
+            var rowHtml = (
+                "<tr>" +
+                scoreCells +
+                "<td>" + escapeHtml(totalDisplay) + "</td></tr>"
+            );
+            return (
+                "<section class=\"scores-subtable-group\">" +
+                "<div class=\"scores-subtable-head\">" +
+                "<h4 class=\"scores-subtable-title\">" + escapeHtml(title) + "</h4>" +
+                "</div>" +
+                "<div class=\"scores-table-scroll my-progress-table-scroll table-scroll\">" +
+                "<table class=\"scores-table\">" +
+                "<thead><tr>" +
+                quizNames.map(function (q) { return "<th>" + escapeHtml(q) + "</th>"; }).join("") +
+                "<th>Total</th></tr></thead>" +
+                "<tbody>" + rowHtml + "</tbody></table></div>" +
+                "</section>"
+            );
+        }
+
+        container.innerHTML = groups.map(function (g) {
+            return renderBreakdownTableByType(g.key, g.title, g.empty);
+        }).join("");
 
         if (window.lucide && typeof window.lucide.createIcons === "function") {
             window.lucide.createIcons();
@@ -248,19 +337,22 @@
                 console.warn("My progress: server returned non-JSON (status " + res.status + "). Is the backend running on " + API_BASE + "?");
             }
             if (data && data.success) {
+                __lastProgressData = data;
                 renderStats(data);
                 renderCharts(data);
                 renderQuizHistory(data.quizzes || []);
             } else {
                 if (!res.ok && !data) console.error("My progress fetch error: " + res.status + " " + res.statusText);
-                renderStats({ completed_count: 0, total_quizzes: 0, completion_rate: 0 });
-                renderCharts({ completed_count: 0, total_quizzes: 0, quizzes: [] });
+                __lastProgressData = { completed_count: 0, total_quizzes: 0, quizzes: [] };
+                renderStats(__lastProgressData);
+                renderCharts(__lastProgressData);
                 renderQuizHistory([]);
             }
         } catch (err) {
             console.error("My progress fetch error:", err);
-            renderStats({ completed_count: 0, total_quizzes: 0, completion_rate: 0 });
-            renderCharts({ completed_count: 0, total_quizzes: 0, quizzes: [] });
+            __lastProgressData = { completed_count: 0, total_quizzes: 0, quizzes: [] };
+            renderStats(__lastProgressData);
+            renderCharts(__lastProgressData);
             renderQuizHistory([]);
         } finally {
             hideLoading();
@@ -275,6 +367,17 @@
         if (backBtn) backBtn.addEventListener("click", function () { window.location.href = "classes.html"; });
     }
 
+    function setupThemeObserver() {
+        if (window.__myProgressThemeObserver) return;
+        window.__myProgressThemeObserver = true;
+        var observer = new MutationObserver(function () {
+            if (__lastProgressData) {
+                renderCharts(__lastProgressData);
+            }
+        });
+        observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    }
+
     if (document.readyState === "loading") {
         document.addEventListener("DOMContentLoaded", function () {
             setupBackToClassesButton();
@@ -283,6 +386,7 @@
                     const userStr = localStorage.getItem("eel_user");
                     const user = userStr ? JSON.parse(userStr) : null;
                     if (user && user.role === "student") {
+                        setupThemeObserver();
                         loadProgress();
                     } else {
                         hideLoading();
@@ -294,6 +398,7 @@
                     hideLoading();
                 });
             } else {
+                setupThemeObserver();
                 loadProgress();
             }
         });
@@ -303,19 +408,21 @@
             initializePage().then(function () {
                 const userStr = localStorage.getItem("eel_user");
                 const user = userStr ? JSON.parse(userStr) : null;
-                if (user && user.role === "student") {
-                    loadProgress();
-                } else {
-                    hideLoading();
-                    if (user && user.role !== "student") {
-                        window.location.href = "classes.html";
-                    }
-                }
-            }).catch(function () {
+if (user && user.role === "student") {
+                setupThemeObserver();
+                loadProgress();
+            } else {
                 hideLoading();
-            });
-        } else {
-            loadProgress();
-        }
+                if (user && user.role !== "student") {
+                    window.location.href = "classes.html";
+                }
+            }
+        }).catch(function () {
+            hideLoading();
+        });
+    } else {
+        setupThemeObserver();
+        loadProgress();
     }
+}
 })();

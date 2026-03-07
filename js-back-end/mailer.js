@@ -117,8 +117,56 @@ async function sendAccountStatusEmail({ to, name, status, reason }) {
   return { success: true };
 }
 
+async function sendPasswordResetCode({ to, code }) {
+  if (!isEmailEnabled()) {
+    if (!warnedMissingConfig) {
+      warnedMissingConfig = true;
+      console.warn(
+        "⚠️ Email notifications are disabled. Set EEL_SMTP_USER and EEL_SMTP_PASS in js-back-end/.env (Gmail App Password), then restart the backend."
+      );
+    }
+    return { skipped: true, reason: "Email not configured" };
+  }
+
+  const transporter = getTransporter();
+  if (!transporter) return { skipped: true, reason: "No transporter" };
+
+  const from = String(process.env.EEL_SMTP_FROM || process.env.EEL_SMTP_USER || "").trim();
+  const safeCode = escapeHtml(String(code || ""));
+
+  const html = `
+    <div style="font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial; color:#0f172a;">
+      <div style="max-width:640px; margin:0 auto; padding:20px;">
+        <div style="padding:18px 18px; border-radius:14px; border:1px solid #e5e7eb; background:#ffffff;">
+          <div style="font-size:18px; font-weight:900; margin-bottom:8px;">EEL - Password Reset Code</div>
+          <div style="color:#334155; margin-bottom:14px;">You requested to reset your password.</div>
+          <div style="color:#334155; line-height:1.55;">Use this verification code to proceed:</div>
+          <div style="margin:20px 0; padding:16px; font-size:28px; font-weight:800; letter-spacing:0.2em; text-align:center; background:#f1f5f9; border-radius:10px; color:#0f172a;">${safeCode}</div>
+          <div style="color:#64748b; font-size:14px;">This code expires in 15 minutes. Do not share it with anyone.</div>
+          <div style="margin-top:16px; color:#64748b; font-size:12px;">
+            If you did not request this, you can safely ignore this email.
+          </div>
+        </div>
+        <div style="margin-top:12px; text-align:center; color:#94a3b8; font-size:12px;">
+          EEL (English Enhancement Learning)
+        </div>
+      </div>
+    </div>
+  `;
+
+  await transporter.sendMail({
+    from,
+    to,
+    subject: "EEL - Your password reset code",
+    html,
+  });
+
+  return { success: true };
+}
+
 module.exports = {
   isEmailEnabled,
   sendAccountStatusEmail,
+  sendPasswordResetCode,
 };
 

@@ -117,20 +117,11 @@
 
             <!-- Content -->
             <div class="modal-content space-y-4">
-                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem;">
-                    <div class="space-y-2">
-                        <label class="form-label">📝 Quiz Title</label>
-                        <input type="text" id="lesson-title" class="form-input" placeholder="e.g., Understanding Communication">
-                    </div>
-                    <div class="space-y-2">
-                        <label class="form-label">⭐ Difficulty Level</label>
-                        <select id="lesson-difficulty" class="form-input" onchange="updatePassagePlaceholder()">
-                            <option value="beginner">🟢 Beginner</option>
-                            <option value="intermediate">🟡 Intermediate</option>
-                            <option value="advanced">🔴 Advanced</option>
-                        </select>
-                    </div>
+                <div class="space-y-2">
+                    <label class="form-label">📝 Quiz Title</label>
+                    <input type="text" id="lesson-title" class="form-input" placeholder="e.g., Understanding Communication">
                 </div>
+                <input type="hidden" id="lesson-difficulty" value="beginner">
 
                 <div class="space-y-2">
                     <label class="form-label">📖 Reading Passage</label>
@@ -392,7 +383,37 @@
     </div>
 
     <!-- ============================================
-     ✍️ TAKE QUIZ MODAL (Student View)
+     ✍️ TERMS & CONDITIONS – Before opening quiz in new tab
+     ============================================ -->
+    <div id="reading-quiz-terms-modal" class="modal-overlay hidden">
+        <div class="quiz-card lesson-quiz-terms-card" style="width: 90%; max-width: 600px;">
+            <button type="button" onclick="closeReadingQuizTermsModal()" class="close-btn" aria-label="Close">&times;</button>
+
+            <h2 id="reading-quiz-terms-title" class="quiz-title">Before you start</h2>
+            <p class="lesson-quiz-terms-quiz-name text-muted-foreground" id="reading-quiz-terms-quiz-name" style="margin-top: -0.5rem; margin-bottom: 1rem;">—</p>
+
+            <div class="lesson-quiz-terms-text">
+                <p>By clicking <strong>Proceed</strong>, you agree to the following:</p>
+                <ul style="margin: 1rem 0; padding-left: 1.5rem; line-height: 1.7;">
+                    <li>You will complete this quiz on your own without external help.</li>
+                    <li>You will not share quiz questions or answers with others during the quiz period.</li>
+                    <li>Your teacher may use your results for grading and feedback.</li>
+                    <li>Once you start, the time limit (if any) applies until you submit.</li>
+                </ul>
+                <p class="text-muted-foreground" style="font-size: 0.9rem;">Click <strong>Proceed</strong> to open the quiz in a new tab.</p>
+            </div>
+
+            <div class="lesson-quiz-terms-actions" style="display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem; flex-wrap: wrap;">
+                <button type="button" onclick="closeReadingQuizTermsModal()" class="btn btn-outline">Cancel</button>
+                <button type="button" id="reading-quiz-proceed-btn" onclick="proceedToReadingQuizPage()" class="btn btn-primary">
+                    Proceed <i data-lucide="arrow-right" class="size-4"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================
+     ✍️ TAKE QUIZ MODAL (Student View – legacy, kept for compatibility)
      ============================================ -->
     <div id="take-quiz-modal" class="modal-quiz-overlay hidden">
         <div class="quiz-card"  style="width: 90%; max-width: 1000px;">
@@ -405,13 +426,9 @@
 
             <!-- Quiz Title -->
             <h2 id="quiz-title" class="quiz-title">✨ </h2>
-            <!-- Countdown Timer -->
-            <div id="quiz-timer-container" class="quiz-timer" style="text-align: right; margin: 0.5rem 0; font-weight: bold;">
-                ⏱ Time limit: <span id="quiz-countdown">--:--</span>
-            </div>
 
             <!-- Reading Passage -->
-            <div id="quiz-passage" class="quiz-passage"></div>
+            <div id="quiz-passage" class="quiz-passage reading-passage"></div>
 
             <!-- Question Display Area -->
             <div id="quiz-questions" class="quiz-questions"></div>

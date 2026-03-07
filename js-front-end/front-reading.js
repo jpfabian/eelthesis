@@ -96,8 +96,10 @@ function createNewLesson() {
     // Clear inputs
     document.getElementById('lesson-title').value = '';
     document.getElementById('lesson-passage').value = '';
-    document.getElementById('lesson-difficulty').value = 'beginner'; // default
+    const diffEl = document.getElementById('lesson-difficulty');
+    if (diffEl) diffEl.value = 'beginner';
     container.innerHTML = ''; // clear old questions
+    if (addQuestionBtn) addQuestionBtn.classList.remove('hidden');
     addQuestion(); // initialize with one empty question
 
     // Set save button to create mode
@@ -112,47 +114,18 @@ function closeModal() {
     document.getElementById('create-lesson-modal').classList.add('hidden');
 }
 
-const difficultySelect = document.getElementById("lesson-difficulty");
 const questionsContainer = document.getElementById("questions-container");
 const addQuestionBtn = document.getElementById("add-question-btn");
 const passageInput = document.getElementById("lesson-passage");
 
-difficultySelect.addEventListener("change", function () {
-    const level = this.value;
-    questionsContainer.innerHTML = "";
-    addQuestionBtn.classList.add("hidden");
-
-    if (level === "beginner") {
-        // Multiple Choice
-        addQuestionBtn.classList.remove("hidden");
-        addQuestion();
-    } 
-    else if (level === "intermediate") {
-        questionsContainer.innerHTML = `
-            <div class="question-item p-4 border border-border rounded-lg space-y-2">
-                <label class="form-label">Answer Key</label>
-                <div id="answer-keys" class="space-y-2"></div>
-            </div>
-        `;
-        generateAnswerKeys(); // initialize blank inputs
-        passageInput.addEventListener("input", generateAnswerKeys);
-    } 
-
-    else if (level === "advanced") {
-        questionsContainer.innerHTML = `
-            <div class="question-item p-4 border border-border rounded-lg space-y-2">
-                <label class="form-label">Essay Question</label>
-                <input type="text" class="form-input question-text" placeholder="Enter essay question">
-            </div>
-        `;
-    } 
-});
+// Difficulty removed: reading comprehension uses multiple-choice only
 
 function updatePassagePlaceholder() {
-    const difficulty = document.getElementById("lesson-difficulty").value;
     const passage = document.getElementById("lesson-passage");
-
-    switch (difficulty) {
+    if (!passage) return;
+    passage.placeholder = "Enter a short reading passage followed by 3–5 multiple-choice questions.\n\nExample:\n'Communication is important because it allows people to share ideas and understand each other.'\n\nYou'll create multiple-choice questions below.";
+    /* dead code removed */
+    if (0) { switch ("x") {
         case "beginner":
             passage.placeholder = "🟢 Beginner Level:\nEnter a short reading passage followed by 3–5 multiple-choice questions.\n\nExample:\n'Communication is important because it allows people to share ideas and understand each other.'\n\n💡 You’ll create multiple-choice questions below.";
             break;
@@ -168,7 +141,7 @@ function updatePassagePlaceholder() {
         default:
             passage.placeholder = "Enter the reading passage here...";
             break;
-    }
+    } }
 }
 
 // 🧠 Initialize correct placeholder on load
@@ -340,7 +313,7 @@ function deleteLesson(lessonId) {
     }
 }
 
-function startLesson(lessonId, isTeacherQuiz = false) {
+function startLesson(lessonId, isTeacherQuiz = false, quizTitle = '') {
     const user = getCurrentUser();
     if (!user) return;
 
@@ -348,10 +321,42 @@ function startLesson(lessonId, isTeacherQuiz = false) {
         // Teacher opens schedule modal
         openScheduleModal(lessonId);
     } else {
-        // Student starts quiz (built-in or teacher-created)
-        openQuizModal(lessonId, isTeacherQuiz);
+        // Student: show terms modal, then Proceed opens quiz in new tab
+        openReadingQuizTermsModal(lessonId, isTeacherQuiz, false, quizTitle);
     }
 }
+
+/** Pending quiz for terms modal. */
+let _pendingReadingQuiz = null;
+
+/** Show terms & conditions modal; Proceed opens quiz in new tab. */
+function openReadingQuizTermsModal(lessonId, isTeacherQuiz = false, isReview = false, quizTitle = '') {
+    _pendingReadingQuiz = { lessonId, isTeacherQuiz, isReview };
+    const modal = document.getElementById('reading-quiz-terms-modal');
+    const nameEl = document.getElementById('reading-quiz-terms-quiz-name');
+    if (modal) modal.classList.remove('hidden');
+    if (nameEl) nameEl.textContent = quizTitle || 'Quiz';
+    if (typeof lucide !== 'undefined' && lucide.createIcons) lucide.createIcons({ icons: lucide.icons });
+}
+
+/** Close terms modal. */
+function closeReadingQuizTermsModal() {
+    _pendingReadingQuiz = null;
+    const modal = document.getElementById('reading-quiz-terms-modal');
+    if (modal) modal.classList.add('hidden');
+}
+
+/** Proceed: open quiz in new tab and close terms modal. */
+function proceedToReadingQuizPage() {
+    if (!_pendingReadingQuiz) return;
+    const { lessonId, isTeacherQuiz, isReview } = _pendingReadingQuiz;
+    const source = isTeacherQuiz ? 'teacher' : 'builtin';
+    let url = `take-reading-quiz.html?quiz_id=${encodeURIComponent(lessonId)}&source=${source}&return=reading-lessons.html`;
+    if (isReview) url += '&review=1';
+    window.open(url, '_blank');
+    closeReadingQuizTermsModal();
+}
+
 
 let currentQuestionIndex = 0;
 let quizData = null;
@@ -361,6 +366,22 @@ let readonly = false;
 let countdownInterval = null;
 let remainingTimePerQuiz = {}; // store remaining time per quiz
 let currentQuizIsTeacher = false;
+
+/** Format passage text into beautiful HTML with paragraphs and reading label. */
+function formatReadingPassageHTML(text) {
+    if (!text || typeof text !== 'string') return '<div class="reading-passage__content"><p>(No passage provided)</p></div>';
+    const escaped = String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    const paragraphs = escaped.split(/\n\n+/).map(p => p.trim()).filter(Boolean);
+    const paras = paragraphs.length
+        ? paragraphs.map(p => `<p>${p}</p>`).join('')
+        : `<p>${escaped}</p>`;
+    return `<div class="reading-passage__label"><span class="reading-passage__icon" aria-hidden="true">📖</span> Reading</div><div class="reading-passage__content">${paras}</div>`;
+}
 
 async function openQuizModal(lessonId, isTeacherQuiz = false) {
     const modal = document.getElementById('take-quiz-modal');
@@ -406,7 +427,7 @@ async function openQuizModal(lessonId, isTeacherQuiz = false) {
 
         modal.classList.remove('hidden');
         document.getElementById('quiz-title').textContent = quiz.title;
-        document.getElementById('quiz-passage').textContent = quiz.passage || "(No passage provided)";
+        document.getElementById('quiz-passage').innerHTML = formatReadingPassageHTML(quiz.passage || "(No passage provided)");
 
         quizData = quiz;
         studentAnswers = {};
@@ -442,30 +463,7 @@ async function openQuizModal(lessonId, isTeacherQuiz = false) {
             }
         }
 
-        // 3️⃣ Countdown timer
-        const countdownEl = document.getElementById('quiz-countdown');
-        if (quiz.time_limit && !readonly) {
-            // use saved remaining time if exists, otherwise full time
-            let timeRemaining = remainingTimePerQuiz[lessonId] ?? quiz.time_limit * 60;
-
-            clearInterval(countdownInterval);
-            countdownInterval = setInterval(() => {
-                const minutes = Math.floor(timeRemaining / 60);
-                const seconds = timeRemaining % 60;
-                countdownEl.textContent = `${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
-
-                if (timeRemaining <= 0) {
-                    clearInterval(countdownInterval);
-                    countdownEl.textContent = "00:00";
-                    submitQuiz(); // auto-submit
-                }
-
-                timeRemaining--;
-                remainingTimePerQuiz[lessonId] = timeRemaining; // save remaining time
-            }, 1000);
-        } else {
-            countdownEl.textContent = ""; // hide countdown if no timer or readonly
-        }
+        // 3️⃣ Countdown timer (removed from UI; timer logic disabled)
 
         // 4️⃣ Fetch student's answers if readonly (built-in only)
         if (readonly && attemptId) {
@@ -512,9 +510,34 @@ function updateProgressBar() {
     if (!quizData || !quizData.questions?.length) return;
 
     const totalQuestions = quizData.questions.length;
-    const progress = ((currentQuestionIndex + 1) / totalQuestions) * 100;
+    // currentQuestionIndex -1 = passage view (0%), 0..n-1 = questions
+    const progress = currentQuestionIndex < 0 ? 0 : ((currentQuestionIndex + 1) / totalQuestions) * 100;
 
     progressBar.style.width = `${progress}%`;
+}
+
+/** Show passage-only view (step before questions). currentQuestionIndex must be -1. */
+function showPassageView() {
+    const container = document.getElementById('quiz-questions');
+    const nextButton = document.getElementById('next-btn');
+    const submitButton = document.getElementById('submit-btn');
+    const prevButton = document.getElementById('prev-btn');
+
+    container.innerHTML = '';
+    const prompt = document.createElement('p');
+    prompt.className = 'text-muted-foreground text-center py-6';
+    prompt.textContent = 'Read the passage above. Click Next when you\'re ready to answer the questions.';
+    container.appendChild(prompt);
+
+    if (prevButton) {
+        prevButton.disabled = true;
+        prevButton.style.opacity = '0.5';
+        prevButton.style.cursor = 'not-allowed';
+    }
+    submitButton?.classList.add('hidden');
+    nextButton?.classList.remove('hidden');
+
+    updateProgressBar();
 }
 
 
@@ -526,7 +549,7 @@ function closeQuizModal() {
     document.getElementById('quiz-nav').classList.add('hidden');
     quizData = null;
     studentAnswers = {};  // ← reset
-    currentQuestionIndex = 0;
+    currentQuestionIndex = -1;
     currentQuizIsTeacher = false;
     clearInterval(countdownInterval);
 }
@@ -548,10 +571,10 @@ function loadQuizQuestions(questions, difficulty, readonly = false) {
         container.innerHTML = '';
         questions.forEach((q, i) => container.appendChild(renderQuestion(q, i, readonly)));
     } else {
-        // Show one question at a time
+        // Show passage first, then one question at a time
         nav.classList.remove('hidden');
-        currentQuestionIndex = 0; // start from first question
-        showSingleQuestion(questions[currentQuestionIndex], readonly);
+        currentQuestionIndex = -1; // -1 = passage view, 0..n-1 = questions
+        showPassageView();
     }
 }
 
@@ -783,11 +806,12 @@ function showSingleQuestion(question, readonly = false) {
     // ✅ Navigation buttons
     const totalQuestions = quizData?.questions?.length || 0;
     
-    // Previous button
+    // Previous button (enabled when on any question to go back; disabled only on passage view)
     if (prevButton) {
-        prevButton.disabled = currentQuestionIndex === 0;
-        prevButton.style.opacity = currentQuestionIndex === 0 ? '0.5' : '1';
-        prevButton.style.cursor = currentQuestionIndex === 0 ? 'not-allowed' : 'pointer';
+        const canGoPrev = currentQuestionIndex >= 0; // 0 = can go back to passage
+        prevButton.disabled = !canGoPrev;
+        prevButton.style.opacity = canGoPrev ? '1' : '0.5';
+        prevButton.style.cursor = canGoPrev ? 'pointer' : 'not-allowed';
     }
 
     if (readonly) {
@@ -840,6 +864,13 @@ function saveCurrentAnswer() {
 
 // ==================== Navigation ====================
 function nextQuestion() {
+    if (!quizData?.questions?.length) return;
+    // Coming from passage view (-1): go to first question
+    if (currentQuestionIndex === -1) {
+        currentQuestionIndex = 0;
+        showSingleQuestion(quizData.questions[0]);
+        return;
+    }
     if (currentQuestionIndex < quizData.questions.length - 1) {
         currentQuestionIndex++;
         showSingleQuestion(quizData.questions[currentQuestionIndex]);
@@ -847,6 +878,13 @@ function nextQuestion() {
 }
 
 function prevQuestion() {
+    if (!quizData?.questions?.length) return;
+    // On first question: go back to passage view
+    if (currentQuestionIndex === 0) {
+        currentQuestionIndex = -1;
+        showPassageView();
+        return;
+    }
     if (currentQuestionIndex > 0) {
         currentQuestionIndex--;
         showSingleQuestion(quizData.questions[currentQuestionIndex]);
@@ -1685,31 +1723,17 @@ async function loadQuizzes(user = getCurrentUser()) {
             studentAttempts = await attemptsRes.json();
         }
 
-        // ✅ Stable ordering + consecutive display numbering
-        const diffOrder = { beginner: 0, intermediate: 1, advanced: 2 };
+        // ✅ Order by quiz_number (difficulty removed)
         quizzes.sort((a, b) => {
-            const da = diffOrder[a.difficulty] ?? 99;
-            const db = diffOrder[b.difficulty] ?? 99;
-            if (da !== db) return da - db;
             const qa = Number(a.quiz_number || 0);
             const qb = Number(b.quiz_number || 0);
             if (qa !== qb) return qa - qb;
             return (a.quiz_id || 0) - (b.quiz_id || 0);
         });
 
-        const hasGlobalQuizNumber = quizzes.some(q => Number(q.quiz_number || 0) > 10);
-        let bCount = 0, iCount = 0, aCount = 0;
         const displayNumberByQuizId = new Map();
-        quizzes.forEach(q => {
-            let n;
-            if (hasGlobalQuizNumber && q.quiz_number != null) n = Number(q.quiz_number);
-            else {
-                if (q.difficulty === 'beginner') n = (++bCount);
-                else if (q.difficulty === 'intermediate') n = 10 + (++iCount);
-                else if (q.difficulty === 'advanced') n = 20 + (++aCount);
-                else n = (bCount + iCount + aCount + 1);
-            }
-            displayNumberByQuizId.set(Number(q.quiz_id), n);
+        quizzes.forEach((q, idx) => {
+            displayNumberByQuizId.set(Number(q.quiz_id), Number(q.quiz_number ?? idx + 1));
         });
 
         // ✅ Unlock progression (prefer backend progress, fallback to attempts)
@@ -1739,16 +1763,6 @@ async function loadQuizzes(user = getCurrentUser()) {
         const lessonsContainer = document.getElementById('lessons-grid');
         lessonsContainer.innerHTML = ''; // clear previous content
 
-        // ✅ Create difficulty containers
-        const beginnerContainer = document.createElement('div');
-        const intermediateContainer = document.createElement('div');
-        const advancedContainer = document.createElement('div');
-
-        beginnerContainer.innerHTML = `<h2 class="card-title text-center px-2 py-1 text-lg rounded-lg bg-secondary/10 text-secondary">Beginner</h2>`;
-        intermediateContainer.innerHTML = `<h2 class="card-title text-center px-2 py-1 text-lg rounded-lg bg-secondary/10 text-secondary">Intermediate</h2>`;
-        advancedContainer.innerHTML = `<h2 class="card-title text-center px-2 py-1 text-lg rounded-lg bg-secondary/10 text-secondary">Advanced</h2>`;
-
-        // ✅ Fallback counter (only used if quiz_number is missing)
         let seqFallback = 1;
 
         quizzes.forEach(quiz => {
@@ -1792,7 +1806,8 @@ async function loadQuizzes(user = getCurrentUser()) {
                 actionButtons = `
                     <button class="btn btn-primary flex-1 ${btnDisabled ? 'opacity-50 cursor-not-allowed' : ''}" 
                             ${btnDisabled ? 'disabled' : ''} 
-                            onclick="event.stopPropagation(); ${btnDisabled ? '' : `openQuizModal(${quiz.quiz_id})`}">
+                            data-quiz-id="${quiz.quiz_id}" data-quiz-title="${escapeHtml(quiz.title || '')}" data-is-review="${isCompleted}"
+                            onclick="event.stopPropagation(); ${btnDisabled ? '' : `openReadingQuizTermsModal(${quiz.quiz_id}, false, ${isCompleted}, this.getAttribute('data-quiz-title'))`}">
                         <i data-lucide="${btnIcon}" class="size-3 mr-1"></i>
                         ${btnText}
                     </button>
@@ -1856,16 +1871,8 @@ async function loadQuizzes(user = getCurrentUser()) {
             header.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } });
             card.querySelectorAll('.quiz-actions .btn').forEach(btn => btn.addEventListener('click', (e) => e.stopPropagation()));
 
-            // ✅ Append to the correct container
-            if (quiz.difficulty === 'beginner') beginnerContainer.appendChild(card);
-            else if (quiz.difficulty === 'intermediate') intermediateContainer.appendChild(card);
-            else advancedContainer.appendChild(card);
+            lessonsContainer.appendChild(card);
         });
-
-        // ✅ Append all difficulty sections to lessons-grid
-        lessonsContainer.appendChild(beginnerContainer);
-        lessonsContainer.appendChild(intermediateContainer);
-        lessonsContainer.appendChild(advancedContainer);
 
         lucide.createIcons({ icons: lucide.icons });
 
@@ -1979,7 +1986,7 @@ async function loadQuizzesTeacher() {
                 }
                 const btnIcon = effectiveLocked ? 'ban' : 'play';
                 actionButtons = `
-                <button type="button" id="quiz-btn-${quiz.quiz_id}" class="btn btn-primary flex-1" ${effectiveLocked ? 'disabled' : ''} onclick="event.stopPropagation(); startLesson(${quiz.quiz_id}, true)">
+                <button type="button" id="quiz-btn-${quiz.quiz_id}" class="btn btn-primary flex-1" ${effectiveLocked ? 'disabled' : ''} data-quiz-title="${escapeHtml(quiz.title || '')}" onclick="event.stopPropagation(); startLesson(${quiz.quiz_id}, true, this.getAttribute('data-quiz-title'))">
                     <i data-lucide="${btnIcon}" class="size-3 mr-1"></i>${btnLabel}
                 </button>
                 <button class="btn btn-outline flex-1" onclick="event.stopPropagation(); openLeaderboardModal(${quiz.quiz_id}, true)">
@@ -2454,6 +2461,27 @@ function formatDateTimePhilippineMilitary(value) {
     }
 }
 
+function formatAttemptListTime(value) {
+    if (value == null || value === '') return '';
+    try {
+        const s = String(value).trim();
+        const hasTz = /Z|[+-]\d{2}:?\d{2}$/.test(s);
+        const instant = hasTz ? new Date(value) : new Date(s.replace(' ', 'T') + '+08:00');
+        if (isNaN(instant.getTime())) return s;
+        return instant.toLocaleString('en-PH', {
+            timeZone: 'Asia/Manila',
+            month: '2-digit',
+            day: '2-digit',
+            year: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+        });
+    } catch {
+        return String(value);
+    }
+}
+
 // ============================================================
 // TEACHER: Review + override grading (near-miss spelling/case)
 // ============================================================
@@ -2581,7 +2609,7 @@ function renderTeacherReadingAttemptsList() {
             ? `${Math.round(a.score)}/${Math.round(a.total_points)}`
             : '-';
         const isActive = Number(teacherReadingReviewState.attemptId) === Number(a.attempt_id);
-        const time = a.end_time ? formatDateTimePhilippineMilitary(a.end_time) : (a.start_time ? formatDateTimePhilippineMilitary(a.start_time) : '');
+        const time = a.end_time ? formatAttemptListTime(a.end_time) : (a.start_time ? formatAttemptListTime(a.start_time) : '');
         return `
             <button
               type="button"
@@ -2589,16 +2617,16 @@ function renderTeacherReadingAttemptsList() {
               onclick="loadTeacherReadingAttempt(${a.attempt_id})"
               style="display:flex; align-items:center; gap:.5rem;"
             >
-              <span class="student-chip" style="min-width:0;">
+              <span class="student-chip teacher-attempt-left" style="min-width:0;">
                 <span class="mini-avatar" aria-hidden="true">${escapeHtml(initials)}</span>
-                <span style="min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
-                  ${escapeHtml(name)}
+                <span class="teacher-attempt-name-block">
+                  <span class="teacher-attempt-name" style="min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                    ${escapeHtml(name)}
+                  </span>
+                  ${time ? `<span class="teacher-attempt-time-inline">${escapeHtml(time)}</span>` : ``}
                 </span>
               </span>
-              <span class="teacher-attempt-meta">
-                <span class="text-xs text-muted-foreground">${escapeHtml(time)}</span>
-                <span class="text-xs teacher-attempt-score">${score}</span>
-              </span>
+              <span class="text-xs teacher-attempt-score">${score}</span>
             </button>
         `;
     }).join('');

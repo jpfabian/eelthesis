@@ -97,7 +97,7 @@
                     </div>
                     <div>
                         <h1 class="page-header-title">Lessons</h1>
-                        <p id="lessons-subtitle" class="page-header-subtitle">Browse lesson topics and open the presentation, or manage AI-generated quizzes.</p>
+                        <p id="lessons-subtitle" class="page-header-subtitle">Browse lesson topics—the system generates a presentation for each topic. Or manage AI-generated quizzes.</p>
                     </div>
                 </header>
 
@@ -569,33 +569,42 @@
      📖 LESSON MODAL (PPTX / presentation viewer)
      ============================================ -->
     <div id="lesson-modal" class="modal-overlay hidden">
-        <div class="modal-card" style="width: 100%; max-width: 1500px;">
-            <div class="modal-header">
-                <h3 id="lesson-title" class="modal-title">📖 Lesson Presentation</h3>
-                <button class="close-btn" onclick="closeLesson()">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="18" y1="6" x2="6" y2="18"></line>
-                        <line x1="6" y1="6" x2="18" y2="18"></line>
-                    </svg>
-                </button>
-            </div>
-
-            <div id="lesson-view-toolbar" class="lesson-view-toolbar hidden">
-                <button type="button" id="lesson-slideshow-btn" class="btn btn-outline btn-sm">
-                    <i data-lucide="presentation" class="size-4"></i>
-                    Slideshow
-                </button>
-            </div>
-
-            <div id="lesson-modal-content" class="modal-content">
-                <div id="lesson-viewer-loading" class="lesson-viewer-loading hidden">
-                    <div class="lesson-viewer-loading-spinner"></div>
-                    <p class="lesson-viewer-loading-text">Loading presentation…</p>
+        <div class="modal-card lesson-presentation-card">
+            <div class="lesson-presentation-header">
+                <div class="lesson-presentation-header-inner">
+                    <div class="lesson-presentation-icon" aria-hidden="true">
+                        <i data-lucide="presentation" class="lesson-presentation-icon-svg"></i>
+                    </div>
+                    <div class="lesson-presentation-title-wrap">
+                        <h3 id="lesson-title" class="lesson-presentation-title">Topic Presentation</h3>
+                    </div>
                 </div>
-                <iframe id="lesson-pdf" class="lesson-viewer" src="" title="Lesson viewer"></iframe>
+                <div class="lesson-presentation-actions">
+                    <button type="button" id="lesson-regenerate-btn" class="btn btn-outline btn-sm lesson-download-btn hidden teacher-only" onclick="regenerateLessonContent()" aria-label="Regenerate content" title="Generate new content (teacher only)">
+                        <i data-lucide="refresh-cw" class="size-4"></i>
+                        Regenerate
+                    </button>
+                    <button type="button" id="lesson-download-ppt-btn" class="btn btn-outline btn-sm lesson-download-btn hidden" onclick="downloadLessonAsPpt()" aria-label="Download as PowerPoint">
+                        <i data-lucide="download" class="size-4"></i>
+                        Download PPT
+                    </button>
+                    <button class="close-btn lesson-presentation-close" onclick="closeLesson()" aria-label="Close">
+                        <i data-lucide="x" class="size-5"></i>
+                    </button>
+                </div>
             </div>
 
-            <div class="modal-footer">
+            <div id="lesson-modal-content" class="lesson-presentation-body">
+                <div id="lesson-viewer-loading" class="lesson-viewer-loading lesson-presentation-loading" style="display: none;">
+                    <div class="lesson-presentation-loading-content">
+                        <div class="lesson-viewer-loading-spinner"></div>
+                        <p class="lesson-viewer-loading-text">Generating topic presentation…</p>
+                        <div class="lesson-presentation-loading-dots">
+                            <span></span><span></span><span></span>
+                        </div>
+                    </div>
+                </div>
+                <div id="lesson-topic-content" class="lesson-topic-content hidden"></div>
             </div>
         </div>
     </div>
@@ -613,6 +622,8 @@
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.min.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/navigation.js"></script>
     <script src="js-front-end/api-config.js"></script>

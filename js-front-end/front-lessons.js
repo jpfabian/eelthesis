@@ -3,6 +3,7 @@
 let __eelLessonsSubject = null;
 const LESSONS_NOTIF_ITEMS_KEY = "eel_lessons_class_notifications_v1";
 const LESSONS_NOTIF_STATE_KEY = "eel_lessons_class_notifications_state_v1";
+const DELETED_AI_QUIZZES_CACHE_KEY = "eel_deleted_ai_quizzes_cache_v1";
 let __lessonsNotifPollHandle = null;
 const LESSONS_USER_NAME_CACHE = {};
 
@@ -286,7 +287,7 @@ function renderLessonSection(lesson, isOpenByDefault) {
   const list = section.querySelector(".topic-list");
 
   topics.forEach((topic) => {
-    list.appendChild(renderTopicRow(topic));
+    list.appendChild(renderTopicRow(topic, lesson));
   });
 
   toggleBtn.addEventListener("click", () => {
@@ -331,25 +332,14 @@ function getViewerUrl(fileUrl) {
   return fileUrl ? "https://docs.google.com/viewer?url=" + encodeURIComponent(fileUrl) + "&embedded=true" : "";
 }
 
-function renderTopicRow(topic) {
+function renderTopicRow(topic, lesson) {
   const row = document.createElement("div");
   row.className = "topic-row";
 
   const title = escapeHtml(topic?.topic_title ?? "Topic");
-  const pdfPath = String(topic?.pdf_path ?? "");
-  const pdfUrl = getPdfUrl(pdfPath);
-  const hasPdf = !!pdfUrl;
 
   // For search filtering
   row.dataset.topicTitle = String(topic?.topic_title ?? "").toLowerCase();
-  row.dataset.lessonPdf = pdfPath;
-
-  const linkOrPlaceholder = hasPdf
-    ? `<button type="button" class="btn btn-outline topic-row__btn" data-action="view-ppt">
-        <i data-lucide="presentation" class="size-4"></i>
-        View Topic
-       </button>`
-    : `<span class="topic-row__no-pdf text-muted-foreground text-sm">No file</span>`;
 
   row.innerHTML = `
     <div class="topic-row__left">
@@ -359,90 +349,298 @@ function renderTopicRow(topic) {
       <div class="topic-row__title">${title}</div>
     </div>
     <div class="topic-row__right">
-      ${linkOrPlaceholder}
+      <button type="button" class="btn btn-outline topic-row__btn" data-action="view-topic">
+        <i data-lucide="presentation" class="size-4"></i>
+        View Topic
+      </button>
     </div>
   `;
 
-  if (hasPdf) {
-    row.addEventListener("click", () => viewLesson(pdfUrl, topic?.topic_title ?? "Lesson"));
-    const btn = row.querySelector('[data-action="view-ppt"]');
-    if (btn) btn.addEventListener("click", (e) => { e.stopPropagation(); viewLesson(pdfUrl, topic?.topic_title ?? "Lesson"); });
-    prefetchViewerOnHover(row, pdfUrl);
-  }
+  row.addEventListener("click", () => viewTopicWithGeneratedContent(topic, lesson));
+  const btn = row.querySelector('[data-action="view-topic"]');
+  if (btn) btn.addEventListener("click", (e) => { e.stopPropagation(); viewTopicWithGeneratedContent(topic, lesson); });
 
   return row;
 }
 
-var lessonPrefetchIframe = null;
-var lessonPrefetchTimer = null;
+let __currentLessonTopic = null;
+let __currentLessonLesson = null;
 
-function prefetchViewerOnHover(row, fileUrl) {
-  if (!fileUrl) return;
-  const viewerUrl = getViewerUrl(fileUrl);
-  row.addEventListener("mouseenter", function () {
-    lessonPrefetchTimer = window.setTimeout(function () {
-      lessonPrefetchTimer = null;
-      if (!lessonPrefetchIframe) {
-        lessonPrefetchIframe = document.createElement("iframe");
-        lessonPrefetchIframe.setAttribute("aria-hidden", "true");
-        lessonPrefetchIframe.style.cssText = "position:absolute;width:0;height:0;border:0;visibility:hidden";
-        document.body.appendChild(lessonPrefetchIframe);
-      }
-      lessonPrefetchIframe.src = viewerUrl;
-    }, 350);
+async function fetchTopicContent(regenerate = false) {
+  const topic = __currentLessonTopic;
+  const lesson = __currentLessonLesson;
+  if (!topic) return;
+
+  const topicTitle = topic?.topic_title ?? "Topic";
+  const lessonTitle = lesson?.lesson_title ?? "";
+  const subjectName = __eelLessonsSubject?.subject_name ?? "";
+
+  const res = await fetch((window.API_BASE || "") + "/api/generate-topic-content", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      topic_id: topic?.topic_id,
+      topic_title: topicTitle,
+      lesson_title: lessonTitle,
+      subject_name: subjectName,
+      regenerate: !!regenerate,
+    }),
   });
-  row.addEventListener("mouseleave", function () {
-    if (lessonPrefetchTimer) {
-      clearTimeout(lessonPrefetchTimer);
-      lessonPrefetchTimer = null;
-    }
-  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) return { success: false, error: data.error || "Request failed" };
+  return data;
 }
 
-let currentLessonUrl = "";
-var lessonViewerLoadTimeout = null;
-
-function viewLesson(fileUrl, topicTitle) {
+async function viewTopicWithGeneratedContent(topic, lesson) {
   const titleEl = document.getElementById("lesson-title");
-  const viewer = document.getElementById("lesson-pdf");
   const modal = document.getElementById("lesson-modal");
-  const toolbar = document.getElementById("lesson-view-toolbar");
   const loadingEl = document.getElementById("lesson-viewer-loading");
+  const contentEl = document.getElementById("lesson-topic-content");
 
-  currentLessonUrl = fileUrl;
+  __currentLessonTopic = topic;
+  __currentLessonLesson = lesson;
+
+  const topicTitle = topic?.topic_title ?? "Topic";
 
   if (titleEl) titleEl.textContent = topicTitle;
-
-  if (loadingEl) loadingEl.classList.remove("hidden");
-  if (viewer) {
-    viewer.src = getViewerUrl(fileUrl);
-    viewer.onload = function onViewerLoad() {
-      viewer.onload = null;
-      if (lessonViewerLoadTimeout) clearTimeout(lessonViewerLoadTimeout);
-      if (loadingEl) loadingEl.classList.add("hidden");
-    };
-    lessonViewerLoadTimeout = setTimeout(function () {
-      lessonViewerLoadTimeout = null;
-      if (loadingEl) loadingEl.classList.add("hidden");
-    }, 25000);
-  } else if (loadingEl) {
-    loadingEl.classList.add("hidden");
+  const downloadBtn = document.getElementById("lesson-download-ppt-btn");
+  const regenerateBtn = document.getElementById("lesson-regenerate-btn");
+  if (downloadBtn) downloadBtn.classList.add("hidden");
+  if (regenerateBtn) regenerateBtn.classList.add("hidden");
+  if (loadingEl) loadingEl.style.display = "flex";
+  if (contentEl) {
+    contentEl.classList.add("hidden");
+    contentEl.innerHTML = "";
   }
-
-  if (toolbar) toolbar.classList.toggle("hidden", !currentLessonUrl);
   if (modal) modal.classList.remove("hidden");
-  if (typeof lucide !== "undefined") lucide.createIcons();
+  setTimeout(() => {
+    if (typeof lucide !== "undefined" && lucide.createIcons) lucide.createIcons();
+  }, 50);
+
+  try {
+    const data = await fetchTopicContent(false);
+
+    if (loadingEl) loadingEl.style.display = "none";
+
+    if (!data.success) {
+      const errMsg = data.error || "Failed to generate topic content.";
+      if (contentEl) {
+        contentEl.innerHTML = `<p class="text-destructive">${escapeHtml(errMsg)}</p>`;
+        contentEl.classList.remove("hidden");
+      }
+      return;
+    }
+
+    if (contentEl && data.content) {
+      contentEl.innerHTML = data.content;
+      contentEl.classList.remove("hidden");
+      if (downloadBtn) downloadBtn.classList.remove("hidden");
+      if (regenerateBtn) regenerateBtn.classList.remove("hidden");
+      if (typeof lucide !== "undefined" && lucide.createIcons) lucide.createIcons();
+    }
+  } catch (err) {
+    if (loadingEl) loadingEl.style.display = "none";
+    if (contentEl) {
+      contentEl.innerHTML = `<p class="text-destructive">${escapeHtml(err?.message || "Something went wrong.")}</p>`;
+      contentEl.classList.remove("hidden");
+    }
+  }
+}
+
+async function regenerateLessonContent() {
+  if (!__currentLessonTopic) return;
+  const loadingEl = document.getElementById("lesson-viewer-loading");
+  const contentEl = document.getElementById("lesson-topic-content");
+  const downloadBtn = document.getElementById("lesson-download-ppt-btn");
+  const regenerateBtn = document.getElementById("lesson-regenerate-btn");
+
+  if (regenerateBtn) regenerateBtn.disabled = true;
+  if (loadingEl) loadingEl.style.display = "flex";
+  if (contentEl) contentEl.classList.add("hidden");
+
+  try {
+    const data = await fetchTopicContent(true);
+    if (loadingEl) loadingEl.style.display = "none";
+
+    if (!data.success) {
+      Swal.fire({ icon: "error", title: "Error", text: data.error || "Failed to regenerate." });
+      if (contentEl) contentEl.classList.remove("hidden");
+      return;
+    }
+
+    if (contentEl && data.content) {
+      contentEl.innerHTML = data.content;
+      contentEl.classList.remove("hidden");
+    }
+  } catch (err) {
+    if (loadingEl) loadingEl.style.display = "none";
+    Swal.fire({ icon: "error", title: "Error", text: err?.message || "Something went wrong." });
+    if (contentEl) contentEl.classList.remove("hidden");
+  } finally {
+    if (regenerateBtn) regenerateBtn.disabled = false;
+    if (typeof lucide !== "undefined" && lucide.createIcons) lucide.createIcons();
+  }
 }
 
 function closeLesson() {
-  exitSlideshow();
   const modal = document.getElementById("lesson-modal");
-  const viewer = document.getElementById("lesson-pdf");
-  const toolbar = document.getElementById("lesson-view-toolbar");
+  const contentEl = document.getElementById("lesson-topic-content");
+  const loadingEl = document.getElementById("lesson-viewer-loading");
+  const downloadBtn = document.getElementById("lesson-download-ppt-btn");
   if (modal) modal.classList.add("hidden");
-  if (viewer) viewer.src = "";
-  currentLessonUrl = "";
-  if (toolbar) toolbar.classList.add("hidden");
+  if (contentEl) {
+    contentEl.innerHTML = "";
+    contentEl.classList.add("hidden");
+  }
+  if (loadingEl) loadingEl.style.display = "none";
+  if (downloadBtn) downloadBtn.classList.add("hidden");
+  const regenerateBtn = document.getElementById("lesson-regenerate-btn");
+  if (regenerateBtn) regenerateBtn.classList.add("hidden");
+  __currentLessonTopic = null;
+  __currentLessonLesson = null;
+}
+
+function downloadLessonAsPpt() {
+  const contentEl = document.getElementById("lesson-topic-content");
+  const titleEl = document.getElementById("lesson-title");
+  if (!contentEl || !contentEl.innerHTML.trim()) return;
+
+  if (typeof PptxGenJS === "undefined") {
+    Swal.fire({ icon: "error", title: "Error", text: "Download library not loaded. Please refresh the page." });
+    return;
+  }
+
+  const topicTitle = (titleEl?.textContent || "Topic").trim();
+  const pres = new PptxGenJS();
+
+  pres.author = "EEL - English Enhancement Learning";
+  pres.title = topicTitle;
+
+  const VIOLET = "6d28d9";
+  const VIOLET_LIGHT = "8b5cf6";
+  const VIOLET_PALE = "ede9fe";
+  const GREEN = "22c55e";
+  const GREEN_LIGHT = "4ade80";
+  const GREEN_PALE = "dcfce7";
+  const SLIDE_BG = "faf5ff";
+  const TEXT_DARK = "2d2d33";
+  const TEXT_MUTED = "6b7280";
+
+  const nodes = contentEl.querySelectorAll("h2, h3, p, ul");
+  let slideContent = [];
+
+  function addContentSlide(title, content) {
+    const slide = pres.addSlide();
+    slide.background = { color: SLIDE_BG };
+
+    if (title) {
+      slide.addShape(pres.ShapeType.rect, {
+        x: 0, y: 0, w: 0.12, h: 7.5,
+        fill: { color: VIOLET },
+      });
+      slide.addShape(pres.ShapeType.rect, {
+        x: 0.12, y: 0, w: 9.88, h: 1.1,
+        fill: { color: VIOLET_PALE, transparency: 50 },
+      });
+      slide.addText(title, {
+        x: 0.5, y: 0.3, w: 8.7, h: 0.9,
+        fontSize: 24, bold: true, color: VIOLET,
+      });
+    }
+
+    if (content && content.length > 0) {
+      slide.addText(content, {
+        x: 0.5, y: title ? 1.4 : 0.5, w: 8.7, h: title ? 5.3 : 6,
+        fontSize: 14, color: TEXT_DARK, valign: "top",
+      });
+    }
+
+    slide.addShape(pres.ShapeType.rect, {
+      x: 0, y: 6.75, w: 5, h: 0.25,
+      fill: { color: VIOLET },
+    });
+    slide.addShape(pres.ShapeType.rect, {
+      x: 5, y: 6.75, w: 5, h: 0.25,
+      fill: { color: GREEN },
+    });
+    slide.addText("EEL", {
+      x: 8.8, y: 6.78, w: 0.8, h: 0.2,
+      fontSize: 10, bold: true, color: "ffffff",
+    });
+  }
+
+  function flushSlide(title) {
+    if (slideContent.length === 0 && !title) return;
+    addContentSlide(title, slideContent);
+    slideContent = [];
+  }
+
+  let hasTitleSlide = false;
+  let currentH2 = "";
+
+  nodes.forEach((el) => {
+    const tag = el.tagName?.toUpperCase();
+    const text = el.textContent?.trim() || "";
+
+    if (tag === "H2") {
+      flushSlide(currentH2);
+      currentH2 = text;
+      if (!hasTitleSlide) {
+        const titleSlide = pres.addSlide();
+        titleSlide.background = { color: VIOLET };
+        titleSlide.addShape(pres.ShapeType.rect, {
+          x: 0, y: 6.5, w: 10, h: 0.5,
+          fill: { color: GREEN },
+        });
+        titleSlide.addShape(pres.ShapeType.rect, {
+          x: 0.6, y: 1.1, w: 8.8, h: 2.4,
+          fill: { color: "ffffff", transparency: 15 },
+        });
+        titleSlide.addText(topicTitle, {
+          x: 0.8, y: 1.4, w: 8.4, h: 1.5,
+          fontSize: 40, bold: true, align: "center", color: VIOLET,
+        });
+        titleSlide.addText("English Enhancement Learning", {
+          x: 0.8, y: 2.85, w: 8.4, h: 0.5,
+          fontSize: 16, align: "center", color: GREEN, bold: true,
+        });
+        titleSlide.addShape(pres.ShapeType.rect, {
+          x: 4.2, y: 3.5, w: 1.6, h: 0.08,
+          fill: { color: GREEN },
+        });
+        hasTitleSlide = true;
+      }
+    } else if (tag === "H3") {
+      if (slideContent.length > 0) {
+        flushSlide(currentH2);
+        currentH2 = "";
+      }
+      slideContent.push({ text: text + "\n", options: { bullet: false, bold: true, fontSize: 16, color: VIOLET } });
+    } else if (tag === "P") {
+      slideContent.push({ text: text + "\n", options: { bullet: false, color: TEXT_DARK } });
+    } else if (tag === "UL") {
+      el.querySelectorAll("li").forEach((li) => {
+        const liText = li.textContent?.trim();
+        if (liText) slideContent.push({ text: liText + "\n", options: { bullet: { code: "2022", color: VIOLET }, color: TEXT_DARK } });
+      });
+    }
+  });
+
+  flushSlide(currentH2);
+
+  if (pres.slides.length === 0) {
+    const slide = pres.addSlide();
+    slide.background = { color: SLIDE_BG };
+    slide.addText(topicTitle, {
+      x: 0.5, y: 1.5, w: 9, h: 1, fontSize: 28, bold: true, align: "center", color: VIOLET,
+    });
+    slide.addText(contentEl.textContent?.trim().slice(0, 500) || "No content", {
+      x: 0.5, y: 2.8, w: 9, h: 3.5, fontSize: 14, color: TEXT_DARK,
+    });
+  }
+
+  const safeName = topicTitle.replace(/[<>:"/\\|?*]/g, "_").slice(0, 80);
+  pres.writeFile({ fileName: `${safeName}.pptx` });
 }
 
 var slideshowFullscreenListener = null;
@@ -1760,6 +1958,111 @@ function handleLockTeacherQuizLesson(quizId, _btn) {
   }
 }
 
+function closeAllLessonQuizMenus() {
+  document.querySelectorAll(".lessons-quiz-item-menu").forEach((menu) => menu.classList.add("hidden"));
+  document.querySelectorAll(".lessons-quiz-item-menu-btn[aria-expanded='true']").forEach((btn) => {
+    btn.setAttribute("aria-expanded", "false");
+  });
+  document.querySelectorAll(".lessons-ai-quiz-item--menu-open").forEach((card) => {
+    card.classList.remove("lessons-ai-quiz-item--menu-open");
+  });
+}
+
+function cacheDeletedAIGeneratedQuiz(quiz, user) {
+  if (!quiz || !user) return;
+  try {
+    const selectedClass = JSON.parse(localStorage.getItem("eel_selected_class") || "null");
+    const raw = localStorage.getItem(DELETED_AI_QUIZZES_CACHE_KEY);
+    const parsed = JSON.parse(raw || "[]");
+    const list = Array.isArray(parsed) ? parsed : [];
+    const snapshot = quiz.quiz_snapshot && typeof quiz.quiz_snapshot === "object" ? quiz.quiz_snapshot : null;
+    list.push({
+      deleted_event_id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      quiz_id: quiz.quiz_id ?? null,
+      title: quiz.title ?? "",
+      difficulty: quiz.difficulty ?? "",
+      subject_id: quiz.subject_id ?? null,
+      class_id: quiz.class_id ?? selectedClass?.id ?? selectedClass?.class_id ?? null,
+      class_name: selectedClass?.name ?? "",
+      section: selectedClass?.section ?? "",
+      subject_name: selectedClass?.subject ?? "",
+      unlock_time: quiz.unlock_time ?? null,
+      lock_time: quiz.lock_time ?? null,
+      time_limit: quiz.time_limit ?? null,
+      quiz_snapshot: snapshot,
+      can_restore: !!snapshot,
+      deleted_at: new Date().toISOString(),
+      deleted_by: user.user_id ?? null
+    });
+    localStorage.setItem(DELETED_AI_QUIZZES_CACHE_KEY, JSON.stringify(list.slice(-300)));
+  } catch (_) {}
+}
+
+async function doDeleteLessonTeacherQuiz(quiz) {
+  const user = typeof getCurrentUser === "function" ? getCurrentUser() : null;
+  if (!user || String(user.role || "").toLowerCase() !== "teacher") return;
+  const quizId = quiz?.quiz_id;
+  if (!quizId) return;
+  try {
+    let snapshot = null;
+    try {
+      const getRes = await fetch(`${window.API_BASE || ""}/api/teacher/reading-quizzes/${encodeURIComponent(quizId)}`);
+      const getData = await getRes.json().catch(() => ({}));
+      if (getRes.ok && getData && Array.isArray(getData.questions)) {
+        snapshot = {
+          title: getData.title ?? quiz.title ?? "",
+          difficulty: getData.difficulty ?? quiz.difficulty ?? "beginner",
+          passage: getData.passage ?? quiz.passage ?? "",
+          subject_id: quiz.subject_id ?? null,
+          class_id: quiz.class_id ?? null,
+          unlock_time: getData.unlock_time ?? quiz.unlock_time ?? null,
+          lock_time: getData.lock_time ?? quiz.lock_time ?? null,
+          time_limit: getData.time_limit ?? quiz.time_limit ?? null,
+          questions: getData.questions
+        };
+      }
+    } catch (_) {}
+
+    const uid = encodeURIComponent(user.user_id);
+    const res = await fetch(`${window.API_BASE || ""}/api/teacher/reading-quizzes/${encodeURIComponent(quizId)}?user_id=${uid}`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user_id: user.user_id })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.success) {
+      cacheDeletedAIGeneratedQuiz({ ...quiz, quiz_snapshot: snapshot }, user);
+      if (typeof showNotification === "function") showNotification("Quiz deleted successfully.", "success");
+      await loadLessonsAIGeneratedList();
+    } else {
+      if (typeof showNotification === "function") showNotification(data.message || "Failed to delete quiz.", "error");
+    }
+  } catch (err) {
+    if (typeof showNotification === "function") showNotification("Failed to delete quiz.", "error");
+  }
+}
+
+function handleDeleteLessonTeacherQuiz(quiz) {
+  const label = String(quiz?.title || "this quiz");
+  if (typeof Swal !== "undefined" && Swal && typeof Swal.fire === "function") {
+    Swal.fire({
+      title: "Delete quiz?",
+      text: `${label} will be permanently deleted.`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Delete",
+      cancelButtonText: "Cancel",
+      confirmButtonColor: "#dc2626"
+    }).then((result) => {
+      if (result.isConfirmed) doDeleteLessonTeacherQuiz(quiz);
+    });
+    return;
+  }
+  if (confirm(`Delete "${label}"? This cannot be undone.`)) {
+    doDeleteLessonTeacherQuiz(quiz);
+  }
+}
+
 async function doLockTeacherQuizLesson(quizId) {
   const now = new Date();
   const ph = new Date(now.getTime() + 8 * 60 * 60 * 1000);
@@ -1875,7 +2178,15 @@ async function loadLessonsAIGeneratedList() {
                 <h3 class="created-quiz-card__title">${escapeHtml(quiz.title)}</h3>
                 <span class="lessons-ai-quiz-status-badge ${statusClass}">${escapeHtml(statusLabel)}</span>
               </div>
-              <i data-lucide="chevron-down" class="created-quiz-card__chevron" aria-hidden="true"></i>
+              <div class="created-quiz-card__header-actions-right">
+                <div class="lessons-quiz-item-menu-wrap">
+                  <button type="button" class="lessons-quiz-item-menu-btn" aria-label="Quiz actions" aria-expanded="false">⋮</button>
+                  <div class="lessons-quiz-item-menu hidden">
+                    <button type="button" class="lessons-quiz-item-menu-delete">Delete</button>
+                  </div>
+                </div>
+                <i data-lucide="chevron-down" class="created-quiz-card__chevron" aria-hidden="true"></i>
+              </div>
             </div>
             <div class="created-quiz-card__details hidden">
               <p class="created-quiz-card__passage">${escapeHtml(quiz.passage ? quiz.passage.substring(0, 140).trim() + (quiz.passage.length > 140 ? "…" : "") : "No description.")}</p>
@@ -1905,8 +2216,39 @@ async function loadLessonsAIGeneratedList() {
             toggle();
           }
         });
+        const menuBtn = card.querySelector(".lessons-quiz-item-menu-btn");
+        const menuEl = card.querySelector(".lessons-quiz-item-menu");
+        const deleteBtn = card.querySelector(".lessons-quiz-item-menu-delete");
+        if (menuBtn && menuEl) {
+          menuBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const willOpen = menuEl.classList.contains("hidden");
+            closeAllLessonQuizMenus();
+            menuEl.classList.toggle("hidden", !willOpen);
+            menuBtn.setAttribute("aria-expanded", willOpen ? "true" : "false");
+            card.classList.toggle("lessons-ai-quiz-item--menu-open", willOpen);
+          });
+        }
+        if (menuEl) {
+          menuEl.addEventListener("click", (e) => e.stopPropagation());
+        }
+        if (deleteBtn) {
+          deleteBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            closeAllLessonQuizMenus();
+            handleDeleteLessonTeacherQuiz(quiz);
+          });
+        }
         card.querySelectorAll(".quiz-actions .btn").forEach((btn) => btn.addEventListener("click", (e) => e.stopPropagation()));
         container.appendChild(card);
+      });
+    }
+    if (!document.body._lessonQuizMenuOutsideBound) {
+      document.body._lessonQuizMenuOutsideBound = true;
+      document.addEventListener("click", () => {
+        closeAllLessonQuizMenus();
       });
     }
     if (window.lucide && typeof window.lucide.createIcons === "function") window.lucide.createIcons();
@@ -2119,7 +2461,7 @@ async function openLessonQuizModal(quizId) {
 function proceedToLessonQuizPage() {
   if (_lessonQuizIdToTake == null) return;
   const url = `take-quiz.html?quiz_id=${_lessonQuizIdToTake}`;
-  window.open(url, "_blank");
+  window.location.href = url;
   closeLessonQuizModal();
 }
 

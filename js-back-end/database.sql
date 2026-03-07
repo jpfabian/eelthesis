@@ -125,6 +125,7 @@ CREATE TABLE IF NOT EXISTS topics (
   lesson_id INT UNSIGNED NOT NULL,
   topic_title VARCHAR(255) NOT NULL,
   pdf_path VARCHAR(500) NULL,
+  topic_content LONGTEXT NULL COMMENT 'Cached AI-generated HTML presentation',
   PRIMARY KEY (topic_id),
   KEY idx_topics_lesson (lesson_id),
   CONSTRAINT fk_topics_lesson
@@ -173,7 +174,7 @@ CREATE TABLE IF NOT EXISTS cached_exams (
    ========================= */
 CREATE TABLE IF NOT EXISTS reading_quizzes (
   quiz_id INT UNSIGNED NOT NULL AUTO_INCREMENT,
-  subject_id INT UNSIGNED NOT NULL,
+  subject_id INT UNSIGNED NULL DEFAULT NULL COMMENT 'NULL = built-in, appears for all subjects',
   /* Order within a subject-based track (1..20) */
   quiz_number INT UNSIGNED NOT NULL DEFAULT 1,
   title VARCHAR(255) NOT NULL,
@@ -243,6 +244,7 @@ CREATE TABLE IF NOT EXISTS reading_quiz_attempts (
   attempt_id INT UNSIGNED NOT NULL AUTO_INCREMENT,
   student_id INT UNSIGNED NOT NULL,
   quiz_id INT UNSIGNED NOT NULL,
+  class_id INT UNSIGNED NULL DEFAULT NULL,
   start_time DATETIME NOT NULL,
   end_time DATETIME NULL,
   status ENUM('in_progress','completed') NOT NULL DEFAULT 'in_progress',
@@ -463,6 +465,7 @@ CREATE TABLE IF NOT EXISTS pronunciation_quizzes (
   quiz_number INT UNSIGNED NOT NULL DEFAULT 1,
   title VARCHAR(255) NOT NULL,
   difficulty ENUM('beginner','intermediate','advanced') NOT NULL,
+  category VARCHAR(100) NULL DEFAULT NULL COMMENT 'Thematic grouping: alphabet, numbers, flowers, animals, colors, food, nature, family, body, home',
   passage LONGTEXT NULL,
   unlock_time DATETIME NULL,
   lock_time DATETIME NULL,
@@ -526,6 +529,7 @@ CREATE TABLE IF NOT EXISTS pronunciation_quiz_attempts (
   attempt_id INT UNSIGNED NOT NULL AUTO_INCREMENT,
   student_id INT UNSIGNED NOT NULL,
   quiz_id INT UNSIGNED NOT NULL,
+  class_id INT UNSIGNED NULL DEFAULT NULL,
   start_time DATETIME NOT NULL,
   end_time DATETIME NULL,
   status ENUM('in_progress','submitted','completed') NOT NULL DEFAULT 'in_progress',
