@@ -2,10 +2,11 @@ const express = require("express");
 const router = express.Router();
 const multer = require("multer");
 const fs = require("fs");
+const path = require("path");
+const FormData = require("form-data");
+const fetch = require("node-fetch");
 const { S3Client } = require("@aws-sdk/client-s3");
 const multerS3 = require("multer-s3");
-const path = require("path");
-const fetch = require("node-fetch");
 require("dotenv").config();
 const Groq = require("groq-sdk");
 const { nowPhilippineDatetime } = require("./utils/datetime");
@@ -24,6 +25,98 @@ function requireGroq(res) {
     success: false,
     message: "AI service is not configured. Set GROQ_API_KEY in your environment."
   });
+  return null;
+}
+
+/** Transcribe audio using Groq Whisper. Returns transcript text or null on error. */
+async function transcribeWithGroq(file) {
+  const apiKey = String(process.env.GROQ_API_KEY || "").trim();
+  if (!apiKey) return null;
+  try {
+    const form = new FormData();
+    if (file.path && fs.existsSync(file.path)) {
+      form.append("file", fs.createReadStream(file.path), { filename: file.originalname || "audio.webm" });
+    } else if (file.buffer) {
+      form.append("file", file.buffer, { filename: file.originalname || "audio.webm" });
+    } else if (file.location && (file.location.startsWith("http://") || file.location.startsWith("https://"))) {
+      form.append("url", file.location);
+    } else {
+      return null;
+    }
+    form.append("model", "whisper-large-v3-turbo");
+    form.append("language", "en");
+    form.append("response_format", "text");
+    const headers = { ...form.getHeaders(), Authorization: `Bearer ${apiKey}` };
+    const res = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
+      method: "POST",
+      headers,
+      body: form,
+    });
+    if (!res.ok) {
+      const errText = await res.text();
+      console.warn("Groq transcription error:", res.status, errText);
+      return null;
+    }
+    return (await res.text()).trim();
+  } catch (e) {
+    console.warn("Groq transcription error:", e?.message || e);
+    return null;
+  }
+}
+
+/** Assess pronunciation using Groq LLM. Returns score 0-100 or null on error. */
+async function assessPronunciationWithGroq(expectedWord, transcript) {
+  if (!groq) return null;
+  const expected = String(expectedWord || "").trim();
+  const transcriptText = String(transcript || "").trim();
+  if (!expected) return null;
+  try {
+    const completion = await groq.chat.completions.create({
+      model: "llama-3.3-70b-versatile",
+      messages: [
+        {
+          role: "system",
+          content: "You are a pronunciation assessment expert. Given the expected word/phrase and the student's transcription, rate pronunciation accuracy from 0 to 100. Reply with ONLY a number. 100 = perfect match, 80-99 = phonetically correct, 50-79 = partially correct, 0-49 = incorrect or unclear.",
+        },
+        {
+          role: "user",
+          content: `Expected: "${expected}"\nStudent transcription: "${transcriptText}"\nScore (0-100):`,
+        },
+      ],
+      temperature: 0.2,
+      max_tokens: 10,
+    });
+    const text = (completion?.choices?.[0]?.message?.content || "").trim();
+    const num = parseInt(text.replace(/\D/g, ""), 10);
+    return Number.isFinite(num) ? Math.max(0, Math.min(100, num)) : null;
+  } catch (e) {
+    console.warn("Groq pronunciation assessment error:", e?.message || e);
+    return null;
+  }
+}
+
+/** Get expected word/phrase for a question. Supports both built-in and teacher pronunciation quizzes. */
+async function getExpectedWordForQuestion(pool, quizId, questionId) {
+  const qId = Number(questionId);
+  const qzId = Number(quizId);
+  if (!Number.isFinite(qId) || !Number.isFinite(qzId)) return null;
+  const tables = [
+    { table: "pronunciation_beginner_questions", wordCol: "word" },
+    { table: "pronunciation_intermediate_questions", wordCol: "word" },
+    { table: "pronunciation_advanced_questions", wordCol: "sentence" },
+    { table: "teacher_pronunciation_beginner_questions", wordCol: "word" },
+    { table: "teacher_pronunciation_intermediate_questions", wordCol: "word" },
+    { table: "teacher_pronunciation_advanced_questions", wordCol: "sentence" },
+  ];
+  for (const { table, wordCol } of tables) {
+    try {
+      const [[row]] = await pool.query(
+        `SELECT ${wordCol} AS word FROM ${table} WHERE question_id = ? AND quiz_id = ? LIMIT 1`,
+        [qId, qzId]
+      );
+      if (row?.word) return String(row.word).trim();
+    } catch (_) {}
+  }
   return null;
 }
 
@@ -452,15 +545,25 @@ router.post("/api/pronunciation-submit", upload.any(), async (req, res) => {
       return res.status(400).json({ success: false, message: "No audio files uploaded" });
     }
 
-    // 1️⃣ Fetch quiz difficulty
-    const [quizRows] = await pool.query(
+    // 1️⃣ Fetch quiz difficulty (built-in or teacher)
+    let quizDifficulty = "beginner";
+    const [builtInRows] = await pool.query(
       "SELECT difficulty FROM pronunciation_quizzes WHERE quiz_id = ?",
       [quiz_id]
     );
-    if (!quizRows.length) {
-      return res.status(404).json({ success: false, message: "Quiz not found" });
+    if (builtInRows.length) {
+      quizDifficulty = builtInRows[0].difficulty;
+    } else {
+      const [teacherRows] = await pool.query(
+        "SELECT difficulty FROM teacher_pronunciation_quizzes WHERE quiz_id = ?",
+        [quiz_id]
+      );
+      if (teacherRows.length) {
+        quizDifficulty = teacherRows[0].difficulty;
+      } else {
+        return res.status(404).json({ success: false, message: "Quiz not found" });
+      }
     }
-    const quizDifficulty = quizRows[0].difficulty;
 
     // 2️⃣ Create a new quiz attempt (scoped to class when provided)
     const attemptNow = nowPhilippineDatetime();
@@ -475,10 +578,10 @@ router.post("/api/pronunciation-submit", upload.any(), async (req, res) => {
     let totalAccuracy = 0;
     let answerCount = 0;
 
-    // 3️⃣ Save each answer
+    // 3️⃣ Save each answer (Groq AI for pronunciation assessment)
     for (let i = 0; i < files.length; i++) {
       const question_id = req.body[`question_id_${i}`];
-      const transcript = req.body[`answer_${i}`] || '';
+      let transcript = req.body[`answer_${i}`] || '';
       const file = files.find(f => f.fieldname === `audio_${i}`);
       if (!file) continue;
 
@@ -490,16 +593,26 @@ router.post("/api/pronunciation-submit", upload.any(), async (req, res) => {
         difficulty = quizDifficulty;
       }
 
-      // Simulate fake pronunciation accuracy (70–100%)
-      const fakeAccuracy = Math.floor(70 + Math.random() * 30);
-      totalAccuracy += fakeAccuracy;
+      // Groq AI: transcribe audio if no transcript, then assess pronunciation
+      let pronunciationScore = null;
+      if (process.env.GROQ_API_KEY) {
+        const transcribed = transcript.trim() ? null : await transcribeWithGroq(file);
+        const textToAssess = (transcript.trim() || transcribed || "").trim();
+        const expectedWord = await getExpectedWordForQuestion(pool, quiz_id, question_id);
+        if (expectedWord && textToAssess) {
+          pronunciationScore = await assessPronunciationWithGroq(expectedWord, textToAssess);
+        }
+        if (transcribed && !transcript.trim()) transcript = transcribed;
+      }
+      const score = pronunciationScore != null ? pronunciationScore : Math.floor(70 + Math.random() * 30);
+      totalAccuracy += score;
       answerCount++;
 
       await pool.query(
         `INSERT INTO pronunciation_quiz_answers
           (attempt_id, question_id, difficulty, student_audio, transcript, pronunciation_score)
          VALUES (?, ?, ?, ?, ?, ?)`,
-        [attempt_id, question_id, difficulty, fileUrl, transcript, fakeAccuracy]
+        [attempt_id, question_id, difficulty, fileUrl, transcript, score]
       );
     }
 

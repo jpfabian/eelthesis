@@ -37,6 +37,16 @@
         </div>
       </header>
 
+      <!-- New accounts notification banner -->
+      <div id="admin-new-accounts-banner" class="admin-new-accounts-banner hidden" role="alert">
+        <i data-lucide="user-plus" class="admin-new-accounts-banner-icon"></i>
+        <span id="admin-new-accounts-text">You have new accounts awaiting verification.</span>
+        <button type="button" class="btn btn-primary btn-sm" id="admin-view-pending-btn">
+          <i data-lucide="check-circle" class="size-4"></i>
+          View pending
+        </button>
+      </div>
+
       <!-- Toolbar: view toggle + search + status filter -->
       <div class="admin-dashboard-toolbar admin-dashboard-toolbar-global">
         <div class="admin-dashboard-view-toggle" role="group" aria-label="Show section">

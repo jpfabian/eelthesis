@@ -1,0 +1,501 @@
+================================================================================
+                    EEL SYSTEM - DATA FLOW DIAGRAM (DFD)
+              Enhancing English Literacy - Level 0, 1, and 2
+================================================================================
+
+Reference: WORK CONNECT DFD structure
+External Entities: Teacher | Student | Admin
+Level 1: No database (processes only)
+Level 2: Same processes with data stores (databases)
+
+================================================================================
+                        LEVEL 0 - CONTEXT DIAGRAM
+================================================================================
+
+    ┌──────────────┐                                    ┌──────────────┐
+    │   TEACHER    │                                    │    ADMIN     │
+    └──────┬───────┘                                    └──────┬───────┘
+           │                                                   │
+           │ Teacher Credentials                              │ Admin Credentials
+           │ Registration (fname, lname, email, role)        │ Approve/Reject Users
+           │ Create Class, Add Lessons                         │ View Pending Users
+           │ Create Quizzes, Schedule Recitation               │
+           │ View Student Progress                             │
+           │                                                   │
+           ▼                                                   ▼
+    ┌─────────────────────────────────────────────────────────────────────────┐
+    │                                                                         │
+    │                    0.0  EEL (Enhancing English Literacy)                 │
+    │                                                                         │
+    └─────────────────────────────────────────────────────────────────────────┘
+           ▲                                                   ▲
+           │                                                   │
+           │ Dashboard, Classes, Lessons                        │ Pending Users List
+           │ Quizzes, Recitation Sessions                      │ Approved/Rejected Count
+           │ Student Progress Reports                          │ User Details
+           │                                                   │
+    ┌──────┴───────┐                                    ┌──────┴───────┐
+    │   STUDENT    │                                    │    ADMIN     │
+    └──────────────┘                                    └──────────────┘
+
+    ┌──────────────┐
+    │   STUDENT    │
+    └──────┬───────┘
+           │
+           │ Student Credentials
+           │ Registration (fname, lname, email, section, strand)
+           │ Join Class (class code)
+           │ Quiz Answers, Pronunciation Attempts
+           │
+           ▼
+    ┌─────────────────────────────────────────────────────────────────────────┐
+    │                    0.0  EEL (Enhancing English Literacy)                 │
+    └─────────────────────────────────────────────────────────────────────────┘
+           ▲
+           │
+           │ Lessons, Quizzes, Reading Materials
+           │ Pronunciation Exercises
+           │ Progress Feedback, Leaderboard
+           │
+    ┌──────┴───────┐
+    │   STUDENT    │
+    └──────────────┘
+
+--------------------------------------------------------------------------------
+LEVEL 0 - DATA FLOWS SUMMARY
+--------------------------------------------------------------------------------
+
+From TEACHER to EEL:
+  - Teacher Credentials (login)
+  - Registration Details (signup: fname, lname, email, password, role)
+  - Create Class (name, section, subject)
+  - Add Lesson / Create Quiz
+  - Schedule Quiz / Recitation
+  - View Student List
+
+From EEL to TEACHER:
+  - Dashboard (Total Students, Active Lessons, Quizzes Created, Avg Score)
+  - Class List, Class Code
+  - Student Progress, Quiz Attempts
+  - Lesson Materials, Quiz Results
+
+From STUDENT to EEL:
+  - Student Credentials (login)
+  - Registration Details (signup: fname, lname, email, section, strand)
+  - Join Class (class code)
+  - Quiz Answers, Pronunciation Recordings
+
+From EEL to STUDENT:
+  - Lessons, Reading Materials
+  - Available Quizzes
+  - Progress Feedback, My Progress
+  - Leaderboard, Announcements
+
+From ADMIN to EEL:
+  - Admin Credentials (login)
+  - Approve User, Reject User
+  - View User List
+
+From EEL to ADMIN:
+  - Pending Users (Teachers, Students)
+  - User Details (name, email, status, section, strand)
+  - Approved/Rejected Counts
+
+================================================================================
+                        LEVEL 1 - NO DATABASE
+================================================================================
+
+External Entities: TEACHER | STUDENT | ADMIN
+Processes: 1.1 to 1.8 (no data stores)
+
+--------------------------------------------------------------------------------
+LEVEL 1 - DIAGRAM (Processes only, no data stores)
+--------------------------------------------------------------------------------
+
+  ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+  │   TEACHER   │     │   STUDENT   │     │    ADMIN    │
+  └──────┬──────┘     └──────┬──────┘     └──────┬──────┘
+         │                   │                   │
+         │ Login/Register    │ Login/Register    │ Admin Login
+         ▼                   ▼                   ▼
+  ┌─────────────────────────────────────────────────────────────┐
+  │ 1.1 Authentication                                         │
+  └─────────────────────────────────────────────────────────────┘
+         │                   │                   │
+         │ Session           │ Session           │ Admin Token
+         ▼                   ▼                   ▼
+  ┌──────────────┐   ┌──────────────┐   ┌──────────────────────┐
+  │ 1.2 Dashboard│   │ 1.3 Classroom│   │ 1.7 Account          │
+  │              │   │              │   │    Verification      │
+  └──────────────┘   └──────────────┘   └──────────────────────┘
+         │                   │                   │
+         │ Stats             │ Class List         │ Pending Users
+         │                   │ Join/Create       │ Approve/Reject
+         ▼                   ▼                   ▼
+  ┌──────────────┐   ┌──────────────┐   ┌──────────────────────┐
+  │ 1.4 Lessons  │   │ 1.5 Recitation│  │ 1.8 Student Progress │
+  │ Reading      │   │ (Teacher)    │   │ (Teacher/Student)    │
+  │ Pronunciation│   └──────────────┘   └──────────────────────┘
+  └──────────────┘
+         │
+         │
+  ┌──────────────┐
+  │ 1.6 Exam    │
+  │ Generator   │
+  │ (Teacher)   │
+  └──────────────┘
+
+--------------------------------------------------------------------------------
+PROCESSES
+--------------------------------------------------------------------------------
+
+  1.1  Authentication      - Login, Signup, Forgot Password, Reset Password
+  1.2  Dashboard           - Overview stats for Teacher/Student
+  1.3  Classroom           - Create class, Join class, Manage classes
+  1.4  Lessons             - Subject lessons, Reading, Pronunciation
+  1.5  Recitation          - Interactive recitation sessions (Teacher)
+  1.6  Exam Generator      - AI-powered quiz creation (Teacher)
+  1.7  Account Verification - Approve/Reject users (Admin)
+  1.8  Student Progress    - View stats, reports (Teacher) / My Progress (Student)
+
+--------------------------------------------------------------------------------
+LEVEL 1 - DATA FLOWS (Entity ↔ Process)
+--------------------------------------------------------------------------------
+
+--- TEACHER ---
+
+  TEACHER → 1.1 Authentication:
+    - Login Credentials (email, password)
+    - Registration (fname, lname, email, password, role=teacher)
+
+  1.1 Authentication → TEACHER:
+    - Session/Token, Redirect to classes.html
+
+  TEACHER → 1.2 Dashboard:
+    - View Dashboard
+
+  1.2 Dashboard → TEACHER:
+    - Total Students, Active Lessons, Quizzes Created, Avg Score
+
+  TEACHER → 1.3 Classroom:
+    - Create Class (name, section, subject)
+    - View Class List
+
+  1.3 Classroom → TEACHER:
+    - Class List, Class Code
+    - Pending Students (join requests)
+
+  TEACHER → 1.4 Lessons:
+    - View Lessons, Create Reading Quiz, Create Pronunciation Quiz
+    - Schedule Quiz, Open/Lock Quiz
+    - Review Student Attempts
+
+  1.4 Lessons → TEACHER:
+    - Lesson Topics, PDF Materials
+    - Quiz List, Student Attempts, Leaderboard
+
+  TEACHER → 1.5 Recitation:
+    - Start Recitation, Select Students
+    - Generate Questions (AI)
+
+  1.5 Recitation → TEACHER:
+    - Recitation Session, Questions
+
+  TEACHER → 1.6 Exam Generator:
+    - Generate AI Quiz (topic, lesson)
+    - Save Quiz
+
+  1.6 Exam Generator → TEACHER:
+    - Generated Quiz, Save Confirmation
+
+  TEACHER → 1.8 Student Progress:
+    - View Student Statistics
+
+  1.8 Student Progress → TEACHER:
+    - Student Stats, Quiz Scores, Completion Data
+
+--- STUDENT ---
+
+  STUDENT → 1.1 Authentication:
+    - Login Credentials (email, password)
+    - Registration (fname, lname, email, section, strand, password)
+    - Forgot Password (email)
+    - Reset Password (email, code, new_password)
+
+  1.1 Authentication → STUDENT:
+    - Session/Token, Redirect to classes.html
+
+  STUDENT → 1.2 Dashboard:
+    - View Dashboard
+
+  1.2 Dashboard → STUDENT:
+    - Reading Lessons Completed, Pronunciation Sessions, Avg Score, Study Time
+
+  STUDENT → 1.3 Classroom:
+    - Join Class (class code)
+    - View Class List
+
+  1.3 Classroom → STUDENT:
+    - Class List, Enrolled Classes
+
+  STUDENT → 1.4 Lessons:
+    - View Lessons, Take Reading Quiz, Take Pronunciation Quiz
+    - Submit Answers, Submit Pronunciation
+
+  1.4 Lessons → STUDENT:
+    - Lesson Topics, PDF Materials
+    - Available Quizzes, Quiz Questions
+    - Score, Leaderboard, Feedback
+
+  STUDENT → 1.8 Student Progress:
+    - View My Progress
+
+  1.8 Student Progress → STUDENT:
+    - My Progress, Completed Quizzes, Scores
+
+--- ADMIN ---
+
+  ADMIN → 1.1 Authentication:
+    - Admin Login (username, password)
+
+  1.1 Authentication → ADMIN:
+    - Admin Token, Redirect to admin-dashboard.html
+
+  ADMIN → 1.7 Account Verification:
+    - View Pending Users
+    - Approve User, Reject User
+    - View Teachers, View Students
+    - Search, Filter by Status
+
+  1.7 Account Verification → ADMIN:
+    - Pending Users List (Teachers, Students)
+    - User Details (name, email, section, strand, status)
+    - Approved/Rejected Count
+
+--------------------------------------------------------------------------------
+LEVEL 1 - INTER-PROCESS FLOWS (Process ↔ Process)
+--------------------------------------------------------------------------------
+
+  1.1 Authentication → 1.2 Dashboard:     User session, role
+  1.1 Authentication → 1.3 Classroom:    User session, role
+  1.1 Authentication → 1.4 Lessons:      User session, role
+  1.1 Authentication → 1.5 Recitation:   User session (teacher)
+  1.1 Authentication → 1.6 Exam Generator: User session (teacher)
+  1.1 Authentication → 1.7 Account Verification: Admin token
+  1.1 Authentication → 1.8 Student Progress: User session, role
+
+  1.3 Classroom → 1.4 Lessons:            Selected class, subject
+  1.3 Classroom → 1.5 Recitation:         Selected class, students
+  1.3 Classroom → 1.8 Student Progress:   Selected class
+
+  1.4 Lessons → 1.6 Exam Generator:       Lesson/topic for AI quiz (teacher)
+  1.6 Exam Generator → 1.4 Lessons:       New quiz created
+
+================================================================================
+                        LEVEL 2 - WITH DATA STORES
+================================================================================
+
+Same processes (1.1 to 1.8) as Level 1, plus data stores (databases).
+Level 2 shows where data is stored and retrieved.
+
+--------------------------------------------------------------------------------
+LEVEL 2 - DIAGRAM (Processes + Data Stores)
+--------------------------------------------------------------------------------
+
+  TEACHER/STUDENT/ADMIN
+         │
+         ▼
+  ┌─────────────────┐         ┌─────────────┐
+  │ 1.1 Auth        │◄───────►│ D1 Users    │
+  └─────────────────┘  Store  └─────────────┘
+         │              Verify
+         ▼
+  ┌─────────────────┐         ┌─────────────┐
+  │ 1.2 Dashboard   │◄───────►│ D2 Dashboard│
+  └─────────────────┘  Read   │ (derived)  │
+         │                    └─────────────┘
+         │                    ┌─────────────┐
+  ┌─────────────────┐         │ D3 Classes  │
+  │ 1.3 Classroom   │◄───────►│             │
+  └─────────────────┘  Store  └─────────────┘
+         │              Read
+         │                    ┌─────────────┐
+  ┌─────────────────┐         │ D4 Lessons  │
+  │ 1.4 Lessons     │◄───────►│ D5 Quizzes  │
+  └─────────────────┘  Store  │ D6 Attempts │
+         │              Read  └─────────────┘
+         │
+  ┌─────────────────┐         ┌─────────────┐
+  │ 1.5 Recitation  │◄───────►│ D7 Recitation│
+  └─────────────────┘         └─────────────┘
+         │
+  ┌─────────────────┐         ┌─────────────┐
+  │ 1.6 Exam Gen    │◄───────►│ D5 Quizzes  │
+  └─────────────────┘  Store  │ D4 Lessons  │
+         │                    └─────────────┘
+         │
+  ┌─────────────────┐         ┌─────────────┐
+  │ 1.7 Acct Verify │◄───────►│ D8 Users    │
+  └─────────────────┘  Update  │ (verification)│
+         │                    └─────────────┘
+         │
+  ┌─────────────────┐         ┌─────────────┐
+  │ 1.8 Student Progress│◄───►│ D3,D5,D6    │
+  └─────────────────┘  Read   └─────────────┘
+
+--------------------------------------------------------------------------------
+DATA STORES (D1 - D8)
+--------------------------------------------------------------------------------
+
+  D1  Users Database           - users table (credentials, role, verification_status)
+  D2  Dashboard Database       - Aggregated stats (derived from other tables)
+  D3  Classes Database         - classes, student_classes tables
+  D4  Lessons Database         - lessons, topics, subjects tables
+  D5  Quizzes Database         - teacher_reading_quizzes, pronunciation_quizzes
+  D6  Attempts Database        - reading_quiz_attempts, pronunciation_attempts
+  D7  Recitation Database     - recitation sessions, AI-generated questions
+  D8  Admin/Verification DB   - users (verification_status, verified_by, etc.)
+
+--------------------------------------------------------------------------------
+LEVEL 2 - PROCESS ↔ DATA STORE FLOWS
+--------------------------------------------------------------------------------
+
+--- 1.1 Authentication ---
+
+  TEACHER/STUDENT → 1.1: Login Credentials, Registration
+  1.1 → D1 Users Database:     Store User (register), Verify Credentials (login)
+  D1 Users Database → 1.1:     User record, verification status
+  1.1 → TEACHER/STUDENT:      Session, Redirect
+
+  ADMIN → 1.1: Admin Credentials
+  1.1 → D1 Users Database:     Verify admin
+  D1 Users Database → 1.1:     Admin record
+  1.1 → ADMIN:                Admin token, Redirect
+
+  (Forgot/Reset: 1.1 ↔ D1 for email, reset code, new password)
+
+--- 1.2 Dashboard ---
+
+  TEACHER/STUDENT → 1.2: View Dashboard
+  1.2 → D2 Dashboard Database:  Read aggregated stats
+  D2 Dashboard Database → 1.2:  Total Students, Lessons, Quizzes, Scores
+  (D2 is logical; actual data from D3, D5, D6)
+  1.2 → D3 Classes Database:   Read class count, student count
+  1.2 → D5 Quizzes Database:   Read quiz count
+  1.2 → D6 Attempts Database:   Read attempt stats, avg scores
+  1.2 → TEACHER/STUDENT:       Dashboard data
+
+--- 1.3 Classroom ---
+
+  TEACHER → 1.3: Create Class
+  1.3 → D3 Classes Database:   Store Class
+  D3 Classes Database → 1.3:    Class record, class code
+  1.3 → TEACHER:               Class list, class code
+
+  STUDENT → 1.3: Join Class (class code)
+  1.3 → D3 Classes Database:   Read class by code, Store student_classes
+  D3 Classes Database → 1.3:   Class info, pending status
+  1.3 → STUDENT:               Join confirmation
+
+  TEACHER → 1.3: Accept/Reject Student
+  1.3 → D3 Classes Database:   Update student_classes status
+  D3 Classes Database → 1.3:   Student list
+  1.3 → TEACHER:               Updated student list
+
+--- 1.4 Lessons ---
+
+  TEACHER → 1.4: Create Quiz, Schedule Quiz
+  1.4 → D4 Lessons Database:  Read lessons, topics
+  1.4 → D5 Quizzes Database:  Store Quiz, Update schedule
+  D4 Lessons Database → 1.4:  Lesson list, topic list
+  D5 Quizzes Database → 1.4:   Quiz saved
+  1.4 → TEACHER:               Quiz list, schedule confirmation
+
+  STUDENT → 1.4: Take Quiz, Submit Answers
+  1.4 → D4 Lessons Database:  Read lessons, topics (PDF path)
+  1.4 → D5 Quizzes Database:  Read available quizzes
+  1.4 → D6 Attempts Database: Store attempt, Store answers, Submit
+  D5 Quizzes Database → 1.4:   Quiz questions
+  D6 Attempts Database → 1.4:  Attempt record, score
+  1.4 → STUDENT:               Quiz, Score, Leaderboard
+
+  (Pronunciation: 1.4 ↔ D5, D6 for pronunciation quizzes and attempts)
+
+--- 1.5 Recitation ---
+
+  TEACHER → 1.5: Start Recitation, Generate Questions
+  1.5 → D3 Classes Database:   Read class students
+  1.5 → D7 Recitation Database: Store session (if persisted)
+  1.5 → (AI/External):        Generate questions
+  D3 Classes Database → 1.5:   Student list
+  1.5 → TEACHER:               Recitation session, questions
+
+--- 1.6 Exam Generator ---
+
+  TEACHER → 1.6: Generate AI Quiz
+  1.6 → D4 Lessons Database:  Read lesson, topic
+  1.6 → (AI/External):        Generate quiz content
+  1.6 → D5 Quizzes Database:  Store Quiz
+  D5 Quizzes Database → 1.6:  Quiz stored
+  1.6 → TEACHER:              Generated quiz, save confirmation
+
+--- 1.7 Account Verification ---
+
+  ADMIN → 1.7: View Users, Approve, Reject
+  1.7 → D8 Admin/Verification DB: Read pending users, Update verification_status
+  D8 Admin/Verification DB → 1.7: Users list (teachers, students)
+  1.7 → ADMIN:                 Pending list, approved/rejected count
+
+  (D8 is part of D1 users table: verification_status, verified_by, rejected_at, etc.)
+
+--- 1.8 Student Progress ---
+
+  TEACHER → 1.8: View Student Statistics
+  1.8 → D3 Classes Database:   Read class, students
+  1.8 → D5 Quizzes Database:   Read quizzes
+  1.8 → D6 Attempts Database:  Read attempts, scores
+  D3, D5, D6 → 1.8:           Class, quiz, attempt data
+  1.8 → TEACHER:               Student stats, completion, scores
+
+  STUDENT → 1.8: View My Progress
+  1.8 → D6 Attempts Database:  Read student attempts
+  1.8 → D5 Quizzes Database:  Read quizzes (for context)
+  D6 Attempts Database → 1.8:  Attempts, scores
+  1.8 → STUDENT:               My progress, completed quizzes
+
+--------------------------------------------------------------------------------
+LEVEL 2 - DATA STORE REFERENCE (EEL Backend)
+--------------------------------------------------------------------------------
+
+  D1  users                    - id, fname, lname, email, password_hash, role,
+                                  verification_status, verified_by, rejected_at
+  D2  (derived)                - Stats from classes, quizzes, attempts
+  D3  classes                  - id, teacher_id, name, section, subject, class_code
+      student_classes          - student_id, class_id, status (pending/accepted)
+  D4  subjects                 - id, name
+      lessons                  - id, subject_id, lesson_title, quarter_number
+      topics                   - id, lesson_id, topic_title, pdf_path
+  D5  teacher_reading_quizzes  - id, user_id, class_id, title, unlock_time, lock_time
+      pronunciation_quizzes    - id, user_id, title, etc.
+  D6  reading_quiz_attempts     - id, quiz_id, student_id, score, submitted_at
+      reading_quiz_answers      - attempt_id, question_id, answer
+      pronunciation_attempts   - id, quiz_id, student_id, score, etc.
+  D7  (recitation)            - Session data, AI questions (may be in-memory or temp)
+  D8  users (verification)     - verification_status, verified_by, rejected_at, rejected_reason
+
+================================================================================
+                        DFD SYMBOL LEGEND
+================================================================================
+
+  [Rectangle]     External Entity (Teacher, Student, Admin)
+  [Rounded]       Process (0.0, 1.1 - 1.8)
+  [Open rect]     Data Store (D1 - D8)
+  [Arrow]         Data Flow (labeled)
+
+  Level 0: One process (0.0 EEL), external entities, data flows
+  Level 1: Processes 1.1-1.8, external entities, NO data stores
+  Level 2: Same processes, external entities, WITH data stores D1-D8
+
+================================================================================
+END OF DFD DOCUMENT
+================================================================================

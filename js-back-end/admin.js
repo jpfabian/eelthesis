@@ -122,7 +122,7 @@ router.get("/api/admin/users", requireAdmin, async (req, res) => {
 
     const enabled = await hasColumn(conn, "verification_status");
     if (!enabled) {
-      return res.json({ success: true, enabled: false, users: [], status: "pending" });
+      return res.json({ success: true, enabled: false, users: [], status: "pending", pending_count: 0 });
     }
 
     const allowed = new Set(["pending", "approved", "rejected", "all"]);
@@ -176,7 +176,15 @@ router.get("/api/admin/users", requireAdmin, async (req, res) => {
       fname: toNameCase(u.fname),
       lname: toNameCase(u.lname),
     }));
-    res.json({ success: true, enabled: true, deactivation_enabled: deactivationEnabled, users, status: effective });
+
+    let pending_count = 0;
+    if (enabled) {
+      const [[c]] = await conn.execute(
+        "SELECT COUNT(*) AS n FROM users WHERE role IN ('student','teacher') AND verification_status = 'pending'"
+      );
+      pending_count = Number(c?.n ?? 0);
+    }
+    res.json({ success: true, enabled: true, deactivation_enabled: deactivationEnabled, users, status: effective, pending_count });
   } catch (err) {
     console.error("❌ Admin users list error:", err);
     res.status(500).json({

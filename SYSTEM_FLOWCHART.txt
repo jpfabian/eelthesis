@@ -1,0 +1,388 @@
+================================================================================
+                    EEL SYSTEM FLOWCHART
+         (Teacher | Student | Admin) - HTML/JS References
+================================================================================
+
+CONNECTOR LEGEND: A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T...
+
+================================================================================
+SECTION 1: LANDING PAGE (index.html)
+================================================================================
+
+                              (START)
+                                 │
+                                 ▼
+                    ┌─────────────────────────────┐
+                    │  A: Landing Page            │
+                    │  index.html                 │
+                    │  [Sign In] [Sign Up]        │
+                    │  [Start Learning]           │
+                    └─────────────────────────────┘
+                                 │
+              ┌──────────────────┼──────────────────┐
+              │                  │                  │
+              ▼                  ▼                  ▼
+    ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────────────────┐
+    │ B: Sign In       │ │ C: Sign Up      │ │ D: Nav Links (public)       │
+    │ → login.html     │ │ → signup.html   │ │ features.html, services.html│
+    │ (btn-ghost)      │ │ (btn-primary)   │ │ for-teachers.html           │
+    └─────────────────┘ └─────────────────┘ │ for-students.html, about.html│
+              │                  │            └─────────────────────────────┘
+              │                  │                         │
+              │                  │                         ▼
+              │                  │            ┌─────────────────────────────┐
+              │                  │            │ Stay on public pages         │
+              │                  │            │ (no auth required)          │
+              │                  │            └─────────────────────────────┘
+              │                  │
+              ▼                  ▼
+
+================================================================================
+SECTION 2: SIGN UP FLOW (signup.html, front-signup.js)
+================================================================================
+
+                    ┌─────────────────────────────┐
+                    │ C: Open Sign Up Page        │
+                    │ signup.html                │
+                    │ [Back] → index.html        │
+                    └─────────────────────────────┘
+                                 │
+                                 ▼
+                    ┌─────────────────────────────┐
+                    │ E: Role Selection Step     │
+                    │ #role-step                 │
+                    │ [Teacher] or [Student]     │
+                    │ role-card-small            │
+                    │ [Continue] #role-continue  │
+                    └─────────────────────────────┘
+                                 │
+                                 ▼
+                    ┌─────────────────────────────┐
+                    │ F: Registration Form        │
+                    │ #registration-step         │
+                    │ #signup-form                │
+                    │ lname, fname, email,       │
+                    │ password, confirm-password │
+                    │ (Student: section, strand)  │
+                    │ [Create Account] #signup-btn│
+                    └─────────────────────────────┘
+                                 │
+                                 ▼
+                         ◇ Validate Input ◇
+                    (validateSignupForm in JS)
+                                 │
+                         ┌──────┴──────┐
+                        Yes           No
+                         │              │
+                         ▼              ▼
+              ┌──────────────────┐  ┌────────────────────┐
+              │ G: API Register   │  │ H: Show Error      │
+              │ POST /api/auth/   │  │ showNotification() │
+              │ register          │  │ SweetAlert2        │
+              └──────────────────┘  └────────────────────┘
+                         │                    │
+                         │                    ▼
+                         │           Back to signup form
+                         │
+                         ▼
+              ┌──────────────────┐
+              │ I: Success        │
+              │ Swal success     │
+              │ → login.html     │
+              └──────────────────┘
+                         │
+                         ▼
+                       (END)
+
+================================================================================
+SECTION 3: LOGIN FLOW (login.html, front-login.js)
+================================================================================
+
+                    ┌─────────────────────────────┐
+                    │ B: Open Login Page          │
+                    │ login.html                 │
+                    │ [Back] → index.html        │
+                    └─────────────────────────────┘
+                                 │
+                                 ▼
+                    ┌─────────────────────────────┐
+                    │ J: User Enters Credentials  │
+                    │ #login-form                 │
+                    │ email, password             │
+                    │ [Remember me] checkbox      │
+                    │ [Forgot password?]          │
+                    │   → forgot-password.html   │
+                    └─────────────────────────────┘
+                                 │
+                                 ▼
+                    ┌─────────────────────────────┐
+                    │ K: Submit Sign In           │
+                    │ #login-btn (handleLogin)    │
+                    │ POST /api/auth/login        │
+                    └─────────────────────────────┘
+                                 │
+                                 ▼
+                         ◇ Validate Input ◇
+                                 │
+                         ┌──────┴──────┐
+                        Yes           No
+                         │              │
+                         ▼              ▼
+              ┌──────────────────┐  ┌────────────────────┐
+              │ L: Check DB      │  │ M: Show Error       │
+              │ API returns      │  │ Swal.fire error     │
+              │ result.success   │  │ "Invalid email or   │
+              └──────────────────┘  │  password"          │
+                         │          └────────────────────┘
+                         │                    │
+                         │                    ▼
+                         │           Back to login form
+                         │
+                         ▼
+              ◇ result.user.role? ◇
+                         │
+         ┌───────────────┼───────────────┐
+         │               │               │
+         ▼               ▼               ▼
+    ┌─────────┐   ┌─────────────┐   ┌─────────────┐
+    │ Admin   │   │ Teacher     │   │ Student     │
+    │ role    │   │ role        │   │ role       │
+    └─────────┘   └─────────────┘   └─────────────┘
+         │               │               │
+         ▼               ▼               ▼
+    ┌─────────┐   ┌─────────────┐   ┌─────────────┐
+    │ N:      │   │ O:          │   │ P:          │
+    │ admin-  │   │ classes.html │   │ classes.html│
+    │ dash-   │   │ (Teacher)    │   │ (Student)   │
+    │ board.  │   │              │   │             │
+    │ html    │   │              │   │             │
+    └─────────┘   └─────────────┘   └─────────────┘
+         │               │               │
+         ▼               ▼               ▼
+                       (END)
+
+================================================================================
+SECTION 4: FORGOT PASSWORD FLOW (forgot-password.html, reset-password.html)
+================================================================================
+
+                    ┌─────────────────────────────┐
+                    │ Q: Forgot Password          │
+                    │ forgot-password.html       │
+                    │ [Back] → login.html        │
+                    └─────────────────────────────┘
+                                 │
+                                 ▼
+                    ┌─────────────────────────────┐
+                    │ R: Enter Email              │
+                    │ #forgot-password-form       │
+                    │ #fp-email                   │
+                    │ [Send verification code]   │
+                    └─────────────────────────────┘
+                                 │
+                                 ▼
+                    ┌─────────────────────────────┐
+                    │ S: Reset Password           │
+                    │ reset-password.html        │
+                    │ (via email link)            │
+                    │ #reset-form, new password  │
+                    └─────────────────────────────┘
+                                 │
+                                 ▼
+                    ┌─────────────────────────────┐
+                    │ T: Redirect to Login        │
+                    │ → login.html                │
+                    └─────────────────────────────┘
+
+================================================================================
+SECTION 5: ADMIN FLOW (admin-dashboard.html, front-admin.js)
+================================================================================
+
+                    ┌─────────────────────────────┐
+                    │ N: Admin Dashboard          │
+                    │ admin-dashboard.html        │
+                    │ (from login.html)           │
+                    └─────────────────────────────┘
+                                 │
+                                 ▼
+                    ┌─────────────────────────────┐
+                    │ U: View Toggle              │
+                    │ #admin-view-teacher         │
+                    │ #admin-view-student         │
+                    │ [Refresh] #admin-refresh     │
+                    │ [Logout] #admin-logout-btn   │
+                    └─────────────────────────────┘
+                                 │
+              ┌──────────────────┴──────────────────┐
+              │                                      │
+              ▼                                      ▼
+    ┌─────────────────────┐              ┌─────────────────────┐
+    │ V: Teachers Table   │              │ W: Students Table    │
+    │ #admin-teachers-    │              │ #admin-students-     │
+    │ section             │              │ section              │
+    │ Approve/Decline     │              │ Approve/Decline      │
+    │ [Prev] [Next]       │              │ [Prev] [Next]        │
+    └─────────────────────┘              └─────────────────────┘
+                                 │
+                                 ▼
+                    ┌─────────────────────────────┐
+                    │ X: Logout → index.html      │
+                    └─────────────────────────────┘
+
+================================================================================
+SECTION 6: TEACHER FLOW (after login → classes.html)
+================================================================================
+
+                    ┌─────────────────────────────┐
+                    │ O: Classes Page             │
+                    │ classes.html                │
+                    │ (Teacher view)              │
+                    └─────────────────────────────┘
+                                 │
+              ┌──────────────────┼──────────────────┐
+              │                  │                  │
+              ▼                  ▼                  ▼
+    ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────────────────┐
+    │ Y: Create Class │ │ Z: Select Class │ │ AA: Sidebar Nav              │
+    │ openClassModal()│ │ (class card)    │ │ lessons.html                 │
+    │ #create-class-  │ │ → dashboard     │ │ reading-lessons.html         │
+    │ modal           │ │ or other pages  │ │ pronunciation-lessons.html   │
+    └─────────────────┘ └─────────────────┘ │ recitation.html              │
+              │                  │         │ exam-generator.html          │
+              │                  │         │ student-progress.html        │
+              │                  │         │ deleted-classes.html          │
+              │                  │         │ settings.html                │
+              │                  │         └─────────────────────────────┘
+              │                  │
+              ▼                  ▼
+    ┌─────────────────────────────────────────────────────────────────────┐
+    │ Teacher Dashboard (dashboard.html) - Quick Actions:                  │
+    │ [Create Reading Lesson] → reading-lessons.html                       │
+    │ [Generate Exam] → exam-generator.html                                │
+    │ [Pronunciation Lesson] → pronunciation-lessons.html                 │
+    │ [Start Recitation] → recitation.html                                 │
+    │ [Back to Classes] #back-class-btn → classes.html                     │
+    │ [Settings] → settings.html                                           │
+    │ [Logout] #logout-btn → index.html                                    │
+    └─────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+SECTION 7: STUDENT FLOW (after login → classes.html)
+================================================================================
+
+                    ┌─────────────────────────────┐
+                    │ P: Classes Page            │
+                    │ classes.html               │
+                    │ (Student view)             │
+                    └─────────────────────────────┘
+                                 │
+              ┌──────────────────┼──────────────────┐
+              │                  │                  │
+              ▼                  ▼                  ▼
+    ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────────────────┐
+    │ AB: Join Class  │ │ AC: Select Class│ │ AD: Sidebar Nav             │
+    │ openJoinModal()│ │ (class card)     │ │ lessons.html                 │
+    │ #join-class-    │ │ → dashboard      │ │ reading-lessons.html        │
+    │ modal           │ │ or other pages   │ │ pronunciation-lessons.html │
+    └─────────────────┘ └─────────────────┘ │ my-progress.html            │
+              │                  │          │ settings.html               │
+              │                  │          └─────────────────────────────┘
+              │                  │
+              ▼                  ▼
+    ┌─────────────────────────────────────────────────────────────────────┐
+    │ Student Dashboard (dashboard.html) - Quick Actions:                  │
+    │ [Start Lessons] → lessons.html                                       │
+    │ [Enhance Reading] → reading-lessons.html                             │
+    │ [Practice Speaking] → pronunciation-lessons.html                     │
+    │ [Back to Classes] #back-class-btn → classes.html                     │
+    │ [Settings] → settings.html                                           │
+    │ [Logout] #logout-btn → index.html                                    │
+    └─────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+SECTION 8: LEARNING FLOWS (shared by Teacher & Student)
+================================================================================
+
+    ┌─────────────────────────────────────────────────────────────────────┐
+    │ lessons.html (front-lessons.js)                                      │
+    │ Subject Lessons → take-quiz.html (front-exam.js)                     │
+    │                   take-reading-quiz.html (take-reading-quiz.js)      │
+    │                   take-pronunciation.html (take-pronunciation.js)     │
+    └─────────────────────────────────────────────────────────────────────┘
+
+    ┌─────────────────────────────────────────────────────────────────────┐
+    │ reading-lessons.html (front-reading.js)                              │
+    │ Reading Lessons → take-reading-quiz.html                             │
+    └─────────────────────────────────────────────────────────────────────┘
+
+    ┌─────────────────────────────────────────────────────────────────────┐
+    │ pronunciation-lessons.html (front-pronunciation.js)                  │
+    │ Pronunciation Lessons → take-pronunciation.html                      │
+    └─────────────────────────────────────────────────────────────────────┘
+
+    ┌─────────────────────────────────────────────────────────────────────┐
+    │ recitation.html (front-recitation.js) - Teacher only                │
+    │ Recitation sessions                                                  │
+    └─────────────────────────────────────────────────────────────────────┘
+
+    ┌─────────────────────────────────────────────────────────────────────┐
+    │ exam-generator.html - Teacher only                                  │
+    │ AI Exam Generator                                                    │
+    └─────────────────────────────────────────────────────────────────────┘
+
+    ┌─────────────────────────────────────────────────────────────────────┐
+    │ student-progress.html - Teacher only                                 │
+    │ Student Statistics                                                   │
+    └─────────────────────────────────────────────────────────────────────┘
+
+    ┌─────────────────────────────────────────────────────────────────────┐
+    │ my-progress.html (front-my-progress.js) - Student only               │
+    │ My Progress                                                          │
+    └─────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+SECTION 9: COMMON ACTIONS (all authenticated users)
+================================================================================
+
+    ┌─────────────────────────────────────────────────────────────────────┐
+    │ settings.html - Profile, avatar, tutorial replay                     │
+    │ [Logout] → logout() → index.html                                     │
+    └─────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+SECTION 10: CONNECTOR REFERENCE TABLE
+================================================================================
+
+  A   Landing Page (index.html)
+  B   Sign In → login.html
+  C   Sign Up → signup.html
+  D   Public nav (features, services, for-teachers, for-students, about)
+  E   Role selection (signup)
+  F   Registration form (signup)
+  G   API register success
+  H   Signup validation error
+  I   Signup success → login
+  J   Login form (credentials)
+  K   Login submit
+  L   Login API success
+  M   Login error
+  N   Admin → admin-dashboard
+  O   Teacher → classes
+  P   Student → classes
+  Q   Forgot password
+  R   Enter email (forgot)
+  S   Reset password
+  T   Reset → login
+  U   Admin view toggle
+  V   Admin teachers table
+  W   Admin students table
+  X   Admin logout
+  Y   Teacher create class
+  Z   Teacher select class
+  AA  Teacher sidebar nav
+  AB  Student join class
+  AC  Student select class
+  AD  Student sidebar nav
+
+================================================================================
+END OF FLOWCHART
+================================================================================

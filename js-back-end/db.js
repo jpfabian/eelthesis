@@ -1,7 +1,7 @@
 const mysql = require("mysql2/promise");
 
 const pool = mysql.createPool({
-  host: "eeldatabse.cnuayk8m8zwm.ap-southeast-1.rds.amazonaws.com",
+  host: "eel.ctu0q8kog8ck.ap-southeast-2.rds.amazonaws.com",
   user: "admin",
   password: "Thesiseel12345",
   database: "eel_db",

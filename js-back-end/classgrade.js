@@ -103,31 +103,44 @@ router.get("/api/my-progress", async (req, res) => {
       } else throw e;
     }
 
-    // Pronunciation completed attempts. When classId set, only attempts for that class.
-    // Include built-in quizzes (subject_id IS NULL)
+    // Pronunciation completed attempts (built-in + teacher-created). When classId set, only attempts for that class.
     try {
       [pronunciation] = await pool.query(
-        `SELECT a.attempt_id, a.quiz_id, q.title AS quiz_name, q.subject_id, q.quiz_number,
-         ROUND(a.score, 1) AS score,
-         ROUND(COALESCE(a.score, 0), 2) AS raw_score, ROUND(COALESCE(a.total_points, 100), 2) AS total_points,
+        `SELECT a.attempt_id, a.quiz_id,
+         COALESCE(q.title, tq.title) AS quiz_name,
+         COALESCE(q.subject_id, tq.subject_id) AS subject_id,
+         COALESCE(q.quiz_number, tq.quiz_id) AS quiz_number,
+         ROUND(COALESCE(a.score, a.pronunciation_score, 0), 1) AS score,
+         ROUND(COALESCE(a.score, a.pronunciation_score, 0), 2) AS raw_score,
+         ROUND(COALESCE(a.total_points, 100), 2) AS total_points,
          a.end_time
-         FROM pronunciation_quiz_attempts a JOIN pronunciation_quizzes q ON q.quiz_id = a.quiz_id
-         WHERE a.student_id = ? AND a.status = 'completed'
-         AND (? IS NULL OR q.subject_id = ? OR q.subject_id IS NULL)
-         AND (? IS NULL OR a.class_id = ?)
+         FROM pronunciation_quiz_attempts a
+         LEFT JOIN pronunciation_quizzes q ON q.quiz_id = a.quiz_id
+         LEFT JOIN teacher_pronunciation_quizzes tq ON tq.quiz_id = a.quiz_id
+         WHERE a.student_id = ? AND a.status IN ('completed', 'submitted')
+         AND (q.quiz_id IS NOT NULL OR tq.quiz_id IS NOT NULL)
+         AND (? IS NULL OR COALESCE(q.subject_id, tq.subject_id) = ?)
+         AND (? IS NULL OR a.class_id <=> ?)
          ORDER BY a.end_time DESC`,
         [studentId, subjectId, subjectId, classId, classId]
       );
     } catch (e) {
       if (String(e?.code || "") === "ER_BAD_FIELD_ERROR" || String(e?.message || "").includes("class_id")) {
         [pronunciation] = await pool.query(
-          `SELECT a.attempt_id, a.quiz_id, q.title AS quiz_name, q.subject_id, q.quiz_number,
-           ROUND(a.score, 1) AS score,
-           ROUND(COALESCE(a.score, 0), 2) AS raw_score, ROUND(COALESCE(a.total_points, 100), 2) AS total_points,
+          `SELECT a.attempt_id, a.quiz_id,
+           COALESCE(q.title, tq.title) AS quiz_name,
+           COALESCE(q.subject_id, tq.subject_id) AS subject_id,
+           COALESCE(q.quiz_number, tq.quiz_id) AS quiz_number,
+           ROUND(COALESCE(a.score, a.pronunciation_score, 0), 1) AS score,
+           ROUND(COALESCE(a.score, a.pronunciation_score, 0), 2) AS raw_score,
+           ROUND(COALESCE(a.total_points, 100), 2) AS total_points,
            a.end_time
-           FROM pronunciation_quiz_attempts a JOIN pronunciation_quizzes q ON q.quiz_id = a.quiz_id
-           WHERE a.student_id = ? AND a.status = 'completed'
-           AND (? IS NULL OR q.subject_id = ? OR q.subject_id IS NULL)
+           FROM pronunciation_quiz_attempts a
+           LEFT JOIN pronunciation_quizzes q ON q.quiz_id = a.quiz_id
+           LEFT JOIN teacher_pronunciation_quizzes tq ON tq.quiz_id = a.quiz_id
+           WHERE a.student_id = ? AND a.status IN ('completed', 'submitted')
+           AND (q.quiz_id IS NOT NULL OR tq.quiz_id IS NOT NULL)
+           AND (? IS NULL OR COALESCE(q.subject_id, tq.subject_id) = ?)
            ORDER BY a.end_time DESC`,
           [studentId, subjectId, subjectId]
         );
@@ -146,12 +159,29 @@ router.get("/api/my-progress", async (req, res) => {
          JOIN teacher_reading_quizzes q ON q.quiz_id = a.quiz_id
          WHERE a.student_id = ? AND a.status = 'completed'
          AND (? IS NULL OR q.subject_id = ?)
-         AND (? IS NULL OR a.class_id = ?)
+         AND (? IS NULL OR a.class_id <=> ?)
          ORDER BY a.end_time DESC`,
         [studentId, subjectId, subjectId, classId, classId]
       );
     } catch (e) {
-      if (String(e?.code || "") !== "ER_NO_SUCH_TABLE" && String(e?.code || "") !== "ER_BAD_FIELD_ERROR") {
+      if (String(e?.code || "") === "ER_BAD_FIELD_ERROR" || String(e?.message || "").includes("class_id")) {
+        try {
+          [aiReading] = await pool.query(
+            `SELECT a.attempt_id, a.quiz_id, q.title AS quiz_name, q.subject_id,
+             ROUND((a.score / NULLIF(a.total_points, 0)) * 100, 1) AS score,
+             ROUND(a.score, 2) AS raw_score, ROUND(a.total_points, 2) AS total_points,
+             a.end_time
+             FROM teacher_reading_quiz_attempts a
+             JOIN teacher_reading_quizzes q ON q.quiz_id = a.quiz_id
+             WHERE a.student_id = ? AND a.status = 'completed'
+             AND (? IS NULL OR q.subject_id = ?)
+             ORDER BY a.end_time DESC`,
+            [studentId, subjectId, subjectId]
+          );
+        } catch (_) {
+          aiReading = [];
+        }
+      } else if (String(e?.code || "") !== "ER_NO_SUCH_TABLE") {
         console.warn("AI reading quiz attempts lookup:", e?.message);
       }
     }
@@ -291,7 +321,15 @@ router.get("/api/my-progress", async (req, res) => {
         aiTotal = Number(aTotal?.c || 0);
       }
     } catch (e) {
-      if (String(e?.code || "") !== "ER_NO_SUCH_TABLE" && String(e?.code || "") !== "ER_BAD_FIELD_ERROR") {
+      if (String(e?.code || "") === "ER_BAD_FIELD_ERROR" || String(e?.message || "").includes("class_id")) {
+        try {
+          const [[aTotal]] = await pool.query(
+            `SELECT COUNT(*) AS c FROM teacher_reading_quizzes WHERE (? IS NULL OR subject_id = ?)`,
+            [subjectId, subjectId]
+          );
+          aiTotal = Number(aTotal?.c || 0);
+        } catch (_) {}
+      } else if (String(e?.code || "") !== "ER_NO_SUCH_TABLE") {
         console.warn("AI quiz count lookup:", e?.message);
       }
     }
@@ -387,20 +425,24 @@ router.get("/api/class/:classId/average-scores", async (req, res) => {
       } else throw e;
     }
 
-    // 3) Pronunciation quiz scores (points + %) — only attempts for this class
+    // 3) Pronunciation quiz scores (built-in + teacher-created) — only attempts for this class
     let pronunciation = [];
     try {
       [pronunciation] = await pool.query(
         `
-        SELECT a.attempt_id, a.student_id, q.title AS quiz_name,
-               q.quiz_id AS source_quiz_id,
-               q.quiz_number AS source_quiz_number,
-               ROUND(a.score, 2) AS raw_score,
-               ROUND(a.total_points, 2) AS total_points,
-               ROUND(a.score, 1) AS score
+        SELECT a.attempt_id, a.student_id,
+               COALESCE(q.title, tq.title) AS quiz_name,
+               COALESCE(q.quiz_id, tq.quiz_id) AS source_quiz_id,
+               COALESCE(q.quiz_number, tq.quiz_id) AS source_quiz_number,
+               ROUND(COALESCE(a.score, a.pronunciation_score, 0), 2) AS raw_score,
+               ROUND(COALESCE(a.total_points, 100), 2) AS total_points,
+               ROUND(COALESCE(a.score, a.pronunciation_score, 0), 1) AS score
         FROM pronunciation_quiz_attempts a
-        JOIN pronunciation_quizzes q ON q.quiz_id = a.quiz_id
-        WHERE a.status = 'completed' AND a.student_id IN (?) AND a.class_id = ?
+        LEFT JOIN pronunciation_quizzes q ON q.quiz_id = a.quiz_id
+        LEFT JOIN teacher_pronunciation_quizzes tq ON tq.quiz_id = a.quiz_id
+        WHERE a.status IN ('completed', 'submitted') AND a.student_id IN (?)
+        AND (q.quiz_id IS NOT NULL OR tq.quiz_id IS NOT NULL)
+        AND (a.class_id <=> ?)
         ORDER BY a.end_time DESC
         `,
         [studentIds, classId]
@@ -408,10 +450,19 @@ router.get("/api/class/:classId/average-scores", async (req, res) => {
     } catch (e) {
       if (String(e?.code || "") === "ER_BAD_FIELD_ERROR" || String(e?.message || "").includes("class_id")) {
         [pronunciation] = await pool.query(
-          `SELECT a.attempt_id, a.student_id, q.title AS quiz_name, q.quiz_id AS source_quiz_id, q.quiz_number AS source_quiz_number,
-           ROUND(a.score, 2) AS raw_score, ROUND(a.total_points, 2) AS total_points, ROUND(a.score, 1) AS score
-           FROM pronunciation_quiz_attempts a JOIN pronunciation_quizzes q ON q.quiz_id = a.quiz_id
-           WHERE a.status = 'completed' AND a.student_id IN (?) ORDER BY a.end_time DESC`,
+          `SELECT a.attempt_id, a.student_id,
+           COALESCE(q.title, tq.title) AS quiz_name,
+           COALESCE(q.quiz_id, tq.quiz_id) AS source_quiz_id,
+           COALESCE(q.quiz_number, tq.quiz_id) AS source_quiz_number,
+           ROUND(COALESCE(a.score, a.pronunciation_score, 0), 2) AS raw_score,
+           ROUND(COALESCE(a.total_points, 100), 2) AS total_points,
+           ROUND(COALESCE(a.score, a.pronunciation_score, 0), 1) AS score
+           FROM pronunciation_quiz_attempts a
+           LEFT JOIN pronunciation_quizzes q ON q.quiz_id = a.quiz_id
+           LEFT JOIN teacher_pronunciation_quizzes tq ON tq.quiz_id = a.quiz_id
+           WHERE a.status IN ('completed', 'submitted') AND a.student_id IN (?)
+           AND (q.quiz_id IS NOT NULL OR tq.quiz_id IS NOT NULL)
+           ORDER BY a.end_time DESC`,
           [studentIds]
         );
       } else throw e;
@@ -429,18 +480,32 @@ router.get("/api/class/:classId/average-scores", async (req, res) => {
                ROUND((a.score / NULLIF(a.total_points, 0)) * 100, 1) AS score
         FROM teacher_reading_quiz_attempts a
         JOIN teacher_reading_quizzes q ON q.quiz_id = a.quiz_id
-        WHERE a.status = 'completed' AND a.student_id IN (?) AND a.class_id = ?
+        WHERE a.status = 'completed' AND a.student_id IN (?) AND (a.class_id <=> ?)
         ORDER BY a.end_time DESC
         `,
         [studentIds, classId]
       );
       aiGenerated = aiRows || [];
     } catch (e) {
-      // Backward compatibility: some databases may not have teacher-reading tables/class_id yet.
-      if (String(e?.code || "") !== "ER_NO_SUCH_TABLE" && String(e?.code || "") !== "ER_BAD_FIELD_ERROR") {
+      if (String(e?.code || "") === "ER_BAD_FIELD_ERROR" || String(e?.message || "").includes("class_id")) {
+        try {
+          const [aiRows] = await pool.query(
+            `SELECT a.attempt_id, a.student_id, q.title AS quiz_name, q.quiz_id AS source_quiz_id,
+             ROUND(a.score, 2) AS raw_score, ROUND(a.total_points, 2) AS total_points,
+             ROUND((a.score / NULLIF(a.total_points, 0)) * 100, 1) AS score
+             FROM teacher_reading_quiz_attempts a
+             JOIN teacher_reading_quizzes q ON q.quiz_id = a.quiz_id
+             WHERE a.status = 'completed' AND a.student_id IN (?)
+             ORDER BY a.end_time DESC`,
+            [studentIds]
+          );
+          aiGenerated = aiRows || [];
+        } catch (_) {
+          aiGenerated = [];
+        }
+      } else if (String(e?.code || "") !== "ER_NO_SUCH_TABLE") {
         throw e;
       }
-      aiGenerated = [];
     }
 
     // 3.1) Reading answers count per attempt (for real score display like 2/5)

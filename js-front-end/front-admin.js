@@ -202,6 +202,24 @@ async function initAdminLoginPage() {
   });
 }
 
+function updateNewAccountsBanner(pendingCount) {
+  const banner = document.getElementById("admin-new-accounts-banner");
+  const textEl = document.getElementById("admin-new-accounts-text");
+  if (!banner || !textEl) return;
+  if (pendingCount > 0) {
+    textEl.textContent =
+      pendingCount === 1
+        ? "You have 1 new account awaiting verification."
+        : `You have ${pendingCount} new accounts awaiting verification.`;
+    banner.classList.remove("hidden");
+    if (window.lucide && typeof window.lucide.createIcons === "function") {
+      window.lucide.createIcons();
+    }
+  } else {
+    banner.classList.add("hidden");
+  }
+}
+
 function applyAdminFilters(users) {
   const q = String(document.getElementById("admin-search")?.value || "").trim().toLowerCase();
   return (users || []).filter((u) => {
@@ -364,6 +382,7 @@ async function initAdminDashboardPage() {
           text: "Run `js-back-end/migrate-account-verification.sql` in your database, then refresh.",
         });
         window.__adminUsers = [];
+        updateNewAccountsBanner(0);
         // Important: don't overwrite the message with "No pending users"
         return;
       }
@@ -371,12 +390,21 @@ async function initAdminDashboardPage() {
       adminTeachersPager.page = 1;
       adminStudentsPager.page = 1;
       renderAdminUsers(window.__adminUsers);
+      updateNewAccountsBanner(data.pending_count ?? 0);
     } catch (err) {
       Swal.fire({ icon: "error", title: "Error", text: err?.message || "Failed to load users" });
+      updateNewAccountsBanner(0);
     }
   };
 
   document.getElementById("admin-refresh-btn")?.addEventListener("click", refresh);
+  document.getElementById("admin-view-pending-btn")?.addEventListener("click", () => {
+    const filter = document.getElementById("admin-status-filter");
+    if (filter) {
+      filter.value = "pending";
+      refresh();
+    }
+  });
   document.getElementById("admin-logout-btn")?.addEventListener("click", async () => {
     const result = await Swal.fire({
       icon: "question",

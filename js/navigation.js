@@ -762,8 +762,29 @@ function initializePage() {
 
 const NAV_NOTIF_ITEMS_KEY = "eel_lessons_class_notifications_v1";
 const NAV_NOTIF_STATE_KEY = "eel_lessons_class_notifications_state_v1";
+const NAV_NOTIF_USER_KEY = "eel_notif_user_id_v1";
 let __navNotifPollHandle = null;
 const NAV_USER_NAME_CACHE = {};
+
+function getNavNotifUserId() {
+    try {
+        const u = localStorage.getItem("eel_user");
+        const parsed = u ? JSON.parse(u) : null;
+        return parsed?.user_id != null ? String(parsed.user_id) : "";
+    } catch { return ""; }
+}
+
+function ensureNavNotifUserScoped() {
+    const current = getNavNotifUserId();
+    const stored = localStorage.getItem(NAV_NOTIF_USER_KEY) || "";
+    if (current && stored !== current) {
+        try {
+            localStorage.removeItem(NAV_NOTIF_ITEMS_KEY);
+            localStorage.removeItem(NAV_NOTIF_STATE_KEY);
+            localStorage.setItem(NAV_NOTIF_USER_KEY, current);
+        } catch {}
+    }
+}
 
 function readNavNotifStore(key) {
     try {
@@ -822,14 +843,16 @@ function deleteNavNotificationItem(classId, itemId) {
 }
 
 function getNavNotifState(classId) {
-    if (!classId) return { knownStudentIds: [], seenOpenQuizIds: [], seenClosingQuizIds: [], seenClosedQuizIds: [] };
+    ensureNavNotifUserScoped();
+    if (!classId) return { knownStudentIds: [], seenOpenQuizIds: [], seenClosingQuizIds: [], seenClosedQuizIds: [], firstSeenAt: null };
     const all = readNavNotifStore(NAV_NOTIF_STATE_KEY);
     const s = all[classId] || {};
     return {
         knownStudentIds: Array.isArray(s.knownStudentIds) ? s.knownStudentIds.map((v) => String(v)) : [],
         seenOpenQuizIds: Array.isArray(s.seenOpenQuizIds) ? s.seenOpenQuizIds.map((v) => String(v)) : [],
         seenClosingQuizIds: Array.isArray(s.seenClosingQuizIds) ? s.seenClosingQuizIds.map((v) => String(v)) : [],
-        seenClosedQuizIds: Array.isArray(s.seenClosedQuizIds) ? s.seenClosedQuizIds.map((v) => String(v)) : []
+        seenClosedQuizIds: Array.isArray(s.seenClosedQuizIds) ? s.seenClosedQuizIds.map((v) => String(v)) : [],
+        firstSeenAt: s.firstSeenAt != null ? Number(s.firstSeenAt) : null
     };
 }
 
@@ -840,7 +863,8 @@ function setNavNotifState(classId, stateValue) {
         knownStudentIds: Array.isArray(stateValue?.knownStudentIds) ? stateValue.knownStudentIds.map((v) => String(v)) : [],
         seenOpenQuizIds: Array.isArray(stateValue?.seenOpenQuizIds) ? stateValue.seenOpenQuizIds.map((v) => String(v)) : [],
         seenClosingQuizIds: Array.isArray(stateValue?.seenClosingQuizIds) ? stateValue.seenClosingQuizIds.map((v) => String(v)) : [],
-        seenClosedQuizIds: Array.isArray(stateValue?.seenClosedQuizIds) ? stateValue.seenClosedQuizIds.map((v) => String(v)) : []
+        seenClosedQuizIds: Array.isArray(stateValue?.seenClosedQuizIds) ? stateValue.seenClosedQuizIds.map((v) => String(v)) : [],
+        firstSeenAt: stateValue?.firstSeenAt != null ? Number(stateValue.firstSeenAt) : null
     };
     writeNavNotifStore(NAV_NOTIF_STATE_KEY, all);
 }
@@ -1150,7 +1174,14 @@ function renderSharedNotifications(classId) {
     const titleEl = document.getElementById("mobileNavNotificationTitle");
     const btn = document.getElementById("mobileNavNotificationBtn");
     if (!listEl || !badgeEl || !classId) return;
-    const items = getNavNotifItems(classId);
+    const state = getNavNotifState(classId);
+    let firstSeenAt = state.firstSeenAt;
+    if (firstSeenAt == null) {
+        firstSeenAt = Date.now();
+        setNavNotifState(classId, { ...state, firstSeenAt });
+    }
+    const allItems = getNavNotifItems(classId);
+    const items = allItems.filter((item) => (new Date(item.ts || 0).getTime() || 0) >= firstSeenAt);
     const unread = items.filter((item) => !item.read).length;
     if (unread > 0) {
         badgeEl.classList.remove("hidden");
@@ -1207,7 +1238,11 @@ async function pollSharedClassNotifications(user) {
     const classInfo = getNavClassContext();
     if (!classInfo.classId) return;
     const state = getNavNotifState(classInfo.classId);
-    const next = { ...state };
+    let next = { ...state };
+    if (next.firstSeenAt == null) {
+        next.firstSeenAt = Date.now();
+        setNavNotifState(classInfo.classId, next);
+    }
 
     const quizzes = await fetchNavQuizList(user, classInfo);
     await backfillNavQuizOpenActors(classInfo.classId, quizzes, role, user);
@@ -1326,6 +1361,7 @@ async function pollSharedClassNotifications(user) {
 
 function setupSharedClassNotifications(user, currentPageId) {
     const enabledPages = new Set([
+        "dashboard",
         "reading-lessons",
         "pronunciation-lessons",
         "recitation",

@@ -3,6 +3,7 @@
 let __eelLessonsSubject = null;
 const LESSONS_NOTIF_ITEMS_KEY = "eel_lessons_class_notifications_v1";
 const LESSONS_NOTIF_STATE_KEY = "eel_lessons_class_notifications_state_v1";
+const LESSONS_NOTIF_USER_KEY = "eel_lessons_notif_user_id_v1";
 const DELETED_AI_QUIZZES_CACHE_KEY = "eel_deleted_ai_quizzes_cache_v1";
 let __lessonsNotifPollHandle = null;
 const LESSONS_USER_NAME_CACHE = {};
@@ -798,6 +799,26 @@ function switchLessonsView(view) {
   if (window.lucide && typeof window.lucide.createIcons === "function") window.lucide.createIcons();
 }
 
+function getLessonsNotifUserId() {
+  try {
+    const u = localStorage.getItem("eel_user");
+    const parsed = u ? JSON.parse(u) : null;
+    return parsed?.user_id != null ? String(parsed.user_id) : "";
+  } catch { return ""; }
+}
+
+function ensureLessonsNotifUserScoped() {
+  const current = getLessonsNotifUserId();
+  const stored = localStorage.getItem(LESSONS_NOTIF_USER_KEY) || "";
+  if (current && stored !== current) {
+    try {
+      localStorage.removeItem(LESSONS_NOTIF_ITEMS_KEY);
+      localStorage.removeItem(LESSONS_NOTIF_STATE_KEY);
+      localStorage.setItem(LESSONS_NOTIF_USER_KEY, current);
+    } catch {}
+  }
+}
+
 function readLessonsNotifStore(key) {
   try {
     const raw = localStorage.getItem(key);
@@ -942,7 +963,8 @@ function deleteLessonsNotificationItem(classId, itemId) {
 }
 
 function getLessonsNotifState(classId) {
-  if (!classId) return { initialized: false, knownStudentIds: [], seenOpenQuizIds: [], seenClosingQuizIds: [], seenClosedQuizIds: [] };
+  ensureLessonsNotifUserScoped();
+  if (!classId) return { initialized: false, knownStudentIds: [], seenOpenQuizIds: [], seenClosingQuizIds: [], seenClosedQuizIds: [], firstSeenAt: null };
   const allState = readLessonsNotifStore(LESSONS_NOTIF_STATE_KEY);
   const value = allState[classId] || {};
   return {
@@ -951,6 +973,7 @@ function getLessonsNotifState(classId) {
     seenOpenQuizIds: Array.isArray(value.seenOpenQuizIds) ? value.seenOpenQuizIds.map((v) => String(v)) : [],
     seenClosingQuizIds: Array.isArray(value.seenClosingQuizIds) ? value.seenClosingQuizIds.map((v) => String(v)) : [],
     seenClosedQuizIds: Array.isArray(value.seenClosedQuizIds) ? value.seenClosedQuizIds.map((v) => String(v)) : [],
+    firstSeenAt: value.firstSeenAt != null ? Number(value.firstSeenAt) : null
   };
 }
 
@@ -963,6 +986,7 @@ function setLessonsNotifState(classId, stateValue) {
     seenOpenQuizIds: Array.isArray(stateValue?.seenOpenQuizIds) ? stateValue.seenOpenQuizIds.map((v) => String(v)) : [],
     seenClosingQuizIds: Array.isArray(stateValue?.seenClosingQuizIds) ? stateValue.seenClosingQuizIds.map((v) => String(v)) : [],
     seenClosedQuizIds: Array.isArray(stateValue?.seenClosedQuizIds) ? stateValue.seenClosedQuizIds.map((v) => String(v)) : [],
+    firstSeenAt: stateValue?.firstSeenAt != null ? Number(stateValue.firstSeenAt) : null
   };
   writeLessonsNotifStore(LESSONS_NOTIF_STATE_KEY, allState);
 }
@@ -1071,7 +1095,14 @@ function renderLessonsNotificationPanel(classId) {
   const titleEl = document.getElementById("mobileNavNotificationTitle");
   const btn = document.getElementById("mobileNavNotificationBtn");
   if (!listEl || !badgeEl || !classId) return;
-  const items = getLessonsNotifItems(classId);
+  const state = getLessonsNotifState(classId);
+  let firstSeenAt = state.firstSeenAt;
+  if (firstSeenAt == null) {
+    firstSeenAt = Date.now();
+    setLessonsNotifState(classId, { ...state, firstSeenAt });
+  }
+  const allItems = getLessonsNotifItems(classId);
+  const items = allItems.filter((item) => (new Date(item.ts || 0).getTime() || 0) >= firstSeenAt);
   const unreadCount = items.filter((item) => !item.read).length;
   if (unreadCount > 0) {
     badgeEl.classList.remove("hidden");
@@ -1206,6 +1237,10 @@ async function pollLessonsNotifications(user) {
   if (!classInfo.classId) return;
   const state = getLessonsNotifState(classInfo.classId);
   let nextState = { ...state };
+  if (nextState.firstSeenAt == null) {
+    nextState.firstSeenAt = Date.now();
+    setLessonsNotifState(classInfo.classId, nextState);
+  }
   const quizList = await fetchLessonsQuizListForNotifications(user, classInfo);
   await backfillLessonsQuizOpenActors(classInfo.classId, quizList, role, user);
   const quizStatuses = getLessonQuizStatuses(quizList);
@@ -1341,7 +1376,6 @@ async function pollLessonsNotifications(user) {
 
 async function initLessonsClassNotifications(user) {
   const classInfo = getLessonsClassContext();
-  if (!classInfo.classId) return;
   const btn = document.getElementById("mobileNavNotificationBtn");
   const panel = document.getElementById("mobileNavNotificationPanel");
   const vocabBtn = document.getElementById("mobileNavVocabBtn");
@@ -1349,9 +1383,11 @@ async function initLessonsClassNotifications(user) {
   const markAllBtn = document.getElementById("mobileNavNotificationMarkAll");
   if (!btn || !panel || !markAllBtn) return;
 
-  renderLessonsNotificationPanel(classInfo.classId);
+  if (classInfo.classId) renderLessonsNotificationPanel(classInfo.classId);
 
-  btn.addEventListener("click", (e) => {
+  if (!btn.__lessonsNotifBound) {
+    btn.__lessonsNotifBound = true;
+    btn.addEventListener("click", (e) => {
     e.stopPropagation();
     const isHidden = panel.classList.contains("hidden");
     panel.classList.toggle("hidden", !isHidden);
@@ -1360,14 +1396,17 @@ async function initLessonsClassNotifications(user) {
       vocabPanel.classList.add("hidden");
       if (vocabBtn) vocabBtn.setAttribute("aria-expanded", "false");
     }
-    if (isHidden) {
+    if (isHidden && classInfo.classId) {
       markLessonsNotificationsRead(classInfo.classId);
       renderLessonsNotificationPanel(classInfo.classId);
     }
   });
+  }
   markAllBtn.addEventListener("click", () => {
-    markLessonsNotificationsRead(classInfo.classId);
-    renderLessonsNotificationPanel(classInfo.classId);
+    if (classInfo.classId) {
+      markLessonsNotificationsRead(classInfo.classId);
+      renderLessonsNotificationPanel(classInfo.classId);
+    }
   });
   document.addEventListener("click", (e) => {
     if (!panel.classList.contains("hidden") && !panel.contains(e.target) && !btn.contains(e.target)) {
@@ -1401,32 +1440,40 @@ async function initLessonsClassNotifications(user) {
       }
       if (readBtn) {
         e.stopPropagation();
-        markLessonsNotificationItemRead(classInfo.classId, itemId);
-        renderLessonsNotificationPanel(classInfo.classId);
+        if (classInfo.classId) {
+          markLessonsNotificationItemRead(classInfo.classId, itemId);
+          renderLessonsNotificationPanel(classInfo.classId);
+        }
         return;
       }
       if (deleteBtn) {
         e.stopPropagation();
-        deleteLessonsNotificationItem(classInfo.classId, itemId);
-        renderLessonsNotificationPanel(classInfo.classId);
+        if (classInfo.classId) {
+          deleteLessonsNotificationItem(classInfo.classId, itemId);
+          renderLessonsNotificationPanel(classInfo.classId);
+        }
         return;
       }
       if (mainBtn) {
         const url = mainBtn.getAttribute("data-target-url");
-        markLessonsNotificationItemRead(classInfo.classId, itemId);
-        renderLessonsNotificationPanel(classInfo.classId);
+        if (classInfo.classId) {
+          markLessonsNotificationItemRead(classInfo.classId, itemId);
+          renderLessonsNotificationPanel(classInfo.classId);
+        }
         if (url) window.location.href = url;
       }
     });
   }
 
-  try {
-    await pollLessonsNotifications(user);
-  } catch {}
-  if (__lessonsNotifPollHandle) clearInterval(__lessonsNotifPollHandle);
-  __lessonsNotifPollHandle = setInterval(() => {
-    pollLessonsNotifications(user).catch(() => {});
-  }, 30000);
+  if (classInfo.classId) {
+    try {
+      await pollLessonsNotifications(user);
+    } catch {}
+    if (__lessonsNotifPollHandle) clearInterval(__lessonsNotifPollHandle);
+    __lessonsNotifPollHandle = setInterval(() => {
+      pollLessonsNotifications(user).catch(() => {});
+    }, 30000);
+  }
   window.addEventListener("beforeunload", () => {
     if (__lessonsNotifPollHandle) clearInterval(__lessonsNotifPollHandle);
   });
@@ -2964,11 +3011,70 @@ async function generateAIQuizLesson() {
       parsed.forEach(function (q) {
         if (byType[q.questionType]) byType[q.questionType].push(q);
       });
-      var mcSlice = (byType["multiple-choice"] || []).slice(0, wantMc);
-      var tfSlice = (byType["true-false"] || []).slice(0, wantTf);
-      var idSlice = (byType["identification"] || []).slice(0, wantId);
+      var mcPool = byType["multiple-choice"] || [];
+      var tfPool = byType["true-false"] || [];
+      var idPool = byType["identification"] || [];
+      var mcSlice = mcPool.slice(0, wantMc);
+      var tfSlice = tfPool.slice(0, wantTf);
+      var idSlice = idPool.slice(0, wantId);
+      var mcGivenAway = 0;
+      if (idSlice.length < wantId && wantId > 0) {
+        var mcOverflow = mcPool.slice(wantMc + mcGivenAway);
+        for (var i = 0; i < wantId - idSlice.length && i < mcOverflow.length; i++) {
+          var mq = mcOverflow[i];
+          idSlice.push({
+            questionType: "identification",
+            questionText: mq.questionText,
+            choices: {},
+            correctAnswerText: mq.choices[mq.correctLetter] || mq.correctAnswerText,
+            correctLetter: "",
+            typeOrder: 2
+          });
+          mcGivenAway++;
+        }
+      }
+      if (tfSlice.length < wantTf && wantTf > 0) {
+        var tfOverflow = tfPool.slice(wantTf);
+        var mcForTf = mcPool.slice(wantMc + mcGivenAway);
+        for (var j = 0; j < wantTf - tfSlice.length && (tfOverflow.length > 0 || mcForTf.length > 0); j++) {
+          var tq = tfOverflow.shift() || mcForTf.shift();
+          if (tq && tq.questionType === "true-false") tfSlice.push(tq);
+          else if (tq) {
+            var ans = (tq.choices[tq.correctLetter] || tq.correctAnswerText || "").toLowerCase();
+            var isT = /^\s*true\s*$/.test(ans) || /^true$/i.test(ans);
+            tfSlice.push({
+              questionType: "true-false",
+              questionText: tq.questionText,
+              choices: { A: "True", B: "False" },
+              correctAnswerText: isT ? "True" : "False",
+              correctLetter: isT ? "A" : "B",
+              typeOrder: 1
+            });
+            mcGivenAway++;
+          }
+        }
+      }
+      if (mcSlice.length < wantMc && wantMc > 0) {
+        var idOverflow = idPool.slice(wantId);
+        var tfOverflow2 = tfPool.slice(wantTf);
+        for (var k = 0; k < wantMc - mcSlice.length && (idOverflow.length > 0 || tfOverflow2.length > 0); k++) {
+          var xq = idOverflow.shift() || tfOverflow2.shift();
+          if (xq && (xq.choices.A || xq.choices.B)) {
+            mcSlice.push(xq);
+          } else if (xq) {
+            mcSlice.push({
+              questionType: "multiple-choice",
+              questionText: xq.questionText,
+              choices: { A: "True", B: "False", C: xq.correctAnswerText, D: "None of the above" },
+              correctAnswerText: xq.correctAnswerText,
+              correctLetter: "C",
+              typeOrder: 0
+            });
+          }
+        }
+      }
       var fitted = mcSlice.concat(tfSlice, idSlice);
-      if (mcSlice.length < wantMc || tfSlice.length < wantTf || idSlice.length < wantId) {
+      if (fitted.length < totalQuestions) {
         if (typeof showNotification === "function") showNotification("Generated quiz has fewer questions than requested for some types. You can Regenerate or edit and save.", "warning");
       }
       let globalIndex = 0;

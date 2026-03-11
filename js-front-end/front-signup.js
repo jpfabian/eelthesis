@@ -51,6 +51,17 @@ let selectedRole = null;
                 await registerUser(fname, lname, email, password, selectedRole, section, strand);
             });
 
+            // Auto-capitalize first letter of each word (First Name, Last Name, Section)
+            ['fname', 'lname', 'section'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.addEventListener('blur', function() {
+                        const formatted = toNameCase(this.value);
+                        if (formatted !== this.value) this.value = formatted;
+                    });
+                }
+            });
+
             // Password strength
             passwordInput.addEventListener('input', function() {
                 checkPasswordStrength(this.value);

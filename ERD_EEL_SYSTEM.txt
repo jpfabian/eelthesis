@@ -1,0 +1,597 @@
+================================================================================
+                    EEL SYSTEM - ENTITY-RELATIONSHIP DIAGRAM (ERD)
+              Enhancing English Literacy - Database Schema
+================================================================================
+
+Reference: Crow's feet notation
+  |---  One
+  |<--  Many (crow's foot)
+  O     Optional (zero)
+  ||    Exactly one
+
+================================================================================
+                        ENTITIES AND ATTRIBUTES
+================================================================================
+
+--------------------------------------------------------------------------------
+1. users
+--------------------------------------------------------------------------------
+  user_id           INT UNSIGNED    PK   (Primary Key)
+  fname             VARCHAR(100)
+  lname             VARCHAR(100)
+  email             VARCHAR(255)   UNIQUE
+  password          VARCHAR(255)
+  role              ENUM('student','teacher','admin')
+  section           VARCHAR(50)   NULL   (Student only)
+  strand            VARCHAR(80)   NULL   (Student only)
+  is_active         TINYINT(1)
+  verification_status ENUM('pending','approved','rejected')
+  verified_at       TIMESTAMP NULL
+  verified_by       VARCHAR(100) NULL
+  rejected_at       TIMESTAMP NULL
+  rejected_reason   VARCHAR(255) NULL
+  created_at        TIMESTAMP
+  updated_at        TIMESTAMP NULL
+
+--------------------------------------------------------------------------------
+2. classes
+--------------------------------------------------------------------------------
+  id                INT UNSIGNED    PK
+  class_code        VARCHAR(10)    UNIQUE
+  name              VARCHAR(100)
+  section           VARCHAR(50)
+  subject           VARCHAR(100)
+  teacher_id        INT UNSIGNED    FK → users(user_id)
+  created_at        TIMESTAMP
+
+--------------------------------------------------------------------------------
+3. student_classes
+--------------------------------------------------------------------------------
+  id                INT UNSIGNED    PK
+  student_id        INT UNSIGNED    FK → users(user_id)
+  student_fname     VARCHAR(100)
+  student_lname     VARCHAR(100)
+  class_id          INT UNSIGNED    FK → classes(id)
+  status            ENUM('pending','accepted','rejected')
+  joined_at         TIMESTAMP
+
+--------------------------------------------------------------------------------
+4. subjects
+--------------------------------------------------------------------------------
+  subject_id        INT UNSIGNED    PK
+  subject_name      VARCHAR(255)   UNIQUE
+
+--------------------------------------------------------------------------------
+5. lessons
+--------------------------------------------------------------------------------
+  lesson_id         INT UNSIGNED    PK
+  subject_id        INT UNSIGNED    FK → subjects(subject_id)
+  lesson_title      VARCHAR(255)
+  quarter_number    TINYINT UNSIGNED NULL
+  quarter_title     VARCHAR(255) NULL
+
+--------------------------------------------------------------------------------
+6. topics
+--------------------------------------------------------------------------------
+  topic_id          INT UNSIGNED    PK
+  lesson_id         INT UNSIGNED    FK → lessons(lesson_id)
+  topic_title       VARCHAR(255)
+  pdf_path          VARCHAR(500) NULL
+  topic_content     LONGTEXT NULL
+
+--------------------------------------------------------------------------------
+7. reading_quizzes (built-in)
+--------------------------------------------------------------------------------
+  quiz_id           INT UNSIGNED    PK
+  subject_id        INT UNSIGNED    FK → subjects(subject_id) NULL
+  quiz_number       INT UNSIGNED
+  title             VARCHAR(255)
+  difficulty        ENUM('beginner','intermediate','advanced')
+  passage           LONGTEXT NULL
+  unlock_time       DATETIME NULL
+  lock_time         DATETIME NULL
+  time_limit        INT UNSIGNED NULL
+  status            ENUM('draft','active','locked','closed')
+  passing_score     DECIMAL(6,2)
+  created_at        TIMESTAMP
+
+--------------------------------------------------------------------------------
+8. teacher_reading_quizzes
+--------------------------------------------------------------------------------
+  quiz_id           INT UNSIGNED    PK
+  subject_id        INT UNSIGNED    FK → subjects(subject_id)
+  user_id           INT UNSIGNED    FK → users(user_id)
+  class_id          INT UNSIGNED    FK → classes(id) NULL
+  title             VARCHAR(255)
+  difficulty        ENUM('beginner','intermediate','advanced')
+  passage           LONGTEXT NULL
+  created_at        TIMESTAMP
+
+--------------------------------------------------------------------------------
+9. pronunciation_quizzes (built-in)
+--------------------------------------------------------------------------------
+  quiz_id           INT UNSIGNED    PK
+  subject_id        INT UNSIGNED    FK → subjects(subject_id)
+  quiz_number       INT UNSIGNED
+  title             VARCHAR(255)
+  difficulty        ENUM('beginner','intermediate','advanced')
+  passage           LONGTEXT NULL
+  unlock_time       DATETIME NULL
+  lock_time         DATETIME NULL
+  created_at        TIMESTAMP
+
+--------------------------------------------------------------------------------
+10. teacher_pronunciation_quizzes
+--------------------------------------------------------------------------------
+  quiz_id           INT UNSIGNED    PK
+  subject_id        INT UNSIGNED    FK → subjects(subject_id)
+  user_id           INT UNSIGNED    FK → users(user_id)
+  title             VARCHAR(255)
+  difficulty        ENUM('beginner','intermediate','advanced')
+  passage           LONGTEXT NULL
+  created_at        TIMESTAMP
+
+--------------------------------------------------------------------------------
+11. reading_quiz_attempts (built-in reading quizzes)
+--------------------------------------------------------------------------------
+  attempt_id        INT UNSIGNED    PK
+  student_id        INT UNSIGNED    FK → users(user_id)
+  quiz_id           INT UNSIGNED    FK → reading_quizzes(quiz_id)
+  class_id          INT UNSIGNED    FK → classes(id) NULL
+  start_time        DATETIME
+  end_time          DATETIME NULL
+  status            ENUM('in_progress','completed')
+  score             DECIMAL(10,2) NULL
+  total_points      DECIMAL(10,2) NULL
+  created_at        TIMESTAMP
+
+--------------------------------------------------------------------------------
+12. teacher_reading_quiz_attempts
+--------------------------------------------------------------------------------
+  attempt_id        INT UNSIGNED    PK
+  student_id        INT UNSIGNED    FK → users(user_id)
+  quiz_id           INT UNSIGNED    FK → teacher_reading_quizzes(quiz_id)
+  start_time        DATETIME
+  end_time          DATETIME NULL
+  status            ENUM('in_progress','completed')
+  score             DECIMAL(10,2) NULL
+  total_points      DECIMAL(10,2) NULL
+  created_at        TIMESTAMP
+
+--------------------------------------------------------------------------------
+13. pronunciation_quiz_attempts
+--------------------------------------------------------------------------------
+  attempt_id        INT UNSIGNED    PK
+  student_id        INT UNSIGNED    FK → users(user_id)
+  quiz_id           INT UNSIGNED    FK → pronunciation_quizzes(quiz_id)
+  class_id          INT UNSIGNED    FK → classes(id) NULL
+  start_time        DATETIME
+  end_time          DATETIME NULL
+  status            ENUM('in_progress','submitted','completed')
+  score             DECIMAL(6,2) NULL
+  pronunciation_score DECIMAL(6,2) NULL
+  created_at        TIMESTAMP
+
+--------------------------------------------------------------------------------
+14. password_reset_tokens
+--------------------------------------------------------------------------------
+  reset_id          INT UNSIGNED    PK
+  user_id           INT UNSIGNED    FK → users(user_id)
+  token_hash        CHAR(64)
+  expires_at        DATETIME
+  used_at           DATETIME NULL
+  created_at        TIMESTAMP
+
+--------------------------------------------------------------------------------
+15. exams (AI exam generator)
+--------------------------------------------------------------------------------
+  id                INT UNSIGNED    PK
+  class_id          INT UNSIGNED    FK → classes(id)
+  created_by        INT UNSIGNED    FK → users(user_id)
+  title             VARCHAR(255)
+  content           LONGTEXT
+  question_count    INT UNSIGNED NULL
+  created_at        DATETIME
+
+--------------------------------------------------------------------------------
+16. reading_student_progress (built-in track unlock)
+--------------------------------------------------------------------------------
+  student_id        INT UNSIGNED    PK, FK → users(user_id)
+  subject_id        INT UNSIGNED    PK, FK → subjects(subject_id)
+  unlocked_quiz_number INT UNSIGNED
+  updated_at        TIMESTAMP
+
+--------------------------------------------------------------------------------
+17. pronunciation_student_progress
+--------------------------------------------------------------------------------
+  student_id        INT UNSIGNED    PK, FK → users(user_id)
+  subject_id        INT UNSIGNED    PK, FK → subjects(subject_id)
+  unlocked_quiz_number INT UNSIGNED
+  updated_at        TIMESTAMP
+
+--------------------------------------------------------------------------------
+18. reading_questions (built-in reading quiz questions)
+--------------------------------------------------------------------------------
+  question_id       INT UNSIGNED    PK
+  quiz_id           INT UNSIGNED    FK → reading_quizzes(quiz_id)
+  question_type     ENUM('mcq','fill_blank','essay')
+  question_text     TEXT
+  points            DECIMAL(8,2)
+  position          INT UNSIGNED
+
+--------------------------------------------------------------------------------
+19. reading_quiz_answers (built-in reading quiz answers)
+--------------------------------------------------------------------------------
+  answer_id         INT UNSIGNED    PK
+  attempt_id        INT UNSIGNED    FK → reading_quiz_attempts(attempt_id)
+  question_id       INT UNSIGNED    FK → reading_questions(question_id)
+  question_type     ENUM('mcq','fill_blank','essay')
+  student_answer    TEXT NULL
+  is_correct        TINYINT(1) NULL
+  points_earned     DECIMAL(10,2) NULL
+  created_at        TIMESTAMP
+
+--------------------------------------------------------------------------------
+20. teacher_reading_beginner_questions
+--------------------------------------------------------------------------------
+  question_id       INT UNSIGNED    PK
+  quiz_id           INT UNSIGNED    FK → teacher_reading_quizzes(quiz_id)
+  question_text     TEXT
+
+--------------------------------------------------------------------------------
+21. teacher_reading_quiz_answers
+--------------------------------------------------------------------------------
+  answer_id         INT UNSIGNED    PK
+  attempt_id        INT UNSIGNED    FK → teacher_reading_quiz_attempts(attempt_id)
+  question_id       INT UNSIGNED    FK → teacher_reading_beginner_questions (or intermediate/advanced)
+  student_answer    TEXT NULL
+  is_correct        TINYINT(1) NULL
+  points_earned     DECIMAL(10,2) NULL
+  created_at        TIMESTAMP
+
+--------------------------------------------------------------------------------
+22. pronunciation_quiz_answers
+--------------------------------------------------------------------------------
+  answer_id         INT UNSIGNED    PK
+  attempt_id        INT UNSIGNED    FK → pronunciation_quiz_attempts(attempt_id)
+  question_id       INT UNSIGNED    FK → pronunciation_*_questions(question_id)
+  difficulty        ENUM('beginner','intermediate','advanced')
+  student_audio     VARCHAR(1000)
+  transcript        TEXT NULL
+  pronunciation_score DECIMAL(6,2) NULL
+  evaluated_at      TIMESTAMP
+
+================================================================================
+                        RELATIONSHIPS (Crow's Feet)
+================================================================================
+
+  users |<----|| classes
+  (One user as teacher can have many classes)
+  FK: classes.teacher_id → users.user_id
+
+  users |<----|| student_classes
+  (One user as student can have many class enrollments)
+  FK: student_classes.student_id → users.user_id
+
+  classes |<----|| student_classes
+  (One class can have many student enrollments)
+  FK: student_classes.class_id → classes.id
+
+  users |<----|| password_reset_tokens
+  (One user can have many reset tokens)
+  FK: password_reset_tokens.user_id → users.user_id
+
+  subjects |<----|| lessons
+  (One subject has many lessons)
+  FK: lessons.subject_id → subjects.subject_id
+
+  lessons |<----|| topics
+  (One lesson has many topics)
+  FK: topics.lesson_id → lessons.lesson_id
+
+  subjects |<----|| reading_quizzes
+  (One subject has many built-in reading quizzes)
+  FK: reading_quizzes.subject_id → subjects.subject_id
+
+  subjects |<----|| teacher_reading_quizzes
+  users   |<----|| teacher_reading_quizzes
+  classes |<----O- teacher_reading_quizzes
+  (One subject has many teacher quizzes; one teacher creates many; one class can have many)
+  FK: teacher_reading_quizzes.subject_id, user_id, class_id
+
+  subjects |<----|| pronunciation_quizzes
+  (One subject has many built-in pronunciation quizzes)
+  FK: pronunciation_quizzes.subject_id → subjects.subject_id
+
+  subjects |<----|| teacher_pronunciation_quizzes
+  users   |<----|| teacher_pronunciation_quizzes
+  (One subject has many; one teacher creates many)
+  FK: teacher_pronunciation_quizzes.subject_id, user_id
+
+  users   |<----|| reading_quiz_attempts
+  reading_quizzes |<----|| reading_quiz_attempts
+  (One student has many attempts; one quiz has many attempts)
+  FK: reading_quiz_attempts.student_id, quiz_id
+
+  users   |<----|| teacher_reading_quiz_attempts
+  teacher_reading_quizzes |<----|| teacher_reading_quiz_attempts
+  FK: teacher_reading_quiz_attempts.student_id, quiz_id
+
+  users   |<----|| pronunciation_quiz_attempts
+  pronunciation_quizzes |<----|| pronunciation_quiz_attempts
+  FK: pronunciation_quiz_attempts.student_id, quiz_id
+
+  classes |<----|| exams
+  users   |<----|| exams
+  (One class has many exams; one teacher creates many)
+  FK: exams.class_id, created_by
+
+  users   |<----|| reading_student_progress
+  subjects |<----|| reading_student_progress
+  (Composite PK: student_id, subject_id)
+
+  users   |<----|| pronunciation_student_progress
+  subjects |<----|| pronunciation_student_progress
+  (Composite PK: student_id, subject_id)
+
+  reading_quizzes |<----|| reading_questions
+  reading_questions |<----|| reading_mcq_options
+  reading_questions |<----|| reading_fill_blanks
+
+  reading_quiz_attempts |<----|| reading_quiz_answers
+  reading_questions |<----|| reading_quiz_answers
+
+  teacher_reading_quizzes |<----|| teacher_reading_beginner_questions
+  teacher_reading_quizzes |<----|| teacher_reading_intermediate_questions
+  teacher_reading_quizzes |<----|| teacher_reading_advanced_questions
+
+  teacher_reading_quiz_attempts |<----|| teacher_reading_quiz_answers
+
+  pronunciation_quizzes |<----|| pronunciation_beginner_questions
+  pronunciation_quizzes |<----|| pronunciation_intermediate_questions
+  pronunciation_quizzes |<----|| pronunciation_advanced_questions
+
+  pronunciation_quiz_attempts |<----|| pronunciation_quiz_answers
+
+================================================================================
+                    SIMPLIFIED ERD DIAGRAM (Core Entities)
+================================================================================
+
+  ┌─────────────────────────────────────────────────────────────────────────────┐
+  │                              users                                           │
+  │  user_id (PK) | fname | lname | email | password | role | section | strand   │
+  │  verification_status | verified_at | verified_by | created_at               │
+  └─────────────────────────────────────────────────────────────────────────────┘
+     │                    │                    │                    │
+     │ 1                  │ 1                  │ 1                  │ 1
+     │                    │                    │                    │
+     │ *                  │ *                  │ *                  │ *
+     ▼                    ▼                    ▼                    ▼
+  ┌──────────┐    ┌──────────────────┐   ┌─────────────────────┐  ┌────────────────────┐
+  │ classes  │    │ student_classes  │   │ teacher_reading_    │  │ password_reset_    │
+  │          │    │                  │   │ quizzes             │  │ tokens             │
+  │ id (PK)  │    │ id (PK)          │   │ quiz_id (PK)        │  │ reset_id (PK)      │
+  │ class_   │    │ student_id (FK)  │   │ subject_id (FK)     │  │ user_id (FK)       │
+  │ code     │    │ class_id (FK)    │   │ user_id (FK)        │  │ token_hash         │
+  │ name     │    │ status           │   │ class_id (FK)       │  │ expires_at         │
+  │ section  │    │ joined_at        │   │ title | passage     │  └────────────────────┘
+  │ subject  │    └────────┬─────────┘   └─────────────────────┘
+  │ teacher_ │             │
+  │ id (FK)  │             │ *
+  └────┬─────┘             │
+       │ 1                 │
+       │ *                 │
+       │                   ▼
+       │            ┌──────────────┐
+       └───────────►│   classes    │
+                    │   id (PK)    │
+                    └──────────────┘
+
+  ┌─────────────────────────────────────────────────────────────────────────────┐
+  │                             subjects                                         │
+  │  subject_id (PK) | subject_name                                              │
+  └─────────────────────────────────────────────────────────────────────────────┘
+     │ 1
+     │ *
+     ▼
+  ┌──────────┐     ┌──────────────────┐     ┌─────────────────────────────┐
+  │ lessons  │     │ reading_quizzes   │     │ teacher_reading_quizzes     │
+  │          │     │ (built-in)        │     │                             │
+  │ lesson_  │     │ quiz_id (PK)      │     │ quiz_id (PK)                │
+  │ id (PK)  │     │ subject_id (FK)   │     │ subject_id (FK)             │
+  │ subject_ │     │ title | passage   │     │ user_id (FK) | class_id(FK) │
+  │ id (FK)  │     │ unlock_time       │     │ title | passage             │
+  │ lesson_  │     │ lock_time         │     └─────────────────────────────┘
+  │ title    │     └────────┬──────────┘              │
+  └────┬─────┘              │                         │
+       │ 1                  │ 1                       │ 1
+       │ *                  │ *                       │ *
+       ▼                    ▼                         ▼
+  ┌──────────┐     ┌──────────────────────┐   ┌──────────────────────────────┐
+  │ topics   │     │ reading_quiz_attempts │   │ teacher_reading_quiz_attempts│
+  │          │     │ (built-in)            │   │                              │
+  │ topic_   │     │ attempt_id (PK)        │   │ attempt_id (PK)              │
+  │ id (PK)  │     │ student_id (FK)       │   │ student_id (FK)              │
+  │ lesson_  │     │ quiz_id (FK)         │   │ quiz_id (FK)                │
+  │ id (FK)  │     │ score | status        │   │ score | status               │
+  │ topic_   │     └──────────────────────┘   └──────────────────────────────┘
+  │ title    │
+  │ pdf_path│
+  └──────────┘
+
+  ┌─────────────────────────────────────────────────────────────────────────────┐
+  │                    pronunciation_quizzes (built-in)                          │
+  │  quiz_id (PK) | subject_id (FK) | title | passage | unlock_time | lock_time │
+  └─────────────────────────────────────────────────────────────────────────────┘
+     │ 1
+     │ *
+     ▼
+  ┌──────────────────────────────┐
+  │ pronunciation_quiz_attempts  │
+  │ attempt_id (PK)              │
+  │ student_id (FK)              │
+  │ quiz_id (FK)                 │
+  │ score | pronunciation_score  │
+  └──────────────────────────────┘
+
+  ┌─────────────────────────────────────────────────────────────────────────────┐
+  │                 teacher_pronunciation_quizzes                                │
+  │  quiz_id (PK) | subject_id (FK) | user_id (FK) | title | passage             │
+  └─────────────────────────────────────────────────────────────────────────────┘
+
+  ┌─────────────────────────────────────────────────────────────────────────────┐
+  │                           exams (AI generator)                              │
+  │  id (PK) | class_id (FK) | created_by (FK) | title | content | question_count│
+  └─────────────────────────────────────────────────────────────────────────────┘
+
+================================================================================
+                    RELATIONSHIP SUMMARY TABLE
+================================================================================
+
+  Parent Entity          Child Entity                    Cardinality    FK in Child
+  ─────────────────────────────────────────────────────────────────────────────
+  users                  classes                         1 : *          teacher_id
+  users                  student_classes                 1 : *          student_id
+  users                  teacher_reading_quizzes         1 : *          user_id
+  users                  teacher_pronunciation_quizzes   1 : *          user_id
+  users                  reading_quiz_attempts            1 : *          student_id
+  users                  teacher_reading_quiz_attempts    1 : *          student_id
+  users                  pronunciation_quiz_attempts     1 : *          student_id
+  users                  password_reset_tokens            1 : *          user_id
+  users                  exams                            1 : *          created_by
+  users                  reading_student_progress         1 : *          student_id
+  users                  pronunciation_student_progress   1 : *          student_id
+
+  classes                student_classes                 1 : *          class_id
+  classes                teacher_reading_quizzes         1 : *          class_id
+  classes                exams                           1 : *          class_id
+
+  subjects               lessons                         1 : *          subject_id
+  subjects               reading_quizzes                  1 : *          subject_id
+  subjects               teacher_reading_quizzes          1 : *          subject_id
+  subjects               pronunciation_quizzes            1 : *          subject_id
+  subjects               teacher_pronunciation_quizzes    1 : *          subject_id
+  subjects               reading_student_progress         1 : *          subject_id
+  subjects               pronunciation_student_progress  1 : *          subject_id
+
+  lessons                topics                           1 : *          lesson_id
+
+  reading_quizzes        reading_quiz_attempts           1 : *          quiz_id
+  reading_quizzes        reading_questions                1 : *          quiz_id
+
+  teacher_reading_quizzes  teacher_reading_quiz_attempts  1 : *        quiz_id
+  teacher_reading_quizzes  teacher_reading_beginner_questions 1 : *     quiz_id
+
+  pronunciation_quizzes  pronunciation_quiz_attempts     1 : *          quiz_id
+
+  reading_quiz_attempts  reading_quiz_answers            1 : *          attempt_id
+  teacher_reading_quiz_attempts  teacher_reading_quiz_answers  1 : *   attempt_id
+  pronunciation_quiz_attempts  pronunciation_quiz_answers 1 : *         attempt_id
+
+================================================================================
+                    VISUAL ERD (Reference Style)
+================================================================================
+
+  ┌─────────────────────┐                    ┌─────────────────────┐
+  │       users         │                    │      classes         │
+  ├─────────────────────┤                    ├─────────────────────┤
+  │ user_id      (PK)    │◄───────────────────│ teacher_id    (FK)   │
+  │ fname                │      1     *      │ id           (PK)    │
+  │ lname                │                    │ class_code           │
+  │ email                │                    │ name                 │
+  │ password             │                    │ section              │
+  │ role                 │                    │ subject              │
+  │ section              │                    └──────────┬──────────┘
+  │ strand               │                               │
+  │ verification_status  │                               │ 1
+  │ created_at           │                               │ *
+  └──────────┬───────────┘                               │
+             │                                           │
+             │ 1                                         │
+             │ *                                         ▼
+             │                                  ┌─────────────────────┐
+             │                                  │   student_classes    │
+             └─────────────────────────────────►│                     │
+                       1         *              │ id           (PK)    │
+                                                │ student_id   (FK)    │
+                                                │ class_id     (FK)    │
+                                                │ status               │
+                                                │ joined_at            │
+                                                └─────────────────────┘
+
+  ┌─────────────────────┐                    ┌─────────────────────┐
+  │      subjects       │                    │      lessons        │
+  ├─────────────────────┤                    ├─────────────────────┤
+  │ subject_id   (PK)   │◄───────────────────│ subject_id   (FK)   │
+  │ subject_name        │      1     *       │ lesson_id   (PK)    │
+  └──────────┬──────────┘                    │ lesson_title        │
+             │                               │ quarter_number      │
+             │ 1                             └──────────┬──────────┘
+             │ *                                        │
+             │                                          │ 1
+             │                                          │ *
+             │                                          ▼
+             │                                 ┌─────────────────────┐
+             │                                 │       topics        │
+             │                                 ├─────────────────────┤
+             │                                 │ topic_id     (PK)   │
+             │                                 │ lesson_id    (FK)   │
+             │                                 │ topic_title         │
+             │                                 │ pdf_path           │
+             │                                 └─────────────────────┘
+             │
+             │ 1
+             │ *
+             ▼
+  ┌─────────────────────┐                    ┌─────────────────────────────┐
+  │  reading_quizzes    │                    │  reading_quiz_attempts      │
+  ├─────────────────────┤                    ├─────────────────────────────┤
+  │ quiz_id      (PK)   │◄───────────────────│ quiz_id             (FK)   │
+  │ subject_id   (FK)   │      1     *       │ attempt_id   (PK)           │
+  │ title               │                    │ student_id   (FK)           │
+  │ passage             │                    │ score | status               │
+  │ unlock_time         │                    └─────────────────────────────┘
+  │ lock_time           │
+  └─────────────────────┘
+
+  ┌─────────────────────────────┐             ┌─────────────────────────────┐
+  │ teacher_reading_quizzes     │             │ teacher_reading_quiz_attempts │
+  ├─────────────────────────────┤             ├─────────────────────────────┤
+  │ quiz_id            (PK)     │◄────────────│ quiz_id             (FK)     │
+  │ subject_id         (FK)     │    1   *    │ attempt_id   (PK)           │
+  │ user_id            (FK)     │             │ student_id   (FK)           │
+  │ class_id           (FK)     │             │ score | status              │
+  │ title | passage             │             └─────────────────────────────┘
+  └─────────────────────────────┘
+
+  ┌─────────────────────────────┐             ┌─────────────────────────────┐
+  │ pronunciation_quizzes      │             │ pronunciation_quiz_attempts  │
+  ├─────────────────────────────┤             ├─────────────────────────────┤
+  │ quiz_id            (PK)     │◄────────────│ quiz_id             (FK)     │
+  │ subject_id         (FK)     │    1   *    │ attempt_id   (PK)           │
+  │ title | passage             │             │ student_id   (FK)           │
+  └─────────────────────────────┘             │ score | pronunciation_score │
+                                              └─────────────────────────────┘
+
+  ┌─────────────────────┐
+  │ password_reset_     │
+  │ tokens             │
+  ├─────────────────────┤
+  │ reset_id     (PK)   │
+  │ user_id      (FK)   │──────► users
+  │ token_hash          │
+  │ expires_at          │
+  └─────────────────────┘
+
+  ┌─────────────────────┐
+  │       exams         │
+  ├─────────────────────┤
+  │ id           (PK)   │
+  │ class_id     (FK)   │──────► classes
+  │ created_by   (FK)   │──────► users
+  │ title | content     │
+  └─────────────────────┘
+
+================================================================================
+END OF ERD DOCUMENT
+================================================================================

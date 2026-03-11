@@ -1,4 +1,5 @@
 -- Migration: Seed English for Academic and Professional Purposes (EAPP) curriculum (15 lessons in 4 quarters)
+-- SUPERSEDED BY: migrate-all-subjects-lessons.sql (one-click: all 5 subjects)
 -- Subject: English for Academic and Professional Purposes = subject_id 5 (must exist in your subjects table)
 -- PDF base: s3://eel-bucket/subjects/English for Academic and Professional Purposes/
 -- Requires: lessons table has quarter_number, quarter_title columns.

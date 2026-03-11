@@ -1006,6 +1006,30 @@ function closeTakePronunciationModal() {
     window.location.reload();
 }
 
+function escapeAttr(str) {
+    return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+}
+
+function speakPronunciationWord(text, slowMo) {
+    if (!text || typeof text !== 'string') return;
+    const t = text.trim();
+    if (!t) return;
+    if (!window.speechSynthesis) {
+        if (typeof showNotification === 'function') showNotification('Audio playback is not supported in this browser.', 'warning');
+        return;
+    }
+    const utterance = new SpeechSynthesisUtterance(t);
+    utterance.lang = 'en-US';
+    utterance.rate = slowMo ? 0.5 : 0.9;
+    utterance.pitch = 1;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
+}
+
 function loadPronunciationQuestion(index) {
     const quiz = pronunciationQuizData;
     if (!quiz || !quiz.questions || !quiz.questions[index]) return;
@@ -1014,6 +1038,12 @@ function loadPronunciationQuestion(index) {
     document.getElementById('pronunciation-question-num').textContent = `Question ${index+1} of ${quiz.questions.length}`;
 
     const pronunciationText = q.answer || q.correct_pronunciation || q.stressed_syllable || '';
+    const wordToSpeak = q.word || q.sentence || '';
+    const sentenceToSpeak = q.sentence || '';
+    const speakerSvg = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>';
+    const speakerSvgSmall = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>';
+    const slowmoSvg = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polygon points="10 8 16 12 10 16 10 8"></polygon></svg><span class="pronunciation-slowmo-label">Slow</span>';
+    const slowmoSvgSmall = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polygon points="10 8 16 12 10 16 10 8"></polygon></svg><span class="pronunciation-slowmo-label">Slow</span>';
     let contentHtml = '';
     if (quiz.difficulty === 'beginner' || quiz.difficulty === 'intermediate') {
         const ipa = pronunciationText ? (pronunciationText.startsWith('/') ? pronunciationText : '/' + pronunciationText + '/') : '';
@@ -1021,7 +1051,10 @@ function loadPronunciationQuestion(index) {
             <div class="pronunciation-prompt-card">
                 <span class="pronunciation-prompt-label">Word to Pronounce</span>
                 <div class="pronunciation-word-block">
-                    <span class="word-large">${q.word || q.sentence || '(No content)'}</span>
+                    <div class="pronunciation-word-row">
+                        <span class="word-large">${q.word || q.sentence || '(No content)'}</span>
+                        ${wordToSpeak ? `<button type="button" class="pronunciation-speaker-btn" data-speak="${escapeAttr(wordToSpeak)}" data-slowmo="0" aria-label="Listen to pronunciation">${speakerSvg}</button><button type="button" class="pronunciation-speaker-btn pronunciation-speaker-btn-slowmo" data-speak="${escapeAttr(wordToSpeak)}" data-slowmo="1" aria-label="Listen at slow speed">${slowmoSvg}</button>` : ''}
+                    </div>
                     ${ipa ? `<span class="pronunciation-ipa">${ipa}</span>` : ''}
                 </div>
             </div>
@@ -1031,7 +1064,7 @@ function loadPronunciationQuestion(index) {
             <div class="pronunciation-prompt-card">
                 <span class="pronunciation-prompt-label">Sentence to Say</span>
                 <div class="sentence-display">
-                    <p class="sentence-text">${q.sentence || '(No sentence)'}</p>
+                    <p class="sentence-text">${q.sentence || '(No sentence)'}${sentenceToSpeak ? ` <button type="button" class="pronunciation-speaker-btn pronunciation-speaker-btn-inline" data-speak="${escapeAttr(sentenceToSpeak)}" data-slowmo="0" aria-label="Listen to pronunciation">${speakerSvgSmall}</button><button type="button" class="pronunciation-speaker-btn pronunciation-speaker-btn-inline pronunciation-speaker-btn-slowmo" data-speak="${escapeAttr(sentenceToSpeak)}" data-slowmo="1" aria-label="Listen at slow speed">${slowmoSvgSmall}</button>` : ''}</p>
                     ${q.reduced_form ? `<p class="reduced-form"><strong>Reduced form:</strong> <span class="highlight">${q.reduced_form}</span></p>` : ''}
                 </div>
             </div>
@@ -1039,6 +1072,12 @@ function loadPronunciationQuestion(index) {
     }
 
     document.getElementById('pronunciation-content').innerHTML = contentHtml;
+
+    document.querySelectorAll('#pronunciation-content .pronunciation-speaker-btn').forEach((btn) => {
+        const text = btn.getAttribute('data-speak') || '';
+        const slowMo = btn.getAttribute('data-slowmo') === '1';
+        if (text) btn.addEventListener('click', () => speakPronunciationWord(text, slowMo));
+    });
 
     // Enable / disable navigation buttons
     document.getElementById('pronunciation-prev-btn').disabled = index === 0;
@@ -1150,33 +1189,31 @@ async function toggleRecording() {
 
                 const blob = new Blob(recordedChunks, { type: recordedChunks[0]?.type || 'audio/webm' });
 
-                // Simulate score (70-100%) - backend will compute real score on submit
-                const score = Math.floor(70 + Math.random() * 31);
-                const feedbackMsg = score >= 90 ? '🌟 Excellent pronunciation!' : score >= 85 ? '👏 Great job!' : score >= 75 ? '💪 Good effort!' : '📢 Keep practicing!';
-
                 const q = pronunciationQuizData.questions[pronunciationCurrentIndex];
                 pronunciationAnswers[pronunciationCurrentIndex] = { 
                     blob, 
                     transcript: recognitionTranscript || '', 
-                    questionId: q.question_id,
-                    displayScore: score
+                    questionId: q.question_id
                 };
 
                 recognitionTranscript = '';
 
-                // Show score and feedback (take-pronunciation.html has this element)
+                // Show recording complete feedback (real score comes from backend on submit)
                 const feedbackEl = document.getElementById('recording-feedback');
                 if (feedbackEl) {
                     feedbackEl.classList.remove('hidden');
                     const charImg = feedbackEl.querySelector('#recording-feedback-character') || feedbackEl.querySelector('.recording-feedback-character');
                     if (charImg) {
-                        charImg.src = score >= 80 ? 'image/eel-character-celebrate.png' : 'image/eel-character-sad.png';
-                        charImg.alt = score >= 80 ? 'EEL character celebrating' : 'EEL character';
+                        charImg.src = 'image/eel-character-celebrate.png';
+                        charImg.alt = 'EEL character';
                     }
                     const scoreEl = feedbackEl.querySelector('.recording-score');
                     const msgEl = feedbackEl.querySelector('.recording-feedback-msg');
-                    if (scoreEl) scoreEl.textContent = score + '%';
-                    if (msgEl) msgEl.textContent = feedbackMsg;
+                    if (scoreEl) {
+                        scoreEl.textContent = '';
+                        scoreEl.style.display = 'none';
+                    }
+                    if (msgEl) msgEl.textContent = 'Recording saved! Submit to see your pronunciation score.';
                 }
             };
 
@@ -1407,20 +1444,24 @@ function showQuizResult(accuracyValue) {
   const feedbackIcon = document.getElementById("feedback-icon");
   const progressRing = document.getElementById("result-progress-ring-fill");
 
-  // ✅ Clamp accuracy between 80 and 100
-  let totalAccuracy = Math.max(80, Math.min(parseFloat(accuracyValue) || 0, 100));
-  scoreElem.textContent = `${totalAccuracy}%`;
+  const totalAccuracy = Math.max(0, Math.min(parseFloat(accuracyValue) || 0, 100));
+  scoreElem.textContent = `${Math.round(totalAccuracy)}%`;
 
-  // ✅ Feedback logic
   if (totalAccuracy >= 90) {
     feedbackElem.textContent = "🌟 Excellent pronunciation! Keep it up!";
     feedbackIcon.textContent = "🌟";
   } else if (totalAccuracy >= 85) {
     feedbackElem.textContent = "👏 Great job! A little more practice and you'll be perfect!";
     feedbackIcon.textContent = "👏";
-  } else {
-    feedbackElem.textContent = "💪 Keep practicing — you're improving!";
+  } else if (totalAccuracy >= 70) {
+    feedbackElem.textContent = "💪 Good effort! Keep practicing — you're improving!";
     feedbackIcon.textContent = "💪";
+  } else if (totalAccuracy >= 50) {
+    feedbackElem.textContent = "📢 Keep practicing! Focus on clear pronunciation and try again.";
+    feedbackIcon.textContent = "📢";
+  } else {
+    feedbackElem.textContent = "🎯 Don't give up! Listen to the word again and practice speaking it clearly.";
+    feedbackIcon.textContent = "🎯";
   }
 
   // ✅ Animate progress ring

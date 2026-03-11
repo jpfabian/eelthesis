@@ -1,4 +1,5 @@
 -- Migration: Seed Creative Non-Fiction curriculum (13 lessons in 4 quarters)
+-- SUPERSEDED BY: migrate-all-subjects-lessons.sql (one-click: all 5 subjects)
 -- Subject: Creative Non-Fiction = subject_id 4 (must exist in your subjects table)
 -- PDF base: s3://eel-bucket/subjects/Creative Non-Fiction/
 -- Requires: lessons table has quarter_number, quarter_title columns.

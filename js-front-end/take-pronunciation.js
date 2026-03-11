@@ -209,7 +209,9 @@
     if (msgEl) {
       if (totalAccuracy >= 90) msgEl.textContent = "🌟 Excellent pronunciation! Keep it up!";
       else if (totalAccuracy >= 85) msgEl.textContent = "👏 Great job! A little more practice and you'll be perfect!";
-      else msgEl.textContent = "💪 Keep practicing — you're improving!";
+      else if (totalAccuracy >= 70) msgEl.textContent = "💪 Good effort! Keep practicing — you're improving!";
+      else if (totalAccuracy >= 50) msgEl.textContent = "📢 Keep practicing! Focus on clear pronunciation.";
+      else msgEl.textContent = "🎯 Don't give up! Listen to the word again and practice.";
     }
     doneEl.classList.remove("hidden");
     if (window.lucide && typeof window.lucide.createIcons === "function") window.lucide.createIcons();

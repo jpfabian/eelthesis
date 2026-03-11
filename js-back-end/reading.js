@@ -59,11 +59,23 @@ router.post("/api/teacher/reading-quizzes", async (req, res) => {
         conn = await pool.getConnection();
         await conn.beginTransaction();
 
-        // Insert quiz (scoped to class when provided)
-        const [quizResult] = await conn.query(
-            "INSERT INTO teacher_reading_quizzes (subject_id, user_id, class_id, title, difficulty, passage) VALUES (?, ?, ?, ?, ?, ?)",
-            [subject_id, user_id, classIdParam, safeTitle, effectiveDifficulty, safePassage]
-        );
+        // Insert quiz (scoped to class when provided; fallback if class_id column missing)
+        let quizResult;
+        try {
+            [quizResult] = await conn.query(
+                "INSERT INTO teacher_reading_quizzes (subject_id, user_id, class_id, title, difficulty, passage) VALUES (?, ?, ?, ?, ?, ?)",
+                [subject_id, user_id, classIdParam, safeTitle, effectiveDifficulty, safePassage]
+            );
+        } catch (insErr) {
+            if (insErr.errno === 1054 && insErr.sqlMessage && insErr.sqlMessage.includes("class_id")) {
+                [quizResult] = await conn.query(
+                    "INSERT INTO teacher_reading_quizzes (subject_id, user_id, title, difficulty, passage) VALUES (?, ?, ?, ?, ?)",
+                    [subject_id, user_id, safeTitle, effectiveDifficulty, safePassage]
+                );
+            } else {
+                throw insErr;
+            }
+        }
         const quizId = quizResult.insertId;
 
         // Insert questions
@@ -235,7 +247,19 @@ router.get("/api/teacher/reading-quizzes", async (req, res) => {
       return res.status(400).json({ error: "Provide user_id (teacher) or subject_id (student view)" });
     }
 
-    const [quizzes] = await pool.query(query, params);
+    let quizzes;
+    try {
+      [quizzes] = await pool.query(query, params);
+    } catch (qerr) {
+      // Fallback: class_id column may not exist yet (run migrate-teacher-reading-class-id.sql)
+      if (qerr.errno === 1054 && qerr.sqlMessage && qerr.sqlMessage.includes("class_id")) {
+        const fallbackQuery = query.replace(/\s*AND class_id = \?\s*/gi, " ");
+        const fallbackParams = classId != null && Number.isFinite(classId) ? params.slice(0, -1) : params;
+        [quizzes] = await pool.query(fallbackQuery, fallbackParams);
+      } else {
+        throw qerr;
+      }
+    }
 
     // Optionally, you can include question counts per difficulty
     for (const quiz of quizzes) {
@@ -300,7 +324,18 @@ router.get("/api/teacher/reading-quizzes/completed-by-student", async (req, res)
       query += " AND class_id = ?";
       params.push(classId);
     }
-    const [rows] = await pool.query(query, params);
+    let rows;
+    try {
+      [rows] = await pool.query(query, params);
+    } catch (qerr) {
+      if (qerr.errno === 1054 && qerr.sqlMessage && qerr.sqlMessage.includes("class_id")) {
+        const fallbackQuery = query.replace(/\s*AND class_id = \?\s*/gi, " ");
+        const fallbackParams = classId != null && Number.isFinite(classId) ? params.slice(0, -1) : params;
+        [rows] = await pool.query(fallbackQuery, fallbackParams);
+      } else {
+        throw qerr;
+      }
+    }
     res.json({ success: true, quiz_ids: rows.map((r) => r.quiz_id) });
   } catch (err) {
     console.error("❌ Completed-by-student error:", err);
@@ -552,23 +587,50 @@ router.post("/api/teacher/reading-quiz-attempts", async (req, res) => {
     if (unlockTime && now < unlockTime) return res.status(403).json({ success: false, error: "Quiz is not yet open." });
     if (lockTime && now > lockTime) return res.status(403).json({ success: false, error: "Quiz has closed." });
 
-    const [[existing]] = await pool.query(
-      `SELECT attempt_id FROM teacher_reading_quiz_attempts
-       WHERE student_id = ? AND quiz_id = ? AND status = 'completed'
-         AND (class_id <=> ?)
-       LIMIT 1`,
-      [student_id, quiz_id, classIdParam]
-    );
+    let existing;
+    try {
+      [[existing]] = await pool.query(
+        `SELECT attempt_id FROM teacher_reading_quiz_attempts
+         WHERE student_id = ? AND quiz_id = ? AND status = 'completed'
+           AND (class_id <=> ?)
+         LIMIT 1`,
+        [student_id, quiz_id, classIdParam]
+      );
+    } catch (qerr) {
+      if (qerr.errno === 1054 && qerr.sqlMessage && qerr.sqlMessage.includes("class_id")) {
+        [[existing]] = await pool.query(
+          `SELECT attempt_id FROM teacher_reading_quiz_attempts
+           WHERE student_id = ? AND quiz_id = ? AND status = 'completed'
+           LIMIT 1`,
+          [student_id, quiz_id]
+        );
+      } else {
+        throw qerr;
+      }
+    }
     if (existing) {
       return res.status(403).json({ success: false, error: "You have already taken this quiz." });
     }
 
     const startTime = nowPhilippineDatetime();
-    const [result] = await pool.query(
-      `INSERT INTO teacher_reading_quiz_attempts (student_id, quiz_id, class_id, start_time, status)
-       VALUES (?, ?, ?, ?, 'in_progress')`,
-      [student_id, quiz_id, classIdParam, startTime]
-    );
+    let result;
+    try {
+      [result] = await pool.query(
+        `INSERT INTO teacher_reading_quiz_attempts (student_id, quiz_id, class_id, start_time, status)
+         VALUES (?, ?, ?, ?, 'in_progress')`,
+        [student_id, quiz_id, classIdParam, startTime]
+      );
+    } catch (insErr) {
+      if (insErr.errno === 1054 && insErr.sqlMessage && insErr.sqlMessage.includes("class_id")) {
+        [result] = await pool.query(
+          `INSERT INTO teacher_reading_quiz_attempts (student_id, quiz_id, start_time, status)
+           VALUES (?, ?, ?, 'in_progress')`,
+          [student_id, quiz_id, startTime]
+        );
+      } else {
+        throw insErr;
+      }
+    }
     res.status(201).json({
       success: true,
       attempt_id: result.insertId,
@@ -1729,7 +1791,13 @@ function buildQuizPromptFromCounts(topicTitle, questionCounts, difficulty, addit
   }
   let instruction = `Generate a quiz about "${topicTitle}" with EXACTLY these numbers of questions (no more, no less):\n\n`;
   instruction += parts.map((p, i) => `${i + 1}. ${p}`).join("\n\n");
-  instruction += `\n\nCRITICAL: The total number of questions must be exactly ${total}. Output exactly ${mc} multiple-choice, exactly ${tf} true-or-false, and exactly ${id} identification. Do not add extra questions or mix formats. Use the exact formats above so answers can be parsed.\n\nIMPORTANT format: Start the first question with exactly "Question 1:" (or "1.") on its own line. Then "Question 2:", "Question 3:", etc. for each following question. You may add a short intro/passage before "Question 1:" but every question must begin with "Question N:" or "N." so they can be parsed.`;
+  instruction += `\n\nCRITICAL - YOU MUST OUTPUT EXACTLY ${total} QUESTIONS:\n`;
+  if (mc > 0) instruction += `- Exactly ${mc} multiple-choice (Questions 1-${mc})\n`;
+  if (tf > 0) instruction += `- Exactly ${tf} true-or-false (Questions ${mc + 1}-${mc + tf})\n`;
+  if (id > 0) instruction += `- Exactly ${id} identification (Questions ${mc + tf + 1}-${total})\n`;
+  instruction += `\n`;
+  instruction += `Output them IN THIS ORDER: all multiple-choice first, then all true-or-false, then all identification. Use the exact formats above so answers can be parsed.\n\n`;
+  instruction += `FORMAT: Start with "Question 1:" (or "1.") on its own line. Then "Question 2:", "Question 3:", etc. for every question. You may add a short intro before "Question 1:" but every question MUST begin with "Question N:" or "N." so they can be parsed.`;
   if (tos_levels && Array.isArray(tos_levels) && tos_levels.length > 0) {
     const labels = tos_levels
       .filter((level) => TOS_LEVEL_DESCRIPTIONS[level])
@@ -1814,13 +1882,23 @@ router.post("/api/generate-quiz", async (req, res) => {
       instruction = buildQuizPrompt(topicTitle, types, difficultyForPrompt, numQuestions, additional_context);
     }
 
-    // ✅ Call Groq API (replace max_output_tokens with max_tokens)
+    let totalRequested = Math.max(1, parseInt(num_questions, 10) || 5);
+    if (question_counts && typeof question_counts === "object") {
+      totalRequested =
+        (Math.max(0, parseInt(question_counts["multiple-choice"], 10) || 0) +
+         Math.max(0, parseInt(question_counts["true-false"], 10) || 0) +
+         Math.max(0, parseInt(question_counts["identification"], 10) || 0)) || 1;
+    }
+    const maxTokens = Math.max(4096, totalRequested * 200);
+
     const completion = await client.chat.completions.create({
       model: "llama-3.1-8b-instant",
       messages: [
-        { role: "system", content: "You are an educational quiz generator that outputs clean and clear text." },
+        { role: "system", content: "You are an educational quiz generator. You MUST output the exact number of questions requested. Never truncate or skip questions. Use the exact format specified." },
         { role: "user", content: instruction }
       ],
+      max_tokens: maxTokens,
+      temperature: 0.4,
     });
 
     const quizContent = completion.choices?.[0]?.message?.content || "";

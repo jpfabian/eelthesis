@@ -516,6 +516,9 @@
 
         function setupDashboard(user) {
             setupSidebar(user, 'dashboard');
+            if (typeof setupSharedClassNotifications === 'function') {
+                setupSharedClassNotifications(user, 'dashboard');
+            }
 
             if (user.role === 'teacher') {
                 document.getElementById('teacher-dashboard').classList.remove('hidden');

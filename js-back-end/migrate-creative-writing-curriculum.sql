@@ -1,4 +1,5 @@
 -- Migration: Seed Creative Writing curriculum (16 lessons in 4 quarters)
+-- SUPERSEDED BY: migrate-all-subjects-lessons.sql (one-click: all 5 subjects)
 -- Subject: Creative Writing = subject_id 3 (must exist in your subjects table)
 -- PDF base: s3://eel-bucket/subjects/Creative Writing/
 -- Requires: lessons table has quarter_number, quarter_title columns.

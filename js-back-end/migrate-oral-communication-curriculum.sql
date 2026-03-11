@@ -1,4 +1,5 @@
 -- Migration: Seed Oral Communication curriculum (15 lessons in 4 quarters)
+-- SUPERSEDED BY: migrate-all-subjects-lessons.sql (one-click: all 5 subjects)
 -- Subject: Oral Communication = subject_id 2 (must exist in your subjects table)
 -- PDF base: s3://eel-bucket/subjects/Oral Communication/
 -- Requires: lessons table has quarter_number, quarter_title columns (run migrate-reading-writing-curriculum.sql ALTERs first if needed).

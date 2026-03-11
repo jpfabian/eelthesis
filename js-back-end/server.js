@@ -42,7 +42,7 @@ app.use(cors({
 app.use(bodyParser.json());
 
 const DB_CONFIG = {
-  host: process.env.DB_HOST || "eeldatabse.cnuayk8m8zwm.ap-southeast-1.rds.amazonaws.com",
+  host: process.env.DB_HOST || "eel.ctu0q8kog8ck.ap-southeast-2.rds.amazonaws.com",
   user: process.env.DB_USER || "admin",
   password: process.env.DB_PASSWORD || "Thesiseel12345",
   database: process.env.DB_NAME || "eel_db",

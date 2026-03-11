@@ -106,6 +106,14 @@ CREATE TABLE IF NOT EXISTS subjects (
   UNIQUE KEY uq_subjects_name (subject_name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Subjects referenced by migrate-*.sql (subject_id 1-5 must match)
+INSERT IGNORE INTO subjects (subject_id, subject_name) VALUES
+  (1, 'Reading and Writing Skills'),
+  (2, 'Oral Communication'),
+  (3, 'Creative Writing'),
+  (4, 'Creative Non-Fiction'),
+  (5, 'English for Academic and Professional Purposes');
+
 CREATE TABLE IF NOT EXISTS lessons (
   lesson_id INT UNSIGNED NOT NULL AUTO_INCREMENT,
   subject_id INT UNSIGNED NOT NULL,

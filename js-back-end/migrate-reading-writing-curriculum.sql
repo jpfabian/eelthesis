@@ -1,4 +1,5 @@
 -- Migration: Add quarter columns to lessons and seed Reading and Writing Skills curriculum
+-- SUPERSEDED BY: migrate-all-subjects-lessons.sql (one-click: all 5 subjects)
 -- Subject: Reading and Writing Skills = subject_id 1 (must exist in your subjects table)
 -- PDF base: s3://eel-bucket/subjects/Reading and Writing Skills/
 -- If your schema already has quarter_number/quarter_title (e.g. from database.sql), comment out the two ALTER lines below.
