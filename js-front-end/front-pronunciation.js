@@ -1,3 +1,19 @@
+// Polyfill showNotification for take-pronunciation.html (does not load navigation.js)
+if (typeof showNotification !== 'function') {
+    window.showNotification = function (message, type = 'info') {
+        document.querySelectorAll('.notification').forEach((n) => n.remove());
+        const n = document.createElement('div');
+        n.className = 'notification notification-' + (type || 'info') + ' fixed top-4 right-4 z-50 p-4 rounded-lg border shadow-lg max-w-sm';
+        if (type === 'success') n.classList.add('bg-primary', 'text-primary-foreground', 'border-primary');
+        else if (type === 'error') n.classList.add('bg-destructive', 'text-destructive-foreground', 'border-destructive');
+        else if (type === 'warning') n.classList.add('bg-secondary', 'text-secondary-foreground', 'border-secondary');
+        else n.classList.add('bg-card', 'text-card-foreground', 'border-border');
+        n.textContent = message;
+        document.body.appendChild(n);
+        setTimeout(function () { if (n.parentElement) n.remove(); }, 5000);
+    };
+}
+
 let currentUser = null;
 let pronunciationQuizData = null;
 let pronunciationCurrentIndex = 0;
