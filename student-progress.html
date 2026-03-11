@@ -325,7 +325,7 @@
                         const formatPoints = (value) => {
                             const n = Number(value);
                             if (!Number.isFinite(n)) return '';
-                            return Number.isInteger(n) ? String(n) : n.toFixed(1).replace(/\.0$/, '');
+                            return String(Math.round(n));
                         };
                         const toScoreFraction = (quiz) => {
                             if (!quiz) return '—';

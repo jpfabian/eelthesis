@@ -258,6 +258,8 @@ CREATE TABLE IF NOT EXISTS reading_quiz_attempts (
   status ENUM('in_progress','completed') NOT NULL DEFAULT 'in_progress',
   score DECIMAL(10,2) NULL,
   total_points DECIMAL(10,2) NULL,
+  cheating_violations INT UNSIGNED NOT NULL DEFAULT 0,
+  cheating_voided TINYINT(1) NOT NULL DEFAULT 0,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (attempt_id),
   KEY idx_reading_attempts_student (student_id),
@@ -432,6 +434,8 @@ CREATE TABLE IF NOT EXISTS teacher_reading_quiz_attempts (
   status ENUM('in_progress','completed') NOT NULL DEFAULT 'in_progress',
   score DECIMAL(10,2) NULL,
   total_points DECIMAL(10,2) NULL,
+  cheating_violations INT UNSIGNED NOT NULL DEFAULT 0,
+  cheating_voided TINYINT(1) NOT NULL DEFAULT 0,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (attempt_id),
   KEY idx_trqa_student (student_id),
@@ -544,6 +548,8 @@ CREATE TABLE IF NOT EXISTS pronunciation_quiz_attempts (
   score DECIMAL(6,2) NULL,              /* 0-100 */
   pronunciation_score DECIMAL(6,2) NULL,/* 0-100 (alias field used in code) */
   total_points DECIMAL(10,2) NULL,
+  cheating_violations INT UNSIGNED NOT NULL DEFAULT 0,
+  cheating_voided TINYINT(1) NOT NULL DEFAULT 0,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (attempt_id),
   KEY idx_pron_attempts_student (student_id),
@@ -690,6 +696,48 @@ CREATE TABLE IF NOT EXISTS ai_quiz_pronunciation_questions (
   CONSTRAINT fk_ai_pron_questions_quiz
     FOREIGN KEY (quiz_id) REFERENCES ai_quiz_pronunciation(quiz_id)
     ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+/* =========================
+   Archive tables (AI quiz, classroom, exam)
+   ========================= */
+CREATE TABLE IF NOT EXISTS archive_ai_quizzes (
+  archive_id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  original_quiz_id INT UNSIGNED NOT NULL,
+  archived_by INT UNSIGNED NOT NULL,
+  archived_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  snapshot JSON NOT NULL COMMENT 'Full quiz + questions snapshot for restore',
+  PRIMARY KEY (archive_id),
+  KEY idx_archive_ai_quizzes_archived_by (archived_by),
+  KEY idx_archive_ai_quizzes_archived_at (archived_at),
+  CONSTRAINT fk_archive_ai_quizzes_user
+    FOREIGN KEY (archived_by) REFERENCES users(user_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS archive_classrooms (
+  archive_id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  original_class_id INT UNSIGNED NOT NULL,
+  archived_by INT UNSIGNED NOT NULL,
+  archived_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  snapshot JSON NOT NULL COMMENT 'Full class snapshot for restore',
+  PRIMARY KEY (archive_id),
+  KEY idx_archive_classrooms_archived_by (archived_by),
+  KEY idx_archive_classrooms_archived_at (archived_at),
+  CONSTRAINT fk_archive_classrooms_user
+    FOREIGN KEY (archived_by) REFERENCES users(user_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS archive_exams (
+  archive_id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  original_exam_id INT UNSIGNED NOT NULL,
+  archived_by INT UNSIGNED NOT NULL,
+  archived_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  snapshot JSON NOT NULL COMMENT 'Full exam snapshot for restore',
+  PRIMARY KEY (archive_id),
+  KEY idx_archive_exams_archived_by (archived_by),
+  KEY idx_archive_exams_archived_at (archived_at),
+  CONSTRAINT fk_archive_exams_user
+    FOREIGN KEY (archived_by) REFERENCES users(user_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 SET FOREIGN_KEY_CHECKS = 1;

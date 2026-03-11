@@ -83,7 +83,7 @@ router.get("/api/my-progress", async (req, res) => {
          FROM reading_quiz_attempts a JOIN reading_quizzes q ON q.quiz_id = a.quiz_id
          WHERE a.student_id = ? AND a.status = 'completed'
          AND (? IS NULL OR q.subject_id = ? OR q.subject_id IS NULL)
-         AND (? IS NULL OR a.class_id = ?)
+         AND (? IS NULL OR a.class_id = ? OR a.class_id IS NULL)
          ORDER BY a.end_time DESC`,
         [studentId, subjectId, subjectId, classId, classId]
       );
@@ -119,8 +119,8 @@ router.get("/api/my-progress", async (req, res) => {
          LEFT JOIN teacher_pronunciation_quizzes tq ON tq.quiz_id = a.quiz_id
          WHERE a.student_id = ? AND a.status IN ('completed', 'submitted')
          AND (q.quiz_id IS NOT NULL OR tq.quiz_id IS NOT NULL)
-         AND (? IS NULL OR COALESCE(q.subject_id, tq.subject_id) = ?)
-         AND (? IS NULL OR a.class_id <=> ?)
+         AND (? IS NULL OR COALESCE(q.subject_id, tq.subject_id) = ? OR COALESCE(q.subject_id, tq.subject_id) IS NULL)
+         AND (? IS NULL OR a.class_id = ? OR a.class_id IS NULL)
          ORDER BY a.end_time DESC`,
         [studentId, subjectId, subjectId, classId, classId]
       );
@@ -227,26 +227,6 @@ router.get("/api/my-progress", async (req, res) => {
       }
     }
 
-    const pronAttemptIds = (pronunciation || []).map((p) => Number(p.attempt_id)).filter((v) => Number.isFinite(v) && v > 0);
-    const pronAnswerCountByAttempt = new Map();
-    if (pronAttemptIds.length > 0) {
-      try {
-        const [answerCounts] = await pool.query(
-          `SELECT attempt_id, SUM(CASE WHEN COALESCE(pronunciation_score, 0) >= 70 THEN 1 ELSE 0 END) AS correct_count, COUNT(*) AS total_count
-           FROM pronunciation_quiz_answers WHERE attempt_id IN (?) GROUP BY attempt_id`,
-          [pronAttemptIds]
-        );
-        for (const row of answerCounts || []) {
-          pronAnswerCountByAttempt.set(Number(row.attempt_id), {
-            correct: Number(row.correct_count || 0),
-            total: Number(row.total_count || 0),
-          });
-        }
-      } catch (e) {
-        if (String(e?.code || "") !== "ER_NO_SUCH_TABLE") console.warn("Pronunciation answer counts:", e?.message);
-      }
-    }
-
     const readingList = (reading || []).map((r) => {
       const counts = readingAnswerCountByAttempt.get(Number(r.attempt_id));
       return {
@@ -262,7 +242,6 @@ router.get("/api/my-progress", async (req, res) => {
       };
     });
     const pronList = (pronunciation || []).map((p) => {
-      const counts = pronAnswerCountByAttempt.get(Number(p.attempt_id));
       return {
         type: "pronunciation",
         quiz_name: p.quiz_name,
@@ -270,8 +249,8 @@ router.get("/api/my-progress", async (req, res) => {
         score: Number(p.score),
         raw_score: Number(p.raw_score),
         total_points: Number(p.total_points),
-        display_score: counts && counts.total > 0 ? counts.correct : Number(p.raw_score),
-        display_total: counts && counts.total > 0 ? counts.total : Number(p.total_points),
+        display_score: Number(p.raw_score),
+        display_total: Number(p.total_points) || 100,
         end_time: p.end_time,
       };
     });
@@ -442,7 +421,7 @@ router.get("/api/class/:classId/average-scores", async (req, res) => {
         LEFT JOIN teacher_pronunciation_quizzes tq ON tq.quiz_id = a.quiz_id
         WHERE a.status IN ('completed', 'submitted') AND a.student_id IN (?)
         AND (q.quiz_id IS NOT NULL OR tq.quiz_id IS NOT NULL)
-        AND (a.class_id <=> ?)
+        AND (a.class_id = ? OR a.class_id IS NULL)
         ORDER BY a.end_time DESC
         `,
         [studentIds, classId]
@@ -735,16 +714,23 @@ router.get("/api/class/:classId/completion-rate", async (req, res) => {
     try {
       [[pronDone]] = await pool.query(
         `SELECT COUNT(DISTINCT CONCAT(a.student_id,'-',a.quiz_id)) AS c FROM pronunciation_quiz_attempts a
-         JOIN pronunciation_quizzes q ON q.quiz_id = a.quiz_id
-         WHERE a.status = 'completed' AND a.student_id IN (?) AND (? IS NULL OR q.subject_id = ? OR q.subject_id IS NULL) AND a.class_id = ?`,
+         LEFT JOIN pronunciation_quizzes q ON q.quiz_id = a.quiz_id
+         LEFT JOIN teacher_pronunciation_quizzes tq ON tq.quiz_id = a.quiz_id
+         WHERE a.status IN ('completed', 'submitted') AND a.student_id IN (?)
+         AND (q.quiz_id IS NOT NULL OR tq.quiz_id IS NOT NULL)
+         AND (? IS NULL OR COALESCE(q.subject_id, tq.subject_id) = ? OR COALESCE(q.subject_id, tq.subject_id) IS NULL)
+         AND (a.class_id = ? OR a.class_id IS NULL)`,
         [studentIds, subjectId, subjectId, classId]
       );
     } catch (e) {
       if (String(e?.code || "") === "ER_BAD_FIELD_ERROR" || String(e?.message || "").includes("class_id")) {
         [[pronDone]] = await pool.query(
           `SELECT COUNT(DISTINCT CONCAT(a.student_id,'-',a.quiz_id)) AS c FROM pronunciation_quiz_attempts a
-           JOIN pronunciation_quizzes q ON q.quiz_id = a.quiz_id
-           WHERE a.status = 'completed' AND a.student_id IN (?) AND (? IS NULL OR q.subject_id = ? OR q.subject_id IS NULL)`,
+           LEFT JOIN pronunciation_quizzes q ON q.quiz_id = a.quiz_id
+           LEFT JOIN teacher_pronunciation_quizzes tq ON tq.quiz_id = a.quiz_id
+           WHERE a.status IN ('completed', 'submitted') AND a.student_id IN (?)
+           AND (q.quiz_id IS NOT NULL OR tq.quiz_id IS NOT NULL)
+           AND (? IS NULL OR COALESCE(q.subject_id, tq.subject_id) = ? OR COALESCE(q.subject_id, tq.subject_id) IS NULL)`,
           [studentIds, subjectId, subjectId]
         );
       } else throw e;
@@ -793,15 +779,24 @@ router.get("/api/class/:classId/completion-rate", async (req, res) => {
     }
     try {
       [pronEngRows] = await pool.query(
-        `SELECT DISTINCT a.student_id FROM pronunciation_quiz_attempts a JOIN pronunciation_quizzes q ON q.quiz_id = a.quiz_id
-         WHERE a.status = 'completed' AND a.student_id IN (?) AND (? IS NULL OR q.subject_id = ? OR q.subject_id IS NULL) AND a.class_id = ?`,
+        `SELECT DISTINCT a.student_id FROM pronunciation_quiz_attempts a
+         LEFT JOIN pronunciation_quizzes q ON q.quiz_id = a.quiz_id
+         LEFT JOIN teacher_pronunciation_quizzes tq ON tq.quiz_id = a.quiz_id
+         WHERE a.status IN ('completed', 'submitted') AND a.student_id IN (?)
+         AND (q.quiz_id IS NOT NULL OR tq.quiz_id IS NOT NULL)
+         AND (? IS NULL OR COALESCE(q.subject_id, tq.subject_id) = ? OR COALESCE(q.subject_id, tq.subject_id) IS NULL)
+         AND (a.class_id = ? OR a.class_id IS NULL)`,
         [studentIds, subjectId, subjectId, classId]
       );
     } catch (e) {
       if (String(e?.code || "") === "ER_BAD_FIELD_ERROR" || String(e?.message || "").includes("class_id")) {
         [pronEngRows] = await pool.query(
-          `SELECT DISTINCT a.student_id FROM pronunciation_quiz_attempts a JOIN pronunciation_quizzes q ON q.quiz_id = a.quiz_id
-           WHERE a.status = 'completed' AND a.student_id IN (?) AND (? IS NULL OR q.subject_id = ? OR q.subject_id IS NULL)`,
+          `SELECT DISTINCT a.student_id FROM pronunciation_quiz_attempts a
+           LEFT JOIN pronunciation_quizzes q ON q.quiz_id = a.quiz_id
+           LEFT JOIN teacher_pronunciation_quizzes tq ON tq.quiz_id = a.quiz_id
+           WHERE a.status IN ('completed', 'submitted') AND a.student_id IN (?)
+           AND (q.quiz_id IS NOT NULL OR tq.quiz_id IS NOT NULL)
+           AND (? IS NULL OR COALESCE(q.subject_id, tq.subject_id) = ? OR COALESCE(q.subject_id, tq.subject_id) IS NULL)`,
           [studentIds, subjectId, subjectId]
         );
       } else throw e;

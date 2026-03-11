@@ -176,13 +176,13 @@ async function deleteClassById(cls) {
             title: "Delete class?",
             text: `${classLabel} will be permanently deleted.`,
             showCancelButton: true,
-            confirmButtonText: "Delete",
+            confirmButtonText: "Archive",
             cancelButtonText: "Cancel",
             confirmButtonColor: "#dc2626",
         });
         confirmed = !!result.isConfirmed;
     } else {
-        confirmed = window.confirm(`Delete ${classLabel}? This cannot be undone.`);
+        confirmed = window.confirm(`Archive ${classLabel}? This cannot be undone.`);
     }
     if (!confirmed) return;
 
@@ -206,11 +206,11 @@ async function deleteClassById(cls) {
         }
 
         if (!response.ok || !data.success) {
-            showNotification(data.message || "Failed to delete class.", "error");
+            showNotification(data.message || "Failed to archive class.", "error");
             return;
         }
         cacheDeletedClass(cls, user.user_id);
-        showNotification("Class deleted successfully.", "success");
+        showNotification("Class archived successfully.", "success");
         await loadTeacherClasses();
     } catch (err) {
         console.error("Delete class error:", err);
@@ -257,7 +257,7 @@ async function loadTeacherClasses() {
                     <div class="class-card__menu-wrap">
                         <button type="button" class="class-card__menu-btn" aria-label="Class actions" aria-expanded="false">⋮</button>
                         <div class="class-card__menu hidden">
-                            <button type="button" class="class-card__menu-item class-card__menu-item--delete">Delete</button>
+                            <button type="button" class="class-card__menu-item class-card__menu-item--delete">Archive</button>
                         </div>
                     </div>
                 </div>

@@ -212,7 +212,7 @@ function setupSidebar(user, currentPage) {
             : currentPage === "settings"
                 ? "Account Settings"
                 : currentPage === "deleted-classes"
-                    ? "Deleted Classes Cache"
+                    ? "Archived Classes Cache"
                 : (selectedClass
                     ? `${selectedClass.name ?? ""} ${selectedClass.section ?? ""}`.trim()
                     : "No class selected");
@@ -330,7 +330,7 @@ function setupSidebar(user, currentPage) {
     if (currentPage === "classes" || currentPage === "settings" || currentPage === "deleted-classes") {
         const teacherExtra = user.role === "teacher"
             ? [
-                { id: 'deleted-classes', label: 'Deleted Classes', icon: 'trash-2', url: 'deleted-classes.html' }
+                { id: 'deleted-classes', label: 'Archived Classes', icon: 'archive', url: 'deleted-classes.html' }
               ]
             : [];
         groups.push({
@@ -370,7 +370,7 @@ function setupSidebar(user, currentPage) {
             title: "Reports",
             items: [
                 { id: 'student-progress', label: 'Student Statistics', icon: 'users', url: 'student-progress.html' },
-                { id: 'deleted-ai-quizzes', label: 'Deleted AI Quizzes', icon: 'archive', url: 'deleted-ai-quizzes.html' },
+                { id: 'deleted-ai-quizzes', label: 'Archived AI Quizzes', icon: 'archive', url: 'deleted-ai-quizzes.html' },
             ]
         });
     } else {
@@ -1216,7 +1216,7 @@ function renderSharedNotifications(classId) {
             <button type="button" class="mobile-nav-notification-more" aria-label="More actions">⋮</button>
             <div class="mobile-nav-notification-actions hidden">
                 <button type="button" class="mobile-nav-notification-action mobile-nav-notification-action--read">Mark as read</button>
-                <button type="button" class="mobile-nav-notification-action mobile-nav-notification-action--delete">Delete</button>
+                <button type="button" class="mobile-nav-notification-action mobile-nav-notification-action--delete">Archive</button>
             </div>
         </div>`;
     }).join("");

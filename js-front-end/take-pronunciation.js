@@ -1,6 +1,10 @@
 (function () {
   "use strict";
 
+  let cheatingViolations = 0;
+  let cheatingVoided = false;
+  let cheatingListenersCleanup = null;
+
   const isTakePronunciationPage = () =>
     typeof window !== "undefined" &&
     (window.location.pathname || "").includes("take-pronunciation");
@@ -37,6 +41,80 @@
     };
   }
 
+  function handleCheatingViolation() {
+    if (cheatingVoided) return;
+    cheatingViolations++;
+    if (cheatingViolations === 1) {
+      const modal = document.getElementById("quiz-cheating-warning-modal");
+      const okBtn = document.getElementById("quiz-cheating-warning-ok");
+      if (modal) modal.classList.remove("hidden");
+      if (okBtn && !okBtn.__cheatingBound) {
+        okBtn.__cheatingBound = true;
+        okBtn.addEventListener("click", function () {
+          if (modal) modal.classList.add("hidden");
+        });
+      }
+    } else {
+      cheatingVoided = true;
+      if (cheatingListenersCleanup) cheatingListenersCleanup();
+      voidPronunciationQuiz();
+    }
+  }
+
+  function setupCheatingListeners() {
+    if (cheatingListenersCleanup) cheatingListenersCleanup();
+    const onVisibilityChange = function () {
+      if (document.hidden) handleCheatingViolation();
+    };
+    const onFullscreenChange = function () {
+      if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) {
+        handleCheatingViolation();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    document.addEventListener("fullscreenchange", onFullscreenChange);
+    document.addEventListener("webkitfullscreenchange", onFullscreenChange);
+    document.addEventListener("MSFullscreenChange", onFullscreenChange);
+    cheatingListenersCleanup = function () {
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      document.removeEventListener("fullscreenchange", onFullscreenChange);
+      document.removeEventListener("webkitfullscreenchange", onFullscreenChange);
+      document.removeEventListener("MSFullscreenChange", onFullscreenChange);
+      cheatingListenersCleanup = null;
+    };
+  }
+
+  async function voidPronunciationQuiz() {
+    const user = typeof getCurrentUser === "function" ? getCurrentUser() : null;
+    if (!user || !pronunciationQuizData) return;
+    const selectedClass = (() => {
+      try { return JSON.parse(localStorage.getItem("eel_selected_class") || "null"); } catch (_) { return null; }
+    })();
+    const classId = selectedClass?.id != null ? selectedClass.id : localStorage.getItem("eel_selected_class_id");
+    try {
+      const res = await fetch((window.API_BASE || "") + "/api/pronunciation-void", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          student_id: user.user_id,
+          quiz_id: pronunciationQuizData.quiz_id,
+          class_id: classId || undefined
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        pronunciationQuizData = null;
+        pronunciationAnswers = {};
+        document.getElementById("quiz-page").classList.add("hidden");
+        showPronunciationQuizDone(0);
+        const msgEl = document.getElementById("pronunciation-quiz-done-msg");
+        if (msgEl) msgEl.textContent = "Quiz voided. You received 0 points due to leaving fullscreen or switching tabs.";
+      }
+    } catch (err) {
+      if (typeof showNotification === "function") showNotification("Error submitting quiz.", "error");
+    }
+  }
+
   const originalSubmitPronunciationQuiz = window.submitPronunciationQuiz;
   if (typeof originalSubmitPronunciationQuiz === "function") {
     window.submitPronunciationQuiz = async function (event) {
@@ -47,6 +125,10 @@
       clearInterval(pronunciationTimer);
       const user = typeof getCurrentUser === "function" ? getCurrentUser() : null;
       if (!user) return;
+      if (cheatingListenersCleanup) {
+        cheatingListenersCleanup();
+        cheatingListenersCleanup = null;
+      }
       const formData = new FormData();
       for (let i = 0; i < pronunciationQuizData.questions.length; i++) {
         const answer = pronunciationAnswers[i];
@@ -78,7 +160,12 @@
           pronunciationQuizData = null;
           pronunciationAnswers = {};
           document.getElementById("quiz-page").classList.add("hidden");
-          showPronunciationQuizDone(data.accuracy);
+          const accuracy = cheatingVoided ? 0 : (data.accuracy != null ? data.accuracy : 0);
+          showPronunciationQuizDone(accuracy);
+          if (cheatingVoided) {
+            const msgEl = document.getElementById("pronunciation-quiz-done-msg");
+            if (msgEl) msgEl.textContent = "Quiz voided. You received 0 points due to leaving fullscreen or switching tabs.";
+          }
           if (data.unlockedNext && typeof showNotification === "function") {
             showNotification("Great job! Next quiz unlocked.", "success");
           }
@@ -371,6 +458,7 @@
           requestFullscreen();
           if (gateEl) gateEl.classList.add("hidden");
           if (quizPageEl) quizPageEl.classList.remove("hidden");
+          setupCheatingListeners();
           showPronunciationQuestionView();
         }
         if (gateEl) {

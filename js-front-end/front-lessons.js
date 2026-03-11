@@ -1143,7 +1143,7 @@ function renderLessonsNotificationPanel(classId) {
           `<button type="button" class="mobile-nav-notification-more" aria-label="More actions">⋮</button>` +
           `<div class="mobile-nav-notification-actions hidden">` +
             `<button type="button" class="mobile-nav-notification-action mobile-nav-notification-action--read">Mark as read</button>` +
-            `<button type="button" class="mobile-nav-notification-action mobile-nav-notification-action--delete">Delete</button>` +
+            `<button type="button" class="mobile-nav-notification-action mobile-nav-notification-action--delete">Archive</button>` +
           `</div>` +
         `</div>`
       );
@@ -1781,6 +1781,11 @@ function renderLessonTeacherReviewAttemptsList() {
     const score = (a.score != null && a.total_points != null) ? Math.round(a.score) + "/" + Math.round(a.total_points) : "-";
     const isActive = Number(_lessonTeacherReviewState.studentId) === Number(a.student_id || a.user_id);
     const timeStr = a.time_taken || (a.end_time ? formatDateTimePhilippineMilitary(a.end_time) : "");
+    const cheated = !!(a.cheating_voided || (a.cheating_violations && a.cheating_violations > 0));
+    const cheatTitle = a.cheating_voided
+      ? "Left fullscreen or switched tabs multiple times. Score set to 0."
+      : "Left fullscreen or switched tabs (" + (a.cheating_violations || 0) + " time(s)).";
+    const cheatBadge = cheated ? "<span class=\"text-xs px-1 py-0.5 rounded bg-destructive/20 text-destructive shrink-0\" title=\"" + escapeHtml(cheatTitle) + "\">⚠</span>" : "";
     return (
       "<button type=\"button\" class=\"btn btn-outline w-full justify-between lesson-teacher-attempt-item " + (isActive ? "is-active" : "") + "\" " +
       "data-student-id=\"" + escapeHtml(String(a.student_id != null ? a.student_id : a.user_id)) + "\" " +
@@ -1790,8 +1795,8 @@ function renderLessonTeacherReviewAttemptsList() {
       "<span style=\"min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;\">" + escapeHtml(name) + "</span>" +
       "</span>" +
       "<span class=\"teacher-attempt-meta\">" +
-      "<span class=\"text-xs text-muted-foreground\">" + escapeHtml(timeStr) + "</span>" +
-      "<span class=\"text-xs teacher-attempt-score\">" + escapeHtml(score) + "</span>" +
+      "<span class=\"text-xs text-muted-foreground shrink-0\">" + escapeHtml(timeStr) + "</span>" +
+      "<span class=\"text-xs teacher-attempt-score shrink-0\">" + escapeHtml(score) + "</span>" + cheatBadge +
       "</span>" +
       "</button>"
     );
@@ -1886,7 +1891,20 @@ function renderLessonTeacherReviewDetail(data) {
     );
   }).join("");
 
+  const cheated = !!(data.attempt && (data.attempt.cheating_voided || (data.attempt.cheating_violations && data.attempt.cheating_violations > 0)));
+  const cheatBanner = cheated
+    ? "<div class=\"p-3 mb-4 rounded-lg flex items-start gap-2 " + (data.attempt.cheating_voided ? "bg-destructive/20 text-destructive" : "bg-amber-500/20 text-amber-700 dark:text-amber-400") + "\">" +
+      "<span class=\"text-lg shrink-0\" aria-hidden=\"true\">⚠️</span>" +
+      "<div>" +
+      "<strong>" + (data.attempt.cheating_voided ? "Quiz voided (0 score)" : "Warning") + ":</strong> " +
+      (data.attempt.cheating_voided
+        ? "Student left fullscreen or switched tabs multiple times. Score set to 0."
+        : "Student left fullscreen or switched tabs (" + (data.attempt.cheating_violations || 0) + " time(s)).") +
+      "</div></div>"
+    : "";
+
   detail.innerHTML =
+    (cheatBanner || "") +
     "<div class=\"teacher-review-summary\">" +
     "<div style=\"min-width:0;\">" +
     "<div class=\"text-xs text-muted-foreground\">Student</div>" +
@@ -2079,13 +2097,13 @@ async function doDeleteLessonTeacherQuiz(quiz) {
     const data = await res.json().catch(() => ({}));
     if (res.ok && data.success) {
       cacheDeletedAIGeneratedQuiz({ ...quiz, quiz_snapshot: snapshot }, user);
-      if (typeof showNotification === "function") showNotification("Quiz deleted successfully.", "success");
+      if (typeof showNotification === "function") showNotification("Quiz archived successfully.", "success");
       await loadLessonsAIGeneratedList();
     } else {
-      if (typeof showNotification === "function") showNotification(data.message || "Failed to delete quiz.", "error");
+      if (typeof showNotification === "function") showNotification(data.message || "Failed to archive quiz.", "error");
     }
   } catch (err) {
-    if (typeof showNotification === "function") showNotification("Failed to delete quiz.", "error");
+    if (typeof showNotification === "function") showNotification("Failed to archive quiz.", "error");
   }
 }
 
@@ -2093,11 +2111,11 @@ function handleDeleteLessonTeacherQuiz(quiz) {
   const label = String(quiz?.title || "this quiz");
   if (typeof Swal !== "undefined" && Swal && typeof Swal.fire === "function") {
     Swal.fire({
-      title: "Delete quiz?",
-      text: `${label} will be permanently deleted.`,
+      title: "Archive quiz?",
+      text: `${label} will be archived.`,
       icon: "warning",
       showCancelButton: true,
-      confirmButtonText: "Delete",
+      confirmButtonText: "Archive",
       cancelButtonText: "Cancel",
       confirmButtonColor: "#dc2626"
     }).then((result) => {
@@ -2105,7 +2123,7 @@ function handleDeleteLessonTeacherQuiz(quiz) {
     });
     return;
   }
-  if (confirm(`Delete "${label}"? This cannot be undone.`)) {
+  if (confirm(`Archive "${label}"? This cannot be undone.`)) {
     doDeleteLessonTeacherQuiz(quiz);
   }
 }
@@ -2229,7 +2247,7 @@ async function loadLessonsAIGeneratedList() {
                 <div class="lessons-quiz-item-menu-wrap">
                   <button type="button" class="lessons-quiz-item-menu-btn" aria-label="Quiz actions" aria-expanded="false">⋮</button>
                   <div class="lessons-quiz-item-menu hidden">
-                    <button type="button" class="lessons-quiz-item-menu-delete">Delete</button>
+                    <button type="button" class="lessons-quiz-item-menu-delete">Archive</button>
                   </div>
                 </div>
                 <i data-lucide="chevron-down" class="created-quiz-card__chevron" aria-hidden="true"></i>
@@ -2508,7 +2526,7 @@ async function openLessonQuizModal(quizId) {
 function proceedToLessonQuizPage() {
   if (_lessonQuizIdToTake == null) return;
   const url = `take-quiz.html?quiz_id=${_lessonQuizIdToTake}`;
-  window.location.href = url;
+  window.open(url, "_blank", "noopener,noreferrer");
   closeLessonQuizModal();
 }
 

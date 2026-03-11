@@ -283,7 +283,7 @@ router.get("/api/teacher/reading-quizzes", async (req, res) => {
   }
 });
 
-// ================= DELETE TEACHER READING QUIZ =================
+// ================= DELETE TEACHER READING QUIZ (archive first, then delete) =================
 router.delete("/api/teacher/reading-quizzes/:id", async (req, res) => {
   const pool = req.pool;
   const quizId = Number(req.params.id);
@@ -294,16 +294,58 @@ router.delete("/api/teacher/reading-quizzes/:id", async (req, res) => {
   }
 
   try {
-    const [[ownedQuiz]] = await pool.query(
-      "SELECT quiz_id FROM teacher_reading_quizzes WHERE quiz_id = ? AND user_id = ? LIMIT 1",
+    const [[quiz]] = await pool.query(
+      "SELECT * FROM teacher_reading_quizzes WHERE quiz_id = ? AND user_id = ? LIMIT 1",
       [quizId, userId]
     );
-    if (!ownedQuiz) {
+    if (!quiz) {
       return res.status(404).json({ success: false, message: "Quiz not found or access denied" });
     }
 
+    // Build full snapshot for archive
+    let questionTable;
+    if (quiz.difficulty === "beginner") questionTable = "teacher_reading_beginner_questions";
+    else if (quiz.difficulty === "intermediate") questionTable = "teacher_reading_intermediate_questions";
+    else if (quiz.difficulty === "advanced") questionTable = "teacher_reading_advanced_questions";
+    else questionTable = "teacher_reading_beginner_questions";
+
+    const [rows] = await pool.query(`SELECT * FROM ${questionTable} WHERE quiz_id = ? ORDER BY question_id ASC`, [quizId]);
+    const questions = [];
+    for (const q of rows) {
+      const question = { question_id: q.question_id, question_text: q.question_text || "", question_type: "mcq", options: [], blanks: [] };
+      if (quiz.difficulty === "beginner") {
+        const [opts] = await pool.query(
+          "SELECT option_id, option_text, is_correct FROM teacher_reading_mcq_options WHERE question_id = ? ORDER BY position ASC",
+          [q.question_id]
+        );
+        question.options = opts.map((o) => ({ option_id: o.option_id, option_text: o.option_text, is_correct: !!o.is_correct }));
+      } else if (quiz.difficulty === "intermediate") {
+        question.question_type = "fill_blank";
+        const [blanks] = await pool.query(
+          "SELECT blank_id, blank_number, answer_text FROM teacher_reading_fill_blanks WHERE question_id = ? ORDER BY blank_number ASC",
+          [q.question_id]
+        );
+        question.blanks = blanks.map((b) => ({ blank_id: b.blank_id, blank_number: b.blank_number, answer_text: b.answer_text }));
+      } else if (quiz.difficulty === "advanced") {
+        question.question_type = "essay";
+        question.points = q.points;
+      }
+      questions.push(question);
+    }
+    const snapshot = JSON.stringify({ quiz, questions });
+
+    // Insert into archive (ignore if table doesn't exist yet)
+    try {
+      await pool.query(
+        "INSERT INTO archive_ai_quizzes (original_quiz_id, archived_by, snapshot) VALUES (?, ?, ?)",
+        [quizId, userId, snapshot]
+      );
+    } catch (archErr) {
+      if (archErr.errno !== 1146) console.warn("Archive AI quiz (table may not exist):", archErr?.message);
+    }
+
     await pool.query("DELETE FROM teacher_reading_quizzes WHERE quiz_id = ? AND user_id = ?", [quizId, userId]);
-    return res.json({ success: true, message: "Quiz deleted successfully" });
+    return res.json({ success: true, message: "Quiz archived successfully" });
   } catch (err) {
     console.error("❌ Delete teacher quiz error:", err);
     return res.status(500).json({ success: false, message: "Database error" });
@@ -366,7 +408,7 @@ router.get("/api/teacher/reading-quizzes/:quizId/review", async (req, res) => {
     }
 
     const [[attempt]] = await pool.query(
-      `SELECT attempt_id, score, total_points, start_time, end_time
+      `SELECT attempt_id, score, total_points, start_time, end_time, cheating_violations, cheating_voided
        FROM teacher_reading_quiz_attempts
        WHERE quiz_id = ? AND student_id = ? AND status = 'completed'
        ORDER BY attempt_id DESC LIMIT 1`,
@@ -427,7 +469,9 @@ router.get("/api/teacher/reading-quizzes/:quizId/review", async (req, res) => {
         attempt_id: attempt.attempt_id,
         score: attempt.score,
         total_points: attempt.total_points,
-        end_time: attempt.end_time
+        end_time: attempt.end_time,
+        cheating_violations: attempt.cheating_violations ?? 0,
+        cheating_voided: !!attempt.cheating_voided
       },
       answers
     });
@@ -647,10 +691,12 @@ router.post("/api/teacher/reading-quiz-attempts", async (req, res) => {
 router.patch("/api/teacher/reading-quiz-attempts/:id/submit", async (req, res) => {
   const pool = req.pool;
   const attemptId = Number(req.params.id);
-  const { answers } = req.body || {};
+  const { answers, cheating_violations, cheating_voided } = req.body || {};
   if (!attemptId || !Array.isArray(answers)) {
     return res.status(400).json({ success: false, error: "attempt id and answers array required" });
   }
+  const violations = Number(cheating_violations) || 0;
+  const voided = !!cheating_voided;
   try {
     const [[attempt]] = await pool.query(
       `SELECT a.attempt_id, a.quiz_id, a.student_id, a.start_time, a.status
@@ -722,16 +768,26 @@ router.patch("/api/teacher/reading-quiz-attempts/:id/submit", async (req, res) =
       );
     }
 
-    await pool.query(
-      `UPDATE teacher_reading_quiz_attempts
-       SET end_time = ?, status = 'completed', score = ?, total_points = ?
-       WHERE attempt_id = ?`,
-      [endTime, totalScore, totalPoints, attemptId]
-    );
+    const finalScore = voided ? 0 : totalScore;
+    try {
+      await pool.query(
+        `UPDATE teacher_reading_quiz_attempts
+         SET end_time = ?, status = 'completed', score = ?, total_points = ?, cheating_violations = ?, cheating_voided = ?
+         WHERE attempt_id = ?`,
+        [endTime, finalScore, totalPoints, violations, voided ? 1 : 0, attemptId]
+      );
+    } catch (colErr) {
+      if (colErr.errno === 1054 && colErr.sqlMessage && colErr.sqlMessage.includes("cheating")) {
+        await pool.query(
+          `UPDATE teacher_reading_quiz_attempts SET end_time = ?, status = 'completed', score = ?, total_points = ? WHERE attempt_id = ?`,
+          [endTime, finalScore, totalPoints, attemptId]
+        );
+      } else throw colErr;
+    }
 
     res.json({
       success: true,
-      score: totalScore,
+      score: finalScore,
       total_points: totalPoints,
       end_time: endTime
     });
@@ -1040,6 +1096,9 @@ router.post("/api/reading-quiz-answers", async (req, res) => {
 router.patch("/api/reading-quiz-attempts/:id/submit", async (req, res) => {
   const pool = req.pool;
   const attemptId = req.params.id;
+  const { cheating_violations, cheating_voided } = req.body || {};
+  const violations = Number(cheating_violations) || 0;
+  const voided = !!cheating_voided;
 
   try {
     // 1️⃣ Get quiz attempt and quiz info
@@ -1154,17 +1213,26 @@ router.patch("/api/reading-quiz-attempts/:id/submit", async (req, res) => {
       }
     }
 
-    // 3️⃣ Update attempt summary
-    await pool.query(`
-      UPDATE reading_quiz_attempts
-      SET score = ?, total_points = ?, status = 'completed', end_time = ?
-      WHERE attempt_id = ?
-    `, [totalScore, totalPoints, endTime, attemptId]);
+    // 3️⃣ Update attempt summary (cheating_voided overrides score to 0)
+    const finalScore = voided ? 0 : totalScore;
+    try {
+      await pool.query(`
+        UPDATE reading_quiz_attempts
+        SET score = ?, total_points = ?, status = 'completed', end_time = ?, cheating_violations = ?, cheating_voided = ?
+        WHERE attempt_id = ?
+      `, [finalScore, totalPoints, endTime, violations, voided ? 1 : 0, attemptId]);
+    } catch (colErr) {
+      if (colErr.errno === 1054 && colErr.sqlMessage && colErr.sqlMessage.includes("cheating")) {
+        await pool.query(`
+          UPDATE reading_quiz_attempts SET score = ?, total_points = ?, status = 'completed', end_time = ? WHERE attempt_id = ?
+        `, [finalScore, totalPoints, endTime, attemptId]);
+      } else throw colErr;
+    }
 
-    // 4️⃣ Unlock next quiz in the subject track if passed
+    // 4️⃣ Unlock next quiz in the subject track if passed (not when voided)
     let unlockedNext = false;
     let unlocked_quiz_number = null;
-    const percentScore = totalPoints > 0 ? (Number(totalScore) / Number(totalPoints)) * 100 : 0;
+    const percentScore = totalPoints > 0 ? (Number(finalScore) / Number(totalPoints)) * 100 : 0;
 
     try {
       const [[meta]] = await pool.query(
@@ -1216,7 +1284,7 @@ router.patch("/api/reading-quiz-attempts/:id/submit", async (req, res) => {
       console.warn("⚠️ Unlock progression skipped:", e?.message || e);
     }
 
-    res.json({ success: true, totalScore, totalPoints, percentScore, timeTakenSeconds, unlockedNext, unlocked_quiz_number });
+    res.json({ success: true, totalScore: finalScore, totalPoints, percentScore: totalPoints > 0 ? (finalScore / totalPoints) * 100 : 0, timeTakenSeconds, unlockedNext, unlocked_quiz_number });
 
   } catch (err) {
     console.error("❌ Error submitting quiz:", err);
@@ -1355,6 +1423,8 @@ router.get("/api/teacher/reading-attempts", async (req, res) => {
           a.score,
           a.total_points,
           a.status,
+          a.cheating_violations,
+          a.cheating_voided,
           a.start_time,
           a.end_time,
           sc.status AS class_status
@@ -1381,6 +1451,8 @@ router.get("/api/teacher/reading-attempts", async (req, res) => {
           a.score,
           a.total_points,
           a.status,
+          a.cheating_violations,
+          a.cheating_voided,
           a.start_time,
           a.end_time,
           sc.status AS class_status
@@ -1626,6 +1698,8 @@ router.get("/api/reading-quiz-leaderboard", async (req, res) => {
           a.score,
           a.total_points,
           a.status,
+          a.cheating_violations,
+          a.cheating_voided,
           a.start_time,
           a.end_time,
           TIMESTAMPDIFF(SECOND, a.start_time, a.end_time) AS time_taken_seconds
@@ -1652,6 +1726,8 @@ router.get("/api/reading-quiz-leaderboard", async (req, res) => {
           a.score,
           a.total_points,
           a.status,
+          a.cheating_violations,
+          a.cheating_voided,
           a.start_time,
           a.end_time,
           TIMESTAMPDIFF(SECOND, a.start_time, a.end_time) AS time_taken_seconds
@@ -1677,7 +1753,9 @@ router.get("/api/reading-quiz-leaderboard", async (req, res) => {
         score: Math.round(r.score),
         total_points: Math.round(r.total_points),
         time_taken_seconds: seconds,
-        time_taken: `${h > 0 ? h + 'h ' : ''}${m > 0 ? m + 'm ' : ''}${s}s`
+        time_taken: `${h > 0 ? h + 'h ' : ''}${m > 0 ? m + 'm ' : ''}${s}s`,
+        cheating_violations: r.cheating_violations ?? 0,
+        cheating_voided: !!r.cheating_voided
       };
     });
 

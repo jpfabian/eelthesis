@@ -18,6 +18,9 @@
   let builtinAttemptId = null;
   let quizStartTime = null;
   let submitResult = null;
+  let cheatingViolations = 0;
+  let cheatingVoided = false;
+  let cheatingListenersCleanup = null;
 
   function getQuestionTypeLabel(q) {
     if (q.question_type === "fill_blank") return "Fill in the blank";
@@ -367,12 +370,59 @@
     });
   }
 
+  function handleCheatingViolation() {
+    if (cheatingVoided) return;
+    cheatingViolations++;
+    if (cheatingViolations === 1) {
+      var modal = document.getElementById("quiz-cheating-warning-modal");
+      var okBtn = document.getElementById("quiz-cheating-warning-ok");
+      if (modal) modal.classList.remove("hidden");
+      if (okBtn && !okBtn.__cheatingBound) {
+        okBtn.__cheatingBound = true;
+        okBtn.addEventListener("click", function () {
+          if (modal) modal.classList.add("hidden");
+        });
+      }
+    } else {
+      cheatingVoided = true;
+      if (cheatingListenersCleanup) cheatingListenersCleanup();
+      submitQuiz();
+    }
+  }
+
+  function setupCheatingListeners() {
+    if (cheatingListenersCleanup) cheatingListenersCleanup();
+    var onVisibilityChange = function () {
+      if (document.hidden) handleCheatingViolation();
+    };
+    var onFullscreenChange = function () {
+      if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) {
+        handleCheatingViolation();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    document.addEventListener("fullscreenchange", onFullscreenChange);
+    document.addEventListener("webkitfullscreenchange", onFullscreenChange);
+    document.addEventListener("MSFullscreenChange", onFullscreenChange);
+    cheatingListenersCleanup = function () {
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      document.removeEventListener("fullscreenchange", onFullscreenChange);
+      document.removeEventListener("webkitfullscreenchange", onFullscreenChange);
+      document.removeEventListener("MSFullscreenChange", onFullscreenChange);
+      cheatingListenersCleanup = null;
+    };
+  }
+
   function submitQuiz() {
     if (!quizData) return;
     closeSubmitConfirmModal();
     saveCurrentAnswer();
     clearInterval(countdownInterval);
     countdownInterval = null;
+    if (cheatingListenersCleanup) {
+      cheatingListenersCleanup();
+      cheatingListenersCleanup = null;
+    }
     exitFullscreen();
     document.getElementById("quiz-page").classList.add("hidden");
     var doneEl = document.getElementById("quiz-done");
@@ -419,19 +469,19 @@
 
     if (teacherQuizAttemptId != null) {
       var answers = buildAnswersPayload();
+      var payload = { answers: answers, cheating_violations: cheatingViolations, cheating_voided: !!cheatingVoided };
       fetch((window.API_BASE || "") + "/api/teacher/reading-quiz-attempts/" + teacherQuizAttemptId + "/submit", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ answers: answers })
+        body: JSON.stringify(payload)
       })
         .then(function (r) { return r.json(); })
         .then(function (data) {
           submitResult = data;
-          renderDone(
-            data.score != null ? data.score : null,
-            data.total_points != null ? data.total_points : null,
-            !!data.success
-          );
+          var score = cheatingVoided ? 0 : (data.score != null ? data.score : null);
+          var total = data.total_points != null ? data.total_points : null;
+          renderDone(score, total, !!data.success);
+          if (cheatingVoided && doneMsg) doneMsg.textContent = "Quiz voided. You received 0 points due to leaving fullscreen or switching tabs.";
         })
         .catch(function () {
           renderDone(null, null, false);
@@ -843,6 +893,8 @@
               }
 
               loadQuestions(quiz.questions || []);
+
+              setupCheatingListeners();
 
               document.getElementById("take-quiz-prev-btn").addEventListener("click", prevQuestion);
               document.getElementById("take-quiz-next-btn").addEventListener("click", nextQuestion);

@@ -2610,6 +2610,11 @@ function renderTeacherReadingAttemptsList() {
             : '-';
         const isActive = Number(teacherReadingReviewState.attemptId) === Number(a.attempt_id);
         const time = a.end_time ? formatAttemptListTime(a.end_time) : (a.start_time ? formatAttemptListTime(a.start_time) : '');
+        const cheated = !!(a.cheating_voided || (a.cheating_violations && a.cheating_violations > 0));
+        const cheatTitle = a.cheating_voided
+            ? 'Left fullscreen or switched tabs multiple times. Score set to 0.'
+            : `Left fullscreen or switched tabs (${a.cheating_violations || 0} time(s)).`;
+        const cheatBadge = cheated ? `<span class="text-xs px-1 py-0.5 rounded bg-destructive/20 text-destructive shrink-0" title="${escapeHtml(cheatTitle)}">⚠</span>` : '';
         return `
             <button
               type="button"
@@ -2626,7 +2631,7 @@ function renderTeacherReadingAttemptsList() {
                   ${time ? `<span class="teacher-attempt-time-inline">${escapeHtml(time)}</span>` : ``}
                 </span>
               </span>
-              <span class="text-xs teacher-attempt-score">${score}</span>
+              <span class="text-xs teacher-attempt-score shrink-0">${score}</span>${cheatBadge}
             </button>
         `;
     }).join('');
@@ -2671,6 +2676,17 @@ function renderTeacherReadingAttemptDetail(answers) {
         ? `${Math.round(attempt.score)}/${Math.round(attempt.total_points)}`
         : '-';
     const submitted = attempt?.end_time ? formatDateTimePhilippineMilitary(attempt.end_time) : '';
+    const cheated = !!(attempt && (attempt.cheating_voided || (attempt.cheating_violations && attempt.cheating_violations > 0)));
+    const cheatBanner = cheated
+        ? `<div class="p-3 mb-4 rounded-lg flex items-start gap-2 ${attempt.cheating_voided ? 'bg-destructive/20 text-destructive' : 'bg-amber-500/20 text-amber-700 dark:text-amber-400'}">
+            <span class="text-lg shrink-0" aria-hidden="true">⚠️</span>
+            <div>
+            <strong>${attempt.cheating_voided ? 'Quiz voided (0 score)' : 'Warning'}:</strong>` +
+            (attempt.cheating_voided
+                ? ' Student left fullscreen or switched tabs multiple times. Score set to 0.'
+                : ` Student left fullscreen or switched tabs (${attempt.cheating_violations || 0} time(s)).`) +
+            '</div></div>'
+        : '';
 
     const byQuestionId = new Map((answers || []).map(a => [Number(a.question_id), a]));
 
@@ -2797,7 +2813,7 @@ function renderTeacherReadingAttemptDetail(answers) {
         return '';
     }).join('');
 
-    detail.innerHTML = `
+    detail.innerHTML = (cheatBanner || '') + `
       <div class="teacher-review-summary">
         <div style="min-width:0;">
           <div class="text-xs text-muted-foreground">Student</div>

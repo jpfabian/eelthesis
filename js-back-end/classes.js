@@ -59,7 +59,7 @@ router.get("/api/classes/:teacherId", async (req, res) => {
   }
 });
 
-// Delete class (teacher-owned)
+// Delete class (teacher-owned) — archive first, then delete
 async function handleDeleteClass(req, res) {
   const { classId } = req.params;
   const teacherId = Number(req.body?.teacher_id || req.query?.teacher_id || 0);
@@ -68,15 +68,27 @@ async function handleDeleteClass(req, res) {
   }
   try {
     const [rows] = await pool.query(
-      "SELECT id FROM classes WHERE id = ? AND teacher_id = ? LIMIT 1",
+      "SELECT * FROM classes WHERE id = ? AND teacher_id = ? LIMIT 1",
       [classId, teacherId]
     );
     if (!rows.length) {
       return res.status(404).json({ success: false, message: "Class not found or access denied" });
     }
+    const cls = rows[0];
+    const snapshot = JSON.stringify(cls);
+
+    // Insert into archive (ignore if table doesn't exist yet)
+    try {
+      await pool.query(
+        "INSERT INTO archive_classrooms (original_class_id, archived_by, snapshot) VALUES (?, ?, ?)",
+        [classId, teacherId, snapshot]
+      );
+    } catch (archErr) {
+      if (archErr.errno !== 1146) console.warn("Archive classroom (table may not exist):", archErr?.message);
+    }
 
     await pool.query("DELETE FROM classes WHERE id = ? AND teacher_id = ?", [classId, teacherId]);
-    res.json({ success: true, message: "Class deleted successfully" });
+    res.json({ success: true, message: "Class archived successfully" });
   } catch (err) {
     console.error("❌ Delete class error:", err);
     res.status(500).json({ success: false, message: "Server error" });

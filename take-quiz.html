@@ -90,6 +90,20 @@
         </div>
     </div>
 
+    <div id="quiz-cheating-warning-modal" class="modal-overlay hidden" style="z-index: 10000;">
+        <div class="modal-card" style="max-width: 560px;">
+            <div class="modal-header">
+                <h3 class="modal-title">⚠️ Cheating Warning</h3>
+            </div>
+            <div class="modal-content">
+                <p>You left fullscreen or switched to another tab. <strong>One more violation will result in a 0 score.</strong> Stay in fullscreen and focused on the quiz.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" id="quiz-cheating-warning-ok">OK</button>
+            </div>
+        </div>
+    </div>
+
     <div id="quiz-submit-confirm-modal" class="modal-overlay hidden" style="z-index: 9999;">
         <div class="modal-card" style="max-width: 560px; max-height: 85vh; display: flex; flex-direction: column;">
             <div class="modal-header">
@@ -132,6 +146,7 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="js/auth.js"></script>
     <script src="js-front-end/api-config.js"></script>
+    <script src="js-front-end/quiz-cheating.js"></script>
     <script src="js-front-end/take-quiz.js"></script>
 </body>
 </html>

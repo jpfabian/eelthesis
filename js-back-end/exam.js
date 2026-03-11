@@ -324,13 +324,33 @@ router.get("/api/get-exam-content/:id", async (req, res) => {
 router.post("/api/move-exam-to-cache/:id", async (req, res) => {
   const { id } = req.params;
   const pool = req.pool;
-
-  // small debug log so you can see the route is hit
-  console.log("POST /api/move-exam-to-cache/:id called with id =", id);
+  const createdBy = Number(req.body?.created_by || req.query?.created_by || 0);
 
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
+
+    const [[exam]] = await connection.query(
+      "SELECT * FROM exams WHERE id = ?",
+      [id]
+    );
+    if (!exam) {
+      await connection.rollback();
+      connection.release();
+      return res.status(404).json({ success: false, message: "Exam not found" });
+    }
+
+    // Archive exam before delete (ignore if table doesn't exist yet)
+    const snapshot = JSON.stringify(exam);
+    const archivedBy = createdBy || exam.created_by;
+    try {
+      await connection.query(
+        "INSERT INTO archive_exams (original_exam_id, archived_by, snapshot) VALUES (?, ?, ?)",
+        [id, archivedBy, snapshot]
+      );
+    } catch (archErr) {
+      if (archErr.errno !== 1146) console.warn("Archive exam (table may not exist):", archErr?.message);
+    }
 
     const [insertResult] = await connection.query(`
       INSERT INTO cached_exams (subject, title, content, question_count, types, created_at)

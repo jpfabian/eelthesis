@@ -1130,12 +1130,27 @@ function initVoiceRecognition() {
     return rec;
 }
 
+function canUseMicrophone() {
+    if (typeof window === 'undefined') return false;
+    if (!window.isSecureContext) return false;
+    if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') return false;
+    return true;
+}
+
 async function toggleRecording() {
     const recordBtn = document.getElementById('record-btn');
     const idle = document.getElementById('recording-idle');
     const active = document.getElementById('recording-active');
     const complete = document.getElementById('recording-complete');
     const recordedControls = document.getElementById('recorded-controls');
+
+    if (!canUseMicrophone()) {
+        showNotification(
+            'Voice recording requires HTTPS. Please access this site via https:// (e.g. https://your-domain.com). On AWS EC2, use a reverse proxy (Nginx, Caddy) with SSL.',
+            'error'
+        );
+        return;
+    }
 
     if (!mediaRecorder || mediaRecorder.state === 'inactive') {
         try {
@@ -1238,7 +1253,17 @@ async function toggleRecording() {
             };
         } catch (err) {
             console.error("Error accessing microphone:", err);
-            showNotification("Unable to access microphone", "error");
+            let msg = "Unable to access microphone.";
+            if (err.name === 'NotAllowedError') {
+                msg = "Microphone access denied. Please allow microphone permission in your browser.";
+            } else if (err.name === 'NotFoundError') {
+                msg = "No microphone found. Please connect a microphone and try again.";
+            } else if (err.name === 'SecurityError' || !window.isSecureContext) {
+                msg = "Voice recording requires HTTPS. Access this site via https:// (e.g. https://your-domain.com).";
+            } else if (err.message) {
+                msg = err.message;
+            }
+            showNotification(msg, "error");
         }
     } else if (mediaRecorder.state === 'recording') {
         mediaRecorder.stop();
@@ -1406,6 +1431,9 @@ async function submitPronunciationQuiz() {
 
   formData.append('student_id', user.user_id);
   formData.append('quiz_id', pronunciationQuizData.quiz_id);
+  const selectedClass = JSON.parse(localStorage.getItem("eel_selected_class") || "null");
+  const classId = selectedClass?.id ?? selectedClass?.class_id ?? localStorage.getItem("eel_selected_class_id");
+  if (classId) formData.append('class_id', classId);
 
   try {
     const res = await fetch((window.API_BASE || "") + "/api/pronunciation-submit", {
@@ -2022,6 +2050,11 @@ function renderTeacherPronAttemptsList() {
         const initials = getInitials(name);
         const score = a.score != null ? `${a.score}` : '-';
         const isActive = Number(teacherPronReviewState.attemptId) === Number(a.attempt_id);
+        const cheated = !!(a.cheating_voided || (a.cheating_violations && a.cheating_violations > 0));
+        const cheatTitle = a.cheating_voided
+            ? 'Left fullscreen or switched tabs multiple times. Score set to 0.'
+            : `Left fullscreen or switched tabs (${a.cheating_violations || 0} time(s)).`;
+        const cheatBadge = cheated ? `<span class="text-xs px-1 py-0.5 rounded bg-destructive/20 text-destructive shrink-0" title="${escapeHtml(cheatTitle)}">⚠</span>` : '';
         return `
             <button
               type="button"
@@ -2036,7 +2069,7 @@ function renderTeacherPronAttemptsList() {
                 </span>
               </span>
               <span class="teacher-attempt-meta">
-                <span class="text-xs teacher-attempt-score">${escapeHtml(score)}</span>
+                <span class="text-xs teacher-attempt-score shrink-0">${escapeHtml(score)}</span>${cheatBadge}
               </span>
             </button>
         `;
@@ -2058,7 +2091,19 @@ async function loadTeacherPronAttempt(attemptId) {
         if (!data.success) throw new Error(data.error || "Failed");
 
         const answers = data.answers || [];
-        detail.innerHTML = answers.map(a => {
+        const attempt = data.attempt || {};
+        const cheated = !!(attempt.cheating_voided || (attempt.cheating_violations && attempt.cheating_violations > 0));
+        const cheatBanner = cheated
+            ? `<div class="p-3 mb-4 rounded-lg flex items-start gap-2 ${attempt.cheating_voided ? 'bg-destructive/20 text-destructive' : 'bg-amber-500/20 text-amber-700 dark:text-amber-400'}">
+                <span class="text-lg shrink-0" aria-hidden="true">⚠️</span>
+                <div>
+                <strong>${attempt.cheating_voided ? 'Quiz voided (0 score)' : 'Warning'}:</strong>` +
+                (attempt.cheating_voided
+                    ? ' Student left fullscreen or switched tabs multiple times. Score set to 0.'
+                    : ` Student left fullscreen or switched tabs (${attempt.cheating_violations || 0} time(s)).`) +
+                '</div></div>'
+            : '';
+        detail.innerHTML = (cheatBanner || '') + answers.map(a => {
             const current = (a.teacher_score != null) ? a.teacher_score : a.pronunciation_score;
             return `
               <div class="card teacher-pron-answer-row" style="margin:0;" data-answer-id="${a.answer_id}">

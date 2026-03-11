@@ -254,6 +254,25 @@ pm2 restart eel-api
 
 ---
 
+## Voice recording (pronunciation quiz) requires HTTPS
+
+The pronunciation quiz uses the browser's microphone API (`getUserMedia`, `MediaRecorder`). Browsers block these on **HTTP** for security—they only work on **HTTPS** or `localhost`.
+
+If the record button does nothing on EC2, the app is likely served over HTTP. You must enable HTTPS:
+
+1. **Get a domain** (e.g. `eel.yourdomain.com`) and point it to your EC2 IP.
+2. **Install Certbot** and obtain a free SSL certificate:
+   ```bash
+   sudo apt install certbot python3-certbot-nginx -y
+   sudo certbot --nginx -d eel.yourdomain.com
+   ```
+3. **Update nginx** so Certbot adds HTTPS. Access the app via `https://eel.yourdomain.com`.
+4. **Update `.env`** `ALLOWED_ORIGINS` to include `https://eel.yourdomain.com`, then `pm2 restart eel-api`.
+
+Without HTTPS, the record button will show an error: *"Voice recording requires HTTPS. Please access this site via https://"*.
+
+---
+
 ## Troubleshooting
 
 - **502 Bad Gateway:** Node not running or not on port 3000 → `pm2 status` and `pm2 logs eel-api`.

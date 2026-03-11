@@ -154,12 +154,14 @@ if (hasS3) {
     },
   });
 
+  const voiceBucket = process.env.AWS_VOICE_BUCKET_NAME || process.env.AWS_BUCKET_NAME;
+  const voiceKeyPrefix = "voices/";
   upload = multer({
     storage: multerS3({
       s3,
-      bucket: process.env.AWS_BUCKET_NAME,
+      bucket: voiceBucket,
       key: (req, file, cb) => {
-        const filename = `pronunciation/${Date.now()}-${file.originalname}`;
+        const filename = `${voiceKeyPrefix}${Date.now()}-${file.originalname}`;
         cb(null, filename);
       },
     }),
@@ -532,14 +534,49 @@ router.get("/api/pronunciation-attempts", async (req, res) => {
   }
 });
 
+// ==================== Handle Cheating Void (0 score, no answers) ====================
+router.post("/api/pronunciation-void", async (req, res) => {
+  const pool = req.pool;
+  const { student_id, quiz_id, class_id } = req.body || {};
+  const classIdParam = class_id != null && class_id !== "" ? Number(class_id) : null;
+  if (!student_id || !quiz_id) {
+    return res.status(400).json({ success: false, message: "student_id and quiz_id required" });
+  }
+  try {
+    const attemptNow = nowPhilippineDatetime();
+    const [result] = await pool.query(
+      `INSERT INTO pronunciation_quiz_attempts 
+         (student_id, quiz_id, class_id, start_time, end_time, status, score, pronunciation_score, total_points, cheating_violations, cheating_voided)
+       VALUES (?, ?, ?, ?, ?, 'completed', 0, 0, 100, 2, 1)`,
+      [student_id, quiz_id, classIdParam, attemptNow, attemptNow]
+    );
+    res.json({ success: true, accuracy: 0, attempt_id: result.insertId });
+  } catch (err) {
+    if (err.errno === 1054 && err.sqlMessage && err.sqlMessage.includes("cheating")) {
+      const attemptNow = nowPhilippineDatetime();
+      const [result] = await pool.query(
+        `INSERT INTO pronunciation_quiz_attempts (student_id, quiz_id, class_id, start_time, end_time, status, score, pronunciation_score, total_points)
+         VALUES (?, ?, ?, ?, ?, 'completed', 0, 0, 100)`,
+        [student_id, quiz_id, classIdParam, attemptNow, attemptNow]
+      );
+      res.json({ success: true, accuracy: 0, attempt_id: result.insertId });
+    } else {
+      console.error("❌ Pronunciation void error:", err);
+      res.status(500).json({ success: false, message: "Database error" });
+    }
+  }
+});
+
 // ==================== Handle Pronunciation Quiz Submission ====================
 router.post("/api/pronunciation-submit", upload.any(), async (req, res) => {
   const pool = req.pool;
 
   try {
-    const { student_id, quiz_id, class_id } = req.body;
+    const { student_id, quiz_id, class_id, cheating_violations, cheating_voided } = req.body;
     const files = req.files;
     const classIdParam = class_id != null && class_id !== "" ? Number(class_id) : null;
+    const violations = Number(cheating_violations) || 0;
+    const voided = !!cheating_voided;
 
     if (!files || files.length === 0) {
       return res.status(400).json({ success: false, message: "No audio files uploaded" });
@@ -616,15 +653,23 @@ router.post("/api/pronunciation-submit", upload.any(), async (req, res) => {
       );
     }
 
-    // 4️⃣ Compute overall accuracy
-    const avgAccuracy = (totalAccuracy / answerCount).toFixed(2);
-
-    await pool.query(
-      `UPDATE pronunciation_quiz_attempts
-         SET score = ?, pronunciation_score = ?, total_points = ?, end_time = ?, status = 'completed'
-       WHERE attempt_id = ?`,
-      [avgAccuracy, avgAccuracy, 100, nowPhilippineDatetime(), attempt_id]
-    );
+    // 4️⃣ Compute overall accuracy (0 if voided)
+    const avgAccuracy = voided ? 0 : (totalAccuracy / answerCount).toFixed(2);
+    try {
+      await pool.query(
+        `UPDATE pronunciation_quiz_attempts
+           SET score = ?, pronunciation_score = ?, total_points = ?, end_time = ?, status = 'completed', cheating_violations = ?, cheating_voided = ?
+         WHERE attempt_id = ?`,
+        [avgAccuracy, avgAccuracy, 100, nowPhilippineDatetime(), violations, voided ? 1 : 0, attempt_id]
+      );
+    } catch (colErr) {
+      if (colErr.errno === 1054 && colErr.sqlMessage && colErr.sqlMessage.includes("cheating")) {
+        await pool.query(
+          `UPDATE pronunciation_quiz_attempts SET score = ?, pronunciation_score = ?, total_points = ?, end_time = ?, status = 'completed' WHERE attempt_id = ?`,
+          [avgAccuracy, avgAccuracy, 100, nowPhilippineDatetime(), attempt_id]
+        );
+      } else throw colErr;
+    }
 
     // 5️⃣ Unlock next quiz in the subject track if passed
     let unlockedNext = false;
@@ -750,6 +795,8 @@ router.get("/api/teacher/pronunciation-attempts", async (req, res) => {
         a.score,
         a.pronunciation_score,
         a.status,
+        a.cheating_violations,
+        a.cheating_voided,
         a.start_time,
         a.end_time,
         sc.status AS class_status

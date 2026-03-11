@@ -195,7 +195,7 @@
     function formatPoints(value) {
         const n = Number(value);
         if (!Number.isFinite(n)) return "";
-        return Number.isInteger(n) ? String(n) : n.toFixed(1).replace(/\.0$/, "");
+        return String(Math.round(n));
     }
 
     function toScoreFraction(quiz) {
@@ -323,7 +323,7 @@
         }
 
         const selectedClass = JSON.parse(localStorage.getItem("eel_selected_class") || "{}");
-        const classId = selectedClass?.id || selectedClass?.class_id;
+        const classId = selectedClass?.id || selectedClass?.class_id || localStorage.getItem("eel_selected_class_id") || null;
         let url = API_BASE + "/api/my-progress?student_id=" + encodeURIComponent(studentId);
         if (classId) url += "&class_id=" + encodeURIComponent(classId);
 

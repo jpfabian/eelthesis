@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Deleted Classes - EEL</title>
+    <title>Archived Classes - EEL</title>
     <link rel="icon" href="image/eel-character.png" type="image/png">
     <link rel="stylesheet" href="css/styles.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.1/lucide.min.css" rel="stylesheet">
@@ -18,7 +18,7 @@
     <div id="loading-screen" class="loading-screen">
         <div class="loading-content">
             <div class="loading-spinner"></div>
-            <p>Loading deleted classes...</p>
+            <p>Loading archived classes...</p>
         </div>
     </div>
 
@@ -44,8 +44,8 @@
                         <i data-lucide="trash-2" class="size-8"></i>
                     </div>
                     <div>
-                        <h1 class="page-header-title">Deleted Classes Cache</h1>
-                        <p class="page-header-subtitle">Recently deleted class records saved in browser cache.</p>
+                        <h1 class="page-header-title">Archived Classes Cache</h1>
+                        <p class="page-header-subtitle">Recently archived class records saved in browser cache.</p>
                     </div>
                 </header>
 
@@ -65,7 +65,7 @@
                             <table class="scores-table" id="deleted-classes-table">
                                 <thead>
                                     <tr>
-                                        <th>Deleted At</th>
+                                        <th>Archived At</th>
                                         <th>Class Name</th>
                                         <th>Section</th>
                                         <th>Subject</th>
@@ -228,7 +228,7 @@
             });
 
             if (!rows.length) {
-                tbody.innerHTML = `<tr><td colspan="6" class="scores-section-message">No deleted class records found.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="scores-section-message">No archived class records found.</td></tr>`;
                 return;
             }
 
@@ -289,8 +289,8 @@
                     clearBtn.addEventListener("click", async () => {
                         const result = await Swal.fire({
                             icon: "warning",
-                            title: "Clear deleted class cache?",
-                            text: "This will remove all cached deleted class records in this browser.",
+                            title: "Clear archived class cache?",
+                            text: "This will remove all cached archived class records in this browser.",
                             showCancelButton: true,
                             confirmButtonText: "Clear",
                             cancelButtonText: "Cancel",
@@ -300,7 +300,7 @@
                         localStorage.removeItem(DELETED_CLASSES_CACHE_KEY);
                         __deletedClassRows = [];
                         renderDeletedClassCache("");
-                        if (typeof showNotification === "function") showNotification("Deleted class cache cleared.", "success");
+                        if (typeof showNotification === "function") showNotification("Archived class cache cleared.", "success");
                     });
                 }
             } catch (err) {
