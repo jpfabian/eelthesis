@@ -1162,7 +1162,7 @@ async function toggleRecording() {
 
     if (!canUseMicrophone()) {
         showNotification(
-            'Voice recording requires HTTPS. Please access this site via https:// (e.g. https://your-domain.com). On AWS EC2, use a reverse proxy (Nginx, Caddy) with SSL.',
+            'Voice recording requires HTTPS. Use https:// instead of http:// (see DEPLOYMENT-EC2.md for setup).',
             'error'
         );
         return;
@@ -1275,7 +1275,7 @@ async function toggleRecording() {
             } else if (err.name === 'NotFoundError') {
                 msg = "No microphone found. Please connect a microphone and try again.";
             } else if (err.name === 'SecurityError' || !window.isSecureContext) {
-                msg = "Voice recording requires HTTPS. Access this site via https:// (e.g. https://your-domain.com).";
+                msg = "Voice recording requires HTTPS. Use https:// instead of http://.";
             } else if (err.message) {
                 msg = err.message;
             }
