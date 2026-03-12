@@ -544,9 +544,11 @@
 
   function exitFullscreen() {
     try {
-      if (document.exitFullscreen) document.exitFullscreen();
-      else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
-      else if (document.msExitFullscreen) document.msExitFullscreen();
+      var p;
+      if (document.exitFullscreen) p = document.exitFullscreen();
+      else if (document.webkitExitFullscreen) p = document.webkitExitFullscreen();
+      else if (document.msExitFullscreen) p = document.msExitFullscreen();
+      if (p && typeof p.catch === "function") p.catch(function () {});
     } catch (e) {}
   }
 

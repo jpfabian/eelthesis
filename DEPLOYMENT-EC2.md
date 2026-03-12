@@ -229,7 +229,7 @@ mkdir -p /home/ubuntu/eelthesis/js-back-end/uploads
 
 | Step | Done |
 |------|------|
-| EC2 security group: 22 (SSH), 80 (HTTP) | ☐ |
+| EC2 security group: 22 (SSH), 80 (HTTP), 443 (HTTPS if using voice recording) | ☐ |
 | RDS security group: 3306 from EC2 SG | ☐ |
 | Node.js & nginx installed | ☐ |
 | Project on server (git or scp) | ☐ |
@@ -258,18 +258,84 @@ pm2 restart eel-api
 
 The pronunciation quiz uses the browser's microphone API (`getUserMedia`, `MediaRecorder`). Browsers block these on **HTTP** for security—they only work on **HTTPS** or `localhost`.
 
-If the record button does nothing on EC2, the app is likely served over HTTP. You must enable HTTPS:
+### Option A: Self-signed certificate (works with IP only, no domain)
 
-1. **Get a domain** (e.g. `eel.yourdomain.com`) and point it to your EC2 IP.
-2. **Install Certbot** and obtain a free SSL certificate:
+**Example:** Your app is at `http://13.239.11.77/`. Run these steps on your EC2 server:
+
+```bash
+# 1. Create SSL directory and generate self-signed cert (valid 365 days)
+sudo mkdir -p /etc/nginx/ssl
+sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+  -keyout /etc/nginx/ssl/eel.key \
+  -out /etc/nginx/ssl/eel.crt \
+  -subj "/CN=13.239.11.77" \
+  -addext "subjectAltName=IP:13.239.11.77"
+
+# 2. Open port 443 in AWS Security Group
+#    EC2 → Security Groups → your instance → Edit inbound rules → Add HTTPS (443) from 0.0.0.0/0
+
+# 3. Update nginx config
+sudo nano /etc/nginx/sites-available/eel
+```
+
+Replace the content with (use your actual IP):
+
+```nginx
+server {
+    listen 80;
+    server_name 13.239.11.77;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name 13.239.11.77;
+
+    ssl_certificate     /etc/nginx/ssl/eel.crt;
+    ssl_certificate_key /etc/nginx/ssl/eel.key;
+
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+```
+
+```bash
+# 4. Test and reload nginx
+sudo nginx -t
+sudo systemctl reload nginx
+
+# 5. Update .env in js-back-end
+#    Add ALLOWED_ORIGINS=http://13.239.11.77,https://13.239.11.77
+#    (or replace with your IP)
+nano /home/ubuntu/eelthesis/js-back-end/.env
+
+# 6. Restart the API
+pm2 restart eel-api
+```
+
+**Access:** `https://13.239.11.77` — browser will show "Your connection is not private". Click **Advanced** → **Proceed to 13.239.11.77 (unsafe)**. After that, voice recording will work.
+
+---
+
+### Option B: Domain + Let's Encrypt (free trusted cert, no browser warning)
+
+1. Get a domain (e.g. `eel.yourdomain.com`) and point it to your EC2 IP.
+2. Install Certbot and obtain a free SSL certificate:
    ```bash
    sudo apt install certbot python3-certbot-nginx -y
    sudo certbot --nginx -d eel.yourdomain.com
    ```
-3. **Update nginx** so Certbot adds HTTPS. Access the app via `https://eel.yourdomain.com`.
-4. **Update `.env`** `ALLOWED_ORIGINS` to include `https://eel.yourdomain.com`, then `pm2 restart eel-api`.
-
-Without HTTPS, the record button will show an error: *"Voice recording requires HTTPS. Please access this site via https://"*.
+3. Access the app via `https://eel.yourdomain.com`.
+4. Update `.env` `ALLOWED_ORIGINS` to include `https://eel.yourdomain.com`, then `pm2 restart eel-api`.
 
 ---
 
@@ -277,5 +343,6 @@ Without HTTPS, the record button will show an error: *"Voice recording requires 
 
 - **502 Bad Gateway:** Node not running or not on port 3000 → `pm2 status` and `pm2 logs eel-api`.
 - **CORS / login fails:** Ensure `ALLOWED_ORIGINS=http://YOUR_EC2_IP` in `.env` (no trailing slash, correct IP), then `pm2 restart eel-api`.
+- **403 on /api/teacher/reading-quiz-attempts:** (1) Add `http://YOUR_EC2_IP` to `ALLOWED_ORIGINS` in `.env`, then `pm2 restart eel-api`. (2) Or the quiz may be not yet open, already closed, or already taken—check unlock/lock times in the teacher dashboard.
 - **Cannot connect to database:** Check RDS security group allows 3306 from EC2; check DB host/user/password in your app config (e.g. in `server.js` or env).
 - **Static files or PDFs 404:** Ensure `uploads` and other static paths exist under the project directory that Node uses.
