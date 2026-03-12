@@ -192,17 +192,17 @@ router.get("/api/reading-quizzes", async (req, res) => {
         [studentId]
       );
 
+      const nowStr = nowPhilippineDatetime();
       quizzes.forEach(quiz => {
         const attempt = attempts.find(a => a.quiz_id === quiz.quiz_id);
-        const now = new Date();
+        const endStr = attempt?.end_time ? String(attempt.end_time).replace("T", " ").slice(0, 19) : null;
+        const unlockStr = quiz.unlock_time ? String(quiz.unlock_time).replace("T", " ").slice(0, 19) : null;
+        const lockStr = quiz.lock_time ? String(quiz.lock_time).replace("T", " ").slice(0, 19) : null;
 
         if (attempt) {
-          const endTime = attempt.end_time ? new Date(attempt.end_time) : null;
-          quiz.is_locked = endTime && now > endTime;
+          quiz.is_locked = endStr ? nowStr > endStr : false;
         } else {
-          const unlock = quiz.unlock_time ? new Date(quiz.unlock_time) : null;
-          const lock = quiz.lock_time ? new Date(quiz.lock_time) : null;
-          quiz.is_locked = !(unlock && now >= unlock && (!lock || now <= lock));
+          quiz.is_locked = !(unlockStr && nowStr >= unlockStr && (!lockStr || nowStr <= lockStr));
         }
       });
     }
@@ -400,9 +400,9 @@ router.get("/api/teacher/reading-quizzes/:quizId/review", async (req, res) => {
 
     const asTeacher = String(req.query.as_teacher || "").toLowerCase() === "1" || req.query.as_teacher === "true";
     if (!asTeacher) {
-      const now = new Date();
-      const lockTime = quiz.lock_time ? new Date(quiz.lock_time) : null;
-      if (lockTime && now <= lockTime) {
+      const nowStr = nowPhilippineDatetime();
+      const lockStr = quiz.lock_time ? String(quiz.lock_time).replace("T", " ").slice(0, 19) : null;
+      if (lockStr && nowStr <= lockStr) {
         return res.status(403).json({ success: false, error: "Review is available after the quiz schedule has ended." });
       }
     }
@@ -625,11 +625,11 @@ router.post("/api/teacher/reading-quiz-attempts", async (req, res) => {
       [quiz_id]
     );
     if (!quiz) return res.status(404).json({ success: false, error: "Quiz not found" });
-    const now = new Date();
-    const unlockTime = quiz.unlock_time ? new Date(quiz.unlock_time) : null;
-    const lockTime = quiz.lock_time ? new Date(quiz.lock_time) : null;
-    if (unlockTime && now < unlockTime) return res.status(403).json({ success: false, error: "Quiz is not yet open." });
-    if (lockTime && now > lockTime) return res.status(403).json({ success: false, error: "Quiz has closed." });
+    const nowStr = nowPhilippineDatetime();
+    const unlockStr = quiz.unlock_time ? String(quiz.unlock_time).replace("T", " ").slice(0, 19) : null;
+    const lockStr = quiz.lock_time ? String(quiz.lock_time).replace("T", " ").slice(0, 19) : null;
+    if (unlockStr && nowStr < unlockStr) return res.status(403).json({ success: false, error: "Quiz is not yet open." });
+    if (lockStr && nowStr > lockStr) return res.status(403).json({ success: false, error: "Quiz has closed." });
 
     let existing;
     try {
