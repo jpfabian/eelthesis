@@ -166,6 +166,19 @@
     prompt.className = "text-muted-foreground text-center py-6";
     prompt.textContent = "Read the passage above. Click Next when you're ready to answer the questions.";
     container.appendChild(prompt);
+    var warning = document.createElement("div");
+    warning.style.margin = "0 auto 0.75rem";
+    warning.style.maxWidth = "760px";
+    warning.style.padding = "0.65rem 0.85rem";
+    warning.style.borderRadius = "0.6rem";
+    warning.style.border = "1px solid rgba(245, 158, 11, 0.45)";
+    warning.style.background = "rgba(245, 158, 11, 0.12)";
+    warning.style.color = "#92400e";
+    warning.style.fontSize = "0.86rem";
+    warning.style.fontWeight = "600";
+    warning.style.textAlign = "center";
+    warning.textContent = "Warning: Once you continue to questions, you cannot go back to the reading passage.";
+    container.appendChild(warning);
     if (prevBtn) {
       prevBtn.disabled = true;
       prevBtn.style.opacity = "0.5";
@@ -230,8 +243,10 @@
     }
     var total = quizData ? quizData.questions.length : 0;
     if (prevBtn) {
-      prevBtn.disabled = false;
-      prevBtn.style.opacity = "1";
+      // Prevent going back to passage after entering questions.
+      var canGoPrev = currentQuestionIndex > 0;
+      prevBtn.disabled = !canGoPrev;
+      prevBtn.style.opacity = canGoPrev ? "1" : "0.5";
       prevBtn.classList.remove("hidden");
       prevBtn.innerHTML = "<i data-lucide=\"chevron-left\" class=\"size-4\"></i> Previous";
     }
@@ -276,12 +291,7 @@
 
   function prevQuestion() {
     if (!quizData || !quizData.questions.length) return;
-    if (currentQuestionIndex === 0) {
-      saveCurrentAnswer();
-      currentQuestionIndex = -1;
-      showPassageOnlyView();
-      return;
-    }
+    if (currentQuestionIndex === 0) return;
     if (currentQuestionIndex > 0) {
       saveCurrentAnswer();
       currentQuestionIndex--;

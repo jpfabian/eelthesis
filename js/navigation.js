@@ -370,7 +370,7 @@ function setupSidebar(user, currentPage) {
             title: "Reports",
             items: [
                 { id: 'student-progress', label: 'Student Statistics', icon: 'users', url: 'student-progress.html' },
-                { id: 'deleted-ai-quizzes', label: 'Archived AI Quizzes', icon: 'archive', url: 'deleted-ai-quizzes.html' },
+                { id: 'deleted-ai-quizzes', label: 'Quiz & Exam Archive', icon: 'archive', url: 'deleted-ai-quizzes.html' },
             ]
         });
     } else {

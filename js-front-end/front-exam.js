@@ -275,6 +275,9 @@ function setupExamGenerator() {
     let subject = selectedClass ? selectedClass.subject : "Unknown Subject";
     subject = subject.split(" ").map(w => w[0].toUpperCase() + w.slice(1)).join(" ");
 
+    const examTitleInput = document.getElementById("exam-title-input");
+    const examTitle = examTitleInput ? examTitleInput.value.trim() : "";
+
     // ✅ Prepare data for backend
     const bodyData = {
       subject,
@@ -283,6 +286,7 @@ function setupExamGenerator() {
       questionTypes,
     };
     if (tosLevels.length > 0) bodyData.tos_levels = tosLevels;
+    if (examTitle) bodyData.title = examTitle;
 
     try {
       const res = await fetch((window.API_BASE || "") + "/api/generate-exam", {
@@ -296,7 +300,7 @@ function setupExamGenerator() {
       if (data.exam) {
         // ❌ Removed auto-save here
         // ✅ Show preview first (edit/save manually)
-        showExamPreview(data.exam, subject, selectedTopics, questionTypes);
+        showExamPreview(data.exam, subject, selectedTopics, questionTypes, examTitle);
         showNotification("✅ Exam successfully generated! You can edit and save it now.");
       } else {
         showNotification("⚠️ Failed to generate exam.");
@@ -313,7 +317,7 @@ function setupExamGenerator() {
 }
 
 // ✅ Show generated exam with Edit/Save logic
-function showExamPreview(examText, subject, selectedTopics, questionTypes) {
+function showExamPreview(examText, subject, selectedTopics, questionTypes, examTitle) {
   const container = document.getElementById("generatedExamContainer");
   const content = document.getElementById("generatedExamContent");
   const editBtn = document.getElementById("editExamBtn");
@@ -323,6 +327,8 @@ function showExamPreview(examText, subject, selectedTopics, questionTypes) {
     console.error("❌ Exam preview container not found!");
     return;
   }
+
+  const displayTitle = (examTitle && examTitle.trim()) ? examTitle.trim() : `${subject} – Examination`;
 
   // ✅ Professional exam document – paper-style, export-ready layout
   const headerHTML = `
@@ -334,7 +340,7 @@ function showExamPreview(examText, subject, selectedTopics, questionTypes) {
       <p class="exam-doc-school">NORZAGARAY NATIONAL HIGH SCHOOL</p>
       <p class="exam-doc-address">A. Villarama St., Poblacion, Norzagaray, Bulacan</p>
       <hr class="exam-doc-rule">
-      <h1 class="exam-doc-title">${subject} – Examination</h1>
+      <h1 class="exam-doc-title">${displayTitle.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</h1>
       <div class="exam-doc-meta">
         <div class="exam-doc-meta-row">
           <span class="exam-doc-meta-label">Name:</span>
@@ -419,12 +425,15 @@ function showExamPreview(examText, subject, selectedTopics, questionTypes) {
     }
 
     try {
+      const examTitleEl = document.getElementById("exam-title-input");
+      const saveTitle = (examTitleEl && examTitleEl.value.trim()) || selectedTopics.join(", ") || "AI Generated Exam";
+
       const res = await fetch((window.API_BASE || "") + "/api/save-exam", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          class_id: classId, // ✅ now defined
-          title: selectedTopics.join(", ") || "AI Generated Exam",
+          class_id: classId,
+          title: saveTitle,
           content: updatedContent,
           question_count: questionTypes.reduce((sum, q) => sum + q.count, 0),
           types: questionTypes.map(q => `${q.type} (${q.count})`).join(", "),
@@ -462,11 +471,39 @@ function showExamPreview(examText, subject, selectedTopics, questionTypes) {
   };
 }
 
+const EXAM_LIST_VIEW_KEY = "eel_exam_list_view";
+
+function setupExamListViewToggle() {
+  const container = document.getElementById("exam-list");
+  const btnList = document.querySelector(".exam-list-view-btn[data-view='list']");
+  const btnGrid = document.querySelector(".exam-list-view-btn[data-view='grid']");
+  if (!container || !btnList || !btnGrid) return;
+
+  const saved = (localStorage.getItem(EXAM_LIST_VIEW_KEY) || "list").toLowerCase();
+  const isList = saved !== "grid";
+
+  function setView(listView) {
+    container.classList.remove("exam-list-view-list", "exam-list-view-grid");
+    container.classList.add(listView ? "exam-list-view-list" : "exam-list-view-grid");
+    btnList.classList.toggle("active", listView);
+    btnList.setAttribute("aria-pressed", listView ? "true" : "false");
+    btnGrid.classList.toggle("active", !listView);
+    btnGrid.setAttribute("aria-pressed", !listView ? "true" : "false");
+    localStorage.setItem(EXAM_LIST_VIEW_KEY, listView ? "list" : "grid");
+  }
+
+  setView(isList);
+
+  btnList.addEventListener("click", () => setView(true));
+  btnGrid.addEventListener("click", () => setView(false));
+}
+
 // ✅ Initialize
 document.addEventListener("DOMContentLoaded", () => {
   loadLessonsAndTopics();
   setupExamGenerator();
   loadExams();
+  setupExamListViewToggle();
 });
 
 async function loadExams() {
@@ -498,8 +535,21 @@ async function loadExams() {
 
       examCard.innerHTML = `
         <div class="exam-list-card-top">
-          <span class="exam-list-card-badge">${capitalizeWords(exam.subject_name)}</span>
-          <h4 class="exam-list-card-title">${exam.title || 'Untitled Exam'}</h4>
+          <div class="exam-list-card-header-row">
+            <span class="exam-list-card-badge">${capitalizeWords(exam.subject_name)}</span>
+            <div class="exam-list-card-menu-wrap">
+              <button type="button" class="exam-list-card-menu-btn" aria-label="More options">
+                <i data-lucide="more-vertical" class="size-4"></i>
+              </button>
+              <div class="exam-list-card-dropdown hidden">
+                <button type="button" class="exam-list-card-archive-option">
+                  <i data-lucide="archive" class="size-4"></i>
+                  Archive
+                </button>
+              </div>
+            </div>
+          </div>
+          <h4 class="exam-list-card-title">${(exam.title || 'Untitled Exam').replace(/</g, "&lt;").replace(/>/g, "&gt;")}</h4>
           <p class="exam-list-card-meta">
             <span>Class: <strong>${exam.class_name} – ${exam.class_section}</strong></span>
             <span>Questions: <strong>${exam.question_count}</strong></span>
@@ -507,8 +557,10 @@ async function loadExams() {
           </p>
         </div>
         <div class="exam-list-card-actions">
-          <button type="button" class="export-btn exam-list-export-btn" title="Export to Excel"><i data-lucide="download" class="size-4"></i> Export</button>
-          <button type="button" class="cache-btn exam-list-cache-btn" title="Move to cache"><i data-lucide="archive" class="size-4"></i> Move to Cache</button>
+          <button type="button" class="export-btn exam-list-export-btn" title="Export to Excel">
+            <i data-lucide="download" class="size-4"></i>
+            Export
+          </button>
         </div>
       `;
 
@@ -517,18 +569,50 @@ async function loadExams() {
 
     lucide.createIcons({ icons: lucide.icons });
 
-    // Event delegation for buttons (click on button or icon inside)
-    examListContainer.addEventListener("click", (e) => {
-      const card = e.target.closest("div[data-id]");
-      if (!card) return;
-      const examId = card.dataset.id;
-      if (e.target.closest(".export-btn")) {
-        exportExamExcel(examId);
-      } else if (e.target.closest(".cache-btn")) {
-        moveExamToCache(examId);
-      }
-    });
+    // Single delegation (no duplicate listeners)
+    if (!examListContainer._examDelegationBound) {
+      examListContainer._examDelegationBound = true;
 
+      // Handle clicks on export, menu, archive option
+      examListContainer.addEventListener("click", (e) => {
+        const card = e.target.closest(".exam-list-card");
+        if (!card) return;
+        const examId = card.dataset.id;
+
+        const menuBtn = e.target.closest(".exam-list-card-menu-btn");
+        if (menuBtn) {
+          e.preventDefault();
+          const wrap = card.querySelector(".exam-list-card-menu-wrap");
+          const dropdown = wrap && wrap.querySelector(".exam-list-card-dropdown");
+          const isOpen = dropdown && !dropdown.classList.contains("hidden");
+          document.querySelectorAll(".exam-list-card-dropdown").forEach(d => d.classList.add("hidden"));
+          if (dropdown && !isOpen) dropdown.classList.remove("hidden");
+          return;
+        }
+
+        const archiveBtn = e.target.closest(".exam-list-card-archive-option");
+        if (archiveBtn) {
+          e.preventDefault();
+          document.querySelectorAll(".exam-list-card-dropdown").forEach(d => d.classList.add("hidden"));
+          confirmArchiveExam(examId);
+          return;
+        }
+
+        if (e.target.closest(".export-btn")) {
+          exportExamExcel(examId);
+        }
+      });
+
+      // Close dropdown when clicking outside any menu
+      if (!document._examListMenuOutsideBound) {
+        document._examListMenuOutsideBound = true;
+        document.addEventListener("click", (e) => {
+          if (!e.target.closest(".exam-list-card-menu-wrap")) {
+            document.querySelectorAll(".exam-list-card-dropdown").forEach(d => d.classList.add("hidden"));
+          }
+        });
+      }
+    }
   } catch (err) {
     console.error("Failed to load exams:", err);
   }
@@ -551,36 +635,51 @@ async function exportExamExcel(id) {
   XLSX.writeFile(wb, `exam-${id}.xlsx`);
 }
 
-// ✅ Move exam to cache and show proper message
+// ✅ Confirm archive with SweetAlert, then move exam to cache
+function confirmArchiveExam(id) {
+  if (typeof Swal === "undefined" || !Swal.fire) {
+    if (window.confirm("Archive this exam? It will be moved to the archive and removed from the exam list.")) {
+      moveExamToCache(id);
+    }
+    return;
+  }
+  Swal.fire({
+    title: "Archive exam?",
+    text: "This exam will be moved to the archive and removed from the exam list. You can view it later in Quiz & Exam Archive.",
+    icon: "question",
+    showCancelButton: true,
+    confirmButtonText: "Archive",
+    cancelButtonText: "Cancel",
+    confirmButtonColor: "#dc2626",
+    cancelButtonColor: "#6b7280"
+  }).then((result) => {
+    if (result.isConfirmed) moveExamToCache(id);
+  });
+}
+
+// ✅ Move exam to cache (archive) and refresh list
 function moveExamToCache(id) {
-  fetch(`${window.API_BASE || ""}/api/move-exam-to-cache/${id}`, { method: "POST" })
+  const user = JSON.parse(localStorage.getItem("eel_user") || "{}");
+  const createdBy = user.user_id || 0;
+
+  fetch(`${window.API_BASE || ""}/api/move-exam-to-cache/${id}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ created_by: createdBy })
+  })
     .then(async res => {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
 
       if (data.success) {
-        showNotification(data.message || "Exam moved to cache successfully!","success");
-        loadExams(); // Refresh list
+        showNotification(data.message || "Exam archived successfully.", "success");
+        loadExams();
       } else {
-        showNotification(data.message || "Failed to move exam.");
+        showNotification(data.message || "Failed to archive exam.");
       }
     })
     .catch(err => {
-      console.error("Error moving exam:", err);
-      showNotification("Something went wrong while moving the exam.");
+      console.error("Error archiving exam:", err);
+      showNotification("Something went wrong while archiving the exam.");
     });
 }
-
-// Button handlers
-document.getElementById("exam-list").addEventListener("click", e => {
-  const id = e.target.dataset.id;
-  if (!id) return;
-
-  if (e.target.classList.contains("export-btn")) {
-    exportExam(id);
-  } else if (e.target.classList.contains("edit-btn")) {
-    editExam(id);
-  } else if (e.target.classList.contains("cache-btn")) {
-    moveExamToCache(id);
-  }
-});

@@ -350,7 +350,7 @@ router.get("/api/my-progress", async (req, res) => {
 // - quizzes: [{ quiz_name, score, raw_score, total_points, display_score, display_total }]
 //   - score is percentage (0-100), kept for compatibility
 //   - display_score/display_total are used for x/y table display
-// - reading_avg, pronunciation_avg, overall_avg
+// - reading_avg, pronunciation_avg, recitation_avg, overall_avg
 // - total (alias of overall_avg, kept for existing UI)
 router.get("/api/class/:classId/average-scores", async (req, res) => {
   const { classId } = req.params;
@@ -487,6 +487,33 @@ router.get("/api/class/:classId/average-scores", async (req, res) => {
       }
     }
 
+    // 3.4) Recitation scores (1 point per question) — optional table
+    // Aggregate by student + topic so points are accumulated across different sessions.
+    let recitation = [];
+    try {
+      const [recRows] = await pool.query(
+        `
+        SELECT rs.student_id,
+               rs.topic_id,
+               COALESCE(NULLIF(TRIM(t.topic_title), ''), 'Recitation Session') AS quiz_name,
+               SUM(COALESCE(rs.points_earned, 0)) AS raw_score,
+               SUM(COALESCE(rs.points_possible, 1)) AS total_points,
+               ROUND((SUM(COALESCE(rs.points_earned, 0)) / NULLIF(SUM(COALESCE(rs.points_possible, 1)), 0)) * 100, 1) AS score,
+               MAX(rs.created_at) AS end_time
+        FROM recitation_scores rs
+        LEFT JOIN topics t ON t.topic_id = rs.topic_id
+        WHERE rs.class_id = ? AND rs.student_id IN (?)
+        GROUP BY rs.student_id, rs.topic_id, COALESCE(NULLIF(TRIM(t.topic_title), ''), 'Recitation Session')
+        ORDER BY end_time DESC
+        `,
+        [classId, studentIds]
+      );
+      recitation = recRows || [];
+    } catch (e) {
+      if (String(e?.code || "") !== "ER_NO_SUCH_TABLE") throw e;
+      recitation = [];
+    }
+
     // 3.1) Reading answers count per attempt (for real score display like 2/5)
     const readingAttemptIds = reading
       .map((r) => Number(r.attempt_id))
@@ -586,15 +613,34 @@ router.get("/api/class/:classId/average-scores", async (req, res) => {
       }
     }
 
+    const recitationByStudent = new Map();
+    for (const r of recitation) {
+      if (!recitationByStudent.has(r.student_id)) recitationByStudent.set(r.student_id, []);
+      if (r.quiz_name && r.score != null) {
+        const raw = Number(r.raw_score);
+        const total = Number(r.total_points);
+        recitationByStudent.get(r.student_id).push({
+          ...r,
+          source_type: "recitation",
+          source_quiz_id: Number.isFinite(Number(r.topic_id)) ? Number(r.topic_id) : String(r.quiz_name || "recitation"),
+          quiz_order: Number.MAX_SAFE_INTEGER,
+          display_score: Number.isFinite(raw) ? raw : 0,
+          display_total: Number.isFinite(total) ? total : 0,
+        });
+      }
+    }
+
     const result = students.map((s) => {
       const aiScores = (aiByStudent.get(s.student_id) || []).map((x) => Number(x.score)).filter(Number.isFinite);
       const rScores = (readingByStudent.get(s.student_id) || []).map((x) => Number(x.score)).filter(Number.isFinite);
       const pScores = (pronByStudent.get(s.student_id) || []).map((x) => Number(x.score)).filter(Number.isFinite);
-      const allScores = [...aiScores, ...rScores, ...pScores];
+      const recScores = (recitationByStudent.get(s.student_id) || []).map((x) => Number(x.score)).filter(Number.isFinite);
+      const allScores = [...aiScores, ...rScores, ...pScores, ...recScores];
 
       const ai_avg = avg(aiScores);
       const reading_avg = avg(rScores);
       const pronunciation_avg = avg(pScores);
+      const recitation_avg = avg(recScores);
       const overall_avg = avg(allScores);
 
       return {
@@ -605,10 +651,12 @@ router.get("/api/class/:classId/average-scores", async (req, res) => {
           ...(aiByStudent.get(s.student_id) || []),
           ...(readingByStudent.get(s.student_id) || []),
           ...(pronByStudent.get(s.student_id) || []),
+          ...(recitationByStudent.get(s.student_id) || []),
         ],
         ai_avg: ai_avg == null ? null : Math.round(ai_avg * 10) / 10,
         reading_avg: reading_avg == null ? null : Math.round(reading_avg * 10) / 10,
         pronunciation_avg: pronunciation_avg == null ? null : Math.round(pronunciation_avg * 10) / 10,
+        recitation_avg: recitation_avg == null ? null : Math.round(recitation_avg * 10) / 10,
         overall_avg: overall_avg == null ? null : Math.round(overall_avg * 10) / 10,
         total: overall_avg == null ? 0 : Math.round(overall_avg * 10) / 10, // kept for existing UI table footer
       };

@@ -347,6 +347,22 @@
                     <label class="schedule-modal-label" for="lesson-modal-lock-time">Unpublish date & time</label>
                     <input type="datetime-local" id="lesson-modal-lock-time" class="schedule-modal-input">
                 </div>
+                <div class="schedule-modal-connector" aria-hidden="true"></div>
+                <div class="schedule-modal-section">
+                    <h4 class="schedule-modal-section-title"><i data-lucide="refresh-ccw" class="size-4"></i> Retake</h4>
+                    <p class="schedule-modal-hint">When quiz is published again, who can retake?</p>
+                    <label class="schedule-modal-label" for="lesson-modal-retake-option">Retake rule</label>
+                    <select id="lesson-modal-retake-option" class="schedule-modal-input">
+                        <option value="none">No retake</option>
+                        <option value="specific" selected>Specific students</option>
+                        <option value="all">All students</option>
+                    </select>
+                </div>
+                <div id="lesson-specific-students-container" class="schedule-modal-section hidden">
+                    <label class="schedule-modal-label">Select students (checkbox)</label>
+                    <input type="text" id="lesson-specific-students-search" class="schedule-modal-input" placeholder="Search student name...">
+                    <div id="lesson-specific-students-list" class="schedule-modal-specific-list"></div>
+                </div>
                 <div class="schedule-modal-tip" role="status">
                     <i data-lucide="info" class="size-4 schedule-modal-tip-icon"></i>
                     <p>Publish and unpublish define the availability window. Time limit applies per attempt.</p>
@@ -584,9 +600,9 @@
                         <i data-lucide="refresh-cw" class="size-4"></i>
                         Regenerate
                     </button>
-                    <button type="button" id="lesson-download-ppt-btn" class="btn btn-outline btn-sm lesson-download-btn hidden" onclick="downloadLessonAsPpt()" aria-label="Download as PowerPoint">
+                    <button type="button" id="lesson-download-ppt-btn" class="btn btn-outline btn-sm lesson-download-btn hidden" onclick="downloadLessonAsPpt()" aria-label="Download presentation">
                         <i data-lucide="download" class="size-4"></i>
-                        Download PPT
+                        Download
                     </button>
                     <button class="close-btn lesson-presentation-close" onclick="closeLesson()" aria-label="Close">
                         <i data-lucide="x" class="size-5"></i>

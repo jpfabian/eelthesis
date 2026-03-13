@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Archived AI Quizzes - EEL</title>
+    <title>Quiz & Exam Archive - EEL</title>
     <link rel="icon" href="image/eel-character.png" type="image/png">
     <link rel="stylesheet" href="css/styles.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.1/lucide.min.css" rel="stylesheet">
     <script src="js/theme.js"></script>
 </head>
-<body class="classes-page">
+<body class="classes-page deleted-archive-page">
     <div class="mobile-nav-header" id="mobileNavHeader" role="banner">
         <button type="button" class="mobile-nav-btn mobile-nav-btn--menu" id="mobileNavMenuBtn" aria-label="Open menu"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
         <button type="button" id="eel-theme-header-toggle" class="theme-header-toggle" aria-label="Toggle dark/light mode"><span class="theme-icon" aria-hidden="true">☀</span><span class="theme-label">light</span></button>
@@ -50,10 +50,22 @@
                         <i data-lucide="archive" class="size-8"></i>
                     </div>
                     <div>
-                        <h1 class="page-header-title">Archived AI Quizzes Cache</h1>
-                        <p class="page-header-subtitle">Cached records of archived AI-generated quizzes from this browser.</p>
+                        <h1 class="page-header-title">Quiz &amp; Exam Archive</h1>
+                        <p class="page-header-subtitle">Archived exams from the database and cached AI-generated quizzes from this browser.</p>
                     </div>
                 </header>
+
+                <div class="archive-section-header mt-2">
+                    <div class="page-header-icon" aria-hidden="true">
+                        <i data-lucide="layers" class="size-7"></i>
+                    </div>
+                    <div>
+                        <h2 class="page-header-title text-xl">Quiz Archive</h2>
+                        <p class="page-header-subtitle text-sm">
+                            AI quizzes that were removed and saved in this browser&apos;s archive cache.
+                        </p>
+                    </div>
+                </div>
 
                 <div class="card">
                     <div class="card-content p-4 flex flex-wrap items-center gap-3">
@@ -90,6 +102,56 @@
                         </div>
                     </div>
                 </div>
+
+                <section class="space-y-2">
+                    <div class="archive-section-header mt-4">
+                        <div class="page-header-icon" aria-hidden="true">
+                            <i data-lucide="file-archive" class="size-7"></i>
+                        </div>
+                        <div>
+                            <h2 class="page-header-title text-xl">Exam Archive</h2>
+                            <p class="page-header-subtitle text-sm">
+                                Exams that were removed from classes and archived in the database.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="card mt-2">
+                        <div class="card-content p-4 flex flex-wrap items-center gap-3">
+                            <input id="exam-archive-search" class="form-input" type="search" placeholder="Search title, class, subject..." style="min-width: 340px; flex: 1.6;">
+                            <select id="exam-archive-sort" class="form-input" style="min-width: 170px; max-width: 220px; flex: 0.7;">
+                                <option value="archived_desc">Sort: Latest archived</option>
+                                <option value="archived_asc">Sort: Oldest archived</option>
+                                <option value="title_asc">Sort: Title A-Z</option>
+                                <option value="title_desc">Sort: Title Z-A</option>
+                            </select>
+                            <button id="exam-archive-clear" type="button" class="btn btn-outline">
+                                <i data-lucide="trash" class="size-4"></i>
+                                Clear Cache
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-content p-0">
+                            <div class="scores-table-scroll table-scroll">
+                                <table class="scores-table" id="exam-archive-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Archived At</th>
+                                            <th>Exam Title</th>
+                                            <th>Class</th>
+                                            <th>Subject</th>
+                                            <th>Question Count</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="exam-archive-body"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
             </div>
         </main>
     </div>
@@ -103,6 +165,7 @@
         const DELETED_AI_QUIZZES_CACHE_KEY = "eel_deleted_ai_quizzes_cache_v1";
         let __deletedAIQuizRows = [];
         let __deletedAIQuizUser = null;
+        let __archivedExamRows = [];
 
         function escapeHtml(value) {
             return String(value ?? "")
@@ -450,6 +513,167 @@
             }
         }
 
+        async function fetchArchivedExams(teacherId) {
+            const base = window.API_BASE || "";
+            const url = `${base}/api/archive-exams${teacherId ? `?teacher_id=${encodeURIComponent(teacherId)}` : ""}`;
+            const res = await fetch(url);
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok || !data.success) {
+                console.warn("Failed to load archived exams:", data?.message);
+                return [];
+            }
+            return Array.isArray(data.exams) ? data.exams : [];
+        }
+
+        async function restoreArchivedExam(archiveId) {
+            if (!archiveId) return;
+
+            const user = __deletedAIQuizUser;
+            const teacherId = user?.user_id || null;
+
+            const confirmRestore = async () => {
+                if (typeof Swal === "undefined" || !Swal.fire) {
+                    return window.confirm("Restore this archived exam back to the exam list?");
+                }
+                const result = await Swal.fire({
+                    icon: "question",
+                    title: "Restore exam?",
+                    text: "This will restore the exam back to the Exam List for this class.",
+                    showCancelButton: true,
+                    confirmButtonText: "Restore",
+                    cancelButtonText: "Cancel",
+                    confirmButtonColor: "#16a34a"
+                });
+                return !!result.isConfirmed;
+            };
+
+            const ok = await confirmRestore();
+            if (!ok) return;
+
+            try {
+                const res = await fetch(`${window.API_BASE || ""}/api/archive-exams/${encodeURIComponent(archiveId)}/restore`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ teacher_id: teacherId })
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok || !data.success) {
+                    const msg = data?.message || "Failed to restore exam from archive.";
+                    if (typeof showNotification === "function") showNotification(msg, "error");
+                    return;
+                }
+                if (typeof showNotification === "function") {
+                    showNotification("Exam restored back to Exam List.", "success");
+                }
+
+                // Refresh archived exams list so restored item disappears
+                try {
+                    const teacherId = __deletedAIQuizUser?.user_id || null;
+                    __archivedExamRows = await fetchArchivedExams(teacherId);
+                    renderArchivedExams();
+                } catch (refreshErr) {
+                    console.warn("Failed to refresh archived exams after restore:", refreshErr);
+                }
+            } catch (err) {
+                console.error("Error restoring archived exam:", err);
+                if (typeof showNotification === "function") {
+                    showNotification("Server error while restoring exam.", "error");
+                }
+            }
+        }
+
+        function renderArchivedExams() {
+            const tbody = document.getElementById("exam-archive-body");
+            const searchInput = document.getElementById("exam-archive-search");
+            const sortSelect = document.getElementById("exam-archive-sort");
+            if (!tbody) return;
+
+            const scope = getCurrentClassScope();
+            const q = String(searchInput?.value || "").trim().toLowerCase();
+            const sortKey = String(sortSelect?.value || "archived_desc");
+
+            let rows = __archivedExamRows.filter((row) => {
+                if (scope && scope.classId) {
+                    const inClass = isRowInCurrentClass(
+                        {
+                            class_id: row.class_id,
+                            class_name: row.class_name,
+                            section: row.section,
+                            subject_name: row.subject_name
+                        },
+                        scope
+                    );
+                    if (!inClass) return false;
+                }
+
+                if (!q) return true;
+                return [
+                    row.title,
+                    row.class_name,
+                    row.section,
+                    row.subject_name
+                ].some((v) => String(v || "").toLowerCase().includes(q));
+            });
+
+            rows.sort((a, b) => {
+                if (sortKey === "archived_asc" || sortKey === "archived_desc") {
+                    const ta = new Date(a.archived_at || 0).getTime();
+                    const tb = new Date(b.archived_at || 0).getTime();
+                    if (sortKey === "archived_asc") return ta - tb;
+                    return tb - ta;
+                }
+                const ta = String(a.title || "").toLowerCase();
+                const tb = String(b.title || "").toLowerCase();
+                if (sortKey === "title_asc") return ta.localeCompare(tb);
+                if (sortKey === "title_desc") return tb.localeCompare(ta);
+                return 0;
+            });
+
+            let selectedClassDisplay = null;
+            try {
+                selectedClassDisplay = JSON.parse(localStorage.getItem("eel_selected_class") || "null");
+            } catch (_) {
+                selectedClassDisplay = null;
+            }
+
+            if (!rows.length) {
+                tbody.innerHTML = `<tr><td colspan="6" class="scores-section-message">No archived exams found.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = rows.map((row) => {
+                let classLabel = [row.class_name, row.section].filter(Boolean).join(" ").trim();
+                if (!classLabel && selectedClassDisplay) {
+                    classLabel = [selectedClassDisplay.name, selectedClassDisplay.section].filter(Boolean).join(" ").trim();
+                }
+                if (!classLabel) classLabel = "-";
+
+                const qc = Number(row.question_count || 0);
+                const questionCountLabel = Number.isFinite(qc) && qc > 0 ? qc.toString() : "-";
+                const archiveId = row.archive_id || row.archiveId || "";
+                return `
+                    <tr>
+                        <td>${escapeHtml(formatDateTime(row.archived_at))}</td>
+                        <td>${escapeHtml(row.title || "-")}</td>
+                        <td>${escapeHtml(classLabel)}</td>
+                        <td>${escapeHtml(row.subject_name || selectedClassDisplay?.subject || "-")}</td>
+                        <td>${escapeHtml(questionCountLabel)}</td>
+                        <td>
+                            <button
+                                type="button"
+                                class="btn btn-outline btn-sm exam-archive-restore-btn"
+                                data-archive-id="${escapeHtml(String(archiveId))}"
+                                title="Restore this exam"
+                            >
+                                <i data-lucide="rotate-ccw" class="size-4"></i>
+                                Restore
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join("");
+        }
+
         document.addEventListener("DOMContentLoaded", async () => {
             try {
                 const user = await initializePage();
@@ -465,6 +689,12 @@
 
                 __deletedAIQuizRows = readDeletedAIQuizCache();
                 renderDeletedAIQuizCache();
+                try {
+                    __archivedExamRows = await fetchArchivedExams(user.user_id);
+                    renderArchivedExams();
+                } catch (errExams) {
+                    console.error("Error loading archived exams:", errExams);
+                }
                 hideLoading();
 
                 const backBtn = document.getElementById("back-class-btn");
@@ -492,6 +722,50 @@
                             return;
                         }
                         await restoreDeletedAIQuiz(rowKey);
+                    });
+                }
+
+                const examSearchInput = document.getElementById("exam-archive-search");
+                if (examSearchInput) examSearchInput.addEventListener("input", renderArchivedExams);
+
+                const examSortSelect = document.getElementById("exam-archive-sort");
+                if (examSortSelect) examSortSelect.addEventListener("change", renderArchivedExams);
+
+                const examArchiveClearBtn = document.getElementById("exam-archive-clear");
+                if (examArchiveClearBtn) {
+                    examArchiveClearBtn.addEventListener("click", async () => {
+                        if (typeof Swal !== "undefined" && Swal && typeof Swal.fire === "function") {
+                            const result = await Swal.fire({
+                                icon: "warning",
+                                title: "Clear exam archive filters?",
+                                text: "This will reset search and sorting for the Exam Archive list.",
+                                showCancelButton: true,
+                                confirmButtonText: "Clear",
+                                cancelButtonText: "Cancel",
+                                confirmButtonColor: "#dc2626"
+                            });
+                            if (!result.isConfirmed) return;
+                        } else {
+                            const ok = window.confirm("Clear exam archive filters (search and sort)?");
+                            if (!ok) return;
+                        }
+
+                        if (examSearchInput) examSearchInput.value = "";
+                        if (examSortSelect) examSortSelect.value = "archived_desc";
+                        renderArchivedExams();
+                        if (typeof showNotification === "function") {
+                            showNotification("Exam archive filters cleared.", "success");
+                        }
+                    });
+                }
+
+                const examArchiveBody = document.getElementById("exam-archive-body");
+                if (examArchiveBody) {
+                    examArchiveBody.addEventListener("click", async (e) => {
+                        const btn = e.target.closest(".exam-archive-restore-btn");
+                        if (!btn) return;
+                        const archiveId = btn.getAttribute("data-archive-id");
+                        await restoreArchivedExam(archiveId);
                     });
                 }
 

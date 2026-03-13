@@ -69,17 +69,20 @@
                     </header>
 
                     <div class="card quiz-page__panel">
+
                         <div class="quiz-page__toolbar">
+                            <div class="quiz-page__builtin-label">
+                                Built-in quizzes
+                            </div>
                             <div class="quiz-page__toolbar-right">
-                                <span class="quiz-page__builtin-label">Built-in Quizzes</span>
                                 <div class="quiz-view-toggle" role="group" aria-label="View mode">
-                                    <button id="quiz-view-grid" type="button" class="btn btn-outline btn-sm">
+                                    <button type="button" id="quiz-view-grid" class="btn btn-sm" title="Grid view">
                                         <i data-lucide="layout-grid" class="size-4"></i>
-                                        Grid
+                                        <span>Grid</span>
                                     </button>
-                                    <button id="quiz-view-list" type="button" class="btn btn-outline btn-sm">
+                                    <button type="button" id="quiz-view-list" class="btn btn-sm" title="List view">
                                         <i data-lucide="list" class="size-4"></i>
-                                        List
+                                        <span>List</span>
                                     </button>
                                 </div>
                             </div>
@@ -686,6 +689,34 @@
                     <i data-lucide="save" class="size-4 mr-2"></i>Save
                 </button>
             </footer>
+        </div>
+    </div>
+
+    <!-- ============================================
+     👁️ STUDENT REVIEW MODAL (Pronunciation)
+     ============================================ -->
+    <div id="student-pron-review-modal" class="modal-overlay hidden">
+        <div class="modal-card lesson-review-modal-card">
+            <div class="modal-header">
+                <h3 class="modal-title"><i data-lucide="eye" class="size-5"></i> Review Quiz</h3>
+                <button class="close-btn" onclick="closeStudentPronunciationReviewModal()" aria-label="Close">
+                    <i data-lucide="x" class="size-5"></i>
+                </button>
+            </div>
+            <div class="modal-content lesson-review-modal-content">
+                <div id="student-pron-review-loading" class="lesson-review-loading">
+                    <div class="loading-spinner"></div>
+                    <p>Loading your answers...</p>
+                </div>
+                <div id="student-pron-review-error" class="lesson-review-error hidden"></div>
+                <div id="student-pron-review-body" class="lesson-review-body hidden">
+                    <div class="quiz-review-inner">
+                        <h3 id="student-pron-review-title" class="quiz-review-title">Pronunciation Review</h3>
+                        <div id="student-pron-review-score" class="quiz-review-score-bar"></div>
+                        <div id="student-pron-review-answers" class="quiz-review-answers"></div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 

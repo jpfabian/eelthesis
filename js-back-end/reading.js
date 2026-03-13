@@ -192,17 +192,17 @@ router.get("/api/reading-quizzes", async (req, res) => {
         [studentId]
       );
 
-      const nowStr = nowPhilippineDatetime();
       quizzes.forEach(quiz => {
         const attempt = attempts.find(a => a.quiz_id === quiz.quiz_id);
-        const endStr = attempt?.end_time ? String(attempt.end_time).replace("T", " ").slice(0, 19) : null;
-        const unlockStr = quiz.unlock_time ? String(quiz.unlock_time).replace("T", " ").slice(0, 19) : null;
-        const lockStr = quiz.lock_time ? String(quiz.lock_time).replace("T", " ").slice(0, 19) : null;
+        const now = new Date();
 
         if (attempt) {
-          quiz.is_locked = endStr ? nowStr > endStr : false;
+          const endTime = attempt.end_time ? new Date(attempt.end_time) : null;
+          quiz.is_locked = endTime && now > endTime;
         } else {
-          quiz.is_locked = !(unlockStr && nowStr >= unlockStr && (!lockStr || nowStr <= lockStr));
+          const unlock = quiz.unlock_time ? new Date(quiz.unlock_time) : null;
+          const lock = quiz.lock_time ? new Date(quiz.lock_time) : null;
+          quiz.is_locked = !(unlock && now >= unlock && (!lock || now <= lock));
         }
       });
     }
@@ -222,6 +222,19 @@ router.get("/api/teacher/reading-quizzes", async (req, res) => {
   const userId = req.query.user_id;
   const subjectId = req.query.subject_id;
   const classId = req.query.class_id != null && req.query.class_id !== "" ? Number(req.query.class_id) : null;
+
+  const queryWithRetry = async (sql, params, retries = 1) => {
+    try {
+      return await pool.query(sql, params);
+    } catch (err) {
+      const code = String(err?.code || "");
+      const retryable = code === "ECONNRESET" || code === "PROTOCOL_CONNECTION_LOST" || code === "ETIMEDOUT";
+      if (retries > 0 && retryable) {
+        return await pool.query(sql, params);
+      }
+      throw err;
+    }
+  };
 
   try {
     let query, params;
@@ -249,13 +262,13 @@ router.get("/api/teacher/reading-quizzes", async (req, res) => {
 
     let quizzes;
     try {
-      [quizzes] = await pool.query(query, params);
+      [quizzes] = await queryWithRetry(query, params);
     } catch (qerr) {
       // Fallback: class_id column may not exist yet (run migrate-teacher-reading-class-id.sql)
       if (qerr.errno === 1054 && qerr.sqlMessage && qerr.sqlMessage.includes("class_id")) {
         const fallbackQuery = query.replace(/\s*AND class_id = \?\s*/gi, " ");
         const fallbackParams = classId != null && Number.isFinite(classId) ? params.slice(0, -1) : params;
-        [quizzes] = await pool.query(fallbackQuery, fallbackParams);
+        [quizzes] = await queryWithRetry(fallbackQuery, fallbackParams);
       } else {
         throw qerr;
       }
@@ -268,7 +281,7 @@ router.get("/api/teacher/reading-quizzes", async (req, res) => {
       else if (quiz.difficulty === 'intermediate') questionTable = 'teacher_reading_intermediate_questions';
       else questionTable = 'teacher_reading_advanced_questions';
 
-      const [questions] = await pool.query(
+      const [questions] = await queryWithRetry(
         `SELECT COUNT(*) AS question_count FROM ${questionTable} WHERE quiz_id = ?`,
         [quiz.quiz_id]
       );
@@ -378,7 +391,44 @@ router.get("/api/teacher/reading-quizzes/completed-by-student", async (req, res)
         throw qerr;
       }
     }
-    res.json({ success: true, quiz_ids: rows.map((r) => r.quiz_id) });
+    let latestAttemptsQuery = `
+      SELECT a.quiz_id, a.attempt_id, a.start_time, a.end_time, a.score, a.total_points
+      FROM teacher_reading_quiz_attempts a
+      INNER JOIN (
+        SELECT quiz_id, MAX(attempt_id) AS latest_attempt_id
+        FROM teacher_reading_quiz_attempts
+        WHERE student_id = ? AND status = 'completed'
+        ${classId != null && Number.isFinite(classId) ? "AND class_id = ?" : ""}
+        GROUP BY quiz_id
+      ) x ON x.latest_attempt_id = a.attempt_id
+    `;
+    const latestParams = classId != null && Number.isFinite(classId) ? [studentId, classId] : [studentId];
+    let latestAttempts;
+    try {
+      [latestAttempts] = await pool.query(latestAttemptsQuery, latestParams);
+    } catch (aerr) {
+      if (aerr.errno === 1054 && aerr.sqlMessage && aerr.sqlMessage.includes("class_id")) {
+        latestAttemptsQuery = `
+          SELECT a.quiz_id, a.attempt_id, a.start_time, a.end_time, a.score, a.total_points
+          FROM teacher_reading_quiz_attempts a
+          INNER JOIN (
+            SELECT quiz_id, MAX(attempt_id) AS latest_attempt_id
+            FROM teacher_reading_quiz_attempts
+            WHERE student_id = ? AND status = 'completed'
+            GROUP BY quiz_id
+          ) x ON x.latest_attempt_id = a.attempt_id
+        `;
+        [latestAttempts] = await pool.query(latestAttemptsQuery, [studentId]);
+      } else {
+        throw aerr;
+      }
+    }
+
+    res.json({
+      success: true,
+      quiz_ids: rows.map((r) => r.quiz_id),
+      latest_attempts: Array.isArray(latestAttempts) ? latestAttempts : []
+    });
   } catch (err) {
     console.error("❌ Completed-by-student error:", err);
     res.status(500).json({ success: false, error: "Database error" });
@@ -400,15 +450,15 @@ router.get("/api/teacher/reading-quizzes/:quizId/review", async (req, res) => {
 
     const asTeacher = String(req.query.as_teacher || "").toLowerCase() === "1" || req.query.as_teacher === "true";
     if (!asTeacher) {
-      const nowStr = nowPhilippineDatetime();
-      const lockStr = quiz.lock_time ? String(quiz.lock_time).replace("T", " ").slice(0, 19) : null;
-      if (lockStr && nowStr <= lockStr) {
+      const now = new Date();
+      const lockTime = quiz.lock_time ? new Date(quiz.lock_time) : null;
+      if (lockTime && now <= lockTime) {
         return res.status(403).json({ success: false, error: "Review is available after the quiz schedule has ended." });
       }
     }
 
     const [[attempt]] = await pool.query(
-      `SELECT attempt_id, score, total_points, start_time, end_time, cheating_violations, cheating_voided
+      `SELECT attempt_id, score, total_points, start_time, end_time
        FROM teacher_reading_quiz_attempts
        WHERE quiz_id = ? AND student_id = ? AND status = 'completed'
        ORDER BY attempt_id DESC LIMIT 1`,
@@ -469,9 +519,7 @@ router.get("/api/teacher/reading-quizzes/:quizId/review", async (req, res) => {
         attempt_id: attempt.attempt_id,
         score: attempt.score,
         total_points: attempt.total_points,
-        end_time: attempt.end_time,
-        cheating_violations: attempt.cheating_violations ?? 0,
-        cheating_voided: !!attempt.cheating_voided
+        end_time: attempt.end_time
       },
       answers
     });
@@ -579,7 +627,7 @@ router.get("/api/teacher/reading-quizzes/:id", async (req, res) => {
 router.patch("/api/teacher/reading-quizzes/:id/schedule", async (req, res) => {
   const pool = req.pool;
   const { id } = req.params;
-  let { unlock_time, lock_time, time_limit } = req.body;
+  let { unlock_time, lock_time, time_limit, retake_option, allowed_students } = req.body;
 
   const toMySqlDateTime = (value) => {
     if (!value) return null;
@@ -595,13 +643,41 @@ router.patch("/api/teacher/reading-quizzes/:id/schedule", async (req, res) => {
     unlock_time = toMySqlDateTime(unlock_time);
     lock_time = toMySqlDateTime(lock_time);
     if (time_limit != null) time_limit = parseInt(time_limit, 10) || null;
+    const retakeOptionNormalized = ["none", "specific", "all"].includes(String(retake_option || "").toLowerCase())
+      ? String(retake_option).toLowerCase()
+      : "specific";
+    const allowedStudentsNormalized = Array.isArray(allowed_students)
+      ? Array.from(new Set(
+        allowed_students
+          .map((v) => Number(v))
+          .filter((n) => Number.isFinite(n) && n > 0)
+      ))
+      : [];
+    const allowedStudentsValue = retakeOptionNormalized === "specific"
+      ? JSON.stringify(allowedStudentsNormalized)
+      : null;
 
-    await pool.query(
-      `UPDATE teacher_reading_quizzes
-       SET unlock_time = ?, lock_time = ?, time_limit = ?
-       WHERE quiz_id = ?`,
-      [unlock_time, lock_time, time_limit, id]
-    );
+    try {
+      await pool.query(
+        `UPDATE teacher_reading_quizzes
+         SET unlock_time = ?, lock_time = ?, time_limit = ?, retake_option = ?, allowed_students = ?
+         WHERE quiz_id = ?`,
+        [unlock_time, lock_time, time_limit, retakeOptionNormalized, allowedStudentsValue, id]
+      );
+    } catch (uErr) {
+      if (uErr.errno === 1054) {
+        try { await pool.query("ALTER TABLE teacher_reading_quizzes ADD COLUMN retake_option VARCHAR(20) NOT NULL DEFAULT 'specific'"); } catch (_) {}
+        try { await pool.query("ALTER TABLE teacher_reading_quizzes ADD COLUMN allowed_students TEXT NULL"); } catch (_) {}
+        await pool.query(
+          `UPDATE teacher_reading_quizzes
+           SET unlock_time = ?, lock_time = ?, time_limit = ?, retake_option = ?, allowed_students = ?
+           WHERE quiz_id = ?`,
+          [unlock_time, lock_time, time_limit, retakeOptionNormalized, allowedStudentsValue, id]
+        );
+      } else {
+        throw uErr;
+      }
+    }
 
     res.json({ success: true, message: "Unlock & lock schedule saved" });
   } catch (err) {
@@ -620,31 +696,46 @@ router.post("/api/teacher/reading-quiz-attempts", async (req, res) => {
     return res.status(400).json({ success: false, error: "student_id and quiz_id are required" });
   }
   try {
-    const [[quiz]] = await pool.query(
-      "SELECT quiz_id, unlock_time, lock_time, time_limit FROM teacher_reading_quizzes WHERE quiz_id = ?",
-      [quiz_id]
-    );
-    if (!quiz) return res.status(404).json({ success: false, error: "Quiz not found" });
-    const nowStr = nowPhilippineDatetime();
-    const unlockStr = quiz.unlock_time ? String(quiz.unlock_time).replace("T", " ").slice(0, 19) : null;
-    const lockStr = quiz.lock_time ? String(quiz.lock_time).replace("T", " ").slice(0, 19) : null;
-    if (unlockStr && nowStr < unlockStr) return res.status(403).json({ success: false, error: "Quiz is not yet open." });
-    if (lockStr && nowStr > lockStr) return res.status(403).json({ success: false, error: "Quiz has closed." });
-
-    let existing;
+    let quiz;
     try {
-      [[existing]] = await pool.query(
-        `SELECT attempt_id FROM teacher_reading_quiz_attempts
+      [[quiz]] = await pool.query(
+        "SELECT quiz_id, unlock_time, lock_time, time_limit, retake_option, allowed_students FROM teacher_reading_quizzes WHERE quiz_id = ?",
+        [quiz_id]
+      );
+    } catch (qerr) {
+      const msg = String(qerr?.sqlMessage || "");
+      if (qerr.errno === 1054 && (msg.includes("retake_option") || msg.includes("allowed_students"))) {
+        [[quiz]] = await pool.query(
+          "SELECT quiz_id, unlock_time, lock_time, time_limit FROM teacher_reading_quizzes WHERE quiz_id = ?",
+          [quiz_id]
+        );
+      } else {
+        throw qerr;
+      }
+    }
+    if (!quiz) return res.status(404).json({ success: false, error: "Quiz not found" });
+    const now = new Date();
+    const unlockTime = quiz.unlock_time ? new Date(quiz.unlock_time) : null;
+    const lockTime = quiz.lock_time ? new Date(quiz.lock_time) : null;
+    if (unlockTime && now < unlockTime) return res.status(403).json({ success: false, error: "Quiz is not yet open." });
+    if (lockTime && now > lockTime) return res.status(403).json({ success: false, error: "Quiz has closed." });
+
+    let latestCompleted;
+    try {
+      [[latestCompleted]] = await pool.query(
+        `SELECT attempt_id, score, total_points FROM teacher_reading_quiz_attempts
          WHERE student_id = ? AND quiz_id = ? AND status = 'completed'
            AND (class_id <=> ?)
+         ORDER BY attempt_id DESC
          LIMIT 1`,
         [student_id, quiz_id, classIdParam]
       );
     } catch (qerr) {
       if (qerr.errno === 1054 && qerr.sqlMessage && qerr.sqlMessage.includes("class_id")) {
-        [[existing]] = await pool.query(
-          `SELECT attempt_id FROM teacher_reading_quiz_attempts
+        [[latestCompleted]] = await pool.query(
+          `SELECT attempt_id, score, total_points FROM teacher_reading_quiz_attempts
            WHERE student_id = ? AND quiz_id = ? AND status = 'completed'
+           ORDER BY attempt_id DESC
            LIMIT 1`,
           [student_id, quiz_id]
         );
@@ -652,11 +743,61 @@ router.post("/api/teacher/reading-quiz-attempts", async (req, res) => {
         throw qerr;
       }
     }
-    if (existing) {
-      return res.status(403).json({ success: false, error: "You have already taken this quiz." });
+    if (latestCompleted) {
+      const retakeOption = String(quiz.retake_option || "none").toLowerCase();
+      if (retakeOption === "none") {
+        return res.status(403).json({ success: false, error: "You have already taken this quiz." });
+      }
+      if (retakeOption === "specific") {
+        let allowed = [];
+        const rawAllowed = String(quiz.allowed_students || "").trim();
+        if (rawAllowed) {
+          if (/^\d+$/.test(rawAllowed)) {
+            allowed = [Number(rawAllowed)];
+          } else if (rawAllowed.includes(",") && !rawAllowed.startsWith("[") && !rawAllowed.startsWith("{")) {
+            allowed = rawAllowed.split(",").map((s) => Number(String(s).trim())).filter((n) => Number.isFinite(n));
+          } else {
+            try {
+              const parsed = JSON.parse(rawAllowed);
+              if (Array.isArray(parsed)) allowed = parsed;
+              else if (parsed && typeof parsed === "object") allowed = Object.values(parsed);
+              else allowed = [parsed];
+            } catch (_) {}
+          }
+        }
+        const permitted = allowed.some((id) => Number(id) === Number(student_id));
+        if (!permitted) {
+          return res.status(403).json({
+            success: false,
+            error: "Retake is allowed only for selected students."
+          });
+        }
+      }
     }
 
     const startTime = nowPhilippineDatetime();
+
+    // Retake behavior: reuse latest completed attempt row (update), do not insert a new one.
+    if (latestCompleted && latestCompleted.attempt_id) {
+      await pool.query(
+        `UPDATE teacher_reading_quiz_attempts
+         SET start_time = ?, end_time = NULL, status = 'in_progress', score = NULL, total_points = NULL
+         WHERE attempt_id = ?`,
+        [startTime, latestCompleted.attempt_id]
+      );
+      await pool.query(
+        `DELETE FROM teacher_reading_quiz_answers
+         WHERE attempt_id = ?`,
+        [latestCompleted.attempt_id]
+      );
+      return res.status(201).json({
+        success: true,
+        attempt_id: latestCompleted.attempt_id,
+        start_time: startTime,
+        time_limit: quiz.time_limit || null
+      });
+    }
+
     let result;
     try {
       [result] = await pool.query(
@@ -691,12 +832,10 @@ router.post("/api/teacher/reading-quiz-attempts", async (req, res) => {
 router.patch("/api/teacher/reading-quiz-attempts/:id/submit", async (req, res) => {
   const pool = req.pool;
   const attemptId = Number(req.params.id);
-  const { answers, cheating_violations, cheating_voided } = req.body || {};
+  const { answers } = req.body || {};
   if (!attemptId || !Array.isArray(answers)) {
     return res.status(400).json({ success: false, error: "attempt id and answers array required" });
   }
-  const violations = Number(cheating_violations) || 0;
-  const voided = !!cheating_voided;
   try {
     const [[attempt]] = await pool.query(
       `SELECT a.attempt_id, a.quiz_id, a.student_id, a.start_time, a.status
@@ -768,26 +907,16 @@ router.patch("/api/teacher/reading-quiz-attempts/:id/submit", async (req, res) =
       );
     }
 
-    const finalScore = voided ? 0 : totalScore;
-    try {
-      await pool.query(
-        `UPDATE teacher_reading_quiz_attempts
-         SET end_time = ?, status = 'completed', score = ?, total_points = ?, cheating_violations = ?, cheating_voided = ?
-         WHERE attempt_id = ?`,
-        [endTime, finalScore, totalPoints, violations, voided ? 1 : 0, attemptId]
-      );
-    } catch (colErr) {
-      if (colErr.errno === 1054 && colErr.sqlMessage && colErr.sqlMessage.includes("cheating")) {
-        await pool.query(
-          `UPDATE teacher_reading_quiz_attempts SET end_time = ?, status = 'completed', score = ?, total_points = ? WHERE attempt_id = ?`,
-          [endTime, finalScore, totalPoints, attemptId]
-        );
-      } else throw colErr;
-    }
+    await pool.query(
+      `UPDATE teacher_reading_quiz_attempts
+       SET end_time = ?, status = 'completed', score = ?, total_points = ?
+       WHERE attempt_id = ?`,
+      [endTime, totalScore, totalPoints, attemptId]
+    );
 
     res.json({
       success: true,
-      score: finalScore,
+      score: totalScore,
       total_points: totalPoints,
       end_time: endTime
     });
@@ -1002,12 +1131,34 @@ router.post("/api/reading-quiz-attempts", async (req, res) => {
       });
     }
 
-    // Create a new attempt (first try or retake), scoped to class when provided
+    // Reuse latest completed attempt on retake (update only, no duplicate rows)
     const startTime = new Date();
     const endTime = quiz.time_limit
       ? new Date(startTime.getTime() + quiz.time_limit * 60000)
       : null;
 
+    if (latestCompleted && latestCompleted.attempt_id) {
+      await pool.query(
+        `UPDATE reading_quiz_attempts
+         SET start_time = ?, end_time = ?, status = 'in_progress', score = NULL, total_points = NULL
+         WHERE attempt_id = ?`,
+        [startTime, endTime, latestCompleted.attempt_id]
+      );
+      await pool.query(
+        `DELETE FROM reading_quiz_answers
+         WHERE attempt_id = ?`,
+        [latestCompleted.attempt_id]
+      );
+      return res.json({
+        attempt_id: latestCompleted.attempt_id,
+        start_time: startTime,
+        end_time: endTime,
+        status: 'in_progress',
+        readonly: false
+      });
+    }
+
+    // Create a new attempt (first try), scoped to class when provided
     const [result] = await pool.query(
       `INSERT INTO reading_quiz_attempts (student_id, quiz_id, class_id, start_time, end_time, status)
        VALUES (?, ?, ?, ?, ?, 'in_progress')`,
@@ -1096,9 +1247,6 @@ router.post("/api/reading-quiz-answers", async (req, res) => {
 router.patch("/api/reading-quiz-attempts/:id/submit", async (req, res) => {
   const pool = req.pool;
   const attemptId = req.params.id;
-  const { cheating_violations, cheating_voided } = req.body || {};
-  const violations = Number(cheating_violations) || 0;
-  const voided = !!cheating_voided;
 
   try {
     // 1️⃣ Get quiz attempt and quiz info
@@ -1213,26 +1361,17 @@ router.patch("/api/reading-quiz-attempts/:id/submit", async (req, res) => {
       }
     }
 
-    // 3️⃣ Update attempt summary (cheating_voided overrides score to 0)
-    const finalScore = voided ? 0 : totalScore;
-    try {
-      await pool.query(`
-        UPDATE reading_quiz_attempts
-        SET score = ?, total_points = ?, status = 'completed', end_time = ?, cheating_violations = ?, cheating_voided = ?
-        WHERE attempt_id = ?
-      `, [finalScore, totalPoints, endTime, violations, voided ? 1 : 0, attemptId]);
-    } catch (colErr) {
-      if (colErr.errno === 1054 && colErr.sqlMessage && colErr.sqlMessage.includes("cheating")) {
-        await pool.query(`
-          UPDATE reading_quiz_attempts SET score = ?, total_points = ?, status = 'completed', end_time = ? WHERE attempt_id = ?
-        `, [finalScore, totalPoints, endTime, attemptId]);
-      } else throw colErr;
-    }
+    // 3️⃣ Update attempt summary
+    await pool.query(`
+      UPDATE reading_quiz_attempts
+      SET score = ?, total_points = ?, status = 'completed', end_time = ?
+      WHERE attempt_id = ?
+    `, [totalScore, totalPoints, endTime, attemptId]);
 
-    // 4️⃣ Unlock next quiz in the subject track if passed (not when voided)
+    // 4️⃣ Unlock next quiz in the subject track if passed
     let unlockedNext = false;
     let unlocked_quiz_number = null;
-    const percentScore = totalPoints > 0 ? (Number(finalScore) / Number(totalPoints)) * 100 : 0;
+    const percentScore = totalPoints > 0 ? (Number(totalScore) / Number(totalPoints)) * 100 : 0;
 
     try {
       const [[meta]] = await pool.query(
@@ -1284,7 +1423,7 @@ router.patch("/api/reading-quiz-attempts/:id/submit", async (req, res) => {
       console.warn("⚠️ Unlock progression skipped:", e?.message || e);
     }
 
-    res.json({ success: true, totalScore: finalScore, totalPoints, percentScore: totalPoints > 0 ? (finalScore / totalPoints) * 100 : 0, timeTakenSeconds, unlockedNext, unlocked_quiz_number });
+    res.json({ success: true, totalScore, totalPoints, percentScore, timeTakenSeconds, unlockedNext, unlocked_quiz_number });
 
   } catch (err) {
     console.error("❌ Error submitting quiz:", err);
@@ -1423,8 +1562,6 @@ router.get("/api/teacher/reading-attempts", async (req, res) => {
           a.score,
           a.total_points,
           a.status,
-          a.cheating_violations,
-          a.cheating_voided,
           a.start_time,
           a.end_time,
           sc.status AS class_status
@@ -1451,8 +1588,6 @@ router.get("/api/teacher/reading-attempts", async (req, res) => {
           a.score,
           a.total_points,
           a.status,
-          a.cheating_violations,
-          a.cheating_voided,
           a.start_time,
           a.end_time,
           sc.status AS class_status
@@ -1698,8 +1833,6 @@ router.get("/api/reading-quiz-leaderboard", async (req, res) => {
           a.score,
           a.total_points,
           a.status,
-          a.cheating_violations,
-          a.cheating_voided,
           a.start_time,
           a.end_time,
           TIMESTAMPDIFF(SECOND, a.start_time, a.end_time) AS time_taken_seconds
@@ -1726,8 +1859,6 @@ router.get("/api/reading-quiz-leaderboard", async (req, res) => {
           a.score,
           a.total_points,
           a.status,
-          a.cheating_violations,
-          a.cheating_voided,
           a.start_time,
           a.end_time,
           TIMESTAMPDIFF(SECOND, a.start_time, a.end_time) AS time_taken_seconds
@@ -1753,9 +1884,7 @@ router.get("/api/reading-quiz-leaderboard", async (req, res) => {
         score: Math.round(r.score),
         total_points: Math.round(r.total_points),
         time_taken_seconds: seconds,
-        time_taken: `${h > 0 ? h + 'h ' : ''}${m > 0 ? m + 'm ' : ''}${s}s`,
-        cheating_violations: r.cheating_violations ?? 0,
-        cheating_voided: !!r.cheating_voided
+        time_taken: `${h > 0 ? h + 'h ' : ''}${m > 0 ? m + 'm ' : ''}${s}s`
       };
     });
 

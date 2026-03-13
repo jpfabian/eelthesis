@@ -76,11 +76,11 @@ async function assessPronunciationWithGroq(expectedWord, transcript) {
       messages: [
         {
           role: "system",
-          content: "You are a pronunciation assessment expert. Given the expected word/phrase and the student's transcription, rate pronunciation accuracy from 0 to 100. Reply with ONLY a number. 100 = perfect match, 80-99 = phonetically correct, 50-79 = partially correct, 0-49 = incorrect or unclear.",
+          content: "You are a pronunciation assessment expert for English. Given the expected English word/phrase and the student's transcription (from speech-to-text), rate pronunciation accuracy from 0 to 100. Reply with ONLY a number.\n\nIMPORTANT: The student must say the EXPECTED word in English. Give a LOW score (0-25) if:\n- The student said a different word entirely (e.g. 'komunikasyon' when expected is 'communication')\n- The student said a translation or cognate in another language (e.g. Filipino, Tagalog) instead of the English word\n- The student said a different English word with similar meaning\n\nScoring: 100 = perfect match of the expected word; 80-99 = phonetically correct; 50-79 = partially correct (same word, minor errors); 25-49 = wrong word or heavily mispronounced; 0-24 = completely wrong word, different language, or unrelated.",
         },
         {
           role: "user",
-          content: `Expected: "${expected}"\nStudent transcription: "${transcriptText}"\nScore (0-100):`,
+          content: `Expected (English): "${expected}"\nStudent transcription: "${transcriptText}"\nScore (0-100):`,
         },
       ],
       temperature: 0.2,
@@ -510,6 +510,8 @@ router.get("/api/pronunciation-attempts", async (req, res) => {
         pa.start_time,
         pa.end_time,
         pa.status,
+        pa.score,
+        pa.total_points,
         pq.title,
         pq.difficulty,
         pq.lock_time,
@@ -622,7 +624,7 @@ router.post("/api/pronunciation-submit", upload.any(), async (req, res) => {
       const file = files.find(f => f.fieldname === `audio_${i}`);
       if (!file) continue;
 
-      const fileUrl = file.location || `/uploads/${file.filename}`;
+      const fileUrl = file.location || `/uploads/pronunciation/${file.filename}`;
       let difficulty = req.body[`difficulty_${i}`];
 
       // Use quiz difficulty if missing or invalid
@@ -793,6 +795,7 @@ router.get("/api/teacher/pronunciation-attempts", async (req, res) => {
         a.student_id,
         CONCAT(u.fname, ' ', u.lname) AS student_name,
         a.score,
+        a.total_points,
         a.pronunciation_score,
         a.status,
         a.cheating_violations,
@@ -827,9 +830,11 @@ router.get("/api/teacher/pronunciation-attempts/:attemptId", async (req, res) =>
 
   try {
     const [[attempt]] = await pool.query(
-      `SELECT a.*, q.title, q.difficulty AS quiz_difficulty, q.subject_id, q.quiz_id
+      `SELECT a.*, q.title, q.difficulty AS quiz_difficulty, q.subject_id, q.quiz_id,
+              CONCAT(u.fname, ' ', u.lname) AS student_name
        FROM pronunciation_quiz_attempts a
        JOIN pronunciation_quizzes q ON q.quiz_id = a.quiz_id
+       JOIN users u ON a.student_id = u.user_id
        WHERE a.attempt_id = ?`,
       [attemptId]
     );

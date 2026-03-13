@@ -392,6 +392,77 @@ async function fetchTopicContent(regenerate = false) {
   return data;
 }
 
+function enhanceLessonTopicPresentation(contentEl) {
+  if (!contentEl || contentEl.dataset.enhancedPresentation === "true") return;
+
+  const originalNodes = Array.from(contentEl.childNodes);
+  if (!originalNodes.length) return;
+
+  const deck = document.createElement("div");
+  deck.className = "lesson-topic-deck";
+
+  let slide = null;
+  let slideBody = null;
+
+  const createSlide = (headingEl) => {
+    const article = document.createElement("article");
+    article.className = "lesson-topic-slide";
+
+    const header = document.createElement("div");
+    header.className = "lesson-topic-slide__header";
+
+    const badge = document.createElement("span");
+    badge.className = "lesson-topic-slide__badge";
+    badge.textContent = deck.children.length === 0 ? "Overview" : `Slide ${deck.children.length + 1}`;
+
+    const title = document.createElement("div");
+    title.className = "lesson-topic-slide__title";
+    title.innerHTML = headingEl.outerHTML;
+
+    header.appendChild(badge);
+    header.appendChild(title);
+
+    const body = document.createElement("div");
+    body.className = "lesson-topic-slide__body";
+
+    article.appendChild(header);
+    article.appendChild(body);
+    deck.appendChild(article);
+    return { article, body };
+  };
+
+  originalNodes.forEach((node) => {
+    if (node.nodeType === Node.TEXT_NODE && !String(node.textContent || "").trim()) return;
+
+    if (node.nodeType === Node.ELEMENT_NODE && node.tagName === "H2") {
+      const created = createSlide(node);
+      slide = created.article;
+      slideBody = created.body;
+      return;
+    }
+
+    if (!slide || !slideBody) {
+      const fallbackHeading = document.createElement("h2");
+      fallbackHeading.textContent = "Topic Highlights";
+      const created = createSlide(fallbackHeading);
+      slide = created.article;
+      slideBody = created.body;
+    }
+
+    if (node.nodeType === Node.ELEMENT_NODE && node.tagName === "H3") {
+      const headingText = String(node.textContent || "").trim().toLowerCase();
+      if (/example|scenario/.test(headingText)) node.classList.add("lesson-topic-accent-heading", "lesson-topic-accent-heading--scenario");
+      if (/takeaway|summary|quick examples/.test(headingText)) node.classList.add("lesson-topic-accent-heading", "lesson-topic-accent-heading--takeaway");
+    }
+
+    slideBody.appendChild(node);
+  });
+
+  contentEl.innerHTML = "";
+  contentEl.appendChild(deck);
+  contentEl.dataset.enhancedPresentation = "true";
+}
+
 async function viewTopicWithGeneratedContent(topic, lesson) {
   const titleEl = document.getElementById("lesson-title");
   const modal = document.getElementById("lesson-modal");
@@ -434,6 +505,8 @@ async function viewTopicWithGeneratedContent(topic, lesson) {
 
     if (contentEl && data.content) {
       contentEl.innerHTML = data.content;
+      delete contentEl.dataset.enhancedPresentation;
+      enhanceLessonTopicPresentation(contentEl);
       contentEl.classList.remove("hidden");
       if (downloadBtn) downloadBtn.classList.remove("hidden");
       if (regenerateBtn) regenerateBtn.classList.remove("hidden");
@@ -471,6 +544,8 @@ async function regenerateLessonContent() {
 
     if (contentEl && data.content) {
       contentEl.innerHTML = data.content;
+      delete contentEl.dataset.enhancedPresentation;
+      enhanceLessonTopicPresentation(contentEl);
       contentEl.classList.remove("hidden");
     }
   } catch (err) {
@@ -491,6 +566,7 @@ function closeLesson() {
   if (modal) modal.classList.add("hidden");
   if (contentEl) {
     contentEl.innerHTML = "";
+    delete contentEl.dataset.enhancedPresentation;
     contentEl.classList.add("hidden");
   }
   if (loadingEl) loadingEl.style.display = "none";
@@ -1498,7 +1574,6 @@ function formatDateTimePhilippineMilitary(value) {
       day: "2-digit",
       hour: "2-digit",
       minute: "2-digit",
-      second: "2-digit",
       hour12: true
     });
   } catch {
@@ -1559,6 +1634,93 @@ function toMySQLDateTimeLocalLesson(input) {
   return null;
 }
 
+function parseAllowedStudentsLesson(rawValue) {
+  if (Array.isArray(rawValue)) return rawValue.map((v) => Number(v)).filter((n) => Number.isFinite(n));
+  if (rawValue == null || rawValue === "") return [];
+  const raw = String(rawValue).trim();
+  if (!raw) return [];
+  if (/^\d+$/.test(raw)) return [Number(raw)];
+  if (raw.includes(",") && !raw.startsWith("[") && !raw.startsWith("{")) {
+    return raw
+      .split(",")
+      .map((p) => Number(String(p).trim()))
+      .filter((n) => Number.isFinite(n));
+  }
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) return parsed.map((v) => Number(v)).filter((n) => Number.isFinite(n));
+    if (parsed && typeof parsed === "object") return Object.values(parsed).map((v) => Number(v)).filter((n) => Number.isFinite(n));
+    const one = Number(parsed);
+    return Number.isFinite(one) ? [one] : [];
+  } catch (_) {
+    return [];
+  }
+}
+
+function applyLessonSpecificStudentsFilter() {
+  const searchEl = document.getElementById("lesson-specific-students-search");
+  const listEl = document.getElementById("lesson-specific-students-list");
+  if (!searchEl || !listEl) return;
+  const query = String(searchEl.value || "").trim().toLowerCase();
+  const rows = Array.from(listEl.querySelectorAll(".schedule-modal-specific-item"));
+  rows.forEach((row) => {
+    const name = String(row.textContent || "").toLowerCase();
+    row.style.display = !query || name.includes(query) ? "" : "none";
+  });
+}
+
+async function loadLessonSpecificRetakeStudents(selectedIds) {
+  const listEl = document.getElementById("lesson-specific-students-list");
+  if (!listEl) return;
+  const selected = new Set((Array.isArray(selectedIds) ? selectedIds : []).map((v) => Number(v)).filter((n) => Number.isFinite(n)));
+  const selectedClass = (() => { try { return JSON.parse(localStorage.getItem("eel_selected_class") || "null"); } catch (_) { return null; } })();
+  const classId = localStorage.getItem("eel_selected_class_id") || selectedClass?.id || selectedClass?.class_id;
+  if (!classId) {
+    listEl.innerHTML = `<div class="text-sm text-muted-foreground">Select a class first to choose students.</div>`;
+    return;
+  }
+  try {
+    const res = await fetch(`${window.API_BASE || ""}/api/class/${encodeURIComponent(classId)}/students`);
+    if (!res.ok) throw new Error("Failed to load students");
+    const rows = await res.json();
+    const students = (Array.isArray(rows) ? rows : [])
+      .filter((s) => String(s.status || "").toLowerCase() !== "pending")
+      .map((s) => ({
+        id: Number(s.student_id),
+        name: `${s.student_fname || ""} ${s.student_lname || ""}`.trim() || `Student #${s.student_id}`
+      }))
+      .filter((s) => Number.isFinite(s.id));
+    if (!students.length) {
+      listEl.innerHTML = `<div class="text-sm text-muted-foreground">No students found in this class.</div>`;
+      return;
+    }
+    listEl.innerHTML = students.map((s) => {
+      const checked = selected.has(s.id) ? "checked" : "";
+      return `<label class="schedule-modal-specific-item">
+        <input type="checkbox" class="lesson-retake-student-checkbox" value="${escapeHtml(String(s.id))}" ${checked}>
+        <span>${escapeHtml(s.name)}</span>
+      </label>`;
+    }).join("");
+    applyLessonSpecificStudentsFilter();
+  } catch (_) {
+    listEl.innerHTML = `<div class="text-sm text-destructive">Failed to load students.</div>`;
+  }
+}
+
+function toggleLessonSpecificStudentsVisibility() {
+  const retakeEl = document.getElementById("lesson-modal-retake-option");
+  const container = document.getElementById("lesson-specific-students-container");
+  if (!retakeEl || !container) return;
+  const show = retakeEl.value === "specific";
+  container.classList.toggle("hidden", !show);
+}
+
+function getLessonSelectedRetakeStudentIds() {
+  return Array.from(document.querySelectorAll("#lesson-specific-students-list .lesson-retake-student-checkbox:checked"))
+    .map((el) => Number(el.value))
+    .filter((n) => Number.isFinite(n));
+}
+
 function openScheduleModalLesson(quizId, scheduleDataAttr) {
   _lessonScheduleQuizId = quizId;
   let existing = null;
@@ -1570,6 +1732,8 @@ function openScheduleModalLesson(quizId, scheduleDataAttr) {
   const unlockEl = document.getElementById("lesson-modal-unlock-time");
   const lockEl = document.getElementById("lesson-modal-lock-time");
   const limitEl = document.getElementById("lesson-modal-time-limit");
+  const retakeEl = document.getElementById("lesson-modal-retake-option");
+  const allowedStudents = parseAllowedStudentsLesson(existing?.allowed_students);
   if (unlockEl) {
     unlockEl.value = (existing && existing.unlock_time) ? toDateTimeLocalPHLesson(existing.unlock_time) : formattedNow;
     unlockEl.min = formattedNow;
@@ -1579,6 +1743,14 @@ function openScheduleModalLesson(quizId, scheduleDataAttr) {
     lockEl.min = formattedNow;
   }
   if (limitEl) limitEl.value = (existing && existing.time_limit != null) ? String(existing.time_limit) : "";
+  if (retakeEl) {
+    const hasPreviousPublishWindow = !!(existing && (existing.unlock_time || existing.lock_time));
+    const defaultRetake = hasPreviousPublishWindow ? "specific" : "none";
+    const saved = String(existing && existing.retake_option ? existing.retake_option : defaultRetake).toLowerCase();
+    retakeEl.value = (saved === "none" || saved === "all" || saved === "specific") ? saved : defaultRetake;
+  }
+  toggleLessonSpecificStudentsVisibility();
+  loadLessonSpecificRetakeStudents(allowedStudents);
   if (window.lucide && typeof window.lucide.createIcons === "function") window.lucide.createIcons();
 }
 
@@ -1586,6 +1758,12 @@ function closeScheduleModalLesson() {
   _lessonScheduleQuizId = null;
   const modal = document.getElementById("lesson-schedule-modal");
   if (modal) modal.classList.add("hidden");
+  const searchEl = document.getElementById("lesson-specific-students-search");
+  if (searchEl) searchEl.value = "";
+  const listEl = document.getElementById("lesson-specific-students-list");
+  if (listEl) listEl.innerHTML = "";
+  const container = document.getElementById("lesson-specific-students-container");
+  if (container) container.classList.add("hidden");
 }
 
 function openLeaderboardModalLesson(quizId) {
@@ -1656,7 +1834,11 @@ async function loadLeaderboardLesson(quizId) {
         avatar.style.background = PODIUM_GRADIENTS[index] || PODIUM_GRADIENTS[0];
       }
       if (podiumName) podiumName.textContent = entry.student_name || "—";
-      if (scoreEl) scoreEl.textContent = `${entry.score}/${entry.total_points || "?"}`;
+      const scoreNum = Number(entry.score);
+      const totalNum = Number(entry.total_points);
+      const scoreText = Number.isFinite(scoreNum) ? Math.round(scoreNum) : "-";
+      const totalText = Number.isFinite(totalNum) ? Math.round(totalNum) : "?";
+      if (scoreEl) scoreEl.textContent = `${scoreText}/${totalText}`;
       if (timeEl) timeEl.textContent = entry.time_taken ? "⏱ " + entry.time_taken : "—";
       if (rankEl) rankEl.textContent = `#${index + 1}`;
     });
@@ -1668,6 +1850,10 @@ async function loadLeaderboardLesson(quizId) {
         const rank = i + 4;
         const initials = (entry.student_name || "").split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
         const gradient = "linear-gradient(135deg, var(--primary), var(--secondary))";
+        const scoreNum = Number(entry.score);
+        const totalNum = Number(entry.total_points);
+        const scoreText = Number.isFinite(scoreNum) ? Math.round(scoreNum) : "-";
+        const totalText = Number.isFinite(totalNum) ? Math.round(totalNum) : "?";
         const row = `<tr class="leaderboard-table-row">
           <td><span class="rank-badge">${rank}</span></td>
           <td>
@@ -1676,7 +1862,7 @@ async function loadLeaderboardLesson(quizId) {
               <span>${escapeHtml(entry.student_name)}</span>
             </div>
           </td>
-          <td><span class="score-badge">${entry.score}/${entry.total_points}</span></td>
+          <td><span class="score-badge">${scoreText}/${totalText}</span></td>
           <td><span class="time-badge">${entry.time_taken || "-"}</span></td>
           <td><span class="status-badge completed">✓ ${entry.status || "Completed"}</span></td>
         </tr>`;
@@ -1861,32 +2047,45 @@ function renderLessonTeacherReviewDetail(data) {
   }
 
   const blocks = (data.answers || []).map(function (a) {
-    const correctText = a.correct_answer_text != null ? escapeHtml(String(a.correct_answer_text)) : "—";
-    let studentText = "—";
+    const correctTextRaw = a.correct_answer_text != null ? String(a.correct_answer_text) : (a.correct_answer != null ? String(a.correct_answer) : "—");
+    const correctText = escapeHtml(correctTextRaw);
+    let studentTextRaw = "—";
     if (a.student_answer != null && a.student_answer !== "") {
-      if (a.options && a.options.length) {
+      if (Array.isArray(a.options) && a.options.length) {
         const opt = a.options.find(function (o) { return String(o.option_id) === String(a.student_answer); });
-        studentText = opt ? escapeHtml(opt.option_text) : escapeHtml(String(a.student_answer));
+        studentTextRaw = opt ? String(opt.option_text || "") : String(a.student_answer);
       } else {
-        studentText = escapeHtml(String(a.student_answer));
+        studentTextRaw = String(a.student_answer);
       }
     }
+    const studentText = escapeHtml(studentTextRaw);
     const status = a.is_correct === true ? "correct" : (a.is_correct === false ? "wrong" : "ungraded");
-    const statusLabel = status === "correct" ? "Correct" : (status === "wrong" ? "Wrong" : "—");
+    const statusLabel = status === "correct" ? "Correct" : (status === "wrong" ? "Wrong" : "Not graded");
+    const statusIcon = status === "correct" ? "check-circle" : (status === "wrong" ? "x-circle" : "help-circle");
     const answerId = a.answer_id != null ? a.answer_id : "";
     const markCorrectRow = answerId
-      ? "<div class=\"flex items-center gap-3 flex-wrap\"><label class=\"flex items-center gap-2\">" +
+      ? "<div class=\"teacher-reading-mark-wrap\"><label class=\"teacher-reading-mark-label\">" +
         "<input type=\"checkbox\" class=\"teacher-is-correct\" " + (a.is_correct ? "checked" : "") + " />" +
-        "<span>Mark correct</span></label></div>"
+        "<span class=\"teacher-reading-mark-text\">Mark correct</span></label></div>"
       : "";
     return (
-      "<div class=\"card teacher-answer-row\" style=\"margin:0;\" data-answer-id=\"" + escapeHtml(String(answerId)) + "\">" +
-      "<div class=\"card-header\"><div class=\"card-title\">" + escapeHtml(a.question_text || "Question") + "</div>" +
-      "<div class=\"card-description\">Correct: " + correctText + "</div></div>" +
-      "<div class=\"card-content space-y-2\">" +
-      "<div class=\"teacher-answer-line\"><strong>Student answer:</strong> " +
-      "<span class=\"teacher-answer-text\" data-status=\"" + status + "\">" + studentText + "</span> " +
-      "<span class=\"teacher-answer-chip teacher-answer-chip--" + status + "\">" + statusLabel + "</span>" +
+      "<div class=\"teacher-reading-answer-row teacher-answer-row\" data-answer-id=\"" + escapeHtml(String(answerId)) + "\">" +
+      "<div class=\"teacher-reading-answer-hero\">" +
+      "<div class=\"teacher-reading-answer-q\">Q</div>" +
+      "<div class=\"teacher-reading-answer-hero-text\">" +
+      "<div class=\"teacher-reading-answer-question\">" + escapeHtml(a.question_text || "Question") + "</div>" +
+      "</div></div>" +
+      "<div class=\"teacher-reading-answer-body\">" +
+      "<div class=\"teacher-reading-answer-section\">" +
+      "<div class=\"teacher-reading-section-label\"><i data-lucide=\"book-open\" class=\"size-4\"></i><span>Correct answer</span></div>" +
+      "<div class=\"teacher-reading-correct-box\">" + correctText + "</div>" +
+      "</div>" +
+      "<div class=\"teacher-reading-answer-section\">" +
+      "<div class=\"teacher-reading-section-label\">" +
+      "<i data-lucide=\"user\" class=\"size-4\"></i><span>Student answer</span>" +
+      "<span class=\"teacher-answer-chip teacher-answer-chip--" + status + "\" aria-label=\"Answer status\">" +
+      "<i data-lucide=\"" + statusIcon + "\" class=\"size-3\"></i>" + statusLabel + "</span></div>" +
+      "<div class=\"teacher-reading-student-box teacher-answer-text\" data-status=\"" + status + "\">" + studentText + "</div>" +
       "</div>" + markCorrectRow + "</div></div>"
     );
   }).join("");
@@ -1926,7 +2125,9 @@ function renderLessonTeacherReviewDetail(data) {
       const status = box.checked ? "correct" : "wrong";
       text.setAttribute("data-status", status);
       chip.className = "teacher-answer-chip teacher-answer-chip--" + status;
-      chip.textContent = box.checked ? "Correct" : "Wrong";
+      chip.innerHTML = "<i data-lucide=\"" + (box.checked ? "check-circle" : "x-circle") + "\" class=\"size-3\"></i>" + (box.checked ? "Correct" : "Wrong");
+      chip.setAttribute("aria-label", "Answer status: " + (box.checked ? "Correct" : "Wrong"));
+      if (window.lucide && typeof window.lucide.createIcons === "function") window.lucide.createIcons();
     });
   });
   if (window.lucide && typeof window.lucide.createIcons === "function") window.lucide.createIcons();
@@ -1971,6 +2172,21 @@ async function saveLessonTeacherReviewOverrides() {
 }
 
 document.addEventListener("DOMContentLoaded", function () {
+  const searchEl = document.getElementById("lesson-specific-students-search");
+  if (searchEl && !searchEl.__boundLessonStudentsSearch) {
+    searchEl.__boundLessonStudentsSearch = true;
+    searchEl.addEventListener("input", applyLessonSpecificStudentsFilter);
+  }
+  const retakeSelect = document.getElementById("lesson-modal-retake-option");
+  if (retakeSelect && !retakeSelect.__boundLessonRetakeChange) {
+    retakeSelect.__boundLessonRetakeChange = true;
+    retakeSelect.addEventListener("change", async function () {
+      toggleLessonSpecificStudentsVisibility();
+      if (retakeSelect.value === "specific") {
+        await loadLessonSpecificRetakeStudents(getLessonSelectedRetakeStudentIds());
+      }
+    });
+  }
   const saveScheduleBtn = document.getElementById("lesson-save-schedule-btn");
   if (saveScheduleBtn) {
     saveScheduleBtn.addEventListener("click", async function () {
@@ -1979,6 +2195,7 @@ document.addEventListener("DOMContentLoaded", function () {
       const unlockVal = document.getElementById("lesson-modal-unlock-time")?.value?.trim();
       const lockVal = document.getElementById("lesson-modal-lock-time")?.value?.trim();
       const limitVal = document.getElementById("lesson-modal-time-limit")?.value?.trim();
+      const retakeVal = document.getElementById("lesson-modal-retake-option")?.value?.trim();
       const unlockStr = toMySQLDateTimeLocalLesson(unlockVal);
       const lockStr = toMySQLDateTimeLocalLesson(lockVal);
       if (!unlockStr || !lockStr) {
@@ -1986,11 +2203,23 @@ document.addEventListener("DOMContentLoaded", function () {
         return;
       }
       const timeLimit = limitVal ? parseInt(limitVal, 10) : null;
+      const retakeOption = (retakeVal === "none" || retakeVal === "all" || retakeVal === "specific") ? retakeVal : "specific";
+      const allowedStudents = retakeOption === "specific" ? getLessonSelectedRetakeStudentIds() : [];
+      if (retakeOption === "specific" && allowedStudents.length === 0) {
+        if (typeof showNotification === "function") showNotification("Select at least one student for retake.", "warning");
+        return;
+      }
       try {
         const res = await fetch(`${window.API_BASE || ""}/api/teacher/reading-quizzes/${quizId}/schedule`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ unlock_time: unlockStr, lock_time: lockStr, time_limit: timeLimit }),
+          body: JSON.stringify({
+            unlock_time: unlockStr,
+            lock_time: lockStr,
+            time_limit: timeLimit,
+            retake_option: retakeOption,
+            allowed_students: allowedStudents
+          }),
         });
         const data = await res.json().catch(() => ({}));
         if (res.ok && data.success) {
@@ -2143,10 +2372,18 @@ async function doLockTeacherQuizLesson(quizId) {
     const quiz = await getRes.json().catch(() => ({}));
     const unlockTime = quiz.unlock_time || null;
     const timeLimit = quiz.time_limit != null ? quiz.time_limit : null;
+    const retakeOption = String(quiz.retake_option || "specific").toLowerCase();
+    const allowedStudents = parseAllowedStudentsLesson(quiz.allowed_students);
     const res = await fetch(`${window.API_BASE || ""}/api/teacher/reading-quizzes/${quizId}/schedule`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ unlock_time: unlockTime, lock_time: lockTime, time_limit: timeLimit }),
+      body: JSON.stringify({
+        unlock_time: unlockTime,
+        lock_time: lockTime,
+        time_limit: timeLimit,
+        retake_option: retakeOption,
+        allowed_students: allowedStudents
+      }),
     });
     const data = await res.json().catch(() => ({}));
     if (res.ok && data.success) {
@@ -2204,7 +2441,13 @@ async function loadLessonsAIGeneratedList() {
           ? `Opens ${formatLessonQuizDate(quiz.unlock_time)} · Due ${formatLessonQuizDate(quiz.lock_time)}`
           : "Not scheduled";
         const scheduleData = hasSchedule
-          ? JSON.stringify({ unlock_time: quiz.unlock_time || null, lock_time: quiz.lock_time || null, time_limit: quiz.time_limit ?? null }).replace(/'/g, "&#39;")
+          ? JSON.stringify({
+            unlock_time: quiz.unlock_time || null,
+            lock_time: quiz.lock_time || null,
+            time_limit: quiz.time_limit ?? null,
+            retake_option: quiz.retake_option || "specific",
+            allowed_students: quiz.allowed_students || null
+          }).replace(/'/g, "&#39;")
           : "{}";
         const actionButtons =
           hasSchedule && !isCurrentlyLocked
@@ -2356,12 +2599,19 @@ async function loadLessonsAIQuizzesForStudent() {
     if (!res.ok) throw new Error("Failed to fetch quizzes");
     const quizzes = await res.json();
     let completedQuizIds = [];
+    const latestCompletedByQuiz = new Map();
     if (studentId) {
       try {
         const crUrl = `${window.API_BASE || ""}/api/teacher/reading-quizzes/completed-by-student?student_id=${studentId}` + (classId ? `&class_id=${classId}` : "");
         const cr = await fetch(crUrl);
         const crData = await cr.json();
         if (crData.success && Array.isArray(crData.quiz_ids)) completedQuizIds = crData.quiz_ids;
+        if (crData.success && Array.isArray(crData.latest_attempts)) {
+          crData.latest_attempts.forEach((a) => {
+            if (!a || a.quiz_id == null) return;
+            latestCompletedByQuiz.set(Number(a.quiz_id), a);
+          });
+        }
       } catch (_) {}
     }
     const now = new Date();
@@ -2401,12 +2651,34 @@ async function loadLessonsAIQuizzesForStudent() {
         else takeLabel = "Unpublished";
       }
       const hasCompleted = completedQuizIds.indexOf(quiz.quiz_id) !== -1;
+      const latestAttempt = latestCompletedByQuiz.get(Number(quiz.quiz_id));
+      const allowedStudents = parseAllowedStudentsLesson(quiz.allowed_students);
+      const retakeOption = String(quiz.retake_option || "none").toLowerCase();
+      const canRetakeSpecific = studentId != null && allowedStudents.some((id) => Number(id) === Number(studentId));
+      const latestAttemptEnd = latestAttempt?.end_time
+        ? new Date(String(latestAttempt.end_time).replace(" ", "T"))
+        : null;
+      const completedInCurrentPublishWindow = !!(
+        hasCompleted &&
+        start &&
+        latestAttemptEnd &&
+        !Number.isNaN(latestAttemptEnd.getTime()) &&
+        latestAttemptEnd >= start
+      );
+      const canRetakeNow = hasCompleted && (
+        retakeOption === "all" ||
+        (retakeOption === "specific" && canRetakeSpecific)
+      ) && !completedInCurrentPublishWindow;
       const canReviewAfterScheduleEnd = hasCompleted && isCurrentlyLocked;
       const alreadyTakenButStillOpen = hasCompleted && !isCurrentlyLocked;
       let primaryActionHtml;
       if (canReviewAfterScheduleEnd) {
         primaryActionHtml = `<button type="button" class="btn btn-primary flex-1" onclick="event.stopPropagation(); openLessonReviewModal(${quiz.quiz_id});">
             <i data-lucide="file-text" class="size-3 mr-1"></i>Review my answers
+          </button>`;
+      } else if (alreadyTakenButStillOpen && canRetakeNow && !effectiveLocked) {
+        primaryActionHtml = `<button type="button" class="btn btn-primary flex-1" onclick="event.stopPropagation(); openLessonQuizModal(${quiz.quiz_id});">
+            <i data-lucide="rotate-ccw" class="size-3 mr-1"></i>Retake quiz
           </button>`;
       } else if (alreadyTakenButStillOpen) {
         primaryActionHtml = `<button type="button" class="btn btn-outline flex-1" disabled title="Review available after the quiz closes">

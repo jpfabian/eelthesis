@@ -357,6 +357,102 @@ function proceedToReadingQuizPage() {
     closeReadingQuizTermsModal();
 }
 
+function closeStudentReadingReviewModal() {
+    const modal = document.getElementById('student-reading-review-modal');
+    if (modal) modal.classList.add('hidden');
+}
+
+async function openStudentReadingReviewModal(quizId, quizTitle = '') {
+    const modal = document.getElementById('student-reading-review-modal');
+    const loadingEl = document.getElementById('student-reading-review-loading');
+    const errorEl = document.getElementById('student-reading-review-error');
+    const bodyEl = document.getElementById('student-reading-review-body');
+    const titleEl = document.getElementById('student-reading-review-title');
+    const scoreEl = document.getElementById('student-reading-review-score');
+    const passageEl = document.getElementById('student-reading-review-passage');
+    const answersEl = document.getElementById('student-reading-review-answers');
+    if (!modal || !loadingEl || !errorEl || !bodyEl || !titleEl || !scoreEl || !passageEl || !answersEl) return;
+
+    modal.classList.remove('hidden');
+    loadingEl.classList.remove('hidden');
+    errorEl.classList.add('hidden');
+    bodyEl.classList.add('hidden');
+    titleEl.textContent = quizTitle || 'Review your answers';
+
+    try {
+        const user = getCurrentUser();
+        if (!user) throw new Error('Please log in first.');
+
+        const selectedClass = JSON.parse(localStorage.getItem("eel_selected_class") || "null");
+        const classId = (selectedClass && selectedClass.id != null) ? selectedClass.id : (localStorage.getItem("eel_selected_class_id") || null);
+        const attemptParams =
+            `quiz_id=${encodeURIComponent(quizId)}&student_id=${encodeURIComponent(user.user_id)}` +
+            (classId ? `&class_id=${encodeURIComponent(classId)}` : '');
+
+        const [quizRes, attemptsRes] = await Promise.all([
+            fetch(`${window.API_BASE || ""}/api/reading-quizzes/${quizId}`),
+            fetch(`${window.API_BASE || ""}/api/reading-quiz-attempts?${attemptParams}`)
+        ]);
+        if (!quizRes.ok) throw new Error('Quiz not found.');
+
+        const quiz = await quizRes.json();
+        const attempts = await attemptsRes.json();
+        const completed = (Array.isArray(attempts) ? attempts : [])
+            .filter(a => a.status === 'completed')
+            .sort((a, b) => Number(b.attempt_id || 0) - Number(a.attempt_id || 0))[0];
+        if (!completed) throw new Error('No completed attempt found for this quiz.');
+
+        const answersRes = await fetch(`${window.API_BASE || ""}/api/reading-quiz-attempts/${completed.attempt_id}/answers`);
+        if (!answersRes.ok) throw new Error('Could not load your answers.');
+        const answers = await answersRes.json();
+
+        const qMap = {};
+        (quiz.questions || []).forEach((q) => { qMap[q.question_id] = q; });
+
+        titleEl.textContent = quiz.title || quizTitle || 'Review your answers';
+        const scoreValue = Number(completed.score || 0);
+        const totalValue = Number(completed.total_points || 0);
+        const percent = totalValue > 0 ? Math.round((scoreValue / totalValue) * 100) : 0;
+        const passingScore = Number(quiz.passing_score ?? 70);
+        const hideCorrectAnswers = percent < passingScore;
+        scoreEl.innerHTML = `Your score: <strong>${Math.round(scoreValue)} / ${Math.round(totalValue)}</strong> (${percent}%)`;
+        passageEl.textContent = quiz.passage || '(No passage)';
+
+        answersEl.innerHTML = (Array.isArray(answers) ? answers : []).map((a, i) => {
+            const q = qMap[a.question_id];
+            let yourAnswerText = a.student_answer != null && a.student_answer !== '' ? escapeHtml(String(a.student_answer)) : '—';
+            if (a.question_type === 'mcq' && q && Array.isArray(q.options)) {
+                const opt = q.options.find(o => Number(o.option_id) === parseInt(a.student_answer, 10));
+                yourAnswerText = opt ? escapeHtml(opt.option_text) : yourAnswerText;
+            }
+            if (a.question_type === 'fill_blank' && Array.isArray(a.blanks) && a.blanks.length) {
+                yourAnswerText = a.blanks.map((b, idx) => `Blank ${idx + 1}: ${escapeHtml(b.student_text || '—')}`).join('; ');
+            }
+            let correctText = a.correct_answer ? escapeHtml(String(a.correct_answer)) : '—';
+            if (a.question_type === 'fill_blank' && Array.isArray(a.blanks) && a.blanks.length) {
+                correctText = a.blanks.map((b, idx) => `Blank ${idx + 1}: ${escapeHtml(b.correct_answer || '—')}`).join('; ');
+            }
+            const badgeClass = a.is_correct ? 'quiz-review-badge--correct' : 'quiz-review-badge--incorrect';
+            const badgeText = a.is_correct ? 'Correct' : 'Incorrect';
+            const correctAnswerValue = hideCorrectAnswers
+                ? 'Hidden because your score is below the passing score.'
+                : correctText;
+            return `<div class="quiz-review-item ${a.is_correct ? 'quiz-review-item--correct' : 'quiz-review-item--incorrect'}"><div class="quiz-review-item__header"><span class="quiz-review-item__num">Question ${i + 1}</span><span class="quiz-review-badge ${badgeClass}">${badgeText}</span></div><p class="quiz-review-item__q">${escapeHtml((q && q.question_text) || '')}</p><div class="quiz-review-item__row"><span class="quiz-review-item__row-label">Your answer</span><span class="quiz-review-item__row-value">${yourAnswerText}</span></div><div class="quiz-review-item__row"><span class="quiz-review-item__row-label">Correct answer</span><span class="quiz-review-item__row-value">${correctAnswerValue}</span></div></div>`;
+        }).join('');
+
+        loadingEl.classList.add('hidden');
+        bodyEl.classList.remove('hidden');
+        if (window.lucide && typeof window.lucide.createIcons === 'function') {
+            window.lucide.createIcons({ icons: window.lucide.icons });
+        }
+    } catch (err) {
+        loadingEl.classList.add('hidden');
+        bodyEl.classList.add('hidden');
+        errorEl.classList.remove('hidden');
+        errorEl.textContent = err?.message || 'Failed to load review.';
+    }
+}
+
 
 let currentQuestionIndex = 0;
 let quizData = null;
@@ -1746,16 +1842,28 @@ async function loadQuizzes(user = getCurrentUser()) {
             );
             unlockedUpTo = backendUnlockedUpTo;
 
-            // Fallback: infer consecutive completion from attempts (works even if progress table isn't updated)
+            // Fallback: infer consecutive PASSED completion from attempts
+            // (only passed quizzes should unlock next quiz).
             if (Array.isArray(studentAttempts) && studentAttempts.length) {
-                const completedNums = new Set(
+                const passedNums = new Set(
                     studentAttempts
-                        .filter(a => a.status === 'completed')
+                        .filter(a => {
+                            if (a.status !== 'completed') return false;
+                            const q = quizzes.find(x => Number(x.quiz_id) === Number(a.quiz_id));
+                            const passing = Number(q?.passing_score ?? 70);
+                            const scoreNum = Number(a.score);
+                            const totalNum = Number(a.total_points);
+                            if (!Number.isFinite(scoreNum)) return false;
+                            if (Number.isFinite(totalNum) && totalNum > 0) {
+                                return ((scoreNum / totalNum) * 100) >= passing;
+                            }
+                            return scoreNum >= passing;
+                        })
                         .map(a => displayNumberByQuizId.get(Number(a.quiz_id)))
                         .filter(Boolean)
                 );
                 let inferred = 1;
-                while (completedNums.has(inferred)) inferred++;
+                while (passedNums.has(inferred)) inferred++;
                 unlockedUpTo = Math.max(unlockedUpTo, inferred);
             }
         }
@@ -1794,10 +1902,19 @@ async function loadQuizzes(user = getCurrentUser()) {
                 const attempt = attemptsForQuiz.find(a => a.status === 'in_progress') || attemptsForQuiz[0] || null;
                 let btnText = 'Start Quiz', btnIcon = 'play', btnDisabled = effectiveLocked;
                 const isCompleted = !!attempt && attempt.status === 'completed';
+                const passingScore = Number(quiz.passing_score ?? 70);
+                const retakeOption = String(quiz.retake_option || 'all').toLowerCase();
+                const canRetake = retakeOption !== 'none';
+                const scoreNum = attempt?.score != null ? Number(attempt.score) : null;
+                const totalNum = attempt?.total_points != null ? Number(attempt.total_points) : null;
+                const scorePercent = (scoreNum != null && totalNum != null && totalNum > 0) ? (scoreNum / totalNum) * 100 : null;
+                const showRetake = isCompleted && canRetake && scorePercent != null && scorePercent < passingScore;
 
+                let openAction = `openReadingQuizTermsModal(${quiz.quiz_id}, false, false, this.getAttribute('data-quiz-title'))`;
                 if (attempt) {
                     if (attempt.status === 'completed') {
                         btnText = 'Review Quiz'; btnIcon = 'eye'; btnDisabled = false;
+                        openAction = `openStudentReadingReviewModal(${quiz.quiz_id}, this.getAttribute('data-quiz-title'))`;
                     } else if (attempt.status === 'in_progress') {
                         btnText = 'Continue Quiz'; btnIcon = 'play'; btnDisabled = false;
                     }
@@ -1807,10 +1924,15 @@ async function loadQuizzes(user = getCurrentUser()) {
                     <button class="btn btn-primary flex-1 ${btnDisabled ? 'opacity-50 cursor-not-allowed' : ''}" 
                             ${btnDisabled ? 'disabled' : ''} 
                             data-quiz-id="${quiz.quiz_id}" data-quiz-title="${escapeHtml(quiz.title || '')}" data-is-review="${isCompleted}"
-                            onclick="event.stopPropagation(); ${btnDisabled ? '' : `openReadingQuizTermsModal(${quiz.quiz_id}, false, ${isCompleted}, this.getAttribute('data-quiz-title'))`}">
+                            onclick="event.stopPropagation(); ${btnDisabled ? '' : openAction}">
                         <i data-lucide="${btnIcon}" class="size-3 mr-1"></i>
                         ${btnText}
                     </button>
+                    ${showRetake ? `
+                    <button class="btn btn-outline flex-1" data-quiz-title="${escapeHtml(quiz.title || '')}" onclick="event.stopPropagation(); openReadingQuizTermsModal(${quiz.quiz_id}, false, false, this.getAttribute('data-quiz-title'))">
+                        <i data-lucide="refresh-cw" class="size-3 mr-1"></i>Retake
+                    </button>
+                    ` : ''}
                     <button class="btn btn-outline flex-1" onclick="event.stopPropagation(); openLeaderboardModal(${quiz.quiz_id})">
                         <i data-lucide="bar-chart-3" class="size-3 mr-1"></i>
                         Leaderboard
@@ -2181,7 +2303,11 @@ async function loadLeaderboard(quizId = null, isTeacherQuiz = null) {
                 podiums[index].querySelector(".podium-avatar").textContent = initials;
                 podiums[index].querySelector(".podium-name").textContent = entry.student_name;
                 const sp = scoreSpan(podiums[index]);
-                if (sp) sp.textContent = entry.total_points ? `${entry.score}/${entry.total_points}` : `${entry.score} pts`;
+                const scoreNum = Number(entry.score);
+                const totalNum = Number(entry.total_points);
+                const scoreText = Number.isFinite(scoreNum) ? Math.round(scoreNum) : "-";
+                const totalText = Number.isFinite(totalNum) ? Math.round(totalNum) : null;
+                if (sp) sp.textContent = totalText != null ? `${scoreText}/${totalText}` : `${scoreText} pts`;
             });
 
             // Table: from 4th onwards only
@@ -2191,6 +2317,10 @@ async function loadLeaderboard(quizId = null, isTeacherQuiz = null) {
                     const rank = i + 4;
                     const initials = entry.student_name.split(" ").map(n => n[0]).join("").slice(0,2).toUpperCase();
                     const avatarGradient = gradients[(i + 3) % gradients.length];
+                    const scoreNum = Number(entry.score);
+                    const totalNum = Number(entry.total_points);
+                    const scoreText = Number.isFinite(scoreNum) ? Math.round(scoreNum) : "-";
+                    const totalText = Number.isFinite(totalNum) ? Math.round(totalNum) : "?";
                     const row = `
                         <tr class="leaderboard-table-row">
                             <td><span class="rank-badge">${rank}</span></td>
@@ -2200,7 +2330,7 @@ async function loadLeaderboard(quizId = null, isTeacherQuiz = null) {
                                     <span>${entry.student_name}</span>
                                 </div>
                             </td>
-                            <td><span class="score-badge">${entry.score}/${entry.total_points}</span></td>
+                            <td><span class="score-badge">${scoreText}/${totalText}</span></td>
                             <td><span class="time-badge">${entry.time_taken || "-"}</span></td>
                             <td><span class="status-badge completed">✓ ${entry.status}</span></td>
                         </tr>
@@ -2453,7 +2583,6 @@ function formatDateTimePhilippineMilitary(value) {
             day: '2-digit',
             hour: '2-digit',
             minute: '2-digit',
-            second: '2-digit',
             hour12: true
         });
     } catch {
@@ -2705,10 +2834,13 @@ function renderTeacherReadingAttemptDetail(answers) {
 
         if (!ans) {
             return `
-              <div class="card" style="margin:0;">
-                <div class="card-header">
-                  <div class="card-title">${escapeHtml(q.question_text || 'Question')}</div>
-                  <div class="card-description">No answer saved.</div>
+              <div class="teacher-reading-answer-row teacher-reading-answer-row--empty" data-answer-id="">
+                <div class="teacher-reading-answer-hero">
+                  <div class="teacher-reading-answer-q">Q</div>
+                  <div class="teacher-reading-answer-question">${escapeHtml(q.question_text || 'Question')}</div>
+                </div>
+                <div class="teacher-reading-answer-body">
+                  <div class="teacher-reading-answer-empty">No answer saved.</div>
                 </div>
               </div>
             `;
@@ -2730,22 +2862,38 @@ function renderTeacherReadingAttemptDetail(answers) {
                 ? 'ungraded'
                 : (Number(effectiveIsCorrect) ? 'correct' : 'wrong');
             const statusText = status === 'correct' ? 'Correct' : (status === 'wrong' ? 'Wrong' : 'Not graded');
+            const statusIcon = status === 'correct' ? 'check-circle' : (status === 'wrong' ? 'x-circle' : 'help-circle');
             return `
-              <div class="card teacher-answer-row" style="margin:0;" data-answer-id="${ans.answer_id}">
-                <div class="card-header">
-                  <div class="card-title">${escapeHtml(q.question_text || 'MCQ')}</div>
-                  <div class="card-description">Correct: ${escapeHtml(ans.correct_answer || '-')}</div>
-                </div>
-                <div class="card-content space-y-2">
-                  <div class="teacher-answer-line">
-                    <strong>Student answer:</strong>
-                    <span class="teacher-answer-text" data-status="${status}">${escapeHtml(chosen)}</span>
-                    <span class="teacher-answer-chip teacher-answer-chip--${status}" aria-label="Answer status">${statusText}</span>
+              <div class="teacher-reading-answer-row teacher-answer-row" data-answer-id="${ans.answer_id}">
+                <div class="teacher-reading-answer-hero">
+                  <div class="teacher-reading-answer-q">Q</div>
+                  <div class="teacher-reading-answer-hero-text">
+                    <div class="teacher-reading-answer-question">${escapeHtml(q.question_text || 'MCQ')}</div>
                   </div>
-                  <div class="flex items-center gap-3 flex-wrap">
-                    <label class="flex items-center gap-2">
+                </div>
+                <div class="teacher-reading-answer-body">
+                  <div class="teacher-reading-answer-section">
+                    <div class="teacher-reading-section-label">
+                      <i data-lucide="book-open" class="size-4"></i>
+                      <span>Correct answer</span>
+                    </div>
+                    <div class="teacher-reading-correct-box">${escapeHtml(ans.correct_answer || '-')}</div>
+                  </div>
+                  <div class="teacher-reading-answer-section">
+                    <div class="teacher-reading-section-label">
+                      <i data-lucide="user" class="size-4"></i>
+                      <span>Student answer</span>
+                      <span class="teacher-answer-chip teacher-answer-chip--${status}" aria-label="Answer status">
+                        <i data-lucide="${statusIcon}" class="size-3"></i>
+                        ${statusText}
+                      </span>
+                    </div>
+                    <div class="teacher-reading-student-box teacher-answer-text" data-status="${status}">${escapeHtml(chosen)}</div>
+                  </div>
+                  <div class="teacher-reading-mark-wrap">
+                    <label class="teacher-reading-mark-label">
                       <input type="checkbox" class="teacher-is-correct" ${ans.is_correct ? 'checked' : ''} />
-                      <span>Mark correct</span>
+                      <span class="teacher-reading-mark-text">Mark correct</span>
                     </label>
                   </div>
                 </div>
@@ -2755,13 +2903,16 @@ function renderTeacherReadingAttemptDetail(answers) {
 
         if (q.question_type === 'essay') {
             return `
-              <div class="card teacher-answer-row" style="margin:0;" data-answer-id="${ans.answer_id}">
-                <div class="card-header">
-                  <div class="card-title">${escapeHtml(q.question_text || 'Essay')}</div>
-                  <div class="card-description">AI score: ${ans.ai_score ?? '-'} • Points earned: ${ans.points_earned ?? 0}</div>
+              <div class="teacher-reading-answer-row teacher-answer-row" data-answer-id="${ans.answer_id}">
+                <div class="teacher-reading-answer-hero">
+                  <div class="teacher-reading-answer-q">Q</div>
+                  <div class="teacher-reading-answer-hero-text">
+                    <div class="teacher-reading-answer-question">${escapeHtml(q.question_text || 'Essay')}</div>
+                    <div class="teacher-reading-answer-meta">AI score: ${ans.ai_score ?? '-'} • Points: ${ans.points_earned ?? 0}</div>
+                  </div>
                 </div>
-                <div class="card-content space-y-2">
-                  <div class="p-3 rounded-lg border border-border bg-background" style="white-space:pre-wrap;">${escapeHtml(ans.student_answer || '')}</div>
+                <div class="teacher-reading-answer-body">
+                  <div class="teacher-reading-essay-box" style="white-space:pre-wrap;">${escapeHtml(ans.student_answer || '')}</div>
                 </div>
               </div>
             `;
@@ -2769,41 +2920,42 @@ function renderTeacherReadingAttemptDetail(answers) {
 
         if (q.question_type === 'fill_blank') {
             const blanks = Array.isArray(ans.blanks) ? ans.blanks : [];
-            const rows = blanks.map(b => `
-              <div class="p-3 rounded-lg border border-border bg-background teacher-blank-row"
-                   data-student-blank-id="${b.student_blank_id}"
-                   data-status="${(() => {
-                      if (b.is_correct != null) return Number(b.is_correct) ? 'correct' : 'wrong';
-                      const s = String(b.student_text || '').trim().toLowerCase();
-                      const c = String(b.correct_answer || '').trim().toLowerCase();
-                      if (!s || !c) return 'ungraded';
-                      return (s === c) ? 'correct' : 'wrong';
-                    })()}"
-                   style="display:grid; grid-template-columns: 1fr 1fr auto; gap:.75rem; align-items:center;">
-                <div>
-                  <div class="text-xs text-muted-foreground">Student</div>
+            const rows = blanks.map(b => {
+                const status = (() => {
+                    if (b.is_correct != null) return Number(b.is_correct) ? 'correct' : 'wrong';
+                    const s = String(b.student_text || '').trim().toLowerCase();
+                    const c = String(b.correct_answer || '').trim().toLowerCase();
+                    if (!s || !c) return 'ungraded';
+                    return (s === c) ? 'correct' : 'wrong';
+                })();
+                return `
+              <div class="teacher-reading-blank-row teacher-blank-row" data-student-blank-id="${b.student_blank_id}" data-status="${status}">
+                <div class="teacher-reading-blank-cell">
+                  <div class="teacher-reading-section-label"><i data-lucide="user" class="size-4"></i> Student</div>
                   <div class="teacher-student-answer">${escapeHtml(b.student_text || '')}</div>
                 </div>
-                <div>
-                  <div class="text-xs text-muted-foreground">Correct</div>
+                <div class="teacher-reading-blank-cell">
+                  <div class="teacher-reading-section-label"><i data-lucide="check" class="size-4"></i> Correct</div>
                   <div>${escapeHtml(b.correct_answer || '')}</div>
                 </div>
-                <div class="flex items-center gap-2 justify-end flex-wrap">
-                  <label class="flex items-center gap-2">
-                    <input type="checkbox" class="teacher-blank-is-correct" ${b.is_correct ? 'checked' : ''} />
-                    <span class="text-xs">Correct</span>
-                  </label>
-                </div>
+                <label class="teacher-reading-mark-label">
+                  <input type="checkbox" class="teacher-blank-is-correct" ${b.is_correct ? 'checked' : ''} />
+                  <span class="teacher-reading-mark-text">Correct</span>
+                </label>
               </div>
-            `).join('');
+            `;
+            }).join('');
 
             return `
-              <div class="card" style="margin:0;">
-                <div class="card-header">
-                  <div class="card-title">${escapeHtml(q.question_text || 'Fill in the blanks')}</div>
-                  <div class="card-description">Mark correct for near-miss spelling/case if needed.</div>
+              <div class="teacher-reading-answer-row teacher-reading-fill-blank" data-answer-id="${ans.answer_id}">
+                <div class="teacher-reading-answer-hero">
+                  <div class="teacher-reading-answer-q">Q</div>
+                  <div class="teacher-reading-answer-hero-text">
+                    <div class="teacher-reading-answer-question">${escapeHtml(q.question_text || 'Fill in the blanks')}</div>
+                    <div class="teacher-reading-answer-meta">Mark correct for near-miss spelling/case if needed.</div>
+                  </div>
                 </div>
-                <div class="card-content space-y-2">
+                <div class="teacher-reading-answer-body">
                   ${rows || `<div class="text-muted-foreground">No blanks saved.</div>`}
                 </div>
               </div>

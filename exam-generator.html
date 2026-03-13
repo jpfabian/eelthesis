@@ -65,27 +65,24 @@
         </header>
 
         <!-- Exam Generation Form -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div class="card group cursor-pointer hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
-            <div class="card-header">
-              <h3 class="card-title">Generate New Exam</h3>
-              <p class="card-description">Provide a topic or text to generate exam questions automatically</p>
+        <div class="grid grid-cols-1 gap-6">
+          <div class="card generate-exam-card group cursor-pointer hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+            <div class="card-header generate-exam-card-header">
+              <div class="generate-exam-card-header-main">
+                <h3 class="card-title">Generate New Exam</h3>
+                <p class="card-description">Provide a topic or text to generate exam questions automatically</p>
+              </div>
+              <div class="generate-exam-card-header-icon" aria-hidden="true">
+                <i data-lucide="sparkles" class="size-5"></i>
+              </div>
             </div>
             <div class="card-content space-y-6">
-              <!-- Generation Method -->
+              <!-- Exam Title -->
               <div class="space-y-2">
-                <label class="form-label">Generation Method</label>
-                <div class="grid grid-cols-1 gap-4">
-                  <label
-                    class="flex items-center gap-2 p-3 border border-border rounded-lg cursor-pointer hover:bg-muted transition-colors" style="width: 100%; gap: 0.5rem; padding: 0.75rem 1rem; background: rgba(99, 102, 241, 0.05); color: #6366f1; border: 1px solid #6366f1; border-radius: 0.5rem;">
-                    <input type="radio" name="method" value="topic" checked>
-                    <div>
-                      <div class="font-medium">From Topic</div>
-                      <div class="text-xs text-muted-foreground">Generate questions about a specific topic</div>
-                    </div>
-                  </label>
-                </div>
+                <label class="form-label" for="exam-title-input">Exam Title</label>
+                <input id="exam-title-input" class="form-input" type="text" placeholder="e.g. Midterm Exam – Quarter 1" maxlength="255" style="width: 100%; padding: 0.75rem 1rem; background: rgba(99, 102, 241, 0.05); border: 1px solid #6366f1; border-radius: 0.5rem;" />
               </div>
+              <input type="radio" name="method" value="topic" id="exam-method-topic" checked style="position: absolute; width: 0; height: 0; opacity: 0; pointer-events: none;" aria-hidden="true" />
 
               <!-- Topic Input -->
               <div id="topic-input" class="space-y-2">
@@ -215,11 +212,25 @@
         <!-- Exam List – violet & green theme -->
         <div class="card exam-list-section">
           <div class="exam-list-section-header">
-            <h3 class="exam-list-section-title"><i data-lucide="file-text" class="exam-list-icon"></i> Exam List</h3>
-            <p class="exam-list-section-sub">Your saved exams — export or move to cache</p>
+            <div class="exam-list-section-header-top">
+              <div>
+                <h3 class="exam-list-section-title"><i data-lucide="file-text" class="exam-list-icon"></i> Exam List</h3>
+                <p class="exam-list-section-sub">Your saved exams — export or move to cache</p>
+              </div>
+              <div class="exam-list-view-toggle" role="group" aria-label="View mode">
+                <button type="button" class="exam-list-view-btn active" data-view="list" aria-pressed="true" title="List view">
+                  <i data-lucide="list" class="size-4"></i>
+                  <span>List</span>
+                </button>
+                <button type="button" class="exam-list-view-btn" data-view="grid" aria-pressed="false" title="Grid view">
+                  <i data-lucide="layout-grid" class="size-4"></i>
+                  <span>Grid</span>
+                </button>
+              </div>
+            </div>
           </div>
           <div class="exam-list-section-content">
-            <div class="exam-list-grid" id="exam-list">
+            <div class="exam-list-grid exam-list-view-list" id="exam-list">
               <!-- Exam cards injected by JS -->
             </div>
           </div>

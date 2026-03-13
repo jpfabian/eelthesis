@@ -142,6 +142,45 @@ CREATE TABLE IF NOT EXISTS topics (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 /* =========================
+   Recitation scoring (1 point per question)
+   ========================= */
+CREATE TABLE IF NOT EXISTS recitation_scores (
+  recitation_score_id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  session_key VARCHAR(80) NOT NULL,
+  class_id INT UNSIGNED NOT NULL,
+  topic_id INT UNSIGNED NULL,
+  teacher_id INT UNSIGNED NULL,
+  student_id INT UNSIGNED NOT NULL,
+  question_index INT UNSIGNED NOT NULL,
+  question_type ENUM('multiple-choice','true-false','identification') NOT NULL,
+  question_text TEXT NULL,
+  student_answer TEXT NULL,
+  correct_answer VARCHAR(255) NULL,
+  is_correct TINYINT(1) NOT NULL DEFAULT 0,
+  points_earned TINYINT UNSIGNED NOT NULL DEFAULT 0,
+  points_possible TINYINT UNSIGNED NOT NULL DEFAULT 1,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (recitation_score_id),
+  UNIQUE KEY uq_recitation_scores_session_student_q (session_key, student_id, question_index),
+  KEY idx_recitation_scores_class (class_id),
+  KEY idx_recitation_scores_topic (topic_id),
+  KEY idx_recitation_scores_student (student_id),
+  CONSTRAINT fk_recitation_scores_class
+    FOREIGN KEY (class_id) REFERENCES classes(id)
+    ON DELETE CASCADE,
+  CONSTRAINT fk_recitation_scores_topic
+    FOREIGN KEY (topic_id) REFERENCES topics(topic_id)
+    ON DELETE SET NULL,
+  CONSTRAINT fk_recitation_scores_teacher
+    FOREIGN KEY (teacher_id) REFERENCES users(user_id)
+    ON DELETE SET NULL,
+  CONSTRAINT fk_recitation_scores_student
+    FOREIGN KEY (student_id) REFERENCES users(user_id)
+    ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+/* =========================
    Exams (AI exam generator)
    ========================= */
 CREATE TABLE IF NOT EXISTS exams (

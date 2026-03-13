@@ -84,7 +84,7 @@
                                 <i data-lucide="trending-up" class="size-4 text-secondary"></i>
                             </div>
                             <div class="text-2xl font-bold text-secondary" id="avg-score-value">—</div>
-                            <p class="text-xs text-muted-foreground" id="avg-score-sub">Average score across reading and pronunciation</p>
+                            <p class="text-xs text-muted-foreground" id="avg-score-sub">Average score across AI, reading, pronunciation, and recitation</p>
                             <p class="stat-action-hint"><span>Tap to open</span><i data-lucide="chevron-right" class="size-4" aria-hidden="true"></i></p>
                         </div>
                     </div>
@@ -172,7 +172,7 @@
 
                             <section class="scores-chart-block" id="scores-chart-block" aria-labelledby="scores-chart-title" role="tabpanel">
                                 <h3 id="scores-chart-title" class="scores-chart-title">Student Average</h3>
-                                <p class="scores-chart-desc">Separated by AI, Reading, and Pronunciation</p>
+                                <p class="scores-chart-desc">Separated by AI, Reading, Pronunciation, and Recitation</p>
                                 <div id="avg-score-chart-groups"></div>
                             </section>
 
@@ -347,10 +347,11 @@
                         const groups = [
                             { key: 'ai', title: 'AI Quiz Generated Results', empty: 'No AI-generated quiz records yet.' },
                             { key: 'reading', title: 'Reading Quiz Result Data', empty: 'No reading quiz records yet.' },
-                            { key: 'pronunciation', title: 'Pronunciation Quiz Result Data', empty: 'No pronunciation quiz records yet.' }
+                            { key: 'pronunciation', title: 'Pronunciation Quiz Result Data', empty: 'No pronunciation quiz records yet.' },
+                            { key: 'recitation', title: 'Recitation Score Result Data', empty: 'No recitation score records yet.' }
                         ];
                         const pageSize = 5;
-                        const pageState = { ai: 1, reading: 1, pronunciation: 1 };
+                        const pageState = { ai: 1, reading: 1, pronunciation: 1, recitation: 1 };
                         const tableState = {};
 
                         function getQuizNamesByType(typeKey) {
@@ -706,13 +707,14 @@
 
             // Scores
             rows.push(['Scores (Average %)', '', '', '', '']);
-            rows.push(['Last Name', 'First Name', 'Reading Avg', 'Pronunciation Avg', 'Overall Avg']);
+            rows.push(['Last Name', 'First Name', 'Reading Avg', 'Pronunciation Avg', 'Recitation Avg', 'Overall Avg']);
             scores.forEach(s => {
                 rows.push([
                     s.student_lname ?? '',
                     s.student_fname ?? '',
                     String(s.reading_avg ?? ''),
                     String(s.pronunciation_avg ?? ''),
+                    String(s.recitation_avg ?? ''),
                     String(s.overall_avg ?? '')
                 ]);
             });
@@ -757,6 +759,32 @@
         return cssVar('--border', 'rgba(0,0,0,0.1)');
     }
 
+    function isDarkTheme() {
+        return document.documentElement.getAttribute('data-theme') === 'dark';
+    }
+
+    function studentProgressChartPalette(key) {
+        const dark = isDarkTheme();
+        if (key === 'ai_avg') {
+            return dark
+                ? { fill: '#8b5cf6', border: '#a78bfa' }
+                : { fill: '#7c3aed', border: '#6d28d9' };
+        }
+        if (key === 'reading_avg') {
+            return dark
+                ? { fill: '#22c55e', border: '#4ade80' }
+                : { fill: '#16a34a', border: '#15803d' };
+        }
+        if (key === 'pronunciation_avg') {
+            return dark
+                ? { fill: '#38bdf8', border: '#7dd3fc' }
+                : { fill: '#0ea5e9', border: '#0284c7' };
+        }
+        return dark
+            ? { fill: '#f59e0b', border: '#fbbf24' }
+            : { fill: '#d97706', border: '#b45309' };
+    }
+
     function destroyChart(ch) {
         try { ch?.destroy?.(); } catch (_) {}
     }
@@ -769,9 +797,10 @@
         __avgScoreCharts = [];
 
         const groups = [
-            { key: 'ai_avg', title: 'AI Quiz Generated Average', colorVar: '--primary' },
-            { key: 'reading_avg', title: 'Reading Quiz Average', colorVar: '--secondary' },
-            { key: 'pronunciation_avg', title: 'Pronunciation Quiz Average', colorVar: '--foreground' }
+            { key: 'ai_avg', title: 'AI Quiz Generated Average' },
+            { key: 'reading_avg', title: 'Reading Quiz Average' },
+            { key: 'pronunciation_avg', title: 'Pronunciation Quiz Average' },
+            { key: 'recitation_avg', title: 'Recitation Score Average' }
         ];
 
         chartGroups.innerHTML = groups.map((g, idx) => `
@@ -796,6 +825,7 @@
 
             const labels = data.map(x => x.label);
             const values = data.map(x => Math.round(x.value));
+            const palette = studentProgressChartPalette(g.key);
             const chart = new Chart(canvas.getContext('2d'), {
                 type: 'bar',
                 data: {
@@ -804,9 +834,11 @@
                         label: `${g.title} (%)`,
                         data: values,
                         borderRadius: 10,
-                        backgroundColor: cssVar(g.colorVar, '#22c55e'),
-                        borderColor: cssVar(g.colorVar, '#22c55e'),
-                        borderWidth: 1
+                        backgroundColor: palette.fill,
+                        borderColor: palette.border,
+                        borderWidth: 1.5,
+                        barThickness: 22,
+                        maxBarThickness: 24
                     }]
                 },
                 options: {

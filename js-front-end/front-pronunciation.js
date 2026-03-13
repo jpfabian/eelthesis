@@ -686,14 +686,25 @@ async function loadPronunciationQuizzes(user) {
             unlockedUpTo = backendUnlockedUpTo;
 
             if (Array.isArray(studentAttempts) && studentAttempts.length) {
-                const completedNums = new Set(
+                const passedNums = new Set(
                     studentAttempts
-                        .filter(a => a.status === "completed")
+                        .filter(a => {
+                            if (a.status !== "completed") return false;
+                            const q = quizzes.find(x => Number(x.quiz_id) === Number(a.quiz_id));
+                            const passing = Number(q?.passing_score ?? 70);
+                            const scoreNum = Number(a.score);
+                            const totalNum = Number(a.total_points);
+                            if (!Number.isFinite(scoreNum)) return false;
+                            if (Number.isFinite(totalNum) && totalNum > 0) {
+                                return ((scoreNum / totalNum) * 100) >= passing;
+                            }
+                            return scoreNum >= passing;
+                        })
                         .map(a => displayNumberByQuizId.get(Number(a.quiz_id)))
                         .filter(Boolean)
                 );
                 let inferred = 1;
-                while (completedNums.has(inferred)) inferred++;
+                while (passedNums.has(inferred)) inferred++;
                 unlockedUpTo = Math.max(unlockedUpTo, inferred);
             }
         }
@@ -729,13 +740,22 @@ async function loadPronunciationQuizzes(user) {
                 let btnDisabled = effectiveLocked;
                 const isReview = !!studentAttempt && studentAttempt.status === "completed";
                 const quizTitle = (quiz.title || "").replace(/"/g, "&quot;");
-                let openAction = `openPronunciationQuizTermsModal(${quiz.quiz_id}, ${isReview}, this.getAttribute('data-quiz-title'))`;
+                let openAction = `openPronunciationQuizTermsModal(${quiz.quiz_id}, false, this.getAttribute('data-quiz-title'))`;
+
+                const passingScore = Number(quiz.passing_score ?? 70);
+                const retakeOption = String(quiz.retake_option || "all").toLowerCase();
+                const canRetake = retakeOption !== "none";
+                const scoreNum = studentAttempt?.score != null ? Number(studentAttempt.score) : null;
+                const totalNum = studentAttempt?.total_points != null ? Number(studentAttempt.total_points) : 100;
+                const scorePercent = (scoreNum != null && totalNum > 0) ? (scoreNum / totalNum) * 100 : scoreNum;
+                const showRetake = isReview && canRetake && scorePercent != null && scorePercent < passingScore;
 
                 if (studentAttempt) {
                     if (studentAttempt.status === "completed") {
                         btnText = "Review Quiz";
                         btnIcon = "eye";
                         btnDisabled = false;
+                        openAction = `openStudentPronunciationReviewModal(${quiz.quiz_id}, this.getAttribute('data-quiz-title'))`;
                     } else if (studentAttempt.status === "in_progress") {
                         btnText = "Continue Quiz";
                         btnIcon = "play";
@@ -753,6 +773,11 @@ async function loadPronunciationQuizzes(user) {
                         <i data-lucide="${btnIcon}" class="size-3 mr-1"></i>
                         ${btnText}
                     </button>
+                    ${showRetake ? `
+                    <button class="btn btn-outline flex-1" data-quiz-title="${quizTitle}" onclick="event.stopPropagation(); openPronunciationQuizTermsModal(${quiz.quiz_id}, false, this.getAttribute('data-quiz-title'))">
+                        <i data-lucide="refresh-cw" class="size-3 mr-1"></i>Retake
+                    </button>
+                    ` : ""}
                     <button 
                         class="btn btn-outline flex-1"
                         onclick="event.stopPropagation(); openLeaderboardModal(${quiz.quiz_id})"
@@ -1530,70 +1555,72 @@ function closeResultModal() {
   modal.classList.add("hidden");
 }
 
-async function openPronunciationReview(quizId, studentId) {
-  const modal = document.getElementById("take-pronunciation-modal");
-  const questionContainer = document.getElementById("pronunciation-questions");
-  const quizTitle = document.getElementById("pronunciation-quiz-title");
+function closeStudentPronunciationReviewModal() {
+  const modal = document.getElementById("student-pron-review-modal");
+  if (modal) modal.classList.add("hidden");
+}
 
-  if (!modal || !questionContainer) {
-    console.error("❌ Pronunciation modal or container missing!");
-    return;
-  }
+async function openStudentPronunciationReviewModal(quizId, quizTitle = '') {
+  const modal = document.getElementById("student-pron-review-modal");
+  const loadingEl = document.getElementById("student-pron-review-loading");
+  const errorEl = document.getElementById("student-pron-review-error");
+  const bodyEl = document.getElementById("student-pron-review-body");
+  const titleEl = document.getElementById("student-pron-review-title");
+  const scoreEl = document.getElementById("student-pron-review-score");
+  const answersEl = document.getElementById("student-pron-review-answers");
+  if (!modal || !loadingEl || !errorEl || !bodyEl || !titleEl || !scoreEl || !answersEl) return;
+
+  modal.classList.remove("hidden");
+  loadingEl.classList.remove("hidden");
+  errorEl.classList.add("hidden");
+  bodyEl.classList.add("hidden");
+  titleEl.textContent = quizTitle || "Pronunciation Review";
 
   try {
-    const res = await fetch(`${window.API_BASE || ""}/api/pronunciation-review?student_id=${studentId}&quiz_id=${quizId}`);
+    const user = getCurrentUser();
+    if (!user) throw new Error("Please log in first.");
+
+    const res = await fetch(`${window.API_BASE || ""}/api/pronunciation-review?student_id=${encodeURIComponent(user.user_id)}&quiz_id=${encodeURIComponent(quizId)}`);
     const data = await res.json();
 
-    if (!data.success || !data.answers || data.answers.length === 0) {
-      showNotification("No recorded answers found for this quiz.", "warning");
-      return;
+    if (!data.success || !Array.isArray(data.answers) || data.answers.length === 0) {
+      throw new Error("No recorded answers found for this quiz.");
     }
 
-    const quiz = data.quiz;
-    const answers = data.answers;
+    const quiz = data.quiz || {};
+    const answers = data.answers || [];
+    const scores = answers.map(a => Number(a.pronunciation_score || 0)).filter(Number.isFinite);
+    const avg = scores.length ? Math.round(scores.reduce((s, n) => s + n, 0) / scores.length) : 0;
+    const passingScore = Number(quiz.passing_score ?? 70);
+    const hideRightAnswer = avg < passingScore;
 
-    quizTitle.textContent = quiz.title || "Pronunciation Review";
-    questionContainer.innerHTML = "";
+    titleEl.textContent = quiz.title || quizTitle || "Pronunciation Review";
+    scoreEl.innerHTML = `Your average score: <strong>${avg} / 100</strong>`;
 
-    answers.forEach((a, i) => {
-      const correctText = a.question_text || "(No question text)";
-      const qDiv = document.createElement("div");
-      qDiv.className = "p-4 mb-3 border rounded-lg bg-muted/10 shadow-sm transition-all duration-200 hover:shadow-md";
+    answersEl.innerHTML = answers.map((a, i) => {
+      const promptText = escapeHtml(a.question_text || "-");
+      const expected = escapeHtml(a.correct_pronunciation || "-");
+      const audioSrc = a.student_audio ? (a.student_audio.startsWith('/') ? (window.API_BASE || '') + a.student_audio : a.student_audio) : '';
+      const score = Math.round(Number(a.pronunciation_score || 0));
+      const badgeClass = score >= 80 ? "quiz-review-badge--correct" : (score >= 60 ? "quiz-review-badge--mid" : "quiz-review-badge--incorrect");
+      const targetValue = hideRightAnswer ? "Hidden because your score is below the passing score." : expected;
+      return `<div class="quiz-review-item ${score >= 80 ? 'quiz-review-item--correct' : (score < 60 ? 'quiz-review-item--incorrect' : '')}"><div class="quiz-review-item__header"><span class="quiz-review-item__num">Question ${i + 1}</span><span class="quiz-review-badge ${badgeClass}">${score}/100</span></div><div class="quiz-review-item__row"><span class="quiz-review-item__row-label">Word / letter</span><span class="quiz-review-item__row-value">${promptText}</span></div><div class="quiz-review-item__row"><span class="quiz-review-item__row-label">Target pronunciation</span><span class="quiz-review-item__row-value">${targetValue}</span></div><div class="quiz-review-item__row"><span class="quiz-review-item__row-label">Your recording</span><div class="quiz-review-audio-wrap"><audio controls src="${escapeHtml(audioSrc)}" class="quiz-review-audio"></audio></div></div></div>`;
+    }).join("");
 
-      qDiv.innerHTML = `
-        <h4 class="font-semibold text-primary mb-1">Question ${i + 1}</h4>
-        <p class="text-sm italic mb-2">${correctText}</p>
-
-        <div class="flex items-center gap-2 mb-3">
-          <p class="text-sm font-medium text-gray-700">Expected Pronunciation:</p>
-          <button 
-            style="width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.75rem 1rem; background: linear-gradient(135deg, rgba(236, 72, 153, 0.1), rgba(168, 85, 247, 0.1)); color: #ec4899; border: 1px solid rgba(236, 72, 153, 0.3); border-radius: 0.5rem; cursor: pointer;"
-            onclick="speakPronunciation('${correctText}')"
-          >
-            <span class="tts-icon">🔊</span>
-            <span>Play</span>
-          </button>
-        </div>
-
-        <audio controls src="${a.student_audio}" class="w-full mb-2"></audio>
-        <p class="text-sm text-green-600 font-medium mt-1">Score: ${a.pronunciation_score}%</p>
-      `;
-
-      questionContainer.appendChild(qDiv);
-    });
-
-    // Hide recording, navigation, and submit buttons
-    document.getElementById("start-pronunciation-btn")?.classList.add("hidden");
-    document.getElementById("submit-pronunciation-btn")?.classList.add("hidden");
-    document.getElementById("close-pronunciation-btn")?.classList.remove("hidden");
-    document.getElementById("pronunciation-nav")?.classList.add("hidden");
-
-    modal.classList.remove("hidden");
-
+    loadingEl.classList.add("hidden");
+    bodyEl.classList.remove("hidden");
+    if (window.lucide && typeof window.lucide.createIcons === "function") window.lucide.createIcons();
   } catch (err) {
-    console.error("❌ Error loading pronunciation review:", err);
-    showNotification("Error loading pronunciation review.", "error");
+    loadingEl.classList.add("hidden");
+    bodyEl.classList.add("hidden");
+    errorEl.classList.remove("hidden");
+    errorEl.textContent = err?.message || "Failed to load review.";
   }
+}
+
+// Backward-compatible alias
+async function openPronunciationReview(quizId, studentId) {
+  return openStudentPronunciationReviewModal(quizId, '');
 }
 
 // 🗣️ Text-to-speech (TTS) player
@@ -1680,7 +1707,7 @@ async function openLeaderboardModal(quizId, classId) {
             const initials = student.name.trim().split(/\s+/).map(n=>n[0]).join("");
             podium.querySelector(".podium-avatar").textContent = initials;
             podium.querySelector(".podium-name").textContent = student.name;
-            podium.querySelector(".podium-score span").textContent = `${student.score}/100`;
+            podium.querySelector(".podium-score span").textContent = `${Math.round(Number(student.score) || 0)}/100`;
             podium.querySelector(".podium-rank").textContent = `#${student.rank}`;
         });
 
@@ -1697,6 +1724,7 @@ async function openLeaderboardModal(quizId, classId) {
                 row.className = "leaderboard-table-row";
 
                 const duration = formatDuration(entry.start_time, entry.end_time);
+                const scoreRounded = Math.round(Number(entry.score) || 0);
 
                 row.innerHTML = `
                     <td><span class="rank-badge">${entry.rank}</span></td>
@@ -1708,7 +1736,7 @@ async function openLeaderboardModal(quizId, classId) {
                             <span>${entry.name}</span>
                         </div>
                     </td>
-                    <td><span class="score-badge">${entry.score}/100</span></td>
+                    <td><span class="score-badge">${scoreRounded}/100</span></td>
                     <td><span class="time-badge">${duration}</span></td>
                     <td><span class="status-badge ${entry.status === "completed" ? "completed" : "in-progress"}">
                         ${entry.status === "completed" ? "✓ Completed" : "In Progress"}
@@ -2064,7 +2092,9 @@ function renderTeacherPronAttemptsList() {
     list.innerHTML = attempts.map(a => {
         const name = a.student_name || `Student #${a.student_id}`;
         const initials = getInitials(name);
-        const score = a.score != null ? `${a.score}` : '-';
+        const score = a.score != null
+            ? `${Math.round(a.score)}/${Math.round(a.total_points ?? 100)}`
+            : '-';
         const isActive = Number(teacherPronReviewState.attemptId) === Number(a.attempt_id);
         const cheated = !!(a.cheating_voided || (a.cheating_violations && a.cheating_violations > 0));
         const cheatTitle = a.cheating_voided
@@ -2097,6 +2127,8 @@ async function loadTeacherPronAttempt(attemptId) {
     if (saveBtn) saveBtn.classList.add('hidden');
 
     teacherPronReviewState.attemptId = attemptId;
+    // Re-render attempts list immediately so clicked row gets .is-active class.
+    renderTeacherPronAttemptsList();
     const detail = document.getElementById('teacher-pron-attempt-detail');
     if (detail) detail.innerHTML = `<div class="lesson-teacher-review-empty"><i data-lucide="loader" class="lesson-teacher-review-empty-icon" aria-hidden="true"></i><p class="lesson-teacher-review-empty-text">Loading answers...</p></div>`;
     if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
@@ -2108,6 +2140,12 @@ async function loadTeacherPronAttempt(attemptId) {
 
         const answers = data.answers || [];
         const attempt = data.attempt || {};
+        const studentName = attempt.student_name || `Student #${attempt.student_id || ''}`;
+        const initials = getInitials(studentName);
+        const score = (attempt.score != null && attempt.total_points != null)
+            ? `${Math.round(attempt.score)}/${Math.round(attempt.total_points)}`
+            : (attempt.score != null ? `${Math.round(attempt.score)}` : '-');
+        const submitted = attempt.end_time ? formatDateTime(attempt.end_time) : '';
         const cheated = !!(attempt.cheating_voided || (attempt.cheating_violations && attempt.cheating_violations > 0));
         const cheatBanner = cheated
             ? `<div class="p-3 mb-4 rounded-lg flex items-start gap-2 ${attempt.cheating_voided ? 'bg-destructive/20 text-destructive' : 'bg-amber-500/20 text-amber-700 dark:text-amber-400'}">
@@ -2119,31 +2157,52 @@ async function loadTeacherPronAttempt(attemptId) {
                     : ` Student left fullscreen or switched tabs (${attempt.cheating_violations || 0} time(s)).`) +
                 '</div></div>'
             : '';
-        detail.innerHTML = (cheatBanner || '') + answers.map(a => {
+        const studentHeader = `
+          <div class="teacher-review-summary" style="margin-bottom:1rem;">
+            <div style="min-width:0;">
+              <div class="text-xs text-muted-foreground">Student</div>
+              <div class="student-chip" style="margin-top:.25rem; min-width:0;">
+                <span class="mini-avatar" aria-hidden="true">${escapeHtml(initials)}</span>
+                <span class="font-semibold" style="min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(studentName)}</span>
+              </div>
+            </div>
+            <div class="teacher-review-summary__right">
+              <div class="teacher-review-summary__chip">${escapeHtml(score)}</div>
+              ${submitted ? `<div class="text-xs text-muted-foreground">${escapeHtml(submitted)}</div>` : ''}
+            </div>
+          </div>`;
+        detail.innerHTML = (cheatBanner || '') + studentHeader + answers.map(a => {
             const current = (a.teacher_score != null) ? a.teacher_score : a.pronunciation_score;
+            const audioSrc = (a.student_audio && a.student_audio.startsWith('/') ? (window.API_BASE || '') + a.student_audio : (a.student_audio || ''));
+            const qText = escapeHtml(a.question_text || 'Item');
+            const target = escapeHtml(a.correct_pronunciation || '-');
             return `
-              <div class="card teacher-pron-answer-row" style="margin:0;" data-answer-id="${a.answer_id}">
-                <div class="card-header">
-                  <div class="card-title">${escapeHtml(a.question_text || 'Item')}</div>
-                  <div class="card-description">Target: ${escapeHtml(a.correct_pronunciation || '-')}</div>
+              <div class="teacher-pron-answer-row" data-answer-id="${a.answer_id}">
+                <div class="teacher-pron-answer-hero">
+                  <div class="teacher-pron-answer-letter">${qText}</div>
+                  <div class="teacher-pron-answer-target">
+                    <span class="teacher-pron-answer-target-label">Target</span>
+                    <span class="teacher-pron-answer-target-ipa">${target}</span>
+                  </div>
                 </div>
-                <div class="card-content space-y-2">
-                  <div class="grid md:grid-cols-2 gap-3">
-                    <div>
-                      <div class="text-xs text-muted-foreground">Transcript (student)</div>
-                      <div class="p-3 rounded-lg border border-border bg-background" style="white-space:pre-wrap;">${escapeHtml(a.transcript || '')}</div>
+                <div class="teacher-pron-answer-body">
+                  <div class="teacher-pron-answer-section teacher-pron-audio">
+                    <div class="teacher-pron-section-label">
+                      <i data-lucide="mic" class="size-4"></i>
+                      <span>Audio</span>
                     </div>
-                    <div class="space-y-2">
-                      <div class="text-xs text-muted-foreground">Audio</div>
-                      <audio controls src="${escapeHtml(a.student_audio || '')}" style="width:100%;"></audio>
-                      <div class="flex items-center gap-2 flex-wrap">
-                        <span class="text-xs text-muted-foreground">Score</span>
-                        <input class="form-input teacher-pron-score" type="number" step="0.1" min="0" max="100" value="${current ?? 0}" style="width:110px;" />
-                      </div>
-                      <div>
-                        <div class="text-xs text-muted-foreground">Teacher note (optional)</div>
-                        <input class="form-input teacher-pron-notes" type="text" value="${escapeHtml(a.teacher_notes || '')}" placeholder="e.g. ok but case/small letter..." />
-                      </div>
+                    <div class="teacher-pron-audio-wrap">
+                      <audio controls src="${audioSrc}" class="teacher-pron-audio-el"></audio>
+                    </div>
+                  </div>
+                  <div class="teacher-pron-answer-section teacher-pron-score-section">
+                    <div class="teacher-pron-section-label">
+                      <i data-lucide="award" class="size-4"></i>
+                      <span>Score</span>
+                    </div>
+                    <div class="teacher-pron-score-wrap">
+                      <input class="teacher-pron-score teacher-pron-score-input" type="number" step="0.1" min="0" max="100" value="${current ?? 0}" />
+                      <span class="teacher-pron-score-suffix">/ 100</span>
                     </div>
                   </div>
                 </div>
@@ -2172,12 +2231,11 @@ async function saveTeacherPronunciationOverrides() {
     const answers = [];
     document.querySelectorAll('#teacher-pron-attempt-detail .teacher-pron-answer-row').forEach(row => {
         const answerId = Number(row.getAttribute('data-answer-id'));
-        const scoreInput = row.querySelector('.teacher-pron-score');
-        const notesInput = row.querySelector('.teacher-pron-notes');
+        const scoreInput = row.querySelector('.teacher-pron-score-input, .teacher-pron-score');
         answers.push({
             answer_id: answerId,
             teacher_score: scoreInput ? Number(scoreInput.value) : null,
-            teacher_notes: notesInput ? String(notesInput.value || '') : ''
+            teacher_notes: ''
         });
     });
 

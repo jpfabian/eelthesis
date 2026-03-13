@@ -1597,6 +1597,39 @@ body,
   color: var(--muted-foreground);
 }
 
+/* Exam generator: header styling */
+body.exam-generator-page .generate-exam-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--primary) 18%, var(--border));
+}
+
+body.exam-generator-page .generate-exam-card-header-main .card-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+body.exam-generator-page .generate-exam-card-header-main .card-description {
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+}
+
+body.exam-generator-page .generate-exam-card-header-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  color: var(--primary-foreground);
+  box-shadow: 0 10px 26px rgba(79, 70, 229, 0.4);
+}
+
 .sidebar-divider {
   height: 1px;
   background: var(--sidebar-border);
@@ -2869,17 +2902,30 @@ body.lessons-page #main-content {
 }
 
 /* Review my answers modal (lessons page) */
-#lesson-review-modal .lesson-review-modal-card {
-  width: 90%;
-  max-width: 720px;
+#lesson-review-modal .lesson-review-modal-card,
+#student-reading-review-modal .lesson-review-modal-card,
+#student-pron-review-modal .lesson-review-modal-card {
+  width: min(96vw, 980px);
   max-height: 90vh;
   display: flex;
   flex-direction: column;
+  border-radius: calc(var(--radius) + 12px);
+  border: 1px solid var(--border);
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.22), 0 0 0 1px color-mix(in srgb, var(--primary) 10%, transparent);
+  overflow: hidden;
 }
-#lesson-review-modal .lesson-review-modal-content {
+#lesson-review-modal .lesson-review-modal-content,
+#student-reading-review-modal .lesson-review-modal-content,
+#student-pron-review-modal .lesson-review-modal-content {
   overflow-y: auto;
   min-height: 0;
   flex: 1;
+  padding: 1rem 1.25rem 1.25rem;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--primary) 4%, var(--card)) 0%,
+    var(--card) 35%
+  );
 }
 .lesson-review-loading,
 .lesson-review-error {
@@ -2901,6 +2947,19 @@ body.lessons-page #main-content {
 }
 .lesson-review-body .quiz-review-answers {
   margin-bottom: 0;
+}
+@media (max-width: 768px) {
+  #lesson-review-modal .lesson-review-modal-card,
+  #student-reading-review-modal .lesson-review-modal-card,
+  #student-pron-review-modal .lesson-review-modal-card {
+    width: 96vw;
+    max-height: 92vh;
+  }
+  #lesson-review-modal .lesson-review-modal-content,
+  #student-reading-review-modal .lesson-review-modal-content,
+  #student-pron-review-modal .lesson-review-modal-content {
+    padding: 0.75rem 0.85rem 1rem;
+  }
 }
 
 .lesson-viewer {
@@ -3091,7 +3150,10 @@ body.lessons-page #main-content {
   overflow-y: auto;
   line-height: 1.7;
   color: var(--foreground);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--primary) 3%, transparent) 0%, transparent 100%);
+  background:
+    radial-gradient(120% 120% at 0% 0%, color-mix(in srgb, var(--primary) 8%, transparent), transparent 40%),
+    radial-gradient(120% 120% at 100% 0%, color-mix(in srgb, var(--secondary) 7%, transparent), transparent 36%),
+    linear-gradient(180deg, color-mix(in srgb, var(--primary) 3%, transparent) 0%, transparent 100%);
   animation: lesson-content-fade-in 0.35s ease-out;
 }
 
@@ -3118,6 +3180,76 @@ body.lessons-page #main-content {
   background: color-mix(in srgb, var(--primary) 55%, transparent);
 }
 
+.lesson-topic-deck {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+.lesson-topic-slide {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1.25rem;
+  border: 1px solid color-mix(in srgb, var(--primary) 16%, var(--border));
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--card) 96%, white 4%), var(--card));
+  box-shadow:
+    0 22px 44px -34px rgba(15, 23, 42, 0.35),
+    0 24px 60px -52px color-mix(in srgb, var(--primary) 18%, transparent);
+}
+
+.lesson-topic-slide::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 100%;
+  height: 5px;
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
+  opacity: 0.95;
+}
+
+.lesson-topic-slide__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.1rem 0.85rem;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--primary) 10%, transparent), color-mix(in srgb, var(--secondary) 8%, transparent));
+  border-bottom: 1px solid color-mix(in srgb, var(--primary) 10%, var(--border));
+}
+
+.lesson-topic-slide__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primary) 12%, var(--card));
+  border: 1px solid color-mix(in srgb, var(--primary) 18%, var(--border));
+  color: color-mix(in srgb, var(--primary) 72%, var(--foreground));
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.lesson-topic-slide__title {
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+
+.lesson-topic-slide__title h2 {
+  margin: 0 !important;
+}
+
+.lesson-topic-slide__body {
+  padding: 1.15rem 1.15rem 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
 .lesson-topic-content h2 {
   font-size: 1.2rem;
   font-weight: 700;
@@ -3135,10 +3267,32 @@ body.lessons-page #main-content {
 }
 
 .lesson-topic-content h3 {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  padding: 0.45rem 0.8rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--primary) 18%, var(--border));
+  background: color-mix(in srgb, var(--primary) 8%, var(--card));
   font-size: 1.05rem;
   font-weight: 600;
   margin: 1.25rem 0 0.5rem;
   color: var(--primary);
+}
+
+.lesson-topic-content .lesson-topic-accent-heading {
+  font-weight: 700;
+}
+
+.lesson-topic-content .lesson-topic-accent-heading--scenario {
+  color: #7c3aed;
+  background: color-mix(in srgb, #7c3aed 10%, var(--card));
+}
+
+.lesson-topic-content .lesson-topic-accent-heading--takeaway {
+  color: #0f766e;
+  background: color-mix(in srgb, #14b8a6 12%, var(--card));
 }
 
 .lesson-topic-content p {
@@ -3175,6 +3329,25 @@ body.lessons-page #main-content {
 .lesson-topic-content strong {
   color: var(--foreground);
   font-weight: 600;
+}
+
+:root[data-theme="dark"] .lesson-topic-slide {
+  background: linear-gradient(180deg, #12203a, #0f172a);
+  border-color: rgba(167, 139, 250, 0.24);
+  box-shadow:
+    0 24px 48px -36px rgba(2, 6, 23, 0.82),
+    0 30px 72px -58px rgba(139, 92, 246, 0.18);
+}
+
+:root[data-theme="dark"] .lesson-topic-slide__header {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.16), rgba(34, 197, 94, 0.10));
+  border-bottom-color: rgba(148, 163, 184, 0.14);
+}
+
+:root[data-theme="dark"] .lesson-topic-slide__badge {
+  background: rgba(139, 92, 246, 0.18);
+  border-color: rgba(167, 139, 250, 0.28);
+  color: #eadcff;
 }
 
 /* Fullscreen presentation (slideshow) overlay */
@@ -3358,7 +3531,8 @@ body.lessons-page #main-content {
 body.recitation-page #main-content,
 body.exam-generator-page #main-content,
 body.student-progress-page #main-content,
-body.settings-page #main-content {
+body.settings-page #main-content,
+body.deleted-archive-page #main-content {
   position: relative;
   isolation: isolate;
   background: var(--background);
@@ -3367,7 +3541,8 @@ body.settings-page #main-content {
 body.recitation-page #main-content::before,
 body.exam-generator-page #main-content::before,
 body.student-progress-page #main-content::before,
-body.settings-page #main-content::before {
+body.settings-page #main-content::before,
+body.deleted-archive-page #main-content::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -3383,14 +3558,16 @@ body.settings-page #main-content::before {
 :root[data-theme="dark"] body.recitation-page #main-content::before,
 :root[data-theme="dark"] body.exam-generator-page #main-content::before,
 :root[data-theme="dark"] body.student-progress-page #main-content::before,
-:root[data-theme="dark"] body.settings-page #main-content::before {
+:root[data-theme="dark"] body.settings-page #main-content::before,
+:root[data-theme="dark"] body.deleted-archive-page #main-content::before {
   opacity: 0.9;
 }
 
 /* Gradient border utility for cards (doesn't replace card background) */
 body.recitation-page #main-content .card,
 body.exam-generator-page #main-content .card,
-body.settings-page #main-content .card {
+body.settings-page #main-content .card,
+body.deleted-archive-page #main-content .card {
   position: relative;
   border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
   background: color-mix(in srgb, var(--card) 92%, transparent);
@@ -3400,7 +3577,8 @@ body.settings-page #main-content .card {
 
 body.recitation-page #main-content .card::before,
 body.exam-generator-page #main-content .card::before,
-body.settings-page #main-content .card::before {
+body.settings-page #main-content .card::before,
+body.deleted-archive-page #main-content .card::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -3421,7 +3599,8 @@ body.settings-page #main-content .card::before {
 
 body.recitation-page #main-content .card:hover,
 body.exam-generator-page #main-content .card:hover,
-body.settings-page #main-content .card:hover {
+body.settings-page #main-content .card:hover,
+body.deleted-archive-page #main-content .card:hover {
   box-shadow:
     0 22px 45px -28px rgba(0, 0, 0, 0.55),
     0 28px 70px -54px color-mix(in srgb, var(--primary) 32%, transparent),
@@ -4243,13 +4422,24 @@ body.classes-page #classes-grid-student {
 /* Recitation countdown timer – progress bar + time display */
 .recitation-timer-wrap {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: center;
   gap: 0.6rem;
   width: 100%;
+  position: sticky;
+  top: 0;
+  z-index: 8;
+  padding: 0.65rem 0.75rem;
+  border-radius: 0.75rem;
+  background: color-mix(in srgb, var(--card) 92%, white 8%);
+  border: 1px solid color-mix(in srgb, var(--primary) 16%, var(--border));
+  box-shadow: 0 6px 14px -10px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(2px);
 }
 
 .recitation-timer-bar-track {
-  width: 100%;
+  flex: 1 1 auto;
+  min-width: 0;
   height: 0.5rem;
   border-radius: 9999px;
   background: var(--muted);
@@ -4280,9 +4470,11 @@ body.classes-page #classes-grid-student {
 
 .recitation-timer-display {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 0.35rem;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  flex: 0 0 auto;
 }
 
 .recitation-timer-value {
@@ -9254,29 +9446,60 @@ body.auth-page .login-screen .btn.btn-primary:hover {
 }
 
 .scores-chart-block {
-  padding: 1.25rem;
-  background: color-mix(in srgb, var(--muted) 30%, var(--card));
-  border: 1px solid var(--border);
-  border-radius: 0.75rem;
+  position: relative;
+  overflow: hidden;
+  padding: 1.35rem;
+  background:
+    radial-gradient(120% 120% at 0% 0%, color-mix(in srgb, var(--primary) 14%, transparent), transparent 46%),
+    radial-gradient(120% 120% at 100% 0%, color-mix(in srgb, var(--secondary) 12%, transparent), transparent 42%),
+    linear-gradient(180deg, color-mix(in srgb, var(--card) 94%, var(--muted) 6%), var(--card));
+  border: 1px solid color-mix(in srgb, var(--primary) 18%, var(--border));
+  border-radius: 1rem;
+  box-shadow:
+    0 18px 42px -30px rgba(15, 23, 42, 0.38),
+    0 28px 70px -58px color-mix(in srgb, var(--primary) 18%, transparent);
+}
+
+.scores-chart-block::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--primary) 16%, transparent),
+    transparent 32%,
+    transparent 70%,
+    color-mix(in srgb, var(--secondary) 12%, transparent)
+  );
+  opacity: 0.65;
 }
 
 .scores-chart-title {
-  font-size: 1rem;
-  font-weight: 600;
+  position: relative;
+  font-size: 1.05rem;
+  font-weight: 800;
   color: var(--foreground);
-  margin: 0 0 0.25rem 0;
+  margin: 0 0 0.35rem 0;
+  letter-spacing: -0.01em;
 }
 
 .scores-chart-desc {
+  position: relative;
   font-size: 0.8125rem;
   color: var(--muted-foreground);
-  margin: 0 0 1rem 0;
+  margin: 0 0 1.15rem 0;
+  max-width: 42rem;
+  line-height: 1.55;
 }
 
 .scores-chart-wrap {
   position: relative;
   width: 100%;
-  min-height: 180px;
+  min-height: 190px;
+  padding: 0.4rem 0;
+  border-radius: 0.85rem;
+  background: color-mix(in srgb, var(--card) 92%, var(--muted) 8%);
 }
 
 .scores-chart-wrap canvas {
@@ -9285,13 +9508,132 @@ body.auth-page .login-screen .btn.btn-primary:hover {
 }
 
 #avg-score-chart-groups {
-  display: flex;
-  flex-direction: column;
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr;
   gap: 1rem;
 }
 
 #avg-score-chart-groups .scores-chart-wrap {
   min-height: 160px;
+}
+
+#avg-score-chart-groups .scores-subtable-group {
+  position: relative;
+  overflow: hidden;
+  padding: 1rem 1rem 0.85rem;
+  border-radius: 1rem;
+  border: 1px solid color-mix(in srgb, var(--primary) 14%, var(--border));
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--card) 94%, white 6%), var(--card));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    0 16px 34px -28px rgba(15, 23, 42, 0.4);
+  transition: transform 0.18s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+}
+
+#avg-score-chart-groups .scores-subtable-group::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 100%;
+  height: 4px;
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
+  opacity: 0.9;
+}
+
+#avg-score-chart-groups .scores-subtable-group:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--primary) 24%, var(--border));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 20px 42px -30px rgba(15, 23, 42, 0.46),
+    0 24px 56px -46px color-mix(in srgb, var(--primary) 22%, transparent);
+}
+
+#avg-score-chart-groups .scores-subtable-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 0.75rem;
+  padding: 0.42rem 0.72rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--primary) 18%, var(--border));
+  background: color-mix(in srgb, var(--primary) 8%, var(--card));
+  color: color-mix(in srgb, var(--primary) 72%, var(--foreground));
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+#avg-score-chart-groups .scores-subtable-title::before {
+  content: "";
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 12%, transparent);
+  flex: 0 0 auto;
+}
+
+:root:not([data-theme="dark"]) .scores-chart-block {
+  background:
+    radial-gradient(120% 120% at 0% 0%, rgba(109, 40, 217, 0.10), transparent 46%),
+    radial-gradient(120% 120% at 100% 0%, rgba(34, 197, 94, 0.10), transparent 42%),
+    linear-gradient(180deg, #fcfbff, #f8fafc);
+  border-color: rgba(109, 40, 217, 0.14);
+}
+
+:root:not([data-theme="dark"]) #avg-score-chart-groups .scores-subtable-group {
+  background: linear-gradient(180deg, #ffffff, #f8fafc);
+  border-color: rgba(109, 40, 217, 0.14);
+}
+
+:root:not([data-theme="dark"]) .scores-chart-wrap {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(248, 250, 252, 0.96));
+  border: 1px solid rgba(109, 40, 217, 0.08);
+}
+
+:root[data-theme="dark"] .scores-chart-block {
+  background:
+    radial-gradient(120% 120% at 0% 0%, rgba(139, 92, 246, 0.20), transparent 48%),
+    radial-gradient(120% 120% at 100% 0%, rgba(34, 197, 94, 0.14), transparent 44%),
+    linear-gradient(180deg, #111c32, #0f172a);
+  border-color: rgba(167, 139, 250, 0.26);
+  box-shadow:
+    0 22px 52px -34px rgba(2, 6, 23, 0.82),
+    0 28px 72px -58px rgba(139, 92, 246, 0.22);
+}
+
+:root[data-theme="dark"] .scores-chart-block::before {
+  opacity: 0.82;
+}
+
+:root[data-theme="dark"] .scores-chart-title {
+  color: #f5f3ff;
+}
+
+:root[data-theme="dark"] .scores-chart-desc {
+  color: #cbd5e1;
+}
+
+:root[data-theme="dark"] #avg-score-chart-groups .scores-subtable-group {
+  background: linear-gradient(180deg, #16233d, #101a31);
+  border-color: rgba(167, 139, 250, 0.24);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 18px 38px -30px rgba(2, 6, 23, 0.85);
+}
+
+:root[data-theme="dark"] #avg-score-chart-groups .scores-subtable-title {
+  background: rgba(139, 92, 246, 0.16);
+  border-color: rgba(167, 139, 250, 0.30);
+  color: #e9ddff;
+}
+
+:root[data-theme="dark"] .scores-chart-wrap {
+  background: linear-gradient(180deg, rgba(9, 14, 28, 0.72), rgba(15, 23, 42, 0.88));
+  border: 1px solid rgba(148, 163, 184, 0.12);
 }
 
 .scores-view-toggle {
@@ -9400,7 +9742,33 @@ body.auth-page .login-screen .btn.btn-primary:hover {
 }
 
 .scores-table-block {
+  position: relative;
   overflow: hidden;
+  padding: 1.2rem;
+  border-radius: 1rem;
+  background:
+    radial-gradient(120% 120% at 0% 0%, color-mix(in srgb, var(--primary) 12%, transparent), transparent 42%),
+    radial-gradient(120% 120% at 100% 0%, color-mix(in srgb, var(--secondary) 10%, transparent), transparent 40%),
+    linear-gradient(180deg, color-mix(in srgb, var(--card) 96%, var(--muted) 4%), var(--card));
+  border: 1px solid color-mix(in srgb, var(--primary) 16%, var(--border));
+  box-shadow:
+    0 18px 42px -32px rgba(15, 23, 42, 0.38),
+    0 30px 74px -62px color-mix(in srgb, var(--primary) 18%, transparent);
+}
+
+.scores-table-block::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--primary) 12%, transparent),
+    transparent 34%,
+    transparent 72%,
+    color-mix(in srgb, var(--secondary) 10%, transparent)
+  );
+  opacity: 0.65;
 }
 
 .scores-subtable-group + .scores-subtable-group {
@@ -9412,45 +9780,70 @@ body.auth-page .login-screen .btn.btn-primary:hover {
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  margin-bottom: 0.6rem;
+  margin-bottom: 0.8rem;
+  position: relative;
 }
 
 .scores-subtable-title {
-  font-size: 0.875rem;
-  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.84rem;
+  font-weight: 800;
   margin: 0;
-  color: var(--foreground);
+  color: color-mix(in srgb, var(--primary) 72%, var(--foreground));
+  padding: 0.45rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--primary) 18%, var(--border));
+  background: color-mix(in srgb, var(--primary) 8%, var(--card));
+  letter-spacing: 0.01em;
+}
+
+.scores-subtable-title::before {
+  content: "";
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 12%, transparent);
+  flex: 0 0 auto;
 }
 
 .scores-table-scroll {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
-  border: 1px solid var(--border);
-  border-radius: 0.5rem;
-  background: var(--background);
+  border: 1px solid color-mix(in srgb, var(--primary) 12%, var(--border));
+  border-radius: 0.9rem;
+  background: color-mix(in srgb, var(--card) 92%, var(--muted) 8%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    0 14px 28px -24px rgba(15, 23, 42, 0.3);
 }
 
 .scores-table {
   width: 100%;
   min-width: 700px;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
 }
 
 .scores-table thead {
   position: sticky;
   top: 0;
-  background: color-mix(in srgb, var(--muted) 50%, var(--card));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--primary) 8%, var(--card)), color-mix(in srgb, var(--muted) 42%, var(--card)));
   z-index: 1;
   border-bottom: 2px solid var(--border);
 }
 
 .scores-table th {
-  padding: 0.75rem 1rem;
-  font-size: 0.8125rem;
-  font-weight: 600;
+  padding: 0.9rem 1rem;
+  font-size: 0.78rem;
+  font-weight: 800;
   color: var(--muted-foreground);
   text-align: left;
   white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .scores-table th:first-child {
@@ -9463,8 +9856,7 @@ body.auth-page .login-screen .btn.btn-primary:hover {
 }
 
 .scores-table tbody tr {
-  border-bottom: 1px solid var(--border);
-  transition: background 0.15s ease;
+  transition: background 0.18s ease, transform 0.18s ease;
 }
 
 .scores-table tbody tr:hover {
@@ -9472,13 +9864,14 @@ body.auth-page .login-screen .btn.btn-primary:hover {
 }
 
 .scores-table td {
-  padding: 0.75rem 1rem;
+  padding: 0.95rem 1rem;
   font-size: 0.875rem;
   color: var(--foreground);
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
 }
 
 .scores-table td:first-child {
-  font-weight: 500;
+  font-weight: 700;
   color: var(--foreground);
 }
 
@@ -9487,16 +9880,21 @@ body.auth-page .login-screen .btn.btn-primary:hover {
 }
 
 .scores-table td:last-child {
-  font-weight: 600;
+  font-weight: 800;
   color: var(--secondary);
+}
+
+.scores-table tbody tr:last-child td {
+  border-bottom: none;
 }
 
 .scores-table-pager {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 0.5rem;
-  margin-top: 0.65rem;
+  gap: 0.65rem;
+  margin-top: 0.85rem;
+  padding-top: 0.1rem;
 }
 
 .scores-table-pager .btn {
@@ -9525,8 +9923,68 @@ body.auth-page .login-screen .btn.btn-primary:hover {
 .scores-page-info {
   font-size: 0.8125rem !important;
   color: var(--muted-foreground) !important;
-  min-width: 5.5rem !important;
+  min-width: 6.5rem !important;
   text-align: center;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--primary) 14%, var(--border));
+  background: color-mix(in srgb, var(--primary) 6%, var(--card));
+}
+
+.scores-export-btn {
+  border-radius: 999px !important;
+  padding-inline: 0.9rem !important;
+  border-color: color-mix(in srgb, var(--primary) 22%, var(--border)) !important;
+  background: color-mix(in srgb, var(--primary) 8%, var(--card)) !important;
+  color: color-mix(in srgb, var(--primary) 70%, var(--foreground)) !important;
+  box-shadow: 0 10px 24px -18px color-mix(in srgb, var(--primary) 30%, transparent);
+}
+
+.scores-export-btn:hover:not(:disabled) {
+  border-color: var(--primary) !important;
+  background: color-mix(in srgb, var(--primary) 16%, var(--card)) !important;
+}
+
+:root[data-theme="dark"] .scores-table-block {
+  background:
+    radial-gradient(120% 120% at 0% 0%, rgba(139, 92, 246, 0.18), transparent 44%),
+    radial-gradient(120% 120% at 100% 0%, rgba(34, 197, 94, 0.12), transparent 42%),
+    linear-gradient(180deg, #101a31, #0f172a);
+  border-color: rgba(167, 139, 250, 0.22);
+  box-shadow:
+    0 20px 48px -34px rgba(2, 6, 23, 0.82),
+    0 28px 76px -60px rgba(139, 92, 246, 0.18);
+}
+
+:root[data-theme="dark"] .scores-table-scroll {
+  background: linear-gradient(180deg, rgba(6, 11, 24, 0.92), rgba(13, 22, 43, 0.96));
+  border-color: rgba(148, 163, 184, 0.12);
+}
+
+:root[data-theme="dark"] .scores-table thead {
+  background: linear-gradient(180deg, rgba(139, 92, 246, 0.12), rgba(30, 41, 59, 0.92));
+}
+
+:root[data-theme="dark"] .scores-table tbody tr:hover {
+  background: rgba(34, 197, 94, 0.08);
+}
+
+:root[data-theme="dark"] .scores-subtable-title {
+  background: rgba(139, 92, 246, 0.14);
+  border-color: rgba(167, 139, 250, 0.28);
+  color: #eadcff;
+}
+
+:root[data-theme="dark"] .scores-page-info {
+  background: rgba(139, 92, 246, 0.10);
+  border-color: rgba(167, 139, 250, 0.24);
+  color: #cbd5e1 !important;
+}
+
+:root[data-theme="dark"] .scores-export-btn {
+  background: rgba(139, 92, 246, 0.12) !important;
+  border-color: rgba(167, 139, 250, 0.28) !important;
+  color: #eadcff !important;
 }
 
 @media (min-width: 640px) {
@@ -9534,7 +9992,7 @@ body.auth-page .login-screen .btn.btn-primary:hover {
     padding: 1.75rem;
   }
   .scores-chart-block {
-    padding: 1.5rem;
+    padding: 1.6rem;
   }
 }
 
@@ -10926,6 +11384,21 @@ body.pronunciation-lessons-page #created-lessons-grid .card:hover {
     0 22px 55px -52px color-mix(in srgb, var(--secondary) 18%, transparent);
 }
 
+/* Reading & Pronunciation pages: grid vs list layout for built-in quizzes */
+body.reading-lessons-page .quiz-page[data-view="grid"] #lessons-grid,
+body.pronunciation-lessons-page .quiz-page[data-view="grid"] #lessons-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+}
+
+body.reading-lessons-page .quiz-page[data-view="list"] #lessons-grid,
+body.pronunciation-lessons-page .quiz-page[data-view="list"] #lessons-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+}
+
 .quiz-view-toggle .btn {
   height: 2.25rem;
   padding: 0.5rem 0.85rem;
@@ -11062,6 +11535,122 @@ body.pronunciation-lessons-page #created-lessons-grid .card:hover {
   gap: 0.75rem;
 }
 
+/* ============================================
+   Pronunciation Teacher Review – answer cards
+   ============================================ */
+#teacher-pronunciation-review-modal .teacher-pron-answer-row {
+  margin-bottom: 1.25rem;
+  border-radius: calc(var(--radius) + 6px);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--card);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+  transition: box-shadow 0.2s, border-color 0.2s;
+}
+#teacher-pronunciation-review-modal .teacher-pron-answer-row:hover {
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+  border-color: color-mix(in srgb, var(--primary) 25%, var(--border));
+}
+#teacher-pronunciation-review-modal .teacher-pron-answer-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 14%, var(--card)), color-mix(in srgb, var(--primary) 6%, var(--card)));
+  border-bottom: 1px solid var(--border);
+}
+#teacher-pronunciation-review-modal .teacher-pron-answer-letter {
+  font-size: 2.5rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--primary);
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+  letter-spacing: -0.02em;
+}
+#teacher-pronunciation-review-modal .teacher-pron-answer-target {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.15rem;
+}
+#teacher-pronunciation-review-modal .teacher-pron-answer-target-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted-foreground);
+}
+#teacher-pronunciation-review-modal .teacher-pron-answer-target-ipa {
+  font-size: 1.1rem;
+  font-weight: 700;
+  font-family: "Georgia", "Times New Roman", serif;
+  color: var(--foreground);
+  padding: 0.25rem 0.6rem;
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--primary) 10%, var(--card));
+  border: 1px solid color-mix(in srgb, var(--primary) 25%, var(--border));
+}
+#teacher-pronunciation-review-modal .teacher-pron-answer-body {
+  padding: 1.25rem 1.5rem;
+  display: grid;
+  gap: 1.25rem;
+}
+#teacher-pronunciation-review-modal .teacher-pron-answer-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+#teacher-pronunciation-review-modal .teacher-pron-section-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+}
+#teacher-pronunciation-review-modal .teacher-pron-section-label i {
+  color: var(--primary);
+  opacity: 0.9;
+}
+#teacher-pronunciation-review-modal .teacher-pron-audio-wrap {
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--muted) 20%, var(--background));
+}
+#teacher-pronunciation-review-modal .teacher-pron-audio-el {
+  width: 100%;
+  height: 2.5rem;
+  padding: 0 0.5rem;
+}
+#teacher-pronunciation-review-modal .teacher-pron-score-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+#teacher-pronunciation-review-modal .teacher-pron-score-input {
+  width: 5rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 1rem;
+  font-weight: 700;
+  text-align: center;
+  border-radius: var(--radius);
+  border: 2px solid color-mix(in srgb, var(--primary) 40%, var(--border));
+  background: color-mix(in srgb, var(--primary) 8%, var(--card));
+  color: var(--foreground);
+}
+#teacher-pronunciation-review-modal .teacher-pron-score-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 20%, transparent);
+}
+#teacher-pronunciation-review-modal .teacher-pron-score-suffix {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+}
+
 /* Attempts list polish (scoped to the teacher review modal) */
 /* Attempt list items: lessons (AI), reading, pronunciation */
 #lesson-teacher-review-modal .lesson-teacher-attempt-item,
@@ -11138,7 +11727,53 @@ body.pronunciation-lessons-page #created-lessons-grid .card:hover {
 #teacher-reading-review-modal .teacher-attempt-item.is-active,
 #teacher-pronunciation-review-modal .teacher-attempt-item.is-active {
   border-color: color-mix(in srgb, var(--primary) 55%, var(--border));
-  background: color-mix(in srgb, var(--primary) 8%, var(--card));
+  background: color-mix(in srgb, var(--primary) 12%, var(--card));
+  border-left-width: 4px;
+  border-left-style: solid;
+  border-left-color: var(--primary);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+/* Strong violet highlight for selected student in lessons modal */
+#lesson-teacher-review-modal .lesson-teacher-attempt-item.is-active {
+  border-color: #7c3aed !important;
+  border-left-color: #7c3aed !important;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, #7c3aed 20%, var(--card)),
+    color-mix(in srgb, #8b5cf6 14%, var(--card))
+  ) !important;
+  box-shadow: 0 6px 16px rgba(124, 58, 237, 0.24) !important;
+}
+
+#lesson-teacher-review-modal .lesson-teacher-attempt-item.is-active .teacher-attempt-score {
+  color: #5b21b6;
+}
+
+/* Apply same violet selected-state behavior to reading/pronunciation modals */
+#teacher-reading-review-modal .teacher-attempt-item.is-active,
+#teacher-pronunciation-review-modal .teacher-attempt-item.is-active {
+  border-color: #7c3aed !important;
+  border-left-color: #7c3aed !important;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, #7c3aed 20%, var(--card)),
+    color-mix(in srgb, #8b5cf6 14%, var(--card))
+  ) !important;
+  box-shadow: 0 6px 16px rgba(124, 58, 237, 0.24) !important;
+}
+
+#teacher-reading-review-modal .teacher-attempt-item.is-active .teacher-attempt-score,
+#teacher-pronunciation-review-modal .teacher-attempt-item.is-active .teacher-attempt-score {
+  color: #5b21b6;
+}
+
+/* Active row: make student name text visibly violet too */
+#lesson-teacher-review-modal .lesson-teacher-attempt-item.is-active .student-chip > span:last-child,
+#teacher-reading-review-modal .teacher-attempt-item.is-active .student-chip > span:last-child,
+#teacher-pronunciation-review-modal .teacher-attempt-item.is-active .student-chip > span:last-child {
+  color: #5b21b6 !important;
+  font-weight: 700;
 }
 
 /* ============================================
@@ -11456,6 +12091,277 @@ body.pronunciation-lessons-page #created-lessons-grid .card:hover {
   flex-wrap: wrap;
 }
 
+/* ============================================
+   Reading Teacher Review – answer cards
+   ============================================ */
+:is(#teacher-reading-review-modal, #lesson-teacher-review-modal) .teacher-reading-answer-row {
+  margin-bottom: 1.25rem;
+  border-radius: calc(var(--radius) + 6px);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--card);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+  transition: box-shadow 0.2s, border-color 0.2s;
+}
+:is(#teacher-reading-review-modal, #lesson-teacher-review-modal) .teacher-reading-answer-row:hover {
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+  border-color: color-mix(in srgb, var(--primary) 25%, var(--border));
+}
+:is(#teacher-reading-review-modal, #lesson-teacher-review-modal) .teacher-reading-answer-hero {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 14%, var(--card)), color-mix(in srgb, var(--primary) 6%, var(--card)));
+  border-bottom: 1px solid var(--border);
+}
+:is(#teacher-reading-review-modal, #lesson-teacher-review-modal) .teacher-reading-answer-q {
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--primary);
+  flex-shrink: 0;
+  width: 2rem;
+  text-align: center;
+}
+:is(#teacher-reading-review-modal, #lesson-teacher-review-modal) .teacher-reading-answer-hero-text {
+  flex: 1;
+  min-width: 0;
+}
+:is(#teacher-reading-review-modal, #lesson-teacher-review-modal) .teacher-reading-answer-question {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--foreground);
+  line-height: 1.4;
+}
+:is(#teacher-reading-review-modal, #lesson-teacher-review-modal) .teacher-reading-answer-body {
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+:is(#teacher-reading-review-modal, #lesson-teacher-review-modal) .teacher-reading-answer-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+:is(#teacher-reading-review-modal, #lesson-teacher-review-modal) .teacher-reading-section-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  flex-wrap: wrap;
+}
+:is(#teacher-reading-review-modal, #lesson-teacher-review-modal) .teacher-reading-section-label i {
+  color: var(--primary);
+  opacity: 0.9;
+}
+:is(#teacher-reading-review-modal, #lesson-teacher-review-modal) .teacher-reading-section-label .teacher-answer-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-left: auto;
+}
+:is(#teacher-reading-review-modal, #lesson-teacher-review-modal) .teacher-reading-correct-box {
+  padding: 1rem 1.25rem;
+  border-radius: var(--radius);
+  border: 1px solid color-mix(in srgb, var(--primary) 30%, var(--border));
+  background: color-mix(in srgb, var(--primary) 8%, var(--card));
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+:is(#teacher-reading-review-modal, #lesson-teacher-review-modal) .teacher-reading-student-box {
+  padding: 1rem 1.25rem;
+  border-radius: var(--radius);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--muted) 30%, var(--background));
+}
+:is(#teacher-reading-review-modal, #lesson-teacher-review-modal) .teacher-reading-student-box[data-status="correct"] {
+  background: color-mix(in srgb, var(--secondary) 14%, var(--card));
+  border-color: color-mix(in srgb, var(--secondary) 40%, var(--border));
+}
+:is(#teacher-reading-review-modal, #lesson-teacher-review-modal) .teacher-reading-student-box[data-status="wrong"] {
+  background: color-mix(in srgb, var(--destructive) 12%, var(--card));
+  border-color: color-mix(in srgb, var(--destructive) 40%, var(--border));
+}
+:is(#teacher-reading-review-modal, #lesson-teacher-review-modal) .teacher-reading-mark-wrap {
+  padding-top: 0.5rem;
+  border-top: 1px dashed var(--border);
+}
+:is(#teacher-reading-review-modal, #lesson-teacher-review-modal) .teacher-reading-mark-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--foreground);
+}
+:is(#teacher-reading-review-modal, #lesson-teacher-review-modal) .teacher-reading-mark-label input {
+  width: 1.1rem;
+  height: 1.1rem;
+  accent-color: var(--primary);
+}
+
+#teacher-reading-review-modal .teacher-reading-answer-row {
+  margin-bottom: 1.25rem;
+  border-radius: calc(var(--radius) + 6px);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--card);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+  transition: box-shadow 0.2s, border-color 0.2s;
+}
+#teacher-reading-review-modal .teacher-reading-answer-row:hover {
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+  border-color: color-mix(in srgb, var(--primary) 25%, var(--border));
+}
+#teacher-reading-review-modal .teacher-reading-answer-hero {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 14%, var(--card)), color-mix(in srgb, var(--primary) 6%, var(--card)));
+  border-bottom: 1px solid var(--border);
+}
+#teacher-reading-review-modal .teacher-reading-answer-q {
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--primary);
+  flex-shrink: 0;
+  width: 2rem;
+  text-align: center;
+}
+#teacher-reading-review-modal .teacher-reading-answer-hero-text {
+  flex: 1;
+  min-width: 0;
+}
+#teacher-reading-review-modal .teacher-reading-answer-question {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--foreground);
+  line-height: 1.4;
+}
+#teacher-reading-review-modal .teacher-reading-answer-meta {
+  font-size: 0.8rem;
+  color: var(--muted-foreground);
+  margin-top: 0.25rem;
+}
+#teacher-reading-review-modal .teacher-reading-answer-body {
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+#teacher-reading-review-modal .teacher-reading-answer-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+#teacher-reading-review-modal .teacher-reading-section-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  flex-wrap: wrap;
+}
+#teacher-reading-review-modal .teacher-reading-section-label i {
+  color: var(--primary);
+  opacity: 0.9;
+}
+#teacher-reading-review-modal .teacher-reading-section-label .teacher-answer-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-left: auto;
+}
+#teacher-reading-review-modal .teacher-reading-correct-box {
+  padding: 1rem 1.25rem;
+  border-radius: var(--radius);
+  border: 1px solid color-mix(in srgb, var(--primary) 30%, var(--border));
+  background: color-mix(in srgb, var(--primary) 8%, var(--card));
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+#teacher-reading-review-modal .teacher-reading-student-box {
+  padding: 1rem 1.25rem;
+  border-radius: var(--radius);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--muted) 30%, var(--background));
+}
+#teacher-reading-review-modal .teacher-reading-student-box[data-status="correct"] {
+  background: color-mix(in srgb, var(--secondary) 14%, var(--card));
+  border-color: color-mix(in srgb, var(--secondary) 40%, var(--border));
+}
+#teacher-reading-review-modal .teacher-reading-student-box[data-status="wrong"] {
+  background: color-mix(in srgb, var(--destructive) 12%, var(--card));
+  border-color: color-mix(in srgb, var(--destructive) 40%, var(--border));
+}
+#teacher-reading-review-modal .teacher-reading-mark-wrap {
+  padding-top: 0.5rem;
+  border-top: 1px dashed var(--border);
+}
+#teacher-reading-review-modal .teacher-reading-mark-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--foreground);
+}
+#teacher-reading-review-modal .teacher-reading-mark-label input {
+  width: 1.1rem;
+  height: 1.1rem;
+  accent-color: var(--primary);
+}
+#teacher-reading-review-modal .teacher-reading-essay-box {
+  padding: 1rem 1.25rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--muted) 25%, var(--background));
+  font-size: 0.95rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+#teacher-reading-review-modal .teacher-reading-blank-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 1rem;
+  align-items: start;
+  padding: 1rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--muted) 20%, var(--background));
+}
+#teacher-reading-review-modal .teacher-reading-blank-row + .teacher-reading-blank-row {
+  margin-top: 0.75rem;
+}
+@media (max-width: 640px) {
+  #teacher-reading-review-modal .teacher-reading-blank-row {
+    grid-template-columns: 1fr;
+  }
+}
+#teacher-reading-review-modal .teacher-reading-blank-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+#teacher-reading-review-modal .teacher-reading-answer-empty {
+  padding: 1rem;
+  color: var(--muted-foreground);
+  font-style: italic;
+}
+
 .teacher-answer-line {
   display: flex;
   align-items: center;
@@ -11567,10 +12473,30 @@ body.pronunciation-lessons-page #created-lessons-grid .card:hover {
   transition: box-shadow 0.25s ease, transform 0.2s ease;
 }
 
-/* Collapsible quiz cards (same behavior in both grids) */
+/* Collapsible quiz cards (Reading & Pronunciation built-in quizzes) */
 #lessons-grid .card.created-quiz-card,
 #created-lessons-grid .card.created-quiz-card {
+  position: relative;
   cursor: default;
+  border-radius: 1.1rem;
+  border: 1px solid color-mix(in srgb, var(--border) 130%, transparent);
+  background:
+    linear-gradient(var(--card), var(--card)) padding-box,
+    radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--primary) 18%, transparent), transparent 55%),
+    radial-gradient(circle at 100% 100%, color-mix(in srgb, var(--secondary) 16%, transparent), transparent 55%) border-box;
+  box-shadow:
+    0 14px 40px -28px rgba(0, 0, 0, 0.5),
+    0 18px 46px -40px color-mix(in srgb, var(--primary) 26%, transparent);
+  transition: transform 0.18s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+#lessons-grid .card.created-quiz-card:hover,
+#created-lessons-grid .card.created-quiz-card:hover {
+  transform: translateY(-3px);
+  border-color: color-mix(in srgb, var(--primary) 40%, var(--border));
+  box-shadow:
+    0 22px 55px -34px rgba(0, 0, 0, 0.65),
+    0 28px 72px -52px color-mix(in srgb, var(--primary) 32%, transparent);
 }
 
 /* List view: force 1-column cards */
@@ -11652,14 +12578,14 @@ body.pronunciation-lessons-page #created-lessons-grid .card:hover {
 .created-quiz-card__inner {
   display: flex;
   flex-direction: column;
-  gap: 0;
-  padding: 1.25rem 1.5rem 1.375rem;
+  gap: 0.5rem;
+  padding: 1.4rem 1.6rem 1.45rem;
   min-height: 0;
-  transition: background 0.2s ease;
+  transition: background 0.2s ease, transform 0.18s ease;
 }
 
 .created-quiz-card .created-quiz-card__inner:hover {
-  background: color-mix(in srgb, var(--muted) 4%, transparent);
+  background: color-mix(in srgb, var(--muted) 6%, transparent);
 }
 
 .created-quiz-card__header {
@@ -11808,6 +12734,10 @@ body.pronunciation-lessons-page #created-lessons-grid .card:hover {
 .created-quiz-card--open .created-quiz-card__chevron {
   transform: rotate(180deg);
   color: var(--primary);
+}
+
+.created-quiz-card--open .created-quiz-card__inner {
+  background: color-mix(in srgb, var(--muted) 10%, transparent);
 }
 
 .created-quiz-card__details {
@@ -12141,46 +13071,66 @@ body.pronunciation-lessons-page #created-lessons-grid .card:hover {
   display: none !important;
 }
 .quiz-review-inner {
-  max-width: 720px;
+  max-width: 860px;
   margin: 0 auto;
 }
 .quiz-review-title {
-  font-size: 1.5rem;
-  font-weight: 700;
+  font-size: 1.8rem;
+  font-weight: 800;
   color: var(--foreground);
-  margin: 0 0 1rem;
+  margin: 0 0 1.1rem;
+  line-height: 1.25;
 }
 .quiz-review-score-bar {
-  padding: 0.75rem 1rem;
-  margin-bottom: 1.25rem;
-  background: color-mix(in srgb, var(--primary) 12%, var(--card));
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  font-size: 1rem;
+  padding: 0.85rem 1.1rem;
+  margin-bottom: 1rem;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 18%, var(--card)), color-mix(in srgb, var(--secondary) 12%, var(--card)));
+  border: 1px solid color-mix(in srgb, var(--primary) 28%, var(--border));
+  border-radius: calc(var(--radius) + 4px);
+  font-size: 1.02rem;
+  font-weight: 600;
   color: var(--foreground);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.07);
 }
 .quiz-review-passage {
-  padding: 1rem 1.25rem;
-  margin-bottom: 1.5rem;
+  padding: 1.1rem 1.25rem;
+  margin-bottom: 1.1rem;
   background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  font-size: 0.9375rem;
+  border: 1px solid color-mix(in srgb, var(--primary) 20%, var(--border));
+  border-radius: calc(var(--radius) + 4px);
+  font-size: 0.95rem;
   line-height: 1.6;
   color: var(--foreground);
   white-space: pre-wrap;
+  max-height: 260px;
+  overflow: auto;
 }
 .quiz-review-answers {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 0.9rem;
   margin-bottom: 1.5rem;
 }
 .quiz-review-item {
-  padding: 1rem 1.25rem;
+  padding: 1rem 1.1rem;
   background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border: 1px solid color-mix(in srgb, var(--primary) 16%, var(--border));
+  border-left: 4px solid color-mix(in srgb, var(--primary) 58%, var(--border));
+  border-radius: calc(var(--radius) + 4px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.05);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.quiz-review-item:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
+}
+.quiz-review-item--correct {
+  border-left-color: #22c55e;
+  border-color: color-mix(in srgb, #22c55e 30%, var(--border));
+}
+.quiz-review-item--incorrect {
+  border-left-color: #dc2626;
+  border-color: color-mix(in srgb, #dc2626 28%, var(--border));
 }
 .quiz-review-item__header {
   display: flex;
@@ -12191,22 +13141,30 @@ body.pronunciation-lessons-page #created-lessons-grid .card:hover {
 }
 .quiz-review-item__num {
   font-weight: 600;
-  font-size: 0.9375rem;
+  font-size: 0.92rem;
   color: var(--foreground);
 }
 .quiz-review-badge {
-  font-size: 0.75rem;
-  font-weight: 600;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 0.28rem 0.62rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
 }
 .quiz-review-badge--correct {
   background: color-mix(in srgb, #22c55e 20%, var(--card));
   color: #16a34a;
+  border-color: color-mix(in srgb, #22c55e 45%, var(--border));
 }
 .quiz-review-badge--incorrect {
   background: color-mix(in srgb, #dc2626 18%, var(--card));
   color: #dc2626;
+  border-color: color-mix(in srgb, #dc2626 40%, var(--border));
+}
+.quiz-review-badge--mid {
+  background: color-mix(in srgb, #f59e0b 16%, var(--card));
+  color: #d97706;
+  border-color: color-mix(in srgb, #f59e0b 42%, var(--border));
 }
 .quiz-review-item__q {
   font-size: 0.9375rem;
@@ -12215,13 +13173,45 @@ body.pronunciation-lessons-page #created-lessons-grid .card:hover {
   line-height: 1.5;
 }
 .quiz-review-item__row {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 0.75rem;
+  align-items: start;
   font-size: 0.875rem;
   color: var(--muted-foreground);
-  margin-top: 0.35rem;
+  margin-top: 0.42rem;
+  line-height: 1.5;
+  padding: 0.5rem 0.65rem;
+  border-radius: 0.65rem;
+  background: color-mix(in srgb, var(--muted) 38%, transparent);
 }
 .quiz-review-item__row strong {
   color: var(--foreground);
   margin-right: 0.35rem;
+}
+.quiz-review-item__row-label {
+  color: var(--foreground);
+  font-weight: 700;
+}
+.quiz-review-item__row-value {
+  color: var(--muted-foreground);
+}
+.quiz-review-audio-wrap {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 0.65rem;
+  overflow: hidden;
+  background: var(--background);
+}
+.quiz-review-audio {
+  width: 100%;
+  height: 2.5rem;
+}
+@media (max-width: 640px) {
+  .quiz-review-item__row {
+    grid-template-columns: 1fr;
+    gap: 0.35rem;
+  }
 }
 .quiz-review-back {
   display: inline-flex;
@@ -13314,13 +14304,18 @@ body.take-quiz-page .take-quiz-questions .mt-4.p-4 .grid > div {
   /* Scope under #schedule-modal so padding/gap are not overridden by .modal-card / .modal-content */
   #schedule-modal .schedule-modal-card {
     width: 100%;
-    max-width: 560px;
+    max-width: min(92vw, 680px) !important;
     margin: auto;
     padding: 0 !important;
-    border-radius: 1rem;
+    border-radius: 1.1rem;
+    border: 1px solid color-mix(in srgb, var(--primary) 20%, var(--border));
+    background:
+      radial-gradient(120% 120% at 100% 0%, color-mix(in srgb, var(--primary) 9%, transparent), transparent 55%),
+      radial-gradient(120% 140% at 0% 100%, color-mix(in srgb, var(--secondary) 9%, transparent), transparent 58%),
+      var(--card);
     box-shadow:
-      0 25px 50px -12px rgba(0, 0, 0, 0.25),
-      0 0 0 1px rgba(99, 102, 241, 0.08);
+      0 24px 48px -20px rgba(15, 23, 42, 0.5),
+      0 10px 24px -16px rgba(99, 102, 241, 0.45);
     overflow: hidden;
     display: flex !important;
     flex-direction: column !important;
@@ -13332,9 +14327,14 @@ body.take-quiz-page .take-quiz-questions .mt-4.p-4 .grid > div {
     align-items: flex-start;
     justify-content: space-between;
     gap: 1rem !important;
-    padding: 1.25rem 1.5rem !important;
-    background: linear-gradient(135deg, color-mix(in srgb, #6366f1 12%, var(--card)), color-mix(in srgb, #10b981 10%, var(--card)));
-    border-bottom: 1px solid var(--border);
+    padding: 1.15rem 1.35rem !important;
+    background: linear-gradient(
+      135deg,
+      color-mix(in srgb, #6366f1 22%, var(--card)),
+      color-mix(in srgb, #10b981 18%, var(--card))
+    );
+    border-bottom: 1px solid color-mix(in srgb, var(--primary) 18%, var(--border));
+    backdrop-filter: blur(2px);
   }
 
   #schedule-modal .schedule-modal-header-inner {
@@ -13351,9 +14351,9 @@ body.take-quiz-page .take-quiz-questions .mt-4.p-4 .grid > div {
     justify-content: center;
     background: linear-gradient(135deg, #6366f1, #10b981);
     color: white;
-    border-radius: 0.75rem;
+    border-radius: 0.8rem;
     flex-shrink: 0;
-    box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
+    box-shadow: 0 6px 16px rgba(99, 102, 241, 0.38);
   }
 
   #schedule-modal .schedule-modal-title {
@@ -13392,14 +14392,20 @@ body.take-quiz-page .take-quiz-questions .mt-4.p-4 .grid > div {
   }
 
   #schedule-modal .schedule-modal-content {
-    padding: 1.25rem 1.5rem !important;
+    padding: 1.25rem 1.35rem 1.1rem !important;
     overflow-y: auto;
     max-height: min(65vh, 520px);
     display: block !important;
+    background: color-mix(in srgb, var(--card) 92%, white 8%);
   }
 
   #schedule-modal .schedule-modal-section {
-    margin-bottom: 1.25rem !important;
+    margin-bottom: 0.85rem !important;
+    padding: 0.85rem 0.95rem !important;
+    border-radius: 0.8rem;
+    border: 1px solid color-mix(in srgb, var(--primary) 10%, var(--border));
+    background: color-mix(in srgb, var(--card) 92%, white 8%);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.45) inset;
   }
 
   #schedule-modal .schedule-modal-section:last-of-type {
@@ -13419,6 +14425,9 @@ body.take-quiz-page .take-quiz-questions .mt-4.p-4 .grid > div {
   #schedule-modal .schedule-modal-section-title i {
     color: var(--primary);
     flex-shrink: 0;
+    background: color-mix(in srgb, var(--primary) 14%, transparent);
+    border-radius: 0.5rem;
+    padding: 0.22rem;
   }
 
   #schedule-modal .schedule-modal-hint {
@@ -13441,8 +14450,8 @@ body.take-quiz-page .take-quiz-questions .mt-4.p-4 .grid > div {
     padding: 0.625rem 0.75rem !important;
     font-size: 0.9375rem;
     border: 1px solid var(--border);
-    border-radius: 0.5rem;
-    background: var(--input-background);
+    border-radius: 0.65rem;
+    background: color-mix(in srgb, var(--input-background) 90%, white 10%);
     color: var(--foreground);
     transition: border-color 0.2s, box-shadow 0.2s;
   }
@@ -13462,11 +14471,11 @@ body.take-quiz-page .take-quiz-questions .mt-4.p-4 .grid > div {
   }
 
   #schedule-modal .schedule-modal-connector {
-    width: 2px;
-    height: 1rem;
-    margin: 0.25rem 0 0.5rem 0.75rem;
-    background: linear-gradient(180deg, var(--border), color-mix(in srgb, var(--primary) 30%, transparent));
-    border-radius: 1px;
+    width: 3px;
+    height: 0.9rem;
+    margin: 0.1rem 0 0.2rem 1rem;
+    background: linear-gradient(180deg, color-mix(in srgb, var(--primary) 55%, transparent), transparent);
+    border-radius: 999px;
   }
 
   #schedule-modal .schedule-modal-divider {
@@ -13485,10 +14494,10 @@ body.take-quiz-page .take-quiz-questions .mt-4.p-4 .grid > div {
     align-items: flex-start;
     gap: 0.5rem !important;
     padding: 0.75rem 1rem !important;
-    margin-top: 1.25rem !important;
-    background: color-mix(in srgb, var(--primary) 8%, var(--card));
-    border: 1px solid color-mix(in srgb, var(--primary) 20%, transparent);
-    border-radius: 0.5rem;
+    margin-top: 1rem !important;
+    background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 10%, var(--card)), color-mix(in srgb, var(--secondary) 9%, var(--card)));
+    border: 1px solid color-mix(in srgb, var(--primary) 24%, transparent);
+    border-radius: 0.75rem;
     font-size: 0.8125rem;
     color: var(--muted-foreground);
     line-height: 1.5;
@@ -13505,9 +14514,9 @@ body.take-quiz-page .take-quiz-questions .mt-4.p-4 .grid > div {
     align-items: center;
     justify-content: flex-end;
     gap: 0.75rem !important;
-    padding: 1rem 1.5rem !important;
-    border-top: 1px solid var(--border);
-    background: var(--card);
+    padding: 0.95rem 1.35rem !important;
+    border-top: 1px solid color-mix(in srgb, var(--primary) 14%, var(--border));
+    background: color-mix(in srgb, var(--card) 90%, white 10%);
   }
 
   #schedule-modal .schedule-modal-btn {
@@ -13517,20 +14526,20 @@ body.take-quiz-page .take-quiz-questions .mt-4.p-4 .grid > div {
     padding: 0.625rem 1.25rem !important;
     font-size: 0.9375rem;
     font-weight: 500;
-    border-radius: 0.5rem;
+    border-radius: 0.65rem;
     cursor: pointer;
     transition: background 0.2s, color 0.2s, border-color 0.2s, transform 0.15s;
   }
 
   #schedule-modal .schedule-modal-btn-cancel {
-    border: 1px solid var(--border);
-    background: var(--card);
+    border: 1px solid color-mix(in srgb, var(--primary) 16%, var(--border));
+    background: color-mix(in srgb, var(--card) 88%, white 12%);
     color: var(--foreground);
   }
 
   #schedule-modal .schedule-modal-btn-cancel:hover {
-    background: color-mix(in srgb, var(--foreground) 6%, var(--card));
-    border-color: color-mix(in srgb, var(--foreground) 20%, var(--border));
+    background: color-mix(in srgb, var(--primary) 10%, var(--card));
+    border-color: color-mix(in srgb, var(--primary) 28%, var(--border));
   }
 
   #schedule-modal .schedule-modal-btn-save {
@@ -13552,6 +14561,68 @@ body.take-quiz-page .take-quiz-questions .mt-4.p-4 .grid > div {
 
   #schedule-modal .schedule-modal-specific.hidden {
     display: none !important;
+  }
+
+  #schedule-modal #lesson-specific-students-container {
+    padding: 0.9rem 1rem 1rem !important;
+    border: 1px solid color-mix(in srgb, var(--primary) 18%, var(--border));
+    border-radius: 0.75rem;
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--primary) 5%, var(--card)),
+      color-mix(in srgb, var(--secondary) 4%, var(--card))
+    );
+  }
+
+  #schedule-modal #lesson-specific-students-search {
+    margin-bottom: 0.65rem !important;
+    border-radius: 0.7rem;
+    border-color: color-mix(in srgb, var(--primary) 16%, var(--border));
+    background: color-mix(in srgb, var(--card) 86%, white 14%);
+    box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.05);
+  }
+
+  #schedule-modal #lesson-specific-students-search:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 24%, transparent);
+  }
+
+  #schedule-modal .schedule-modal-specific-list {
+    display: grid;
+    gap: 0.45rem;
+    max-height: 12rem;
+    overflow-y: auto;
+    padding: 0.6rem;
+    border: 1px solid color-mix(in srgb, var(--primary) 14%, var(--border));
+    border-radius: 0.7rem;
+    background: color-mix(in srgb, var(--card) 90%, white 10%);
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.04);
+  }
+
+  #schedule-modal .schedule-modal-specific-item {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 0.9rem;
+    color: var(--foreground);
+    padding: 0.45rem 0.55rem;
+    border: 1px solid color-mix(in srgb, var(--border) 78%, transparent);
+    border-radius: 0.55rem;
+    background: color-mix(in srgb, var(--card) 88%, white 12%);
+    transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+  }
+
+  #schedule-modal .schedule-modal-specific-item:hover {
+    transform: translateY(-1px);
+    border-color: color-mix(in srgb, var(--primary) 28%, var(--border));
+    background: color-mix(in srgb, var(--primary) 10%, var(--card));
+  }
+
+  #schedule-modal .schedule-modal-specific-item input[type="checkbox"] {
+    width: 1rem;
+    height: 1rem;
+    accent-color: var(--primary);
+    cursor: pointer;
   }
 
   @media (max-width: 520px) {
@@ -16627,6 +17698,78 @@ body.take-quiz-page .take-quiz-questions .mt-4.p-4 .grid > div {
       gap: 0.75rem;
     }
 
+    .exam-list-section-content .exam-list-card-header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      width: 100%;
+    }
+
+    .exam-list-section-content .exam-list-card-menu-wrap {
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .exam-list-section-content .exam-list-card-menu-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 2rem;
+      height: 2rem;
+      padding: 0;
+      border: none;
+      border-radius: 0.375rem;
+      background: transparent;
+      color: var(--muted-foreground);
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .exam-list-section-content .exam-list-card-menu-btn:hover {
+      background: color-mix(in srgb, var(--primary) 12%, transparent);
+      color: var(--foreground);
+    }
+
+    .exam-list-section-content .exam-list-card-dropdown {
+      position: absolute;
+      right: 0;
+      top: 100%;
+      margin-top: 0.25rem;
+      min-width: 10rem;
+      padding: 0.35rem;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 0.5rem;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+      z-index: 20;
+    }
+
+    .exam-list-section-content .exam-list-card-dropdown.hidden {
+      display: none;
+    }
+
+    .exam-list-section-content .exam-list-card-archive-option {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      width: 100%;
+      padding: 0.5rem 0.75rem !important;
+      border: none;
+      border-radius: 0.375rem;
+      background: transparent;
+      color: #b91c1c;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+      text-align: left;
+    }
+
+    .exam-list-section-content .exam-list-card-archive-option:hover {
+      background: rgba(220, 38, 38, 0.1);
+    }
+
     .exam-list-section-content .exam-list-card-badge {
       display: inline-block;
       align-self: flex-start;
@@ -16752,6 +17895,69 @@ body.take-quiz-page .take-quiz-questions .mt-4.p-4 .grid > div {
       display: flex;
       flex-direction: column;
       gap: 0.5rem;
+    }
+
+    .exam-list-section-header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .exam-list-view-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 0;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 0.5rem;
+      padding: 0.2rem !important;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .exam-list-view-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.45rem 0.85rem !important;
+      border: none;
+      border-radius: 0.35rem;
+      background: transparent;
+      color: rgba(255, 255, 255, 0.9);
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .exam-list-view-btn:hover {
+      background: rgba(255, 255, 255, 0.15);
+      color: #fff;
+    }
+
+    .exam-list-view-btn.active {
+      background: #fff;
+      color: var(--primary);
+    }
+
+    .exam-list-section-content .exam-list-grid.exam-list-view-list {
+      grid-template-columns: 1fr;
+    }
+
+    .exam-list-section-content .exam-list-grid.exam-list-view-grid {
+      grid-template-columns: 1fr;
+    }
+
+    @media (min-width: 640px) {
+      .exam-list-section-content .exam-list-grid.exam-list-view-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (min-width: 1024px) {
+      .exam-list-section-content .exam-list-grid.exam-list-view-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
     }
 
     .exam-list-section-title {
@@ -18131,5 +19337,298 @@ body.take-pronunciation-page #pronunciation-content {
     to { opacity: 1; transform: translateY(0); }
 }
 
+/* Exam generator – beautify main form card */
+body.exam-generator-page #exam-title-input {
+    border-radius: 0.85rem;
+    border-width: 1px;
+    border-color: color-mix(in srgb, var(--primary) 60%, var(--border));
+    background: radial-gradient(circle at 0% 0%, rgba(129, 140, 248, 0.12), transparent 55%),
+                radial-gradient(circle at 100% 0%, rgba(52, 211, 153, 0.1), transparent 60%),
+                color-mix(in srgb, var(--card) 96%, transparent);
+    box-shadow: 0 10px 28px rgba(79, 70, 229, 0.18);
+}
 
+body.exam-generator-page #exam-title-input:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--primary) 65%, transparent);
+    outline-offset: 2px;
+    box-shadow:
+        0 0 0 1px color-mix(in srgb, var(--primary) 55%, transparent),
+        0 14px 32px rgba(79, 70, 229, 0.35);
+}
+
+body.exam-generator-page #topicDropdownContainer {
+    background: radial-gradient(circle at 0% 0%, rgba(129, 140, 248, 0.12), transparent 55%),
+                radial-gradient(circle at 100% 0%, rgba(45, 212, 191, 0.1), transparent 60%),
+                color-mix(in srgb, var(--card) 96%, transparent);
+    border-radius: 1rem;
+    border-color: color-mix(in srgb, var(--primary) 16%, var(--border));
+    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.16);
+}
+
+body.exam-generator-page .exam-quantity-row {
+    background: linear-gradient(135deg,
+        color-mix(in srgb, var(--primary) 12%, var(--card)),
+        color-mix(in srgb, var(--secondary) 8%, var(--card))
+    ) !important;
+    border: 1px solid color-mix(in srgb, var(--primary) 32%, var(--border)) !important;
+    border-radius: 0.85rem !important;
+    padding: 0.85rem 1.1rem !important;
+    box-shadow: 0 4px 14px rgba(99, 102, 241, 0.12);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+body.exam-generator-page .exam-quantity-row:hover {
+    box-shadow: 0 8px 24px rgba(99, 102, 241, 0.18);
+    transform: translateY(-1px);
+}
+
+body.exam-generator-page .exam-quantity-row:has(input[type="checkbox"]:checked) {
+    border-color: var(--primary) !important;
+    background: linear-gradient(135deg,
+        color-mix(in srgb, var(--primary) 20%, var(--card)),
+        color-mix(in srgb, var(--secondary) 14%, var(--card))
+    ) !important;
+    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.25);
+}
+
+body.exam-generator-page .exam-quantity-row input[type="checkbox"] {
+    border-radius: 9999px;
+    accent-color: var(--primary);
+}
+
+body.exam-generator-page .exam-quantity-row label {
+    font-weight: 600;
+    color: var(--foreground);
+}
+
+body.exam-generator-page .exam-quantity-input {
+    border-radius: 0.5rem;
+    border: 1px solid color-mix(in srgb, var(--primary) 35%, var(--border));
+    background: color-mix(in srgb, var(--card) 98%, transparent);
+    font-weight: 600;
+}
+
+body.exam-generator-page .exam-quantity-row .text-muted-foreground {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--muted-foreground);
+}
+
+body.exam-generator-page .generate-exam-card .grid.grid-cols-2.gap-3 {
+    gap: 0.85rem !important;
+}
+
+body.exam-generator-page .ai-tos-wrap {
+    border-radius: 1rem;
+    border: 1px solid color-mix(in srgb, var(--primary) 22%, var(--border));
+    background: radial-gradient(circle at 0% 0%, rgba(129, 140, 248, 0.1), transparent 50%),
+                radial-gradient(circle at 100% 100%, rgba(52, 211, 153, 0.08), transparent 50%),
+                color-mix(in srgb, var(--card) 96%, transparent);
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+    padding: 1.25rem 1.5rem !important;
+}
+
+body.exam-generator-page .ai-tos-title {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--foreground);
+    margin: 0 0 0.25rem 0;
+    letter-spacing: 0.01em;
+}
+
+body.exam-generator-page .ai-tos-hint {
+    font-size: 0.875rem;
+    color: var(--muted-foreground);
+    margin: 0 0 1rem 0 !important;
+    line-height: 1.45;
+}
+
+body.exam-generator-page .ai-tos-checkboxes {
+    gap: 0.75rem !important;
+}
+
+body.exam-generator-page .ai-tos-cb-label {
+    border-radius: 0.75rem !important;
+    padding: 0.75rem 1rem !important;
+    border: 1px solid color-mix(in srgb, var(--primary) 25%, var(--border));
+    background: color-mix(in srgb, var(--card) 98%, transparent);
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.08);
+    transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+body.exam-generator-page .ai-tos-cb-label::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: linear-gradient(180deg, var(--primary), var(--secondary));
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+body.exam-generator-page .ai-tos-cb-label:hover {
+    border-color: color-mix(in srgb, var(--primary) 45%, var(--border));
+    background: color-mix(in srgb, var(--primary) 10%, var(--card));
+    box-shadow: 0 4px 14px rgba(99, 102, 241, 0.15);
+}
+
+body.exam-generator-page .ai-tos-cb-label:has(.ai-tos-cb:checked) {
+    border-color: var(--primary);
+    background: color-mix(in srgb, var(--primary) 14%, var(--card));
+    box-shadow: 0 4px 16px rgba(99, 102, 241, 0.22);
+}
+
+body.exam-generator-page .ai-tos-cb-label:has(.ai-tos-cb:checked)::before {
+    opacity: 1;
+}
+
+body.exam-generator-page .ai-tos-cb-text {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--foreground);
+}
+
+body.exam-generator-page #generateExamBtn {
+    width: 100%;
+    border-radius: 9999px;
+    padding-top: 0.9rem;
+    padding-bottom: 0.9rem;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    box-shadow: 0 18px 40px rgba(79, 70, 229, 0.45);
+}
+
+body.exam-generator-page #generateExamBtn:hover {
+    filter: brightness(1.06);
+    transform: translateY(-1px);
+}
+
+/* Exam generator – form labels and topic list */
+body.exam-generator-page .generate-exam-card .form-label {
+    font-weight: 700;
+    font-size: 0.9375rem;
+    color: var(--foreground);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.25rem 0;
+}
+body.exam-generator-page .generate-exam-card #topic-input .form-label,
+body.exam-generator-page .generate-exam-card .space-y-2 > .form-label,
+body.exam-generator-page .generate-exam-card .space-y-4 > .form-label {
+    border-left: 3px solid var(--primary);
+    padding-left: 0.6rem;
+    margin-bottom: 0.25rem;
+}
+
+body.exam-generator-page #topicDropdownContainer {
+    padding: 1rem 1.25rem !important;
+    border-radius: 1rem;
+    border: 1px solid color-mix(in srgb, var(--primary) 22%, var(--border));
+    box-shadow: 0 14px 30px rgba(15, 23, 42, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+body.exam-generator-page .generate-exam-card .exam-quarter-block {
+    margin-bottom: 0;
+    padding: 0.85rem 1rem;
+    border-radius: 0.85rem;
+    background: linear-gradient(135deg, rgba(52, 211, 153, 0.08), rgba(129, 140, 248, 0.06));
+    border: 1px solid color-mix(in srgb, var(--secondary) 25%, var(--border));
+}
+
+body.exam-generator-page .generate-exam-card .lesson-quarter-heading {
+    padding: 0.5rem 0;
+    margin-bottom: 0.5rem;
+    border-bottom: 1px solid color-mix(in srgb, var(--secondary) 20%, var(--border));
+}
+
+body.exam-generator-page .generate-exam-card .lesson-quarter-heading__badge {
+    background: linear-gradient(135deg, var(--secondary), color-mix(in srgb, var(--secondary) 85%, #0d9488));
+    color: #fff;
+    border: none;
+    padding: 0.4rem 0.75rem;
+    border-radius: 9999px;
+    font-weight: 700;
+    font-size: 0.8rem;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.35);
+}
+
+body.exam-generator-page .generate-exam-card .lesson-quarter-heading__title {
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--foreground);
+}
+
+body.exam-generator-page .generate-exam-card .exam-topic-lesson-header {
+    padding: 0.65rem 1rem;
+    border-radius: 0.75rem;
+    border: 1px solid color-mix(in srgb, var(--primary) 28%, var(--border));
+    background: linear-gradient(135deg, rgba(129, 140, 248, 0.12), rgba(129, 140, 248, 0.06));
+    font-weight: 700;
+    font-size: 0.9375rem;
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.12);
+    transition: background 0.2s, box-shadow 0.2s;
+}
+
+body.exam-generator-page .generate-exam-card .exam-topic-lesson-header:hover {
+    background: linear-gradient(135deg, rgba(129, 140, 248, 0.18), rgba(129, 140, 248, 0.1));
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.18);
+}
+
+body.exam-generator-page .generate-exam-card .exam-topic-topics {
+    border-left: 3px solid color-mix(in srgb, var(--primary) 40%, var(--border));
+    border-radius: 0 0.5rem 0.5rem 0;
+    background: color-mix(in srgb, var(--background) 60%, transparent);
+    padding: 0.6rem 1rem 0.75rem;
+}
+
+body.exam-generator-page .generate-exam-card .exam-topic-option {
+    padding: 0.35rem 0;
+    font-size: 0.9rem;
+}
+
+/* Quiz & Exam Archive page – layout & framing */
+body.deleted-archive-page #main-content > div.p-6 {
+    max-width: 1040px;
+    margin: 0 auto;
+}
+
+body.deleted-archive-page #main-content .archive-section-header {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    padding: 0.9rem 1.1rem;
+    border-radius: 1rem;
+    background:
+        radial-gradient(circle at 0% 0%, color-mix(in srgb, var(--primary) 24%, transparent), transparent 55%),
+        radial-gradient(circle at 90% 0%, color-mix(in srgb, var(--secondary) 20%, transparent), transparent 60%);
+}
+
+body.deleted-archive-page #main-content .archive-section-header .page-header-title {
+    font-size: 1.1rem;
+}
+
+body.deleted-archive-page #main-content .archive-section-header .page-header-subtitle {
+    font-size: 0.85rem;
+}
+
+body.deleted-archive-page #main-content .archive-section-header .page-header-icon {
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: var(--primary-foreground);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+
+body.deleted-archive-page #main-content .scores-table-scroll {
+    background: color-mix(in srgb, var(--card) 96%, transparent);
+}
+
+@media (max-width: 768px) {
+    body.deleted-archive-page #main-content > div.p-6 {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+    }
+}
 

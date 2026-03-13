@@ -162,6 +162,11 @@ function serveUploads(req, res) {
       const fallback = path.join(uploadsDir, decoded.replace(/\//g, path.sep));
       if (fs.existsSync(fallback)) toSend = path.resolve(fallback);
     }
+    // Fallback for legacy pronunciation paths: /uploads/xxx.webm -> /uploads/pronunciation/xxx.webm
+    if (!fs.existsSync(toSend) && segments.length === 1) {
+      const pronFallback = path.join(uploadsDir, 'pronunciation', segments[0]);
+      if (fs.existsSync(pronFallback) && fs.statSync(pronFallback).isFile()) toSend = path.resolve(pronFallback);
+    }
     if (!fs.existsSync(toSend) || !fs.statSync(toSend).isFile()) {
       res.status(404).send('File not found');
       return true;

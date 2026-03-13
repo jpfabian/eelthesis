@@ -385,4 +385,153 @@ router.post("/api/move-exam-to-cache/:id", async (req, res) => {
   }
 });
 
+// ✅ Get archived exams (exam archive)
+router.get("/api/archive-exams", async (req, res) => {
+  const pool = req.pool;
+  const teacherId = Number(req.query.teacher_id || req.query.user_id || 0) || null;
+
+  try {
+    let query = `
+      SELECT
+        ae.archive_id,
+        ae.original_exam_id,
+        ae.archived_by,
+        ae.archived_at,
+        ae.snapshot
+      FROM archive_exams ae
+    `;
+    const params = [];
+
+    if (teacherId) {
+      query += " WHERE ae.archived_by = ?";
+      params.push(teacherId);
+    }
+
+    query += " ORDER BY ae.archived_at DESC";
+
+    const [rows] = await pool.query(query, params);
+
+    const exams = rows.map((row) => {
+      let snapshot = {};
+      try {
+        const raw = row.snapshot;
+        if (raw == null) {
+          snapshot = {};
+        } else if (typeof raw === "object" && !Buffer.isBuffer(raw)) {
+          snapshot = raw;
+        } else {
+          const str = Buffer.isBuffer(raw) ? raw.toString("utf8") : String(raw);
+          snapshot = str ? JSON.parse(str) : {};
+        }
+      } catch {
+        snapshot = {};
+      }
+
+      const questionCountFromSnapshot =
+        Number(snapshot.question_count || 0) ||
+        (Array.isArray(snapshot.questions) ? snapshot.questions.length : null);
+
+      return {
+        archive_id: row.archive_id,
+        original_exam_id: row.original_exam_id,
+        archived_by: row.archived_by,
+        archived_at: row.archived_at,
+        exam_id: snapshot.id || snapshot.exam_id || row.original_exam_id,
+        title: snapshot.title || "Untitled exam",
+        class_id: snapshot.class_id || null,
+        class_name: snapshot.class_name || null,
+        section: snapshot.section || snapshot.class_section || null,
+        subject_name: snapshot.subject || snapshot.subject_name || null,
+        question_count: questionCountFromSnapshot,
+        types: snapshot.types || null
+      };
+    });
+
+    res.json({ success: true, exams });
+  } catch (err) {
+    // If archive_exams table does not exist yet, just return an empty list
+    if (err && (err.errno === 1146 || err.code === "ER_NO_SUCH_TABLE")) {
+      return res.json({ success: true, exams: [] });
+    }
+    console.error("Failed to fetch archived exams:", err);
+    res.status(500).json({ success: false, message: "Failed to fetch archived exams" });
+  }
+});
+
+// ✅ Restore an exam from archive_exams back into exams
+router.post("/api/archive-exams/:archiveId/restore", async (req, res) => {
+  const pool = req.pool;
+  const { archiveId } = req.params;
+  const teacherId = Number(req.body?.teacher_id || req.query?.teacher_id || 0) || null;
+
+  try {
+    const [rows] = await pool.query(
+      "SELECT snapshot, archived_by FROM archive_exams WHERE archive_id = ?",
+      [archiveId]
+    );
+    if (!rows.length) {
+      return res.status(404).json({ success: false, message: "Archived exam not found" });
+    }
+
+    const row = rows[0];
+    let snapshot = {};
+    try {
+      const raw = row.snapshot;
+      if (raw == null) {
+        snapshot = {};
+      } else if (typeof raw === "object" && !Buffer.isBuffer(raw)) {
+        snapshot = raw;
+      } else {
+        const str = Buffer.isBuffer(raw) ? raw.toString("utf8") : String(raw);
+        snapshot = str ? JSON.parse(str) : {};
+      }
+    } catch {
+      snapshot = {};
+    }
+
+    const classId = snapshot.class_id || null;
+    const title = (snapshot.title || "Restored Exam").toString().trim();
+    const content = (snapshot.content || "").toString();
+    const createdBy = snapshot.created_by || teacherId || row.archived_by || null;
+
+    const questionCount =
+      Number(snapshot.question_count || 0) ||
+      (Array.isArray(snapshot.questions) ? snapshot.questions.length : 0);
+
+    const typesValue =
+      typeof snapshot.types === "string"
+        ? snapshot.types
+        : snapshot.types != null
+        ? JSON.stringify(snapshot.types)
+        : null;
+
+    if (!classId || !createdBy || !title || !content) {
+      return res.status(400).json({
+        success: false,
+        message: "Cannot restore exam. Missing class, creator, title, or content in archive snapshot."
+      });
+    }
+
+    const createdAt = snapshot.created_at || nowPhilippineDatetime();
+
+    const [result] = await pool.query(
+      `INSERT INTO exams (class_id, created_by, title, content, question_count, types, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [classId, createdBy, title, content, questionCount || 0, typesValue, createdAt]
+    );
+
+    // Optionally remove the row from archive_exams so it no longer appears in the archive list
+    await pool.query("DELETE FROM archive_exams WHERE archive_id = ?", [archiveId]);
+
+    return res.json({
+      success: true,
+      message: "Exam restored from archive successfully.",
+      exam_id: result.insertId
+    });
+  } catch (err) {
+    console.error("Failed to restore archived exam:", err);
+    res.status(500).json({ success: false, message: "Failed to restore archived exam" });
+  }
+});
+
 module.exports = router;

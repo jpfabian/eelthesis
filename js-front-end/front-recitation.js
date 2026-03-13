@@ -11,6 +11,8 @@ let state = {
     selectedStudent: null,
     currentAnswer: '',
     intervalId: null,
+    recitationSessionKey: '',
+    modalScoreSaved: false,
     pickMode: 'auto', // 'manual' = tap a card to choose; 'auto' = Play + slider
     nextQuestionRandom: false // true after Remove/Close so next pick gets random question
 };
@@ -44,12 +46,66 @@ const RECITATION_QTY_IDS = {
     'identification': 'recitation-qty-identification'
 };
 
+function createRecitationSessionKey() {
+    const rand = Math.random().toString(36).slice(2, 10);
+    return `rec-${Date.now()}-${rand}`;
+}
+
+function getRecitationCurrentUser() {
+    try {
+        const raw = localStorage.getItem("eel_user");
+        return raw ? JSON.parse(raw) : null;
+    } catch (_) {
+        return null;
+    }
+}
+
+function getRecitationCurrentClassId() {
+    const direct = localStorage.getItem("eel_selected_class_id");
+    if (direct != null && direct !== "") return Number(direct);
+    try {
+        const c = JSON.parse(localStorage.getItem("eel_selected_class") || "{}");
+        const id = c?.class_id ?? c?.id;
+        return Number(id);
+    } catch (_) {
+        return NaN;
+    }
+}
+
+async function saveRecitationScoreItem(params) {
+    const user = getRecitationCurrentUser();
+    const classId = getRecitationCurrentClassId();
+    if (!state.recitationSessionKey || !Number.isFinite(classId) || !params?.studentId) return;
+    try {
+        await fetch((window.API_BASE || "") + "/api/recitation/scores", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                session_key: state.recitationSessionKey,
+                class_id: classId,
+                topic_id: state.selectedTopicId || null,
+                teacher_id: user?.user_id ?? null,
+                student_id: params.studentId,
+                question_index: params.questionIndex,
+                question_type: params.questionType,
+                question_text: params.questionText,
+                student_answer: params.studentAnswer,
+                correct_answer: params.correctAnswer,
+                is_correct: params.isCorrect ? 1 : 0
+            })
+        });
+    } catch (err) {
+        console.error("saveRecitationScoreItem:", err);
+    }
+}
+
 function getRecitationQuestionCounts() {
     const counts = {};
     RECITATION_QUESTION_TYPES.forEach(type => {
         const el = document.getElementById(RECITATION_QTY_IDS[type]);
-        const n = el ? Math.max(0, Math.min(20, parseInt(el.value, 10) || 0)) : 0;
-        counts[type] = n;
+        const cb = document.querySelector('.recitation-type-cb[value="' + type + '"]');
+        const n = el ? Math.max(0, Math.min(30, parseInt(el.value, 10) || 0)) : 0;
+        counts[type] = (cb && cb.checked) ? n : 0;
     });
     return counts;
 }
@@ -413,6 +469,7 @@ async function generateQuestions() {
             body: JSON.stringify({
                 topic_id: topicId,
                 question_types: questionTypes,
+                question_counts: questionCounts,
                 question_count: totalQuestions
             })
         });
@@ -500,6 +557,7 @@ function startSession() {
     const picker = document.getElementById('student-picker');
 
     state.pickMode = getPickMode();
+    state.recitationSessionKey = createRecitationSessionKey();
 
     if (setup && picker) {
         setup.classList.remove('active');
@@ -664,6 +722,9 @@ function toggleSpin(autoPick = false) {
     if (!state.isSpinning) {
         // Reset previous selection
         clearSelectedStudents();
+        // Start from a random index so each spin begins unpredictably.
+        state.currentSlideIndex = Math.floor(Math.random() * availableStudents.length);
+        updateSliderPosition({ animate: false });
 
         state.isSpinning = true;
         state.spinSpeed = 50;
@@ -713,8 +774,9 @@ function speedUpAndStop(availableStudents) {
             clearInterval(state.intervalId);
             state.isSpinning = false;
 
-            // ensure index is within bounds (in case availableStudents changed)
-            const idx = state.currentSlideIndex % availableStudents.length;
+            // Randomly pick the final student each stop.
+            const idx = Math.floor(Math.random() * availableStudents.length);
+            state.currentSlideIndex = idx;
             state.selectedStudent = availableStudents[idx];
             highlightSelectedStudent();
             setTimeout(showQuestionModal, 500);
@@ -842,6 +904,7 @@ function showQuestionModal() {
 
     // --- reset modal-answer state to avoid race conditions ---
     state.modalAnswered = false;
+    state.modalScoreSaved = false;
     if (state.autoContinueTimeout) { clearTimeout(state.autoContinueTimeout); state.autoContinueTimeout = null; }
     if (state.timerInterval) { clearInterval(state.timerInterval); state.timerInterval = null; }
 
@@ -1052,11 +1115,34 @@ function closeQuestionModal() {
 }
 
 function closeQuestionModalWithRandomNext() {
+    persistZeroScoreIfUnanswered();
     state.nextQuestionRandom = true;
     closeQuestionModal();
+    // Keep student available (not removed) and prepare next random pick.
+    clearSelectedStudents();
+    renderStudentSlider();
+    updateQuestionProgress();
+}
+
+function persistZeroScoreIfUnanswered() {
+    if (state.modalAnswered || state.modalScoreSaved) return;
+    const currentQuestion = state.questions[state.currentQuestionIndex];
+    if (!currentQuestion || !state.selectedStudent || !state.selectedStudent.id) return;
+    saveRecitationScoreItem({
+        studentId: state.selectedStudent.id,
+        questionIndex: state.currentQuestionIndex + 1,
+        questionType: currentQuestion.type || 'identification',
+        questionText: currentQuestion.question || '',
+        studentAnswer: 'No answer',
+        correctAnswer: currentQuestion.correctAnswer || '',
+        isCorrect: false
+    });
+    state.modalAnswered = true;
+    state.modalScoreSaved = true;
 }
 
 function removeStudentAndClose() {
+    persistZeroScoreIfUnanswered();
     if (state.selectedStudent) {
         state.selectedStudent.answered = true;
     }
@@ -1122,6 +1208,19 @@ function showResult(isCorrect, userAnswer, correctAnswer, autoContinue = false) 
     // prevent duplicate calls
     if (state.modalAnswered === false) {
         state.modalAnswered = true;
+    }
+    if (!state.modalScoreSaved) {
+        const currentQuestion = state.questions[state.currentQuestionIndex];
+        saveRecitationScoreItem({
+            studentId: state.selectedStudent?.id,
+            questionIndex: state.currentQuestionIndex + 1,
+            questionType: currentQuestion?.type || 'identification',
+            questionText: currentQuestion?.question || '',
+            studentAnswer: userAnswer || '',
+            correctAnswer: correctAnswer || '',
+            isCorrect: !!isCorrect
+        });
+        state.modalScoreSaved = true;
     }
     // clear any timers
     if (state.timerInterval) { clearInterval(state.timerInterval); state.timerInterval = null; }

@@ -11,6 +11,11 @@ const groq = (() => {
   return null;
 })();
 
+function hasScenarioExampleContent(html) {
+  const text = String(html || "").toLowerCase();
+  return /example|scenario|real-life|real life|situation/.test(text);
+}
+
 // GET curriculum with subjects → lessons → topics
 router.get("/curriculum", async (req, res) => {
   try {
@@ -101,7 +106,9 @@ router.post("/api/generate-topic-content", async (req, res) => {
       );
       const cached = rows?.[0]?.topic_content;
       if (cached && String(cached).trim().length > 0) {
-        return res.json({ success: true, content: cached, cached: true });
+        if (hasScenarioExampleContent(cached)) {
+          return res.json({ success: true, content: cached, cached: true });
+        }
       }
     }
   } catch (err) {
@@ -139,6 +146,19 @@ Structure your output as follows:
    - Use <strong> for emphasis
    - Include key definitions, examples, and takeaways for this specific topic
 
+3. EXAMPLE SCENARIO (required)
+   - Add a separate <h3> titled "Example Scenario" immediately after the main topic explanation
+   - Write 1 short realistic classroom, school, or everyday-life scenario showing how the topic is used
+   - Follow it with 2-3 sentences explaining why the example fits the topic
+
+4. QUICK EXAMPLES (required)
+   - Add another <h3> titled "Quick Examples" directly after Example Scenario
+   - Include a short <ul> with 2-4 simple examples related to the topic
+
+5. KEY TAKEAWAYS (required)
+   - After the examples sections, add a final <h3> titled "Key Takeaways"
+   - Provide a short <ul> (2-4 bullets) summarizing the most important points students should remember
+
 Format rules:
 - Keep it concise but informative (roughly 350-650 words total)
 - Output ONLY valid HTML, no markdown, no code blocks, no explanation
@@ -158,6 +178,25 @@ Format rules:
     let content = completion.choices?.[0]?.message?.content?.trim() || "";
     // Strip any asterisks (** or *) that the model may have output
     content = content.replace(/\*\*/g, "").replace(/\*/g, "");
+    // Remove generic example lead‑ins we don't want to show verbatim
+    const bannedExamplePhrases = [
+      /the following passage is an example of academic writing:?/gi,
+      /the following passage is an example:?/gi,
+      /the following text is an example:?/gi
+    ];
+    bannedExamplePhrases.forEach((re) => {
+      content = content.replace(re, "");
+    });
+    if (content && !hasScenarioExampleContent(content)) {
+      content += `
+<h3>Example Scenario</h3>
+<p>Imagine a student encountering <strong>${tTitle}</strong> during a classroom discussion or real-life communication task. This scenario helps connect the lesson idea to a practical situation so learners can understand when and why the topic matters.</p>
+<h3>Quick Examples</h3>
+<ul>
+  <li>A simple classroom-based use of <strong>${tTitle}</strong></li>
+  <li>An everyday communication situation connected to the topic</li>
+</ul>`.trim();
+    }
     if (!content) {
       return res.status(500).json({ success: false, error: "No content generated" });
     }
