@@ -8844,6 +8844,12 @@ body.auth-page .login-screen .btn.btn-primary:hover {
   flex-direction: column;
   gap: 1.5rem;
 }
+.admin-dashboard-container--tight {
+  gap: 0.75rem;
+}
+.admin-dashboard-page .account-verification-page-header {
+  margin-bottom: 1rem;
+}
 
 .admin-dashboard-header {
   background: var(--card);
@@ -11538,7 +11544,8 @@ body.pronunciation-lessons-page .quiz-page[data-view="list"] #lessons-grid {
 /* ============================================
    Pronunciation Teacher Review – answer cards
    ============================================ */
-#teacher-pronunciation-review-modal .teacher-pron-answer-row {
+#teacher-pronunciation-review-modal .teacher-pron-answer-row,
+#teacher-pronunciation-review-answers-modal .teacher-pron-answer-row {
   margin-bottom: 1.25rem;
   border-radius: calc(var(--radius) + 6px);
   overflow: hidden;
@@ -11547,11 +11554,13 @@ body.pronunciation-lessons-page .quiz-page[data-view="list"] #lessons-grid {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
   transition: box-shadow 0.2s, border-color 0.2s;
 }
-#teacher-pronunciation-review-modal .teacher-pron-answer-row:hover {
+#teacher-pronunciation-review-modal .teacher-pron-answer-row:hover,
+#teacher-pronunciation-review-answers-modal .teacher-pron-answer-row:hover {
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
   border-color: color-mix(in srgb, var(--primary) 25%, var(--border));
 }
-#teacher-pronunciation-review-modal .teacher-pron-answer-hero {
+#teacher-pronunciation-review-modal .teacher-pron-answer-hero,
+#teacher-pronunciation-review-answers-modal .teacher-pron-answer-hero {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -11560,7 +11569,8 @@ body.pronunciation-lessons-page .quiz-page[data-view="list"] #lessons-grid {
   background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 14%, var(--card)), color-mix(in srgb, var(--primary) 6%, var(--card)));
   border-bottom: 1px solid var(--border);
 }
-#teacher-pronunciation-review-modal .teacher-pron-answer-letter {
+#teacher-pronunciation-review-modal .teacher-pron-answer-letter,
+#teacher-pronunciation-review-answers-modal .teacher-pron-answer-letter {
   font-size: 2.5rem;
   font-weight: 800;
   line-height: 1;
@@ -11568,20 +11578,23 @@ body.pronunciation-lessons-page .quiz-page[data-view="list"] #lessons-grid {
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
   letter-spacing: -0.02em;
 }
-#teacher-pronunciation-review-modal .teacher-pron-answer-target {
+#teacher-pronunciation-review-modal .teacher-pron-answer-target,
+#teacher-pronunciation-review-answers-modal .teacher-pron-answer-target {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   gap: 0.15rem;
 }
-#teacher-pronunciation-review-modal .teacher-pron-answer-target-label {
+#teacher-pronunciation-review-modal .teacher-pron-answer-target-label,
+#teacher-pronunciation-review-answers-modal .teacher-pron-answer-target-label {
   font-size: 0.7rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--muted-foreground);
 }
-#teacher-pronunciation-review-modal .teacher-pron-answer-target-ipa {
+#teacher-pronunciation-review-modal .teacher-pron-answer-target-ipa,
+#teacher-pronunciation-review-answers-modal .teacher-pron-answer-target-ipa {
   font-size: 1.1rem;
   font-weight: 700;
   font-family: "Georgia", "Times New Roman", serif;
@@ -11591,17 +11604,20 @@ body.pronunciation-lessons-page .quiz-page[data-view="list"] #lessons-grid {
   background: color-mix(in srgb, var(--primary) 10%, var(--card));
   border: 1px solid color-mix(in srgb, var(--primary) 25%, var(--border));
 }
-#teacher-pronunciation-review-modal .teacher-pron-answer-body {
+#teacher-pronunciation-review-modal .teacher-pron-answer-body,
+#teacher-pronunciation-review-answers-modal .teacher-pron-answer-body {
   padding: 1.25rem 1.5rem;
   display: grid;
   gap: 1.25rem;
 }
-#teacher-pronunciation-review-modal .teacher-pron-answer-section {
+#teacher-pronunciation-review-modal .teacher-pron-answer-section,
+#teacher-pronunciation-review-answers-modal .teacher-pron-answer-section {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
-#teacher-pronunciation-review-modal .teacher-pron-section-label {
+#teacher-pronunciation-review-modal .teacher-pron-section-label,
+#teacher-pronunciation-review-answers-modal .teacher-pron-section-label {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
@@ -11609,27 +11625,32 @@ body.pronunciation-lessons-page .quiz-page[data-view="list"] #lessons-grid {
   font-weight: 600;
   color: var(--muted-foreground);
 }
-#teacher-pronunciation-review-modal .teacher-pron-section-label i {
+#teacher-pronunciation-review-modal .teacher-pron-section-label i,
+#teacher-pronunciation-review-answers-modal .teacher-pron-section-label i {
   color: var(--primary);
   opacity: 0.9;
 }
-#teacher-pronunciation-review-modal .teacher-pron-audio-wrap {
+#teacher-pronunciation-review-modal .teacher-pron-audio-wrap,
+#teacher-pronunciation-review-answers-modal .teacher-pron-audio-wrap {
   border-radius: var(--radius);
   overflow: hidden;
   border: 1px solid var(--border);
   background: color-mix(in srgb, var(--muted) 20%, var(--background));
 }
-#teacher-pronunciation-review-modal .teacher-pron-audio-el {
+#teacher-pronunciation-review-modal .teacher-pron-audio-el,
+#teacher-pronunciation-review-answers-modal .teacher-pron-audio-el {
   width: 100%;
   height: 2.5rem;
   padding: 0 0.5rem;
 }
-#teacher-pronunciation-review-modal .teacher-pron-score-wrap {
+#teacher-pronunciation-review-modal .teacher-pron-score-wrap,
+#teacher-pronunciation-review-answers-modal .teacher-pron-score-wrap {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
 }
-#teacher-pronunciation-review-modal .teacher-pron-score-input {
+#teacher-pronunciation-review-modal .teacher-pron-score-input,
+#teacher-pronunciation-review-answers-modal .teacher-pron-score-input {
   width: 5rem;
   padding: 0.5rem 0.75rem;
   font-size: 1rem;
@@ -11640,12 +11661,14 @@ body.pronunciation-lessons-page .quiz-page[data-view="list"] #lessons-grid {
   background: color-mix(in srgb, var(--primary) 8%, var(--card));
   color: var(--foreground);
 }
-#teacher-pronunciation-review-modal .teacher-pron-score-input:focus {
+#teacher-pronunciation-review-modal .teacher-pron-score-input:focus,
+#teacher-pronunciation-review-answers-modal .teacher-pron-score-input:focus {
   outline: none;
   border-color: var(--primary);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 20%, transparent);
 }
-#teacher-pronunciation-review-modal .teacher-pron-score-suffix {
+#teacher-pronunciation-review-modal .teacher-pron-score-suffix,
+#teacher-pronunciation-review-answers-modal .teacher-pron-score-suffix {
   font-size: 0.95rem;
   font-weight: 600;
   color: var(--muted-foreground);
@@ -11986,7 +12009,10 @@ body.pronunciation-lessons-page .quiz-page[data-view="list"] #lessons-grid {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 1rem 1.5rem;
+  -webkit-overflow-scrolling: touch;
+  min-height: 200px; /* ensure answers section never collapses */
 }
 
 .lesson-teacher-review-empty {
@@ -12066,6 +12092,111 @@ body.pronunciation-lessons-page .quiz-page[data-view="list"] #lessons-grid {
   display: none !important;
 }
 
+/* ============================================
+   Answers modal (mobile/tablet): second modal when teacher clicks student
+   ============================================ */
+.lesson-teacher-review-answers-overlay {
+  z-index: 10001; /* above the student-list modal */
+}
+.lesson-teacher-review-answers-card {
+  width: min(96vw, 640px);
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--card);
+  border-radius: calc(var(--radius) + 12px);
+  border: 1px solid var(--border);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  animation: modalSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.lesson-teacher-review-answers-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 12%, var(--card)), color-mix(in srgb, var(--primary) 6%, var(--card)));
+  border-bottom: 1px solid var(--border);
+}
+.lesson-teacher-review-answers-back {
+  width: 2.5rem;
+  height: 2.5rem;
+  min-width: 2.5rem;
+  min-height: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--foreground);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.lesson-teacher-review-answers-back:hover {
+  background: var(--muted);
+}
+.lesson-teacher-review-answers-header-text {
+  min-width: 0;
+  flex: 1;
+}
+.lesson-teacher-review-answers-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 0 0 0.15rem 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lesson-teacher-review-answers-quiz {
+  font-size: 0.85rem;
+  color: var(--muted-foreground);
+  margin: 0;
+}
+.lesson-teacher-review-answers-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.lesson-teacher-review-answers-body .lesson-teacher-review-main-header {
+  flex-shrink: 0;
+}
+.lesson-teacher-review-answers-body .lesson-teacher-review-detail {
+  flex: 1;
+  min-height: 200px;
+}
+
+/* Mobile/Tablet (≤1024px): hide main content in first modal, show only student list */
+@media (max-width: 1024px) {
+  #lesson-teacher-review-modal .lesson-teacher-review-main,
+  #lesson-teacher-review-modal .lesson-teacher-review-footer,
+  #teacher-reading-review-modal .lesson-teacher-review-main,
+  #teacher-reading-review-modal .lesson-teacher-review-footer,
+  #teacher-pronunciation-review-modal .lesson-teacher-review-main,
+  #teacher-pronunciation-review-modal .lesson-teacher-review-footer {
+    display: none !important;
+  }
+  #lesson-teacher-review-modal .lesson-teacher-review-body,
+  #teacher-reading-review-modal .lesson-teacher-review-body,
+  #teacher-pronunciation-review-modal .lesson-teacher-review-body {
+    grid-template-columns: 1fr;
+  }
+  #lesson-teacher-review-modal .lesson-teacher-review-sidebar,
+  #teacher-reading-review-modal .lesson-teacher-review-sidebar,
+  #teacher-pronunciation-review-modal .lesson-teacher-review-sidebar {
+    border-right: none;
+    max-height: none;
+  }
+}
+
+@media (min-width: 1025px) {
+  .lesson-teacher-review-answers-overlay {
+    display: none !important;
+  }
+}
+
 @media (max-width: 768px) {
   .lesson-teacher-review-body {
     grid-template-columns: 1fr;
@@ -12094,7 +12225,7 @@ body.pronunciation-lessons-page .quiz-page[data-view="list"] #lessons-grid {
 /* ============================================
    Reading Teacher Review – answer cards
    ============================================ */
-:is(#teacher-reading-review-modal, #lesson-teacher-review-modal) .teacher-reading-answer-row {
+:is(#teacher-reading-review-modal, #lesson-teacher-review-modal, #lesson-teacher-review-answers-modal, #teacher-reading-review-answers-modal) .teacher-reading-answer-row {
   margin-bottom: 1.25rem;
   border-radius: calc(var(--radius) + 6px);
   overflow: hidden;
@@ -12103,11 +12234,11 @@ body.pronunciation-lessons-page .quiz-page[data-view="list"] #lessons-grid {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
   transition: box-shadow 0.2s, border-color 0.2s;
 }
-:is(#teacher-reading-review-modal, #lesson-teacher-review-modal) .teacher-reading-answer-row:hover {
+:is(#teacher-reading-review-modal, #lesson-teacher-review-modal, #lesson-teacher-review-answers-modal, #teacher-reading-review-answers-modal) .teacher-reading-answer-row:hover {
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
   border-color: color-mix(in srgb, var(--primary) 25%, var(--border));
 }
-:is(#teacher-reading-review-modal, #lesson-teacher-review-modal) .teacher-reading-answer-hero {
+:is(#teacher-reading-review-modal, #lesson-teacher-review-modal, #lesson-teacher-review-answers-modal, #teacher-reading-review-answers-modal) .teacher-reading-answer-hero {
   display: flex;
   align-items: flex-start;
   gap: 1rem;
@@ -12115,7 +12246,7 @@ body.pronunciation-lessons-page .quiz-page[data-view="list"] #lessons-grid {
   background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 14%, var(--card)), color-mix(in srgb, var(--primary) 6%, var(--card)));
   border-bottom: 1px solid var(--border);
 }
-:is(#teacher-reading-review-modal, #lesson-teacher-review-modal) .teacher-reading-answer-q {
+:is(#teacher-reading-review-modal, #lesson-teacher-review-modal, #lesson-teacher-review-answers-modal, #teacher-reading-review-answers-modal) .teacher-reading-answer-q {
   font-size: 1.5rem;
   font-weight: 800;
   line-height: 1;
@@ -12124,28 +12255,30 @@ body.pronunciation-lessons-page .quiz-page[data-view="list"] #lessons-grid {
   width: 2rem;
   text-align: center;
 }
-:is(#teacher-reading-review-modal, #lesson-teacher-review-modal) .teacher-reading-answer-hero-text {
+:is(#teacher-reading-review-modal, #lesson-teacher-review-modal, #lesson-teacher-review-answers-modal, #teacher-reading-review-answers-modal) .teacher-reading-answer-hero-text {
   flex: 1;
   min-width: 0;
 }
-:is(#teacher-reading-review-modal, #lesson-teacher-review-modal) .teacher-reading-answer-question {
+:is(#teacher-reading-review-modal, #lesson-teacher-review-modal, #lesson-teacher-review-answers-modal, #teacher-reading-review-answers-modal) .teacher-reading-answer-question {
   font-size: 1.05rem;
   font-weight: 600;
   color: var(--foreground);
   line-height: 1.4;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
-:is(#teacher-reading-review-modal, #lesson-teacher-review-modal) .teacher-reading-answer-body {
+:is(#teacher-reading-review-modal, #lesson-teacher-review-modal, #lesson-teacher-review-answers-modal, #teacher-reading-review-answers-modal) .teacher-reading-answer-body {
   padding: 1.25rem 1.5rem;
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
 }
-:is(#teacher-reading-review-modal, #lesson-teacher-review-modal) .teacher-reading-answer-section {
+:is(#teacher-reading-review-modal, #lesson-teacher-review-modal, #lesson-teacher-review-answers-modal, #teacher-reading-review-answers-modal) .teacher-reading-answer-section {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
-:is(#teacher-reading-review-modal, #lesson-teacher-review-modal) .teacher-reading-section-label {
+:is(#teacher-reading-review-modal, #lesson-teacher-review-modal, #lesson-teacher-review-answers-modal, #teacher-reading-review-answers-modal) .teacher-reading-section-label {
   display: flex;
   align-items: center;
   gap: 0.4rem;
@@ -12154,17 +12287,17 @@ body.pronunciation-lessons-page .quiz-page[data-view="list"] #lessons-grid {
   color: var(--muted-foreground);
   flex-wrap: wrap;
 }
-:is(#teacher-reading-review-modal, #lesson-teacher-review-modal) .teacher-reading-section-label i {
+:is(#teacher-reading-review-modal, #lesson-teacher-review-modal, #lesson-teacher-review-answers-modal, #teacher-reading-review-answers-modal) .teacher-reading-section-label i {
   color: var(--primary);
   opacity: 0.9;
 }
-:is(#teacher-reading-review-modal, #lesson-teacher-review-modal) .teacher-reading-section-label .teacher-answer-chip {
+:is(#teacher-reading-review-modal, #lesson-teacher-review-modal, #lesson-teacher-review-answers-modal, #teacher-reading-review-answers-modal) .teacher-reading-section-label .teacher-answer-chip {
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
   margin-left: auto;
 }
-:is(#teacher-reading-review-modal, #lesson-teacher-review-modal) .teacher-reading-correct-box {
+:is(#teacher-reading-review-modal, #lesson-teacher-review-modal, #lesson-teacher-review-answers-modal, #teacher-reading-review-answers-modal) .teacher-reading-correct-box {
   padding: 1rem 1.25rem;
   border-radius: var(--radius);
   border: 1px solid color-mix(in srgb, var(--primary) 30%, var(--border));
@@ -12172,7 +12305,7 @@ body.pronunciation-lessons-page .quiz-page[data-view="list"] #lessons-grid {
   font-size: 0.95rem;
   line-height: 1.5;
 }
-:is(#teacher-reading-review-modal, #lesson-teacher-review-modal) .teacher-reading-student-box {
+:is(#teacher-reading-review-modal, #lesson-teacher-review-modal, #lesson-teacher-review-answers-modal, #teacher-reading-review-answers-modal) .teacher-reading-student-box {
   padding: 1rem 1.25rem;
   border-radius: var(--radius);
   font-size: 0.95rem;
@@ -12180,19 +12313,19 @@ body.pronunciation-lessons-page .quiz-page[data-view="list"] #lessons-grid {
   border: 1px solid var(--border);
   background: color-mix(in srgb, var(--muted) 30%, var(--background));
 }
-:is(#teacher-reading-review-modal, #lesson-teacher-review-modal) .teacher-reading-student-box[data-status="correct"] {
+:is(#teacher-reading-review-modal, #lesson-teacher-review-modal, #lesson-teacher-review-answers-modal, #teacher-reading-review-answers-modal) .teacher-reading-student-box[data-status="correct"] {
   background: color-mix(in srgb, var(--secondary) 14%, var(--card));
   border-color: color-mix(in srgb, var(--secondary) 40%, var(--border));
 }
-:is(#teacher-reading-review-modal, #lesson-teacher-review-modal) .teacher-reading-student-box[data-status="wrong"] {
+:is(#teacher-reading-review-modal, #lesson-teacher-review-modal, #lesson-teacher-review-answers-modal, #teacher-reading-review-answers-modal) .teacher-reading-student-box[data-status="wrong"] {
   background: color-mix(in srgb, var(--destructive) 12%, var(--card));
   border-color: color-mix(in srgb, var(--destructive) 40%, var(--border));
 }
-:is(#teacher-reading-review-modal, #lesson-teacher-review-modal) .teacher-reading-mark-wrap {
+:is(#teacher-reading-review-modal, #lesson-teacher-review-modal, #lesson-teacher-review-answers-modal, #teacher-reading-review-answers-modal) .teacher-reading-mark-wrap {
   padding-top: 0.5rem;
   border-top: 1px dashed var(--border);
 }
-:is(#teacher-reading-review-modal, #lesson-teacher-review-modal) .teacher-reading-mark-label {
+:is(#teacher-reading-review-modal, #lesson-teacher-review-modal, #lesson-teacher-review-answers-modal, #teacher-reading-review-answers-modal) .teacher-reading-mark-label {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
@@ -12201,7 +12334,7 @@ body.pronunciation-lessons-page .quiz-page[data-view="list"] #lessons-grid {
   font-weight: 500;
   color: var(--foreground);
 }
-:is(#teacher-reading-review-modal, #lesson-teacher-review-modal) .teacher-reading-mark-label input {
+:is(#teacher-reading-review-modal, #lesson-teacher-review-modal, #lesson-teacher-review-answers-modal, #teacher-reading-review-answers-modal) .teacher-reading-mark-label input {
   width: 1.1rem;
   height: 1.1rem;
   accent-color: var(--primary);
@@ -13782,6 +13915,46 @@ body.take-quiz-page .take-quiz-questions .mt-4.p-4 .grid > div {
     flex-direction: column;
     padding: 2rem !important;
   }
+
+  /* Sign up admin modal: wider width */
+  #signup-admin-modal .modal-card {
+    width: min(92vw, 720px) !important;
+    max-width: 720px !important;
+  }
+
+  .curriculum-modal-card {
+    width: min(92vw, 720px) !important;
+    max-width: 720px !important;
+  }
+
+  .password-strength-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .password-strength-bar {
+    flex: 1;
+    height: 6px;
+    background: var(--muted);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .password-strength-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.2s ease, background-color 0.2s ease;
+  }
+  .password-strength-wrap[data-strength="weak"] .password-strength-fill { background: #ef4444; }
+  .password-strength-wrap[data-strength="fair"] .password-strength-fill { background: #f59e0b; }
+  .password-strength-wrap[data-strength="strong"] .password-strength-fill { background: #22c55e; }
+  .password-strength-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    min-width: 3.5rem;
+  }
+  .password-strength-wrap[data-strength="weak"] .password-strength-label { color: #ef4444; }
+  .password-strength-wrap[data-strength="fair"] .password-strength-label { color: #f59e0b; }
+  .password-strength-wrap[data-strength="strong"] .password-strength-label { color: #22c55e; }
 
   /* 🎯 Quiz Card (special styling) */
   .quiz-card {
@@ -15575,6 +15748,14 @@ body.take-quiz-page .take-quiz-questions .mt-4.p-4 .grid > div {
       width: 95%;
       margin: 0.5rem;
       max-height: 95vh;
+    }
+    #signup-admin-modal .modal-card {
+      width: 92vw !important;
+      max-width: none !important;
+    }
+    .curriculum-modal-card {
+      width: 92vw !important;
+      max-width: none !important;
     }
 
     .quiz-card {
@@ -17889,12 +18070,13 @@ body.take-quiz-page .take-quiz-questions .mt-4.p-4 .grid > div {
     }
 
     .exam-list-section-header {
-      background: linear-gradient(135deg, var(--primary) 0%, color-mix(in srgb, var(--primary) 75%, var(--secondary)) 50%, var(--secondary) 100%);
-      color: var(--primary-foreground);
+      background: var(--card);
+      color: var(--foreground);
       padding: 1.5rem 1.75rem !important;
       display: flex;
       flex-direction: column;
       gap: 0.5rem;
+      border-bottom: 1px solid var(--border);
     }
 
     .exam-list-section-header-top {
@@ -17909,10 +18091,10 @@ body.take-quiz-page .take-quiz-questions .mt-4.p-4 .grid > div {
       display: inline-flex;
       align-items: center;
       gap: 0;
-      background: rgba(255, 255, 255, 0.2);
+      background: var(--muted);
       border-radius: 0.5rem;
       padding: 0.2rem !important;
-      border: 1px solid rgba(255, 255, 255, 0.3);
+      border: 1px solid var(--border);
     }
 
     .exam-list-view-btn {
@@ -17923,7 +18105,7 @@ body.take-quiz-page .take-quiz-questions .mt-4.p-4 .grid > div {
       border: none;
       border-radius: 0.35rem;
       background: transparent;
-      color: rgba(255, 255, 255, 0.9);
+      color: var(--muted-foreground);
       font-size: 0.875rem;
       font-weight: 600;
       cursor: pointer;
@@ -17931,13 +18113,14 @@ body.take-quiz-page .take-quiz-questions .mt-4.p-4 .grid > div {
     }
 
     .exam-list-view-btn:hover {
-      background: rgba(255, 255, 255, 0.15);
-      color: #fff;
+      background: color-mix(in srgb, var(--primary) 10%, transparent);
+      color: var(--foreground);
     }
 
     .exam-list-view-btn.active {
-      background: #fff;
+      background: var(--card);
       color: var(--primary);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
     }
 
     .exam-list-section-content .exam-list-grid.exam-list-view-list {
@@ -17972,7 +18155,7 @@ body.take-quiz-page .take-quiz-questions .mt-4.p-4 .grid > div {
     .exam-list-section-sub {
       margin: 0;
       font-size: 0.9rem;
-      opacity: 0.92;
+      color: var(--muted-foreground);
       line-height: 1.4;
     }
 
@@ -19630,5 +19813,1400 @@ body.deleted-archive-page #main-content .scores-table-scroll {
         padding-left: 0.75rem;
         padding-right: 0.75rem;
     }
+}
+
+/* =========================
+   Master Admin Dashboard
+   ========================= */
+.master-admin-stat-card {
+  border-radius: 1rem;
+  border: 1px solid var(--border);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  overflow: hidden;
+}
+.master-admin-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+:root[data-theme="dark"] .master-admin-stat-card:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+.master-admin-stat-card--primary .master-admin-stat-icon-wrap { background: linear-gradient(135deg, rgba(109, 40, 217, 0.15), rgba(109, 40, 217, 0.08)); color: var(--primary); }
+.master-admin-stat-card--primary #stat-admins,
+.master-admin-stat-card--primary #stat-students { color: var(--primary); }
+.master-admin-stat-card--secondary .master-admin-stat-icon-wrap { background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(34, 197, 94, 0.08)); color: var(--secondary); }
+.master-admin-stat-card--secondary #stat-teachers,
+.master-admin-stat-card--secondary #stat-classes { color: var(--secondary); }
+.master-admin-stat-icon-wrap {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.master-admin-curriculum-card {
+  border-radius: 1rem;
+  border: 1px solid var(--border);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.master-admin-curriculum-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
+}
+.master-admin-curriculum-icon-wrap {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.625rem;
+  background: linear-gradient(135deg, var(--muted), color-mix(in srgb, var(--muted) 70%, transparent));
+  color: var(--muted-foreground);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.master-admin-verification-card {
+  border-radius: 1rem;
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--card) 98%, transparent), var(--card));
+  overflow: hidden;
+}
+.teacher-progress-charts-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-top: 0.5rem;
+}
+.teacher-progress-chart-merged {
+  margin-top: 0.5rem;
+}
+.teacher-progress-chart-legend {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+.teacher-progress-legend-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  padding: 0.35rem 0.75rem;
+  border-radius: 9999px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.teacher-progress-legend-badge:hover {
+  transform: translateY(-1px);
+}
+.teacher-progress-legend-badge--reading {
+  background: color-mix(in srgb, var(--primary) 18%, transparent);
+  color: var(--foreground);
+  border: 1px solid color-mix(in srgb, var(--primary) 35%, transparent);
+}
+.teacher-progress-legend-badge--pron {
+  background: color-mix(in srgb, var(--secondary) 18%, transparent);
+  color: var(--foreground);
+  border: 1px solid color-mix(in srgb, var(--secondary) 35%, transparent);
+}
+.teacher-progress-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.teacher-progress-legend-badge--reading .teacher-progress-legend-dot {
+  background: var(--primary);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--primary) 50%, transparent);
+}
+.teacher-progress-legend-badge--pron .teacher-progress-legend-dot {
+  background: var(--secondary);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--secondary) 50%, transparent);
+}
+.teacher-progress-chart-merged .teacher-progress-line-svg.teacher-progress-line-svg--merged {
+  width: 100% !important;
+  max-width: none !important;
+  min-height: 240px;
+  height: 240px;
+  display: block;
+}
+.teacher-progress-chart-merged .teacher-progress-line-wrap {
+  width: 100%;
+  max-width: none;
+}
+.teacher-progress-line-wrap--has-tooltip {
+  position: relative;
+  cursor: crosshair;
+  padding: 1rem;
+  background: color-mix(in srgb, var(--muted) 12%, transparent);
+  border-radius: 1rem;
+  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  animation: teacherChartReveal 0.4s ease;
+}
+@keyframes teacherChartReveal {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.teacher-chart-bg {
+  fill: color-mix(in srgb, var(--background) 60%, transparent);
+}
+.teacher-chart-line {
+  transition: stroke-width 0.2s ease;
+}
+.teacher-progress-line-wrap--has-tooltip:hover .teacher-chart-line {
+  stroke-width: 3.5;
+}
+.teacher-progress-y-axis {
+  fill: var(--muted-foreground);
+  font-weight: 500;
+  opacity: 0.9;
+}
+.teacher-chart-point circle:last-child {
+  transition: filter 0.2s ease, opacity 0.2s ease;
+}
+.teacher-chart-point:hover circle:last-child {
+  filter: drop-shadow(0 0 8px currentColor);
+  opacity: 1;
+}
+.teacher-chart-tooltip {
+  position: absolute;
+  z-index: 50;
+  padding: 0.6rem 1rem;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2), 0 0 1px rgba(0, 0, 0, 0.1);
+  font-size: 0.8125rem;
+  pointer-events: none;
+  min-width: 130px;
+  animation: teacherTooltipFade 0.15s ease;
+}
+@keyframes teacherTooltipFade {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.teacher-chart-tooltip.hidden {
+  display: none;
+}
+.teacher-chart-tooltip-month {
+  font-weight: 600;
+  margin-bottom: 0.35rem;
+  color: var(--foreground);
+}
+.teacher-chart-tooltip-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--muted-foreground);
+}
+.teacher-chart-tooltip-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+#teacher-progress-chart.teacher-progress-chart-merged {
+  width: 100%;
+}
+@media (max-width: 640px) {
+  .teacher-progress-charts-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.teacher-progress-chart-card {
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 1rem;
+  background: color-mix(in srgb, var(--muted) 15%, transparent);
+}
+.teacher-month-filter {
+  min-width: 140px;
+}
+.teacher-period-select {
+  min-width: 140px;
+  width: auto;
+}
+.teacher-progress-chart-title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  margin: 0 0 0.75rem;
+  color: var(--foreground);
+}
+.teacher-progress-line-wrap {
+  min-height: 200px;
+  padding: 0.5rem 0;
+}
+.teacher-progress-line-svg {
+  width: 100%;
+  max-width: 400px;
+  height: auto;
+  min-height: 180px;
+}
+.teacher-progress-line-label {
+  font-size: 12px;
+  font-weight: 600;
+  fill: var(--foreground);
+}
+.teacher-progress-line-axis {
+  font-size: 13px;
+  font-weight: 500;
+  fill: var(--muted-foreground);
+}
+#teacher-progress-line-path {
+  transition: stroke-dashoffset 0.6s ease;
+}
+#teacher-progress-line-dot-1,
+#teacher-progress-line-dot-2 {
+  transition: cx 0.5s ease, cy 0.5s ease;
+}
+.master-admin-verification-header-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.75rem;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(109, 40, 217, 0.25);
+}
+.teacher-dashboard-chart-icon {
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--primary) 35%, transparent);
+}
+.master-admin-verification-progress-wrap {
+  margin-bottom: 0.5rem;
+}
+.master-admin-verification-progress-bar {
+  height: 0.5rem;
+  border-radius: 9999px;
+  background: var(--muted);
+  display: flex;
+  overflow: hidden;
+}
+.master-admin-verification-progress-segment {
+  transition: width 0.5s ease;
+  min-width: 0;
+}
+.master-admin-verification-progress--pending { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+.master-admin-verification-progress--approved { background: linear-gradient(90deg, #22c55e, #4ade80); }
+.master-admin-verification-progress--rejected { background: linear-gradient(90deg, #ef4444, #f87171); }
+.master-admin-verification-tile {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border-radius: 0.875rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.master-admin-verification-tile:hover {
+  transform: translateY(-1px);
+}
+.master-admin-verification-tile--pending {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(251, 191, 36, 0.06));
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+.master-admin-verification-tile--pending .master-admin-verification-tile-icon {
+  background: rgba(245, 158, 11, 0.2);
+  color: #d97706;
+}
+:root[data-theme="dark"] .master-admin-verification-tile--pending .master-admin-verification-tile-icon { color: #fbbf24; }
+.master-admin-verification-tile--approved {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.12), rgba(74, 222, 128, 0.06));
+  border: 1px solid rgba(34, 197, 94, 0.25);
+}
+.master-admin-verification-tile--approved .master-admin-verification-tile-icon {
+  background: rgba(34, 197, 94, 0.2);
+  color: #16a34a;
+}
+:root[data-theme="dark"] .master-admin-verification-tile--approved .master-admin-verification-tile-icon { color: #4ade80; }
+.master-admin-verification-tile--rejected {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.12), rgba(248, 113, 113, 0.06));
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+.master-admin-verification-tile--rejected .master-admin-verification-tile-icon {
+  background: rgba(239, 68, 68, 0.2);
+  color: #dc2626;
+}
+:root[data-theme="dark"] .master-admin-verification-tile--rejected .master-admin-verification-tile-icon { color: #f87171; }
+.master-admin-verification-tile-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.625rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.master-admin-verification-tile-content { min-width: 0; }
+.master-admin-verification-tile-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+.master-admin-verification-tile-label {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  display: block;
+  margin-top: 0.25rem;
+}
+
+/* =========================
+   Master Admin - Admin Accounts
+   ========================= */
+.master-admin-admins-card {
+  border-radius: 1rem;
+  border: 1px solid var(--border);
+  background: var(--card);
+  overflow: hidden;
+  padding: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+:root[data-theme="dark"] .master-admin-admins-card {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+.master-admin-admins-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1.5rem 1.5rem 1rem;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--primary) 6%, transparent), transparent);
+}
+.master-admin-admins-header-icon {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 0.75rem;
+  background: linear-gradient(135deg, var(--primary), color-mix(in srgb, var(--primary) 80%, var(--secondary)));
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(109, 40, 217, 0.25);
+}
+.master-admin-admins-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin: 0;
+  color: var(--foreground);
+}
+.master-admin-admins-subtitle {
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+  margin: 0.25rem 0 0;
+}
+.master-admin-admins-table-wrap {
+  overflow-x: auto;
+  padding: 0 1.5rem 1.5rem;
+}
+.master-admin-admins-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+}
+.master-admin-admins-table thead tr {
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--muted) 50%, transparent);
+}
+.master-admin-admins-table th {
+  padding: 0.75rem 1rem;
+  font-weight: 600;
+  text-align: left;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.master-admin-admins-table th.master-admin-admins-th-actions {
+  text-align: right;
+}
+.master-admin-admins-row {
+  border-bottom: 1px solid var(--border);
+  transition: background 0.15s ease;
+}
+.master-admin-admins-row:hover {
+  background: color-mix(in srgb, var(--muted) 30%, transparent);
+}
+.master-admin-admins-row:last-child {
+  border-bottom: none;
+}
+.master-admin-admins-cell {
+  padding: 1rem;
+  vertical-align: middle;
+}
+.master-admin-admins-cell-name {
+  font-weight: 500;
+  color: var(--foreground);
+}
+.master-admin-admins-cell-muted {
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+}
+.master-admin-admins-cell-actions {
+  text-align: right;
+}
+.master-admin-admins-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.625rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+.master-admin-admins-status--active {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.18), rgba(34, 197, 94, 0.1));
+  color: #16a34a;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+:root[data-theme="dark"] .master-admin-admins-status--active {
+  color: #4ade80;
+}
+.master-admin-admins-status--deactivated {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.18), rgba(239, 68, 68, 0.1));
+  color: #dc2626;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+:root[data-theme="dark"] .master-admin-admins-status--deactivated {
+  color: #f87171;
+}
+.master-admin-admins-loading {
+  padding: 2rem 1rem !important;
+  text-align: center;
+  color: var(--muted-foreground);
+}
+.master-admin-admins-error {
+  color: var(--destructive) !important;
+}
+.master-admin-admins-empty {
+  margin: 1.5rem;
+  padding: 2.5rem 2rem;
+  text-align: center;
+  border: 1px dashed var(--border);
+  border-radius: 0.875rem;
+  background: color-mix(in srgb, var(--muted) 20%, transparent);
+}
+.master-admin-admins-empty-icon {
+  color: var(--muted-foreground);
+  opacity: 0.6;
+  margin-bottom: 1rem;
+}
+.master-admin-admins-empty-title {
+  font-weight: 600;
+  font-size: 1rem;
+  margin: 0 0 0.25rem;
+  color: var(--foreground);
+}
+.master-admin-admins-empty-text {
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+  margin: 0;
+}
+.master-admin-admins-actions {
+  margin-top: 1.25rem;
+  display: flex;
+  justify-content: flex-end;
+}
+.master-admin-signup-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  font-weight: 500;
+  border-radius: 0.75rem;
+  box-shadow: 0 2px 8px rgba(109, 40, 217, 0.2);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.master-admin-signup-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(109, 40, 217, 0.3);
+}
+
+/* =========================
+   Master Admin - Curriculum
+   ========================= */
+.curriculum-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+  padding: 0.25rem;
+  background: color-mix(in srgb, var(--muted) 40%, transparent);
+  border-radius: 0.75rem;
+}
+.curriculum-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  background: transparent;
+  border: none;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: color 0.2s, background 0.2s;
+}
+.curriculum-tab-btn:hover {
+  color: var(--foreground);
+  background: color-mix(in srgb, var(--muted) 60%, transparent);
+}
+.curriculum-tab-btn.active {
+  color: var(--primary-foreground);
+  background: var(--primary);
+  box-shadow: 0 2px 8px rgba(109, 40, 217, 0.25);
+}
+.curriculum-panel {
+  border-radius: 1rem;
+  border: 1px solid var(--border);
+  background: var(--card);
+  overflow: hidden;
+  padding: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+:root[data-theme="dark"] .curriculum-panel {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+.curriculum-panel-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1.5rem 1.5rem 1rem;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--secondary) 8%, transparent), transparent);
+}
+.curriculum-panel-header-icon {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 0.75rem;
+  background: linear-gradient(135deg, var(--secondary), color-mix(in srgb, var(--secondary) 80%, var(--primary)));
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.25);
+}
+.curriculum-panel-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin: 0;
+  color: var(--foreground);
+}
+.curriculum-panel-subtitle {
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+  margin: 0.25rem 0 0;
+}
+.curriculum-box {
+  margin: 0 1.5rem 1.5rem;
+  padding: 1.25rem;
+  border-radius: 0.875rem;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--card) 98%, transparent);
+}
+.curriculum-box-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+.curriculum-box-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
+  color: var(--foreground);
+}
+.curriculum-filter-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.curriculum-filter-label {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+.curriculum-filter-select {
+  padding: 0.375rem 0.75rem;
+  font-size: 0.875rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--input-background);
+  color: var(--foreground);
+  min-width: 10rem;
+  color-scheme: light;
+  cursor: pointer;
+}
+:root[data-theme="dark"] .curriculum-filter-select {
+  color-scheme: dark;
+}
+.curriculum-filter-select option,
+.curriculum-filter-select optgroup {
+  background: var(--card);
+  color: var(--foreground);
+}
+.curriculum-table-wrap {
+  overflow-x: auto;
+  border-radius: 0.5rem;
+  border: 1px solid var(--border);
+}
+.curriculum-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+}
+.curriculum-table thead tr {
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--muted) 50%, transparent);
+}
+.curriculum-table th {
+  padding: 0.75rem 1rem;
+  font-weight: 600;
+  text-align: left;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.curriculum-table th.curriculum-th-actions {
+  text-align: right;
+}
+.curriculum-row {
+  border-bottom: 1px solid var(--border);
+  transition: background 0.15s ease;
+}
+.curriculum-row:hover {
+  background: color-mix(in srgb, var(--muted) 30%, transparent);
+}
+.curriculum-row:last-child {
+  border-bottom: none;
+}
+.curriculum-cell {
+  padding: 0.875rem 1rem;
+  vertical-align: middle;
+}
+.curriculum-cell-name {
+  font-weight: 500;
+  color: var(--foreground);
+}
+.curriculum-cell-muted {
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+}
+.curriculum-cell-actions {
+  text-align: right;
+}
+.curriculum-delete-btn:hover {
+  background: var(--destructive) !important;
+  border-color: var(--destructive) !important;
+  color: var(--destructive-foreground) !important;
+}
+.curriculum-delete-btn:focus-visible {
+  outline: 2px solid var(--destructive) !important;
+  outline-offset: 2px;
+}
+.curriculum-loading {
+  padding: 2rem 1rem !important;
+  text-align: center;
+  color: var(--muted-foreground);
+}
+.curriculum-empty {
+  margin-top: 1rem;
+  padding: 2rem;
+  text-align: center;
+  border: 1px dashed var(--border);
+  border-radius: 0.75rem;
+  background: color-mix(in srgb, var(--muted) 15%, transparent);
+}
+.curriculum-empty-icon {
+  color: var(--muted-foreground);
+  opacity: 0.6;
+  margin-bottom: 0.75rem;
+}
+.curriculum-empty-title {
+  font-weight: 600;
+  font-size: 0.9375rem;
+  margin: 0 0 0.25rem;
+  color: var(--foreground);
+}
+.curriculum-empty-text {
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+  margin: 0;
+}
+.curriculum-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.75rem;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+.curriculum-pagination-btns {
+  display: flex;
+  gap: 0.5rem;
+}
+.curriculum-actions {
+  margin-top: 1.25rem;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+.curriculum-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  font-weight: 500;
+  border-radius: 0.75rem;
+  box-shadow: 0 2px 8px rgba(109, 40, 217, 0.2);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.curriculum-action-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(109, 40, 217, 0.3);
+}
+
+/* =========================
+   Curriculum Browse View
+   ========================= */
+.curriculum-browse-box {
+  padding: 1.5rem;
+}
+.curriculum-browse-header {
+  margin-bottom: 1.5rem;
+}
+.curriculum-browse-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  align-items: flex-end;
+}
+.curriculum-browse-subject-wrap {
+  flex: 1;
+  min-width: 200px;
+}
+.curriculum-browse-select {
+  cursor: pointer;
+  color-scheme: light;
+}
+:root[data-theme="dark"] .curriculum-browse-select {
+  color-scheme: dark;
+}
+.curriculum-browse-select option,
+.curriculum-browse-select optgroup {
+  background: var(--card);
+  color: var(--foreground);
+}
+.curriculum-browse-search-wrap {
+  flex: 1;
+  min-width: 200px;
+}
+.curriculum-browse-search-input-wrap {
+  position: relative;
+}
+.curriculum-browse-search-icon {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted-foreground);
+  pointer-events: none;
+}
+.curriculum-browse-search-input {
+  padding-left: 2.5rem;
+  border-radius: 0.5rem;
+}
+.curriculum-browse-content {
+  min-height: 120px;
+}
+.curriculum-browse-placeholder {
+  padding: 2rem 0;
+  text-align: center;
+  font-size: 0.9375rem;
+}
+.curriculum-browse-subject-label {
+  margin-bottom: 1.5rem;
+}
+.curriculum-browse-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.curriculum-browse-subject-name {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0.25rem 0 0;
+  color: var(--foreground);
+}
+.curriculum-browse-quarter {
+  margin-bottom: 1.5rem;
+}
+.curriculum-browse-quarter-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+.curriculum-browse-quarter-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, var(--secondary), color-mix(in srgb, var(--secondary) 80%, var(--primary)));
+  color: white;
+}
+.curriculum-browse-quarter-title {
+  font-size: 0.9375rem;
+  color: var(--muted-foreground);
+}
+.curriculum-browse-lesson-card {
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  overflow: hidden;
+  margin-bottom: 0.75rem;
+  background: var(--card);
+}
+.curriculum-browse-lesson-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.curriculum-browse-lesson-header:hover {
+  background: color-mix(in srgb, var(--muted) 30%, transparent);
+}
+.curriculum-browse-lesson-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 20%, transparent), color-mix(in srgb, var(--primary) 10%, transparent));
+  color: var(--primary);
+  flex-shrink: 0;
+}
+.curriculum-browse-lesson-title-wrap {
+  flex: 1;
+  min-width: 0;
+}
+.curriculum-browse-lesson-title {
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: var(--foreground);
+}
+.curriculum-browse-lesson-meta {
+  display: block;
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  margin-top: 0.125rem;
+}
+.curriculum-browse-lesson-chevron {
+  color: var(--muted-foreground);
+  flex-shrink: 0;
+}
+.curriculum-browse-lesson-topics {
+  padding: 0.5rem 1.25rem 1rem 4.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  border-top: 1px solid var(--border);
+}
+.curriculum-browse-lesson-topics.collapsed {
+  display: none;
+}
+.curriculum-browse-topic-tile {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 1rem;
+  border-radius: 0.5rem;
+  background: color-mix(in srgb, var(--secondary) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--secondary) 25%, transparent);
+}
+.curriculum-browse-topic-icon {
+  color: var(--secondary);
+  flex-shrink: 0;
+}
+.curriculum-browse-topic-title {
+  flex: 1;
+  font-weight: 500;
+  font-size: 0.875rem;
+  color: var(--foreground);
+}
+.curriculum-browse-view-topic {
+  flex-shrink: 0;
+  text-decoration: none;
+}
+.curriculum-browse-view-topic:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.curriculum-browse-empty {
+  padding: 2rem;
+  text-align: center;
+}
+
+/* =========================
+   Master Admin - Modals
+   ========================= */
+.master-admin-modal-overlay {
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(16px);
+}
+.master-admin-modal-card {
+  border-radius: 1rem;
+  border: 1px solid var(--border);
+  box-shadow:
+    0 25px 50px -12px rgba(0, 0, 0, 0.25),
+    0 0 0 1px rgba(255, 255, 255, 0.05);
+  padding: 0 !important;
+  overflow: hidden;
+}
+:root[data-theme="dark"] .master-admin-modal-card {
+  box-shadow:
+    0 25px 50px -12px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+.master-admin-modal-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1.5rem 1.5rem 1.25rem;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--primary) 8%, transparent), transparent);
+  border-bottom: 1px solid var(--border);
+  position: relative;
+}
+.master-admin-modal-header-icon {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: white;
+}
+.master-admin-modal-header-icon--primary {
+  background: linear-gradient(135deg, var(--primary), color-mix(in srgb, var(--primary) 75%, var(--secondary)));
+  box-shadow: 0 4px 14px rgba(109, 40, 217, 0.35);
+}
+.master-admin-modal-header-icon--secondary {
+  background: linear-gradient(135deg, var(--secondary), color-mix(in srgb, var(--secondary) 75%, var(--primary)));
+  box-shadow: 0 4px 14px rgba(34, 197, 94, 0.35);
+}
+.master-admin-modal-header-text {
+  flex: 1;
+  min-width: 0;
+}
+.master-admin-modal-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0;
+  color: var(--foreground);
+}
+.master-admin-modal-subtitle {
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+  margin: 0.375rem 0 0;
+  line-height: 1.4;
+}
+.master-admin-modal-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  width: 2.25rem;
+  height: 2.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--muted) 50%, transparent);
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+.master-admin-modal-close:hover {
+  background: color-mix(in srgb, var(--muted) 80%, transparent);
+  color: var(--foreground);
+  border-color: var(--border);
+}
+.master-admin-modal-content {
+  padding: 1.5rem 1.5rem !important;
+  background: var(--card);
+}
+.master-admin-modal-form .form-label {
+  font-weight: 500;
+  font-size: 0.875rem;
+}
+.master-admin-modal-form .form-input {
+  border-radius: 0.5rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.master-admin-modal-form .form-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 25%, transparent);
+}
+.master-admin-modal-footer {
+  padding: 1rem 1.5rem 1.5rem !important;
+  border-top: 1px solid var(--border);
+  background: color-mix(in srgb, var(--muted) 20%, transparent);
+}
+.master-admin-modal-submit {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  font-weight: 500;
+  border-radius: 0.75rem;
+  box-shadow: 0 2px 8px rgba(109, 40, 217, 0.25);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.master-admin-modal-submit:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(109, 40, 217, 0.35);
+}
+
+/* ============================================
+   RESPONSIVE – Mobile S, M, L & Tablet
+   Breakpoints: 480px (S), 640px (M), 768px (L), 1024px (tablet)
+   ============================================ */
+
+/* ---------- Mobile S (≤480px) ---------- */
+@media (max-width: 480px) {
+  html { font-size: 15px; }
+  body { font-size: 0.9375rem; }
+  .text-4xl { font-size: 1.75rem; }
+  .text-3xl { font-size: 1.5rem; }
+  .text-2xl { font-size: 1.25rem; }
+  .text-xl { font-size: 1.125rem; }
+  .page-header-title,
+  .modal-title,
+  h1 { font-size: 1.25rem; }
+  h2 { font-size: 1.125rem; }
+
+  .modal-overlay,
+  .modal-quiz-overlay,
+  .modal-create-overlay,
+  .join-class-modal-overlay,
+  .create-class-modal-overlay,
+  .recitation-picker-overlay,
+  .recitation-question-overlay,
+  .lesson-slideshow-overlay,
+  .eel-tutorial-overlay,
+  .master-admin-modal-overlay {
+    padding: 0;
+    align-items: flex-start;
+  }
+  .modal-card,
+  .leaderboard-modal-card,
+  .quiz-card,
+  .result-card,
+  .join-class-modal-card,
+  .create-class-modal-card,
+  .curriculum-modal-card,
+  .master-admin-modal-card,
+  .lesson-review-modal-card,
+  #signup-admin-modal .modal-card {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    min-height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
+    margin: 0;
+    padding: 1rem !important;
+  }
+  .modal-content,
+  .lesson-review-modal-content,
+  .master-admin-modal-content {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 1rem !important;
+    flex: 1;
+    min-height: 0;
+  }
+  .modal-header,
+  .modal-footer,
+  .join-class-modal-header,
+  .create-class-modal-header,
+  .master-admin-modal-header,
+  .master-admin-modal-footer {
+    padding: 1rem !important;
+  }
+  .modal-footer,
+  .join-class-modal-footer,
+  .create-class-modal-footer,
+  .master-admin-modal-footer {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .modal-footer .btn,
+  .join-class-modal-footer .btn,
+  .create-class-modal-footer .btn,
+  .master-admin-modal-footer .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .btn:not(.btn-sm),
+  .btn-primary,
+  .btn-secondary,
+  .btn-outline,
+  .nav-button.btn,
+  .btn-side-bar,
+  .logout-button {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.75rem 1rem;
+  }
+  .page-header-actions .btn,
+  .btn-create-class,
+  .btn-join-class {
+    width: 100%;
+    justify-content: center;
+  }
+
+  #main-content,
+  #main-app #main-content > div,
+  #main-app #main-content > div.p-6 {
+    padding: 1rem !important;
+  }
+  .card-content.p-6,
+  .card-content.p-5,
+  .card-content.p-4 {
+    padding: 1rem !important;
+  }
+  .master-admin-stat-card .card-content,
+  .master-admin-verification-card .card-content {
+    padding: 1rem !important;
+  }
+
+  .form-input,
+  .form-textarea,
+  select.form-input {
+    width: 100%;
+    padding: 0.875rem 1rem;
+    font-size: 16px;
+    min-height: 44px;
+  }
+  .form-textarea { min-height: 6rem; }
+
+  .flex-wrap { flex-wrap: wrap; }
+  .page-header,
+  .flex.items-start.justify-between {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+  .teacher-period-select,
+  .teacher-progress-legend-badge {
+    min-width: 100%;
+  }
+  .teacher-progress-chart-legend {
+    flex-direction: column;
+  }
+}
+
+/* ---------- Mobile M (481–640px) ---------- */
+@media (min-width: 481px) and (max-width: 640px) {
+  html { font-size: 16px; }
+  .text-4xl { font-size: 1.875rem; }
+  .text-3xl { font-size: 1.5rem; }
+
+  .modal-overlay,
+  .modal-quiz-overlay,
+  .modal-create-overlay,
+  .master-admin-modal-overlay {
+    padding: 0.5rem;
+  }
+  .modal-card,
+  .leaderboard-modal-card,
+  .quiz-card,
+  .join-class-modal-card,
+  .create-class-modal-card,
+  .master-admin-modal-card {
+    width: 95vw !important;
+    max-width: 95vw !important;
+    padding: 1.25rem !important;
+  }
+  .modal-content,
+  .master-admin-modal-content {
+    padding: 1.25rem !important;
+  }
+
+  .btn:not(.btn-sm),
+  .btn-primary,
+  .btn-secondary {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.625rem 1rem;
+  }
+
+  #main-content > div,
+  #main-app #main-content > div.p-6 {
+    padding: 1.25rem !important;
+  }
+
+  .form-input,
+  .form-textarea {
+    padding: 0.75rem 1rem;
+    min-height: 44px;
+  }
+
+  .grid.grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* ---------- Mobile L (641–768px) ---------- */
+@media (min-width: 641px) and (max-width: 768px) {
+  .modal-card,
+  .leaderboard-modal-card,
+  .quiz-card,
+  .master-admin-modal-card {
+    width: min(92vw, 600px) !important;
+    padding: 1.5rem !important;
+  }
+  .modal-content,
+  .master-admin-modal-content {
+    padding: 1.5rem !important;
+  }
+
+  .btn:not(.btn-sm) {
+    min-height: 44px;
+    padding: 0.5rem 1rem;
+  }
+
+  #main-content > div,
+  #main-app #main-content > div.p-6 {
+    padding: 1.5rem !important;
+  }
+
+  .form-input,
+  .form-textarea {
+    padding: 0.75rem 1rem;
+  }
+
+  .grid.grid-cols-4,
+  .grid.grid-cols-5,
+  .grid.grid-cols-6 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .grid.grid-cols-3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* ---------- Tablet (769–1024px) ---------- */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .modal-card,
+  .leaderboard-modal-card,
+  .quiz-card,
+  .master-admin-modal-card {
+    width: min(90vw, 680px) !important;
+  }
+
+  .btn:not(.btn-sm) {
+    min-height: 44px;
+  }
+
+  #main-content > div,
+  #main-app #main-content > div.p-6 {
+    padding: 1.5rem 2rem !important;
+  }
+
+  .grid.grid-cols-5,
+  .grid.grid-cols-6 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .grid.grid-cols-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* sm: breakpoint (640px) for grid utilities */
+@media (min-width: 640px) {
+  .sm\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .sm\:flex-row { flex-direction: row; }
+}
+
+/* Ensure stat cards stack on small screens */
+@media (max-width: 640px) {
+  .master-admin-stat-cards.grid,
+  .grid.master-admin-stat-cards {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* SweetAlert2 responsive overrides */
+@media (max-width: 480px) {
+  .swal2-popup {
+    width: 92vw !important;
+    max-width: 92vw !important;
+    padding: 1.25rem !important;
+  }
+  .swal2-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+  .swal2-actions .swal2-confirm,
+  .swal2-actions .swal2-cancel {
+    width: 100%;
+    margin: 0.25rem 0 !important;
+  }
+}
+@media (min-width: 481px) and (max-width: 640px) {
+  .swal2-popup {
+    width: 95vw !important;
+    max-width: 420px !important;
+  }
+}
+
+/* Auth forms responsive */
+@media (max-width: 480px) {
+  .login-container,
+  .signup-container,
+  .auth-form-card {
+    width: 95vw !important;
+    max-width: 95vw !important;
+    padding: 1.25rem !important;
+  }
+  .login-header h1,
+  .hero-title {
+    font-size: 1.5rem !important;
+  }
+}
+
+/* Mobile nav header – ensure buttons are tappable */
+@media (max-width: 768px) {
+  .mobile-nav-btn,
+  .theme-header-toggle,
+  .mobile-nav-vocab-btn,
+  .mobile-nav-notification-btn {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0.5rem;
+  }
+}
+
+/* Tables – horizontal scroll on mobile */
+@media (max-width: 640px) {
+  .table-wrap,
+  table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  table {
+    min-width: 400px;
+  }
 }
 

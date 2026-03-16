@@ -119,11 +119,86 @@ async function getTeachersDashboardStats(req, res) {
       pct: s.pct != null && !Number.isNaN(s.pct) ? s.pct : 0,
     }));
 
+    // ——— 3b) Monthly progress for line graphs ———
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const yearParam = req.query.year ? Math.min(2030, Math.max(2020, Number(req.query.year))) : currentYear;
+    const rangeParam = (req.query.range || "1-6").toString().trim();
+    const [fromM, toM] = rangeParam.split("-").map((x) => parseInt(x, 10)).filter(Number.isFinite);
+    const fromMonth = fromM >= 1 && fromM <= 12 ? fromM : 1;
+    const toMonth = toM >= 1 && toM <= 12 ? toM : 6;
+
+    const fromDate = `${yearParam}-${String(fromMonth).padStart(2, "0")}-01`;
+    const lastDay = new Date(yearParam, toMonth, 0);
+    const toDate = `${yearParam}-${String(toMonth).padStart(2, "0")}-${String(lastDay.getDate()).padStart(2, "0")}`;
+
+    const teacherSub = teacherId != null && Number.isFinite(teacherId)
+      ? "AND a.student_id IN (SELECT sc.student_id FROM student_classes sc JOIN classes c ON c.id = sc.class_id WHERE c.teacher_id = ? AND sc.status = 'accepted')"
+      : "";
+    const rParams = teacherId != null && Number.isFinite(teacherId) ? [fromDate, toDate, teacherId] : [fromDate, toDate];
+    const pParams = teacherId != null && Number.isFinite(teacherId) ? [fromDate, toDate, teacherId] : [fromDate, toDate];
+
+    const [readingRows] = await pool.query(
+      `SELECT YEAR(a.created_at) AS y, MONTH(a.created_at) AS m,
+              AVG((a.score / NULLIF(a.total_points, 0)) * 100) AS avg_pct
+       FROM reading_quiz_attempts a
+       WHERE a.status = 'completed' AND a.created_at >= ? AND a.created_at <= ? ${teacherSub}
+       GROUP BY YEAR(a.created_at), MONTH(a.created_at)
+       ORDER BY y, m`,
+      rParams
+    );
+    const [pronRows] = await pool.query(
+      `SELECT YEAR(a.created_at) AS y, MONTH(a.created_at) AS m,
+              AVG(a.score) AS avg_pct
+       FROM pronunciation_quiz_attempts a
+       WHERE a.status IN ('completed', 'submitted') AND a.created_at >= ? AND a.created_at <= ? ${teacherSub}
+       GROUP BY YEAR(a.created_at), MONTH(a.created_at)
+       ORDER BY y, m`,
+      pParams
+    );
+
+    const readingByMonthMap = new Map(readingRows.map((r) => [`${r.y}-${r.m}`, Math.round(Number(r.avg_pct) * 10) / 10]));
+    const pronByMonthMap = new Map(pronRows.map((r) => [`${r.y}-${r.m}`, Math.round(Number(r.avg_pct) * 10) / 10]));
+
+    const monthLabels = [];
+    const readingByMonth = [];
+    const pronByMonth = [];
+    for (let m = fromMonth; m <= toMonth; m++) {
+      const d = new Date(yearParam, m - 1, 1);
+      monthLabels.push(d.toLocaleString("en", { month: "short" }));
+      readingByMonth.push(readingByMonthMap.get(`${yearParam}-${m}`) ?? 0);
+      pronByMonth.push(pronByMonthMap.get(`${yearParam}-${m}`) ?? 0);
+    }
+
+    // ——— 4) Classes and students count (teacher_id required) ———
+    let classesCount = 0;
+    let studentsCount = 0;
+    if (teacherId != null && Number.isFinite(teacherId)) {
+      const [[classesRow]] = await pool.query(
+        `SELECT COUNT(*) AS c FROM classes WHERE teacher_id = ?`,
+        [teacherId]
+      );
+      const [[studentsRow]] = await pool.query(
+        `SELECT COUNT(DISTINCT sc.student_id) AS c FROM student_classes sc
+         JOIN classes c ON c.id = sc.class_id WHERE c.teacher_id = ? AND sc.status = 'accepted'`,
+        [teacherId]
+      );
+      classesCount = Number(classesRow?.c || 0);
+      studentsCount = Number(studentsRow?.c || 0);
+    }
+
     res.json({
       success: true,
       analytics: { improvementRate },
       quizzes: { generatedThisMonth: quizzesGeneratedThisMonth },
       studentProgress,
+      classes: { count: classesCount },
+      students: { count: studentsCount },
+      monthlyProgress: {
+        months: monthLabels,
+        reading: readingByMonth,
+        pronunciation: pronByMonth,
+      },
     });
   } catch (err) {
     console.error("teachers-dashboard-stats error:", err);

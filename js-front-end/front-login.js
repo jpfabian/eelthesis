@@ -49,14 +49,27 @@ function isAuthenticated() {
                         user_id: result.user.user_id,
                         fname: result.user.fname,
                         lname: result.user.lname,
+                        email: result.user.email,
                         role: result.user.role
                     }));
                     if (result.adminToken) {
                         try { localStorage.setItem("eel_admin_token", result.adminToken); } catch (_) {}
                     }
+                    if (result.masterAdminToken) {
+                        try { localStorage.setItem("eel_master_admin_token", result.masterAdminToken); } catch (_) {}
+                    }
 
                     var role = result.user.role;
-                    if (role === "admin") {
+                    if (role === "master_admin") {
+                        Swal.fire({
+                            icon: "success",
+                            title: "Welcome Master Admin!",
+                            text: "Signed in successfully.",
+                            confirmButtonColor: "#3085d6"
+                        }).then(() => {
+                            window.location.href = "master-admin.html";
+                        });
+                    } else if (role === "admin") {
                         Swal.fire({
                             icon: "success",
                             title: "Welcome Admin!",
@@ -72,7 +85,7 @@ function isAuthenticated() {
                             text: "Hello, " + result.user.fname + "!",
                             confirmButtonColor: "#3085d6"
                         }).then(() => {
-                            window.location.href = "classes.html";
+                            window.location.href = "teacher-dashboard.html";
                         });
                     } else if (role === "student") {
                         Swal.fire({
@@ -113,7 +126,7 @@ function isAuthenticated() {
                 setTimeout(() => {
                     hideLoading();
                     showNotification(`Welcome to the demo, ${result.user.name}!`, 'success');
-                    window.location.href = 'classes.html';
+                    window.location.href = role === 'teacher' ? 'teacher-dashboard.html' : 'classes.html';
                 }, 800);
                 
             } catch (error) {

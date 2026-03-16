@@ -1,7 +1,20 @@
 let selectedRole = null;
 
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', async function() {
             const roleCards = document.querySelectorAll('.role-card-small');
+            const strandSelect = document.getElementById('strand');
+            if (strandSelect) {
+                try {
+                    const res = await fetch((window.API_BASE || '') + '/api/tracks');
+                    const data = await res.json();
+                    if (data.success && Array.isArray(data.tracks)) {
+                        strandSelect.innerHTML = '<option value="">Select TRACK</option>' +
+                            data.tracks.map(t => '<option value="' + (t.track_name || '').replace(/"/g, '&quot;') + '">' + (t.track_name || '').replace(/</g, '&lt;') + '</option>').join('');
+                    }
+                } catch (e) {
+                    console.warn('Could not load tracks:', e);
+                }
+            }
             const roleContinueBtn = document.getElementById('role-continue-btn');
             const signupForm = document.getElementById('signup-form');
             const passwordInput = document.getElementById('password');

@@ -262,7 +262,7 @@ async function handleGenerateRecitationQuestions(req, res) {
     const topicTitle = topicRows[0].topic_title;
 
     const typeDescriptions = {
-      'multiple-choice': 'multiple choice with 4 options (A, B, C, D) and one correct answer',
+      'multiple-choice': 'multiple choice with 4 options. Each option must be the FULL answer text (e.g. "To introduce the main idea of the paper"), NOT just letters A, B, C, or D. options must be an array of 4 strings like ["First full answer", "Second full answer", "Third full answer", "Fourth full answer"]. correctAnswer must exactly match one of those strings.',
       'true-false': 'true or false with options ["True","False"] and correctAnswer set to "True" or "False"',
       'identification': 'identification with a one-word answer only'
     };
@@ -363,24 +363,33 @@ async function handleGenerateRecitationQuestions(req, res) {
         : rawCorrectAnswer;
 
       // Hard guard: MCQ must always be rendered as choices, never text input.
+      let finalCorrectAnswer = normalizedCorrectAnswer;
       if (type === 'multiple-choice') {
         const seen = new Set();
         let mcqOptions = (Array.isArray(options) ? options : [])
           .map((x) => String(x || '').trim())
           .filter((x) => x && !seen.has(x) && seen.add(x));
 
-        const mcqCorrect = String(normalizedCorrectAnswer || '').trim();
-        if (mcqCorrect && !mcqOptions.some((o) => o.toLowerCase() === mcqCorrect.toLowerCase())) {
-          mcqOptions.unshift(mcqCorrect);
+        const isLetterOnly = (s) => /^[A-Da-d]\.?$/.test(String(s || '').trim());
+        const allLetterOnly = mcqOptions.length > 0 && mcqOptions.every(isLetterOnly);
+        if (allLetterOnly) {
+          mcqOptions = ['Option A', 'Option B', 'Option C', 'Option D'];
+          const letter = (normalizedCorrectAnswer || '').toUpperCase().charAt(0);
+          if (letter >= 'A' && letter <= 'D') finalCorrectAnswer = `Option ${letter}`;
+        } else {
+          const mcqCorrect = String(normalizedCorrectAnswer || '').trim();
+          if (mcqCorrect && !mcqOptions.some((o) => o.toLowerCase() === mcqCorrect.toLowerCase())) {
+            mcqOptions.unshift(mcqCorrect);
+          }
+          if (mcqOptions.length === 0) {
+            const seed = mcqCorrect || 'Correct answer';
+            mcqOptions = [seed, 'Option B', 'Option C', 'Option D'];
+          }
+          while (mcqOptions.length < 4) {
+            mcqOptions.push(`Option ${String.fromCharCode(65 + mcqOptions.length)}`);
+          }
+          mcqOptions = mcqOptions.slice(0, 4);
         }
-        if (mcqOptions.length === 0) {
-          const seed = mcqCorrect || 'Correct answer';
-          mcqOptions = [seed, 'Option B', 'Option C', 'Option D'];
-        }
-        while (mcqOptions.length < 4) {
-          mcqOptions.push(`Option ${String.fromCharCode(65 + mcqOptions.length)}`);
-        }
-        mcqOptions = mcqOptions.slice(0, 4);
         options = mcqOptions;
       }
 
@@ -389,7 +398,7 @@ async function handleGenerateRecitationQuestions(req, res) {
         type,
         question: sanitizeQuestionTextByType(q.question, type),
         options,
-        correctAnswer: normalizedCorrectAnswer
+        correctAnswer: finalCorrectAnswer
       };
     };
 
@@ -423,7 +432,7 @@ async function handleGenerateRecitationQuestions(req, res) {
 
     const generateQuestionsChunk = async (type, count) => {
       const systemPrompt = `You are a recitation question generator for high school English. Reply with ONLY a single valid JSON array. Do not use markdown, code blocks, or any text outside the array. Generate ONLY ${type} questions.`;
-      const userPrompt = `Topic: "${topicTitle}". Generate exactly ${count} ${typeDescriptions[type]}. Return a JSON array only. Each item must have "type", "question", "options", and "correctAnswer". For multiple-choice, options must contain exactly 4 strings and correctAnswer must match one option exactly. For true-false, options must be ["True","False"]. For identification, options must be null and correctAnswer must be exactly one word.`;
+      const userPrompt = `Topic: "${topicTitle}". Generate exactly ${count} ${typeDescriptions[type]}. Return a JSON array only. Each item must have "type", "question", "options", and "correctAnswer". For multiple-choice, options must be an array of 4 FULL answer strings (e.g. ["To introduce the main idea", "To summarize findings", "To define terms", "To persuade the reader"])—NEVER use only letters like "A" or "B" as options. correctAnswer must exactly match one option string. For true-false, options must be ["True","False"]. For identification, options must be null and correctAnswer must be exactly one word.`;
 
       let lastErr = null;
       for (let attempt = 0; attempt < 3; attempt++) {

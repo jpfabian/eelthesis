@@ -73,9 +73,10 @@ router.post("/api/auth/login", async (req, res) => {
         .json({ success: false, error: "Invalid email or password" });
     }
 
-    // If account verification is enabled, block non-approved accounts (except admins)
+    // If account verification is enabled, block non-approved accounts (except admins and master_admin)
     const status = user.verification_status; // may be undefined if column doesn't exist
-    if (user.role !== "admin" && typeof status === "string") {
+    const isAdminRole = user.role === "admin" || user.role === "master_admin";
+    if (!isAdminRole && typeof status === "string") {
       if (status === "pending") {
         return res.status(403).json({
           success: false,
@@ -92,8 +93,8 @@ router.post("/api/auth/login", async (req, res) => {
       }
     }
 
-    // If deactivation is enabled, block deactivated accounts (except admins)
-    if (user.role !== "admin" && typeof user.is_active !== "undefined") {
+    // If deactivation is enabled, block deactivated accounts (except admins and master_admin)
+    if (!isAdminRole && typeof user.is_active !== "undefined") {
       const active = Number(user.is_active) === 1;
       if (!active) {
         return res.status(403).json({
@@ -118,6 +119,10 @@ router.post("/api/auth/login", async (req, res) => {
     };
     if (user.role === "admin") {
       payload.adminToken = "eel_admin_token_v1";
+    }
+    if (user.role === "master_admin") {
+      payload.adminToken = "eel_admin_token_v1";
+      payload.masterAdminToken = "eel_master_admin_token_v1";
     }
     res.json(payload);
   } catch (err) {

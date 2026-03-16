@@ -5,6 +5,7 @@ let state = {
     questions: [],
     students: [],
     currentQuestionIndex: 0,
+    answeredCorrectlyQuestionIds: new Set(), // questions answered correctly are removed from pool
     isSpinning: false,
     spinSpeed: 50,
     currentSlideIndex: 0,
@@ -14,7 +15,7 @@ let state = {
     recitationSessionKey: '',
     modalScoreSaved: false,
     pickMode: 'auto', // 'manual' = tap a card to choose; 'auto' = Play + slider
-    nextQuestionRandom: false // true after Remove/Close so next pick gets random question
+    nextQuestionRandom: false // true after Cancel/Close/Remove so next pick gets random question
 };
 
 // Ticking sound for the slider (Web Audio API – no file needed)
@@ -566,6 +567,7 @@ function startSession() {
     }
 
     state.currentQuestionIndex = 0;
+    state.answeredCorrectlyQuestionIds = new Set();
     state.students.forEach(s => s.answered = false);
 
     clearSelectedStudents();
@@ -594,8 +596,9 @@ function backToSetup() {
 function updateQuestionProgress() {
     const qNumEl = document.getElementById('current-question-num');
     const qTotalEl = document.getElementById('total-questions');
+    const availableCount = state.questions.length > 0 ? getAvailableQuestionIndices().length : state.questions.length;
     if (qNumEl) qNumEl.textContent = state.currentQuestionIndex + 1;
-    if (qTotalEl) qTotalEl.textContent = state.questions.length;
+    if (qTotalEl) qTotalEl.textContent = availableCount;
 
     const availableStudents = state.students.filter(s => !s.answered);
     const remainingEl = document.getElementById('students-remaining');
@@ -890,14 +893,31 @@ function highlightSelectedStudentById(studentId) {
     });
 }
 
+function getAvailableQuestionIndices() {
+    return state.questions
+        .map((q, i) => ({ q, i }))
+        .filter(({ q }) => !state.answeredCorrectlyQuestionIds.has(q.id))
+        .map(({ i }) => i);
+}
+
 function showQuestionModal() {
     const modal = document.getElementById('question-modal');
     if (!modal || !state.selectedStudent || !state.questions.length) return;
 
-    // Random question only after teacher clicked Remove or Close and picked another student; otherwise use next in sequence
+    const availableIndices = getAvailableQuestionIndices();
+    if (availableIndices.length === 0) {
+        alert('All questions have been answered correctly!');
+        backToSetup();
+        return;
+    }
+
+    // Random question after Cancel/Close/Remove; otherwise use next available in sequence
     if (state.nextQuestionRandom) {
-        state.currentQuestionIndex = Math.floor(Math.random() * state.questions.length);
+        state.currentQuestionIndex = availableIndices[Math.floor(Math.random() * availableIndices.length)];
         state.nextQuestionRandom = false;
+    } else {
+        const nextIdx = availableIndices.find(i => i > state.currentQuestionIndex);
+        state.currentQuestionIndex = nextIdx != null ? nextIdx : availableIndices[0];
     }
     const currentQuestion = state.questions[state.currentQuestionIndex];
     if (!currentQuestion) return;
@@ -932,8 +952,11 @@ function showQuestionModal() {
     if (questionTextEl) questionTextEl.textContent = currentQuestion.question;
     const qNumEl = document.getElementById('modal-question-num');
     const qTotalEl = document.getElementById('modal-total-questions');
-    if (qNumEl) qNumEl.textContent = String(state.currentQuestionIndex + 1);
-    if (qTotalEl) qTotalEl.textContent = String(state.questions.length);
+    const availIndices = getAvailableQuestionIndices();
+    const availCount = availIndices.length;
+    const posInAvail = availIndices.indexOf(state.currentQuestionIndex) + 1;
+    if (qNumEl) qNumEl.textContent = String(availCount > 0 ? posInAvail : 1);
+    if (qTotalEl) qTotalEl.textContent = String(availCount);
 
     // render inputs fresh
     renderAnswerInput(currentQuestion);
@@ -1141,7 +1164,19 @@ function persistZeroScoreIfUnanswered() {
     state.modalScoreSaved = true;
 }
 
-function removeStudentAndClose() {
+async function removeStudentAndClose() {
+    if (typeof Swal !== "undefined" && Swal && typeof Swal.fire === "function") {
+        const result = await Swal.fire({
+            title: "Remove student?",
+            text: "This student will be marked as answered with no score and removed from recitation.",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonText: "Remove",
+            cancelButtonText: "Cancel",
+            confirmButtonColor: "#dc2626",
+        });
+        if (!result.isConfirmed) return;
+    }
     persistZeroScoreIfUnanswered();
     if (state.selectedStudent) {
         state.selectedStudent.answered = true;
@@ -1208,6 +1243,9 @@ function showResult(isCorrect, userAnswer, correctAnswer, autoContinue = false) 
     // prevent duplicate calls
     if (state.modalAnswered === false) {
         state.modalAnswered = true;
+    }
+    if (isCorrect && state.questions[state.currentQuestionIndex]) {
+        state.answeredCorrectlyQuestionIds.add(state.questions[state.currentQuestionIndex].id);
     }
     if (!state.modalScoreSaved) {
         const currentQuestion = state.questions[state.currentQuestionIndex];
@@ -1304,20 +1342,19 @@ function continueToNext() {
     // Close the question modal
     closeQuestionModal();
 
-    // Check if there are still questions remaining
-    if (state.currentQuestionIndex < state.questions.length - 1) {
-        state.currentQuestionIndex++;
-        updateQuestionProgress();
-        renderStudentSlider();
-
-        // Reopen student picker for next student
-        const picker = document.getElementById('student-picker');
-        if (picker) picker.classList.remove('hidden');
-    } else {
-        // All questions completed
-        alert('All questions completed!');
+    const availableIndices = getAvailableQuestionIndices();
+    if (availableIndices.length === 0) {
+        alert('All questions have been answered correctly!');
         backToSetup();
+        return;
     }
+
+    updateQuestionProgress();
+    renderStudentSlider();
+
+    // Reopen student picker for next student
+    const picker = document.getElementById('student-picker');
+    if (picker) picker.classList.remove('hidden');
 }
 
 function handleLogout() {

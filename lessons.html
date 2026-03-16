@@ -514,6 +514,33 @@
         </div>
     </div>
 
+    <!-- Answers modal (mobile/tablet only): opens when teacher clicks a student -->
+    <div id="lesson-teacher-review-answers-modal" class="modal-overlay hidden lesson-teacher-review-answers-overlay">
+        <div class="lesson-teacher-review-answers-card">
+            <header class="lesson-teacher-review-answers-header">
+                <button type="button" class="lesson-teacher-review-answers-back" onclick="closeLessonTeacherReviewAnswersModal()" aria-label="Back to students">
+                    <i data-lucide="arrow-left" class="size-5"></i>
+                </button>
+                <div class="lesson-teacher-review-answers-header-text">
+                    <h3 class="lesson-teacher-review-answers-title" id="lesson-teacher-review-answers-student-name">View Answers</h3>
+                    <p class="lesson-teacher-review-answers-quiz" id="lesson-teacher-review-answers-quiz-name">Quiz</p>
+                </div>
+            </header>
+            <div class="lesson-teacher-review-answers-body">
+                <div class="lesson-teacher-review-main-header">
+                    <h3 class="lesson-teacher-review-main-title">Answers &amp; grading</h3>
+                    <p class="lesson-teacher-review-main-desc">Toggle &quot;Mark correct&quot; for each answer, then click Save.</p>
+                </div>
+                <div id="lesson-teacher-review-answers-detail" class="lesson-teacher-review-detail"></div>
+            </div>
+            <footer class="lesson-teacher-review-footer">
+                <button type="button" id="lesson-teacher-review-answers-save-btn" class="lesson-teacher-review-save-btn hidden" onclick="saveLessonTeacherReviewOverrides()">
+                    <i data-lucide="save" class="size-4 mr-2"></i>Save Adjustments
+                </button>
+            </footer>
+        </div>
+    </div>
+
     <!-- ============================================
      ✍️ TAKE QUIZ – Terms & Conditions (then Proceed opens take-quiz.html)
      ============================================ -->
@@ -596,10 +623,6 @@
                     </div>
                 </div>
                 <div class="lesson-presentation-actions">
-                    <button type="button" id="lesson-regenerate-btn" class="btn btn-outline btn-sm lesson-download-btn hidden teacher-only" onclick="regenerateLessonContent()" aria-label="Regenerate content" title="Generate new content (teacher only)">
-                        <i data-lucide="refresh-cw" class="size-4"></i>
-                        Regenerate
-                    </button>
                     <button type="button" id="lesson-download-ppt-btn" class="btn btn-outline btn-sm lesson-download-btn hidden" onclick="downloadLessonAsPpt()" aria-label="Download presentation">
                         <i data-lucide="download" class="size-4"></i>
                         Download

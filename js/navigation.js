@@ -199,6 +199,7 @@ function setupSidebar(user, currentPage) {
     const roleLabel =
         user.role === "teacher" ? "Teacher" :
         user.role === "admin" ? "Admin" :
+        user.role === "master_admin" ? "Master Admin" :
         "Student";
 
     // Replace the default header (p-6) with a cleaner profile header, without changing page HTML files
@@ -213,6 +214,8 @@ function setupSidebar(user, currentPage) {
                 ? "Account Settings"
                 : currentPage === "deleted-classes"
                     ? "Archived Classes Cache"
+                : currentPage === "teacher-dashboard" && user.role === "teacher"
+                    ? "Dashboard"
                 : (selectedClass
                     ? `${selectedClass.name ?? ""} ${selectedClass.section ?? ""}`.trim()
                     : "No class selected");
@@ -242,7 +245,8 @@ function setupSidebar(user, currentPage) {
         const showClassDetailsBadge =
             currentPage !== "settings" &&
             currentPage !== "classes" &&
-            currentPage !== "deleted-classes";
+            currentPage !== "deleted-classes" &&
+            !(currentPage === "teacher-dashboard" && user.role === "teacher");
 
         headerContainer.innerHTML = `
             <div class="sidebar-profile-top">
@@ -254,6 +258,7 @@ function setupSidebar(user, currentPage) {
                         <div class="sidebar-profile-popover-avatar">${popoverAvatarHtml}</div>
                         <div class="sidebar-profile-popover-name">${fullName}</div>
                         ${userEmail ? `<div class="sidebar-profile-popover-email">${escapeHtml(userEmail)}</div>` : ""}
+                        ${user.role === "master_admin" ? `<a href="master-admin.html" class="sidebar-profile-popover-link"><i data-lucide="shield" class="size-4"></i>Master Admin</a>` : ""}
                         <a href="settings.html" class="sidebar-profile-popover-link">
                             <i data-lucide="settings" class="size-4"></i>
                             Settings
@@ -326,31 +331,56 @@ function setupSidebar(user, currentPage) {
 
     // Settings and Logout live in the sidebar HTML with Back to Classes, not in nav groups.
 
-    // Special case: on Classes/Settings/Deleted Classes pages, show minimal sidebar.
-    if (currentPage === "classes" || currentPage === "settings" || currentPage === "deleted-classes") {
-        const teacherExtra = user.role === "teacher"
-            ? [
-                { id: 'deleted-classes', label: 'Archived Classes', icon: 'archive', url: 'deleted-classes.html' }
-              ]
-            : [];
-        groups.push({
-            title: "Classroom",
-            items: [
-                { id: 'classes', label: 'Classroom', icon: 'layers', url: 'classes.html' },
-                { id: 'settings', label: 'Settings', icon: 'settings', url: 'settings.html' },
-                ...teacherExtra
-            ]
-        });
+    // Special case: on Classes/Settings/Deleted Classes/Teacher Dashboard pages, show minimal sidebar.
+    if (currentPage === "classes" || currentPage === "settings" || currentPage === "deleted-classes" || (user.role === "teacher" && currentPage === "teacher-dashboard")) {
+        if (user.role === "teacher") {
+            groups.push({
+                title: "Overview",
+                items: [{ id: 'teacher-dashboard', label: 'Dashboard', icon: 'layout-dashboard', url: 'teacher-dashboard.html' }]
+            });
+            groups.push({
+                title: "Classroom",
+                items: [{ id: 'classes', label: 'Classroom', icon: 'layers', url: 'classes.html' }]
+            });
+            groups.push({
+                title: "Account",
+                items: [
+                    { id: 'settings', label: 'Settings', icon: 'settings', url: 'settings.html' },
+                    { id: 'deleted-classes', label: 'Archived Classes', icon: 'archive', url: 'deleted-classes.html' }
+                ]
+            });
+        } else {
+            groups.push({
+                title: "Classroom",
+                items: [{ id: 'classes', label: 'Classroom', icon: 'layers', url: 'classes.html' }]
+            });
+            groups.push({
+                title: "Account",
+                items: [{ id: 'settings', label: 'Settings', icon: 'settings', url: 'settings.html' }]
+            });
+        }
     } else
 
     if (user.role === "admin") {
         groups.push({
-            title: "Admin",
+            title: "Overview",
+            items: [
+                { id: 'admin-dashboard', label: 'Dashboard', icon: 'layout-dashboard', url: 'admin-dashboard.html' },
+            ]
+        });
+        groups.push({
+            title: "Management",
             items: [
                 { id: 'account-verification', label: 'Account Verification', icon: 'check-circle', url: 'account-verification.html' },
             ]
         });
-    } else if (user.role === "teacher") {
+    } else if (user.role === "master_admin" || user.role === "teacher") {
+        const teacherOverview = user.role === "teacher" && !selectedClass
+            ? [{ id: 'teacher-dashboard', label: 'Dashboard', icon: 'layout-dashboard', url: 'teacher-dashboard.html' }]
+            : [];
+        if (teacherOverview.length) {
+            groups.push({ title: "Overview", items: teacherOverview });
+        }
         groups.push({
             title: "Learning",
             items: [
@@ -672,7 +702,7 @@ function getCurrentPageId() {
     const filename = path.split('/').pop().split('?')[0].replace('.html', '');
 
     const pageMap = {
-        //'dashboard': 'dashboard',
+        'teacher-dashboard': 'teacher-dashboard',
         'lessons': 'lessons',
         'reading-lessons': 'reading-lessons',
         'pronunciation-lessons': 'pronunciation-lessons',
@@ -692,8 +722,8 @@ function getCurrentPageId() {
 // Helper function to validate user access to page
 function validatePageAccess(user, pageId) {
     const teacherPages = [
-        'classes', // ➕ dito
-        'dashboard', 'lessons', 'reading-lessons', 'pronunciation-lessons', 
+        'classes', 'teacher-dashboard',
+        'lessons', 'reading-lessons', 'pronunciation-lessons', 
         'exam-generator', 'recitation',
         'student-progress', 'settings', 'deleted-classes', 'deleted-ai-quizzes'
     ];
@@ -742,7 +772,7 @@ function initializePage() {
         // Validate user has access to this page
         if (!validatePageAccess(user, currentPageId)) {
             // Redirect to appropriate dashboard
-            window.location.href = 'dashboard.html';
+            window.location.href = user.role === 'teacher' ? 'teacher-dashboard.html' : 'dashboard.html';
             return;
         }
 
@@ -1362,6 +1392,7 @@ async function pollSharedClassNotifications(user) {
 function setupSharedClassNotifications(user, currentPageId) {
     const enabledPages = new Set([
         "dashboard",
+        "teacher-dashboard",
         "reading-lessons",
         "pronunciation-lessons",
         "recitation",
@@ -1417,7 +1448,7 @@ function setupSharedClassNotifications(user, currentPageId) {
 
     if (!listEl.__navNotifClickBound) {
         listEl.__navNotifClickBound = true;
-        listEl.addEventListener("click", (e) => {
+        listEl.addEventListener("click", async (e) => {
             const row = e.target && e.target.closest ? e.target.closest(".mobile-nav-notification-item") : null;
             if (!row) return;
             const itemId = row.getAttribute("data-item-id");
@@ -1450,6 +1481,19 @@ function setupSharedClassNotifications(user, currentPageId) {
             if (deleteBtn) {
                 e.stopPropagation();
                 if (classCtx.classId) {
+                    const hasSwal = typeof Swal !== "undefined" && Swal && typeof Swal.fire === "function";
+                    if (hasSwal) {
+                        const result = await Swal.fire({
+                            title: "Archive notification?",
+                            text: "This will remove the notification from your list.",
+                            icon: "question",
+                            showCancelButton: true,
+                            confirmButtonText: "Archive",
+                            cancelButtonText: "Cancel",
+                            confirmButtonColor: "#dc2626",
+                        });
+                        if (!result.isConfirmed) return;
+                    }
                     deleteNavNotificationItem(classCtx.classId, itemId);
                     renderSharedNotifications(classCtx.classId);
                 }

@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tracks - Master Admin - EEL</title>
+  <link rel="icon" href="image/eel-character.png" type="image/png">
+  <link rel="stylesheet" href="css/styles.css" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.1/lucide.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="js/theme.js"></script>
+</head>
+<body class="auth-page master-admin-page">
+  <div class="mobile-nav-header" id="mobileNavHeader" role="banner">
+    <button type="button" class="mobile-nav-btn mobile-nav-btn--menu" id="mobileNavMenuBtn" aria-label="Open menu"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+    <div class="mobile-nav-actions-right">
+      <button type="button" class="mobile-nav-btn mobile-nav-notification-btn" id="masterAdminNotificationBtn" aria-label="Open notifications" aria-expanded="false">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 17h5l-1.4-1.4a2 2 0 0 1-.6-1.4V11a6 6 0 1 0-12 0v3.2a2 2 0 0 1-.6 1.4L4 17h5"/><path d="M9 17a3 3 0 0 0 6 0"/></svg>
+        <span id="masterAdminNotificationBadge" class="mobile-nav-notification-badge hidden" aria-hidden="true">0</span>
+      </button>
+      <button type="button" id="eel-theme-header-toggle" class="theme-header-toggle" aria-label="Toggle dark/light mode"><span class="theme-icon" aria-hidden="true">☀</span><span class="theme-label">light</span></button>
+    </div>
+  </div>
+  <div id="masterAdminNotificationPanel" class="mobile-nav-notification-panel hidden" role="region" aria-label="Notifications">
+    <div class="mobile-nav-notification-panel__header">
+      <strong>Notifications</strong>
+    </div>
+    <div id="masterAdminNotificationList" class="mobile-nav-notification-list">
+      <p class="mobile-nav-notification-empty">No notifications.</p>
+    </div>
+  </div>
+
+  <div id="loading-screen" class="loading-screen">
+    <div class="loading-content">
+      <div class="loading-spinner"></div>
+      <p>Loading...</p>
+    </div>
+  </div>
+
+  <div id="main-app" class="master-admin-app flex h-screen bg-background hidden">
+    <aside id="sidebar" class="w-64 bg-sidebar border-r border-sidebar-border h-full flex flex-col flex-shrink-0">
+      <div class="sidebar-profile">
+        <div class="sidebar-profile-top">
+          <div class="sidebar-avatar-wrap">
+            <div class="sidebar-avatar" aria-hidden="true">M</div>
+          </div>
+          <div style="min-width:0;">
+            <div class="sidebar-name-row">
+              <span class="sidebar-user-name">Master Admin</span>
+              <span class="sidebar-user-role">Master Admin</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <nav id="master-admin-task-nav" class="flex-1 px-4 space-y-1 overflow-auto" role="navigation" aria-label="Master Admin tasks">
+        <div class="sidebar-section-title">Overview</div>
+        <div class="space-y-2">
+          <a href="master-admin-dashboard.html" class="master-admin-task-btn nav-button btn btn-side-bar w-full justify-start gap-3 p-3 rounded-md text-left transition-all flex items-center" data-task="dashboard">
+            <i data-lucide="layout-dashboard" class="size-5"></i>
+            <span>Dashboard</span>
+          </a>
+        </div>
+        <div class="sidebar-divider"></div>
+        <div class="sidebar-section-title">Management</div>
+        <div class="space-y-2">
+          <a href="admin-accounts.html" class="master-admin-task-btn nav-button btn btn-side-bar w-full justify-start gap-3 p-3 rounded-md text-left transition-all flex items-center" data-task="admin-accounts">
+            <i data-lucide="users" class="size-5"></i>
+            <span>Admin accounts</span>
+          </a>
+        </div>
+        <div class="sidebar-divider"></div>
+        <div class="sidebar-section-title">Curriculum</div>
+        <div class="space-y-2">
+          <a href="master-admin-curriculum.html" class="master-admin-task-btn nav-button btn btn-side-bar w-full justify-start gap-3 p-3 rounded-md text-left transition-all flex items-center" data-task="curriculum">
+            <i data-lucide="book-open" class="size-5"></i>
+            <span>Curriculum</span>
+          </a>
+          <a href="master-admin-tracks.html" class="master-admin-task-btn nav-button btn btn-side-bar w-full justify-start gap-3 p-3 rounded-md text-left transition-all flex items-center active" data-task="tracks" aria-current="page">
+            <i data-lucide="graduation-cap" class="size-5"></i>
+            <span>Tracks</span>
+          </a>
+        </div>
+      </nav>
+      <div class="p-4">
+        <button id="logout-btn" class="w-full p-3 logout-button btn-side-bar border">
+          <i data-lucide="log-out"></i>
+          Logout
+        </button>
+      </div>
+    </aside>
+
+    <main class="flex-1 overflow-auto p-6" role="main">
+      <header class="page-header mb-6">
+        <div class="page-header-icon" aria-hidden="true">
+          <i data-lucide="shield" class="size-8"></i>
+        </div>
+        <div>
+          <h1 class="page-header-title">Master Admin</h1>
+          <p class="page-header-subtitle" id="master-admin-subtitle">Add and manage Senior High School tracks (ABM, STEM, HUMSS, GAS, TVL, etc.).</p>
+        </div>
+      </header>
+
+      <div id="master-admin-panels" class="max-w-4xl">
+        <section id="panel-tracks" class="curriculum-panel" aria-labelledby="master-admin-tracks-heading" role="region">
+          <div class="curriculum-panel-header">
+            <div class="curriculum-panel-header-icon">
+              <i data-lucide="graduation-cap" class="size-5"></i>
+            </div>
+            <div>
+              <h2 id="master-admin-tracks-heading" class="curriculum-panel-title">Tracks</h2>
+              <p class="curriculum-panel-subtitle">Manage Senior High School tracks for student signup.</p>
+            </div>
+          </div>
+
+          <div id="curriculum-box-tracks" class="curriculum-box">
+            <div class="curriculum-box-header">
+              <h3 class="curriculum-box-title">Tracks</h3>
+            </div>
+            <div class="curriculum-table-wrap">
+              <table class="curriculum-table" role="grid" aria-label="Tracks">
+                <thead>
+                  <tr>
+                    <th scope="col">Name</th>
+                    <th scope="col" class="curriculum-th-actions">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="curriculum-tracks-tbody">
+                  <tr><td colspan="2" class="curriculum-loading">Loading…</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div id="curriculum-tracks-empty" class="curriculum-empty hidden">
+              <div class="curriculum-empty-icon"><i data-lucide="graduation-cap" class="size-10"></i></div>
+              <p class="curriculum-empty-title">No tracks yet</p>
+              <p class="curriculum-empty-text">Add your first track using the button below.</p>
+            </div>
+          </div>
+        </section>
+
+        <div class="curriculum-actions">
+          <button type="button" id="curriculum-open-track-modal-btn" class="btn btn-primary curriculum-action-btn">
+            <i data-lucide="plus" class="size-4"></i>
+            Add track
+          </button>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Add track modal -->
+  <div id="add-track-modal" class="modal-overlay master-admin-modal-overlay hidden" aria-modal="true" role="dialog" aria-labelledby="add-track-modal-title">
+    <div class="modal-card curriculum-modal-card master-admin-modal-card">
+      <div class="master-admin-modal-header">
+        <div class="master-admin-modal-header-icon master-admin-modal-header-icon--secondary">
+          <i data-lucide="graduation-cap" class="size-6"></i>
+        </div>
+        <div class="master-admin-modal-header-text">
+          <h3 id="add-track-modal-title" class="master-admin-modal-title">Add track</h3>
+          <p class="master-admin-modal-subtitle">Add a new Senior High School track (e.g. ABM, STEM, HUMSS).</p>
+        </div>
+        <button type="button" class="curriculum-modal-close master-admin-modal-close" data-modal="add-track-modal" aria-label="Close"><i data-lucide="x" class="size-5"></i></button>
+      </div>
+      <div class="modal-content master-admin-modal-content">
+        <form id="master-admin-track-form" class="master-admin-modal-form space-y-4">
+          <div class="space-y-2">
+            <label class="form-label" for="track-name">Track name</label>
+            <input type="text" id="track-name" class="form-input" required placeholder="e.g. ABM, STEM, HUMSS, GAS, TVL">
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer master-admin-modal-footer">
+        <button type="submit" form="master-admin-track-form" class="btn btn-primary master-admin-modal-submit">
+          <i data-lucide="plus" class="size-4"></i>
+          Add track
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="js/auth.js"></script>
+  <script src="js-front-end/api-config.js"></script>
+  <script src="js-front-end/front-master-admin.js"></script>
+</body>
+</html>

@@ -21,6 +21,59 @@ router.get("/api/admin/health", (req, res) => {
   res.json({ success: true, service: "admin", version: 1 });
 });
 
+// Dashboard stats for admin overview
+router.get("/api/admin/dashboard-stats", requireAdmin, async (req, res) => {
+  const pool = req.pool;
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    const enabled = await hasColumn(conn, "verification_status");
+    if (!enabled) {
+      return res.json({
+        success: true,
+        stats: {
+          teachers: 0,
+          students: 0,
+          classes: 0,
+          verification: { pending: 0, approved: 0, rejected: 0 },
+        },
+      });
+    }
+    const [
+      [teachersRows],
+      [studentsRows],
+      [classesRows],
+      [verificationRows],
+    ] = await Promise.all([
+      conn.execute("SELECT COUNT(*) AS c FROM users WHERE role = 'teacher'"),
+      conn.execute("SELECT COUNT(*) AS c FROM users WHERE role = 'student'"),
+      conn.execute("SELECT COUNT(*) AS c FROM classes"),
+      conn.execute(
+        `SELECT verification_status, COUNT(*) AS c FROM users WHERE role IN ('teacher','student') GROUP BY verification_status`
+      ),
+    ]);
+    const verification = { pending: 0, approved: 0, rejected: 0 };
+    (verificationRows || []).forEach((r) => {
+      const status = String(r.verification_status || "").toLowerCase();
+      if (status in verification) verification[status] = Number(r.c || 0);
+    });
+    res.json({
+      success: true,
+      stats: {
+        teachers: Number(teachersRows?.[0]?.c || 0),
+        students: Number(studentsRows?.[0]?.c || 0),
+        classes: Number(classesRows?.[0]?.c || 0),
+        verification,
+      },
+    });
+  } catch (err) {
+    console.error("Admin dashboard stats:", err);
+    res.status(500).json({ success: false, error: "Server error" });
+  } finally {
+    if (conn) conn.release();
+  }
+});
+
 // Admin-only: check if SMTP env vars are loaded (no secrets)
 router.get("/api/admin/email-health", requireAdmin, (req, res) => {
   const u = String(process.env.EEL_SMTP_USER || "").trim();

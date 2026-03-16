@@ -3,28 +3,28 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dashboard - Admin - EEL</title>
+  <title>Dashboard - Master Admin - EEL</title>
   <link rel="icon" href="image/eel-character.png" type="image/png">
   <link rel="stylesheet" href="css/styles.css" />
   <link href="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.1/lucide.min.css" rel="stylesheet">
   <script src="js/theme.js"></script>
 </head>
-<body class="auth-page admin-dashboard-page admin-page-with-sidebar">
+<body class="auth-page master-admin-page">
   <div class="mobile-nav-header" id="mobileNavHeader" role="banner">
     <button type="button" class="mobile-nav-btn mobile-nav-btn--menu" id="mobileNavMenuBtn" aria-label="Open menu"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
     <div class="mobile-nav-actions-right">
-      <button type="button" class="mobile-nav-btn mobile-nav-notification-btn" id="adminNotificationBtn" aria-label="Open notifications" aria-expanded="false">
+      <button type="button" class="mobile-nav-btn mobile-nav-notification-btn" id="masterAdminNotificationBtn" aria-label="Open notifications" aria-expanded="false">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 17h5l-1.4-1.4a2 2 0 0 1-.6-1.4V11a6 6 0 1 0-12 0v3.2a2 2 0 0 1-.6 1.4L4 17h5"/><path d="M9 17a3 3 0 0 0 6 0"/></svg>
-        <span id="adminNotificationBadge" class="mobile-nav-notification-badge hidden" aria-hidden="true">0</span>
+        <span id="masterAdminNotificationBadge" class="mobile-nav-notification-badge hidden" aria-hidden="true">0</span>
       </button>
       <button type="button" id="eel-theme-header-toggle" class="theme-header-toggle" aria-label="Toggle dark/light mode"><span class="theme-icon" aria-hidden="true">☀</span><span class="theme-label">light</span></button>
     </div>
   </div>
-  <div id="adminNotificationPanel" class="mobile-nav-notification-panel hidden" role="region" aria-label="Admin notifications">
+  <div id="masterAdminNotificationPanel" class="mobile-nav-notification-panel hidden" role="region" aria-label="Notifications">
     <div class="mobile-nav-notification-panel__header">
       <strong>Notifications</strong>
     </div>
-    <div id="adminNotificationList" class="mobile-nav-notification-list">
+    <div id="masterAdminNotificationList" class="mobile-nav-notification-list">
       <p class="mobile-nav-notification-empty">No notifications.</p>
     </div>
   </div>
@@ -41,20 +41,20 @@
       <div class="sidebar-profile">
         <div class="sidebar-profile-top">
           <div class="sidebar-avatar-wrap">
-            <div class="sidebar-avatar" aria-hidden="true">A</div>
+            <div class="sidebar-avatar" aria-hidden="true">M</div>
           </div>
           <div style="min-width:0;">
             <div class="sidebar-name-row">
-              <span class="sidebar-user-name">Admin</span>
-              <span class="sidebar-user-role">Admin</span>
+              <span class="sidebar-user-name">Master Admin</span>
+              <span class="sidebar-user-role">Master Admin</span>
             </div>
           </div>
         </div>
       </div>
-      <nav id="admin-task-nav" class="flex-1 px-4 space-y-1 overflow-auto" role="navigation" aria-label="Admin tasks">
+      <nav id="master-admin-task-nav" class="flex-1 px-4 space-y-1 overflow-auto" role="navigation" aria-label="Master Admin tasks">
         <div class="sidebar-section-title">Overview</div>
         <div class="space-y-2">
-          <a href="admin-dashboard.html" class="nav-button btn btn-side-bar w-full justify-start gap-3 p-3 rounded-md text-left transition-all flex items-center active" data-task="dashboard" aria-current="page">
+          <a href="master-admin-dashboard.html" class="master-admin-task-btn nav-button btn btn-side-bar w-full justify-start gap-3 p-3 rounded-md text-left transition-all flex items-center active" data-task="dashboard" aria-current="page">
             <i data-lucide="layout-dashboard" class="size-5"></i>
             <span>Dashboard</span>
           </a>
@@ -62,9 +62,21 @@
         <div class="sidebar-divider"></div>
         <div class="sidebar-section-title">Management</div>
         <div class="space-y-2">
-          <a href="account-verification.html" class="nav-button btn btn-side-bar w-full justify-start gap-3 p-3 rounded-md text-left transition-all flex items-center" data-task="account-verification">
-            <i data-lucide="check-circle" class="size-5"></i>
-            <span>Account Verification</span>
+          <a href="admin-accounts.html" class="master-admin-task-btn nav-button btn btn-side-bar w-full justify-start gap-3 p-3 rounded-md text-left transition-all flex items-center" data-task="admin-accounts">
+            <i data-lucide="users" class="size-5"></i>
+            <span>Admin accounts</span>
+          </a>
+        </div>
+        <div class="sidebar-divider"></div>
+        <div class="sidebar-section-title">Curriculum</div>
+        <div class="space-y-2">
+          <a href="master-admin-curriculum.html" class="master-admin-task-btn nav-button btn btn-side-bar w-full justify-start gap-3 p-3 rounded-md text-left transition-all flex items-center" data-task="curriculum">
+            <i data-lucide="book-open" class="size-5"></i>
+            <span>Curriculum</span>
+          </a>
+          <a href="master-admin-tracks.html" class="master-admin-task-btn nav-button btn btn-side-bar w-full justify-start gap-3 p-3 rounded-md text-left transition-all flex items-center" data-task="tracks">
+            <i data-lucide="graduation-cap" class="size-5"></i>
+            <span>Tracks</span>
           </a>
         </div>
       </nav>
@@ -82,67 +94,107 @@
           <i data-lucide="shield" class="size-8"></i>
         </div>
         <div>
-          <h1 class="page-header-title">Admin Dashboard</h1>
-          <p class="page-header-subtitle">Overview of platform users and verification status.</p>
+          <h1 class="page-header-title">Master Admin Dashboard</h1>
+          <p class="page-header-subtitle" id="master-admin-subtitle">Overview of platform data and activity.</p>
         </div>
       </header>
 
-      <div id="admin-dashboard-stats" class="max-w-5xl">
+      <div id="master-admin-dashboard" class="max-w-5xl">
         <!-- Stats Overview -->
-        <div class="grid grid-cols-3 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 master-admin-stat-cards">
+        <div class="grid grid-cols-4 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 master-admin-stat-cards">
           <div class="card master-admin-stat-card master-admin-stat-card--primary">
             <div class="card-content p-6">
               <div class="master-admin-stat-icon-wrap master-admin-stat-icon-wrap--primary">
-                <i data-lucide="graduation-cap" class="size-5"></i>
+                <i data-lucide="shield-check" class="size-5"></i>
               </div>
-              <h3 class="text-sm font-medium text-muted-foreground mt-3 mb-1">Teachers</h3>
-              <div id="admin-stat-teachers" class="text-3xl font-bold tracking-tight">—</div>
-              <p class="text-xs text-muted-foreground mt-1">Registered teachers</p>
+              <h3 class="text-sm font-medium text-muted-foreground mt-3 mb-1">Admins</h3>
+              <div id="stat-admins" class="text-3xl font-bold tracking-tight">—</div>
+              <p class="text-xs text-muted-foreground mt-1">Active admin accounts</p>
             </div>
           </div>
           <div class="card master-admin-stat-card master-admin-stat-card--secondary">
             <div class="card-content p-6">
               <div class="master-admin-stat-icon-wrap master-admin-stat-icon-wrap--secondary">
-                <i data-lucide="users" class="size-5"></i>
+                <i data-lucide="graduation-cap" class="size-5"></i>
               </div>
-              <h3 class="text-sm font-medium text-muted-foreground mt-3 mb-1">Students</h3>
-              <div id="admin-stat-students" class="text-3xl font-bold tracking-tight">—</div>
-              <p class="text-xs text-muted-foreground mt-1">Registered students</p>
+              <h3 class="text-sm font-medium text-muted-foreground mt-3 mb-1">Teachers</h3>
+              <div id="stat-teachers" class="text-3xl font-bold tracking-tight">—</div>
+              <p class="text-xs text-muted-foreground mt-1">Registered teachers</p>
             </div>
           </div>
           <div class="card master-admin-stat-card master-admin-stat-card--primary">
             <div class="card-content p-6">
               <div class="master-admin-stat-icon-wrap master-admin-stat-icon-wrap--primary">
+                <i data-lucide="users" class="size-5"></i>
+              </div>
+              <h3 class="text-sm font-medium text-muted-foreground mt-3 mb-1">Students</h3>
+              <div id="stat-students" class="text-3xl font-bold tracking-tight">—</div>
+              <p class="text-xs text-muted-foreground mt-1">Registered students</p>
+            </div>
+          </div>
+          <div class="card master-admin-stat-card master-admin-stat-card--secondary">
+            <div class="card-content p-6">
+              <div class="master-admin-stat-icon-wrap master-admin-stat-icon-wrap--secondary">
                 <i data-lucide="layers" class="size-5"></i>
               </div>
               <h3 class="text-sm font-medium text-muted-foreground mt-3 mb-1">Classes</h3>
-              <div id="admin-stat-classes" class="text-3xl font-bold tracking-tight">—</div>
+              <div id="stat-classes" class="text-3xl font-bold tracking-tight">—</div>
               <p class="text-xs text-muted-foreground mt-1">Active classrooms</p>
             </div>
           </div>
         </div>
 
-        <!-- Verification Stats -->
+        <!-- Curriculum Stats -->
+        <div class="grid grid-cols-3 sm:grid-cols-3 gap-4 mb-8 master-admin-curriculum-cards">
+          <div class="card master-admin-curriculum-card">
+            <div class="card-content p-6">
+              <div class="master-admin-curriculum-icon-wrap">
+                <i data-lucide="book-open" class="size-5"></i>
+              </div>
+              <h3 class="text-sm font-medium text-muted-foreground mt-3 mb-1">Subjects</h3>
+              <div id="stat-subjects" class="text-2xl font-bold">—</div>
+              <p class="text-xs text-muted-foreground mt-1">Curriculum subjects</p>
+            </div>
+          </div>
+          <div class="card master-admin-curriculum-card">
+            <div class="card-content p-6">
+              <div class="master-admin-curriculum-icon-wrap">
+                <i data-lucide="file-text" class="size-5"></i>
+              </div>
+              <h3 class="text-sm font-medium text-muted-foreground mt-3 mb-1">Lessons</h3>
+              <div id="stat-lessons" class="text-2xl font-bold">—</div>
+              <p class="text-xs text-muted-foreground mt-1">Lesson modules</p>
+            </div>
+          </div>
+          <div class="card master-admin-curriculum-card">
+            <div class="card-content p-6">
+              <div class="master-admin-curriculum-icon-wrap">
+                <i data-lucide="presentation" class="size-5"></i>
+              </div>
+              <h3 class="text-sm font-medium text-muted-foreground mt-3 mb-1">Topics</h3>
+              <div id="stat-topics" class="text-2xl font-bold">—</div>
+              <p class="text-xs text-muted-foreground mt-1">PPT/PDF modules</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Account Verification -->
         <div class="card master-admin-verification-card">
           <div class="card-content p-6">
             <div class="flex items-start justify-between gap-4 mb-6">
               <div>
                 <div class="master-admin-verification-header-icon">
-                  <i data-lucide="check-circle" class="size-6"></i>
+                  <i data-lucide="shield-check" class="size-6"></i>
                 </div>
                 <h3 class="text-lg font-semibold mt-2">Account Verification</h3>
                 <p class="text-sm text-muted-foreground mt-1">Teacher and student accounts by approval status</p>
               </div>
-              <a href="account-verification.html" class="btn btn-primary btn-sm">
-                <i data-lucide="arrow-right" class="size-4"></i>
-                Manage
-              </a>
             </div>
             <div class="master-admin-verification-progress-wrap">
-              <div class="master-admin-verification-progress-bar" id="admin-verification-progress-bar">
-                <span class="master-admin-verification-progress-segment master-admin-verification-progress--pending" id="admin-progress-pending" style="width: 0%"></span>
-                <span class="master-admin-verification-progress-segment master-admin-verification-progress--approved" id="admin-progress-approved" style="width: 0%"></span>
-                <span class="master-admin-verification-progress-segment master-admin-verification-progress--rejected" id="admin-progress-rejected" style="width: 0%"></span>
+              <div class="master-admin-verification-progress-bar" id="verification-progress-bar">
+                <span class="master-admin-verification-progress-segment master-admin-verification-progress--pending" id="progress-pending" style="width: 0%"></span>
+                <span class="master-admin-verification-progress-segment master-admin-verification-progress--approved" id="progress-approved" style="width: 0%"></span>
+                <span class="master-admin-verification-progress-segment master-admin-verification-progress--rejected" id="progress-rejected" style="width: 0%"></span>
               </div>
               <div class="flex justify-between text-xs text-muted-foreground mt-2">
                 <span>Pending</span>
@@ -156,7 +208,7 @@
                   <i data-lucide="clock" class="size-5"></i>
                 </div>
                 <div class="master-admin-verification-tile-content">
-                  <div id="admin-stat-pending" class="master-admin-verification-tile-value">—</div>
+                  <div id="stat-pending" class="master-admin-verification-tile-value">—</div>
                   <span class="master-admin-verification-tile-label">Pending</span>
                 </div>
               </div>
@@ -165,7 +217,7 @@
                   <i data-lucide="check-circle" class="size-5"></i>
                 </div>
                 <div class="master-admin-verification-tile-content">
-                  <div id="admin-stat-approved" class="master-admin-verification-tile-value">—</div>
+                  <div id="stat-approved" class="master-admin-verification-tile-value">—</div>
                   <span class="master-admin-verification-tile-label">Approved</span>
                 </div>
               </div>
@@ -174,7 +226,7 @@
                   <i data-lucide="x-circle" class="size-5"></i>
                 </div>
                 <div class="master-admin-verification-tile-content">
-                  <div id="admin-stat-rejected" class="master-admin-verification-tile-value">—</div>
+                  <div id="stat-rejected" class="master-admin-verification-tile-value">—</div>
                   <span class="master-admin-verification-tile-label">Rejected</span>
                 </div>
               </div>
@@ -187,7 +239,8 @@
 
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="js/auth.js"></script>
   <script src="js-front-end/api-config.js"></script>
-  <script src="js-front-end/front-admin.js"></script>
+  <script src="js-front-end/front-master-admin.js"></script>
 </body>
 </html>

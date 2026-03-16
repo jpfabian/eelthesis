@@ -341,8 +341,38 @@ function addWordStressQuestion() {
     lucide.createIcons({ icons: lucide.icons });
 }
 
+// Remove AI-generated question with confirmation
+async function removeAIQuestion(btn) {
+    if (typeof Swal !== "undefined" && Swal && typeof Swal.fire === "function") {
+        const result = await Swal.fire({
+            title: "Remove question?",
+            text: "This generated question will be removed.",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonText: "Remove",
+            cancelButtonText: "Cancel",
+            confirmButtonColor: "#dc2626",
+        });
+        if (!result.isConfirmed) return;
+    }
+    const item = btn.closest(".question-item");
+    if (item) item.remove();
+}
+
 // Reuse for removing any question
-function removePronunciationQuestion(btn) {
+async function removePronunciationQuestion(btn) {
+    if (typeof Swal !== "undefined" && Swal && typeof Swal.fire === "function") {
+        const result = await Swal.fire({
+            title: "Remove question?",
+            text: "This question will be removed from the quiz.",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonText: "Remove",
+            cancelButtonText: "Cancel",
+            confirmButtonColor: "#dc2626",
+        });
+        if (!result.isConfirmed) return;
+    }
     btn.parentElement.remove();
 }
 //advance level
@@ -1902,7 +1932,7 @@ async function generatePronunciationQuiz() {
         div.innerHTML = `
           <div class="ai-question-item__header">
             <h4 class="ai-question-item__title">Word ${i + 1}</h4>
-            <button type="button" class="ai-question-remove-btn" onclick="this.closest('.question-item').remove()">Remove</button>
+            <button type="button" class="ai-question-remove-btn" onclick="removeAIQuestion(this)">Remove</button>
           </div>
           <input type="text" class="form-input ai-question-input" placeholder="Word" value="${escapeHtml(word)}">
           <input type="text" class="form-input" placeholder="Correct Pronunciation" value="${escapeHtml(answer)}">
@@ -2025,20 +2055,36 @@ let teacherPronReviewState = {
     attempts: []
 };
 
+function isMobileOrTablet() {
+    return window.matchMedia && window.matchMedia('(max-width: 1024px)').matches;
+}
+
+function closeTeacherPronunciationReviewAnswersModal() {
+    const modal = document.getElementById('teacher-pronunciation-review-answers-modal');
+    if (modal) modal.classList.add('hidden');
+    if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
+}
+
 function closeTeacherPronunciationReviewModal() {
     const modal = document.getElementById('teacher-pronunciation-review-modal');
-    modal?.classList.add('hidden');
+    if (modal) modal.classList.add('hidden');
+    closeTeacherPronunciationReviewAnswersModal();
     teacherPronReviewState = { quizId: null, attemptId: null, quiz: null, attempts: [] };
 
     const list = document.getElementById('teacher-pron-attempts-list');
     const detail = document.getElementById('teacher-pron-attempt-detail');
+    const answersDetail = document.getElementById('teacher-pron-attempt-answers-detail');
     const title = document.getElementById('teacher-pron-review-quiz-title');
     const saveBtn = document.getElementById('teacher-pron-review-save-btn');
+    const answersSaveBtn = document.getElementById('teacher-pron-review-answers-save-btn');
     if (list) list.innerHTML = '';
-    if (detail) detail.innerHTML = `<div class="lesson-teacher-review-empty"><i data-lucide="user-check" class="lesson-teacher-review-empty-icon" aria-hidden="true"></i><p class="lesson-teacher-review-empty-text">Select a submission from the list to view answers.</p></div>`;
+    const emptyHtml = `<div class="lesson-teacher-review-empty"><i data-lucide="user-check" class="lesson-teacher-review-empty-icon" aria-hidden="true"></i><p class="lesson-teacher-review-empty-text">Select a submission from the list to view answers.</p></div>`;
+    if (detail) detail.innerHTML = emptyHtml;
+    if (answersDetail) answersDetail.innerHTML = '';
     if (title) title.textContent = 'Quiz';
-    if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
     if (saveBtn) saveBtn.classList.add('hidden');
+    if (answersSaveBtn) answersSaveBtn.classList.add('hidden');
+    if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
 }
 
 async function openTeacherPronunciationReviewModal(quizId) {
@@ -2123,14 +2169,25 @@ function renderTeacherPronAttemptsList() {
 }
 
 async function loadTeacherPronAttempt(attemptId) {
+    const useAnswersModal = isMobileOrTablet();
+    const detail = useAnswersModal ? document.getElementById('teacher-pron-attempt-answers-detail') : document.getElementById('teacher-pron-attempt-detail');
     const saveBtn = document.getElementById('teacher-pron-review-save-btn');
+    const answersSaveBtn = document.getElementById('teacher-pron-review-answers-save-btn');
     if (saveBtn) saveBtn.classList.add('hidden');
+    if (answersSaveBtn) answersSaveBtn.classList.add('hidden');
 
     teacherPronReviewState.attemptId = attemptId;
-    // Re-render attempts list immediately so clicked row gets .is-active class.
     renderTeacherPronAttemptsList();
-    const detail = document.getElementById('teacher-pron-attempt-detail');
     if (detail) detail.innerHTML = `<div class="lesson-teacher-review-empty"><i data-lucide="loader" class="lesson-teacher-review-empty-icon" aria-hidden="true"></i><p class="lesson-teacher-review-empty-text">Loading answers...</p></div>`;
+    if (useAnswersModal) {
+        const answersModal = document.getElementById('teacher-pronunciation-review-answers-modal');
+        const studentNameEl = document.getElementById('teacher-pron-review-answers-student-name');
+        const quizNameEl = document.getElementById('teacher-pron-review-answers-quiz-name');
+        const attemptFromList = (teacherPronReviewState.attempts || []).find(a => Number(a.attempt_id) === Number(attemptId));
+        if (studentNameEl) studentNameEl.textContent = attemptFromList?.student_name || `Submission #${attemptId}`;
+        if (quizNameEl) quizNameEl.textContent = teacherPronReviewState.quiz?.title || 'Quiz';
+        if (answersModal) answersModal.classList.remove('hidden');
+    }
     if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
 
     try {
@@ -2171,6 +2228,7 @@ async function loadTeacherPronAttempt(attemptId) {
               ${submitted ? `<div class="text-xs text-muted-foreground">${escapeHtml(submitted)}</div>` : ''}
             </div>
           </div>`;
+        if (!detail) return;
         detail.innerHTML = (cheatBanner || '') + studentHeader + answers.map(a => {
             const current = (a.teacher_score != null) ? a.teacher_score : a.pronunciation_score;
             const audioSrc = (a.student_audio && a.student_audio.startsWith('/') ? (window.API_BASE || '') + a.student_audio : (a.student_audio || ''));
@@ -2210,7 +2268,8 @@ async function loadTeacherPronAttempt(attemptId) {
             `;
         }).join('') || `<div class="text-muted-foreground">No answers found.</div>`;
 
-        if (saveBtn) saveBtn.classList.remove('hidden');
+        if (useAnswersModal && answersSaveBtn) answersSaveBtn.classList.remove('hidden');
+        else if (!useAnswersModal && saveBtn) saveBtn.classList.remove('hidden');
 
         if (window.lucide && typeof window.lucide.createIcons === 'function') {
             window.lucide.createIcons();
@@ -2229,7 +2288,9 @@ async function saveTeacherPronunciationOverrides() {
     if (!attemptId) return;
 
     const answers = [];
-    document.querySelectorAll('#teacher-pron-attempt-detail .teacher-pron-answer-row').forEach(row => {
+    const container = document.getElementById('teacher-pron-attempt-answers-detail') || document.getElementById('teacher-pron-attempt-detail');
+    if (!container) return;
+    container.querySelectorAll('.teacher-pron-answer-row').forEach(row => {
         const answerId = Number(row.getAttribute('data-answer-id'));
         const scoreInput = row.querySelector('.teacher-pron-score-input, .teacher-pron-score');
         answers.push({

@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS users (
   strand VARCHAR(80) NULL,
   email VARCHAR(255) NOT NULL,
   password VARCHAR(255) NOT NULL,
-  role ENUM('student','teacher','admin') NOT NULL DEFAULT 'student',
+  role ENUM('student','teacher','admin','master_admin') NOT NULL DEFAULT 'student',
   /* Admin control: deactivate approved accounts */
   is_active TINYINT(1) NOT NULL DEFAULT 1,
   deactivated_at TIMESTAMP NULL DEFAULT NULL,
@@ -37,6 +37,13 @@ CREATE TABLE IF NOT EXISTS users (
   UNIQUE KEY uq_users_email (email),
   KEY idx_users_verification_status (verification_status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- If you already have users table without 'master_admin', run:
+-- ALTER TABLE users MODIFY role ENUM('student','teacher','admin','master_admin') NOT NULL DEFAULT 'student';
+
+-- Master admin account (password: masteradmin123)
+INSERT IGNORE INTO users (fname, lname, email, password, role, verification_status) VALUES
+('Master', 'Admin', 'master.eel.2026@gmail.com', '$2b$10$IsuPol10sccnrfUyEDMyROleng9k3sUyShYU6kVQ3KVmM1w4oFuB6', 'master_admin', 'approved');
 
 /* =========================
    Classes
@@ -113,6 +120,23 @@ INSERT IGNORE INTO subjects (subject_id, subject_name) VALUES
   (3, 'Creative Writing'),
   (4, 'Creative Non-Fiction'),
   (5, 'English for Academic and Professional Purposes');
+
+/* =========================
+   Tracks (Senior High School: ABM, STEM, HUMSS, etc.)
+   ========================= */
+CREATE TABLE IF NOT EXISTS tracks (
+  track_id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  track_name VARCHAR(80) NOT NULL,
+  PRIMARY KEY (track_id),
+  UNIQUE KEY uq_tracks_name (track_name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+INSERT IGNORE INTO tracks (track_id, track_name) VALUES
+  (1, 'STEM'),
+  (2, 'ABM'),
+  (3, 'HUMSS'),
+  (4, 'GAS'),
+  (5, 'TVL');
 
 CREATE TABLE IF NOT EXISTS lessons (
   lesson_id INT UNSIGNED NOT NULL AUTO_INCREMENT,

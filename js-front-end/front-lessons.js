@@ -42,8 +42,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Role-based UI (keep behavior consistent)
     const tabQuizzes = document.getElementById("lessons-tab-quizzes");
     const quizSubtitle = document.getElementById("lessons-ai-quiz-subtitle");
+    const isTeacherOrMasterAdmin = user.role === "teacher" || user.role === "master_admin";
     if (user.role === "student") {
       document.querySelectorAll(".teacher-only").forEach((el) => (el.style.display = "none"));
+      document.querySelectorAll(".teacher-or-master-admin-only").forEach((el) => (el.style.display = "none"));
       document.querySelectorAll(".student-only").forEach((btn) => btn.classList.remove("hidden"));
       if (tabQuizzes) tabQuizzes.classList.remove("hidden");
       if (quizSubtitle) quizSubtitle.textContent = "Quizzes from your teacher. Take them and view the leaderboard.";
@@ -68,6 +70,23 @@ document.addEventListener("DOMContentLoaded", async () => {
     window.location.href = "login.html";
   }
 });
+
+async function removeAILessonQuestion(btn) {
+  if (typeof Swal !== "undefined" && Swal && typeof Swal.fire === "function") {
+    const result = await Swal.fire({
+      title: "Remove question?",
+      text: "This generated question will be removed.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Remove",
+      cancelButtonText: "Cancel",
+      confirmButtonColor: "#dc2626",
+    });
+    if (!result.isConfirmed) return;
+  }
+  const item = btn.closest(".question-item");
+  if (item) item.remove();
+}
 
 function escapeHtml(str) {
   return String(str)
@@ -476,9 +495,7 @@ async function viewTopicWithGeneratedContent(topic, lesson) {
 
   if (titleEl) titleEl.textContent = topicTitle;
   const downloadBtn = document.getElementById("lesson-download-ppt-btn");
-  const regenerateBtn = document.getElementById("lesson-regenerate-btn");
   if (downloadBtn) downloadBtn.classList.add("hidden");
-  if (regenerateBtn) regenerateBtn.classList.add("hidden");
   if (loadingEl) loadingEl.style.display = "flex";
   if (contentEl) {
     contentEl.classList.add("hidden");
@@ -509,7 +526,6 @@ async function viewTopicWithGeneratedContent(topic, lesson) {
       enhanceLessonTopicPresentation(contentEl);
       contentEl.classList.remove("hidden");
       if (downloadBtn) downloadBtn.classList.remove("hidden");
-      if (regenerateBtn) regenerateBtn.classList.remove("hidden");
       if (typeof lucide !== "undefined" && lucide.createIcons) lucide.createIcons();
     }
   } catch (err) {
@@ -518,43 +534,6 @@ async function viewTopicWithGeneratedContent(topic, lesson) {
       contentEl.innerHTML = `<p class="text-destructive">${escapeHtml(err?.message || "Something went wrong.")}</p>`;
       contentEl.classList.remove("hidden");
     }
-  }
-}
-
-async function regenerateLessonContent() {
-  if (!__currentLessonTopic) return;
-  const loadingEl = document.getElementById("lesson-viewer-loading");
-  const contentEl = document.getElementById("lesson-topic-content");
-  const downloadBtn = document.getElementById("lesson-download-ppt-btn");
-  const regenerateBtn = document.getElementById("lesson-regenerate-btn");
-
-  if (regenerateBtn) regenerateBtn.disabled = true;
-  if (loadingEl) loadingEl.style.display = "flex";
-  if (contentEl) contentEl.classList.add("hidden");
-
-  try {
-    const data = await fetchTopicContent(true);
-    if (loadingEl) loadingEl.style.display = "none";
-
-    if (!data.success) {
-      Swal.fire({ icon: "error", title: "Error", text: data.error || "Failed to regenerate." });
-      if (contentEl) contentEl.classList.remove("hidden");
-      return;
-    }
-
-    if (contentEl && data.content) {
-      contentEl.innerHTML = data.content;
-      delete contentEl.dataset.enhancedPresentation;
-      enhanceLessonTopicPresentation(contentEl);
-      contentEl.classList.remove("hidden");
-    }
-  } catch (err) {
-    if (loadingEl) loadingEl.style.display = "none";
-    Swal.fire({ icon: "error", title: "Error", text: err?.message || "Something went wrong." });
-    if (contentEl) contentEl.classList.remove("hidden");
-  } finally {
-    if (regenerateBtn) regenerateBtn.disabled = false;
-    if (typeof lucide !== "undefined" && lucide.createIcons) lucide.createIcons();
   }
 }
 
@@ -571,8 +550,6 @@ function closeLesson() {
   }
   if (loadingEl) loadingEl.style.display = "none";
   if (downloadBtn) downloadBtn.classList.add("hidden");
-  const regenerateBtn = document.getElementById("lesson-regenerate-btn");
-  if (regenerateBtn) regenerateBtn.classList.add("hidden");
   __currentLessonTopic = null;
   __currentLessonLesson = null;
 }
@@ -1493,7 +1470,7 @@ async function initLessonsClassNotifications(user) {
   const listEl = document.getElementById("mobileNavNotificationList");
   if (listEl && !listEl.__lessonsNotifClickBound) {
     listEl.__lessonsNotifClickBound = true;
-    listEl.addEventListener("click", (e) => {
+    listEl.addEventListener("click", async (e) => {
       const row = e.target && e.target.closest ? e.target.closest(".mobile-nav-notification-item") : null;
       if (!row) return;
       const itemId = row.getAttribute("data-item-id");
@@ -1525,6 +1502,18 @@ async function initLessonsClassNotifications(user) {
       if (deleteBtn) {
         e.stopPropagation();
         if (classInfo.classId) {
+          if (typeof Swal !== "undefined" && Swal && typeof Swal.fire === "function") {
+            const result = await Swal.fire({
+              title: "Archive notification?",
+              text: "This will remove the notification from your list.",
+              icon: "question",
+              showCancelButton: true,
+              confirmButtonText: "Archive",
+              cancelButtonText: "Cancel",
+              confirmButtonColor: "#dc2626",
+            });
+            if (!result.isConfirmed) return;
+          }
           deleteLessonsNotificationItem(classInfo.classId, itemId);
           renderLessonsNotificationPanel(classInfo.classId);
         }
@@ -1886,16 +1875,32 @@ function refreshLeaderboardLesson() {
 // ========== Teacher: Review student answers (AI quiz) – same logic as reading-lessons ==========
 let _lessonTeacherReviewState = { quizId: null, studentId: null, attemptId: null, attempts: [], quizTitle: "", search: "" };
 
+function isMobileOrTablet() {
+  return window.matchMedia && window.matchMedia("(max-width: 1024px)").matches;
+}
+
+function closeLessonTeacherReviewAnswersModal() {
+  const modal = document.getElementById("lesson-teacher-review-answers-modal");
+  if (modal) modal.classList.add("hidden");
+  if (window.lucide && typeof window.lucide.createIcons === "function") window.lucide.createIcons();
+}
+
 function closeLessonTeacherReviewModal() {
   const modal = document.getElementById("lesson-teacher-review-modal");
   if (modal) modal.classList.add("hidden");
+  closeLessonTeacherReviewAnswersModal();
   _lessonTeacherReviewState = { quizId: null, studentId: null, attemptId: null, attempts: [], quizTitle: "", search: "" };
   const list = document.getElementById("lesson-teacher-review-attempts-list");
   const detail = document.getElementById("lesson-teacher-review-detail");
+  const answersDetail = document.getElementById("lesson-teacher-review-answers-detail");
   const saveBtn = document.getElementById("lesson-teacher-review-save-btn");
+  const answersSaveBtn = document.getElementById("lesson-teacher-review-answers-save-btn");
   if (list) list.innerHTML = "";
-  if (detail) detail.innerHTML = "<div class=\"lesson-teacher-review-empty\"><i data-lucide=\"user-check\" class=\"lesson-teacher-review-empty-icon\" aria-hidden=\"true\"></i><p class=\"lesson-teacher-review-empty-text\">Select a student from the list to view their answers.</p></div>";
+  const emptyHtml = "<div class=\"lesson-teacher-review-empty\"><i data-lucide=\"user-check\" class=\"lesson-teacher-review-empty-icon\" aria-hidden=\"true\"></i><p class=\"lesson-teacher-review-empty-text\">Select a student from the list to view their answers.</p></div>";
+  if (detail) detail.innerHTML = emptyHtml;
+  if (answersDetail) answersDetail.innerHTML = "";
   if (saveBtn) saveBtn.classList.add("hidden");
+  if (answersSaveBtn) answersSaveBtn.classList.add("hidden");
   const titleEl = document.getElementById("lesson-teacher-review-quiz-title");
   if (titleEl) titleEl.textContent = "Quiz";
   if (window.lucide && typeof window.lucide.createIcons === "function") window.lucide.createIcons();
@@ -2003,11 +2008,22 @@ async function loadLessonTeacherReviewAttempt(studentId) {
   _lessonTeacherReviewState.studentId = studentId;
   _lessonTeacherReviewState.attemptId = null;
   renderLessonTeacherReviewAttemptsList();
-  var saveBtn = document.getElementById("lesson-teacher-review-save-btn");
+  const useAnswersModal = isMobileOrTablet();
+  const detail = useAnswersModal ? document.getElementById("lesson-teacher-review-answers-detail") : document.getElementById("lesson-teacher-review-detail");
+  const saveBtn = document.getElementById("lesson-teacher-review-save-btn");
+  const answersSaveBtn = document.getElementById("lesson-teacher-review-answers-save-btn");
   if (saveBtn) saveBtn.classList.add("hidden");
-
-  const detail = document.getElementById("lesson-teacher-review-detail");
+  if (answersSaveBtn) answersSaveBtn.classList.add("hidden");
   if (detail) detail.innerHTML = "<div class=\"lesson-teacher-review-empty\"><i data-lucide=\"loader\" class=\"lesson-teacher-review-empty-icon\" aria-hidden=\"true\"></i><p class=\"lesson-teacher-review-empty-text\">Loading answers...</p></div>";
+  if (useAnswersModal) {
+    const answersModal = document.getElementById("lesson-teacher-review-answers-modal");
+    const studentNameEl = document.getElementById("lesson-teacher-review-answers-student-name");
+    const quizNameEl = document.getElementById("lesson-teacher-review-answers-quiz-name");
+    const attempt = (_lessonTeacherReviewState.attempts || []).find(function (a) { return Number(a.student_id || a.user_id) === Number(studentId); });
+    if (studentNameEl) studentNameEl.textContent = attempt?.student_name || ("Student #" + studentId);
+    if (quizNameEl) quizNameEl.textContent = _lessonTeacherReviewState.quizTitle || "Quiz";
+    if (answersModal) answersModal.classList.remove("hidden");
+  }
   if (window.lucide && typeof window.lucide.createIcons === "function") window.lucide.createIcons();
 
   try {
@@ -2016,20 +2032,20 @@ async function loadLessonTeacherReviewAttempt(studentId) {
     if (!res.ok) throw new Error(data.error || "Failed to load answers");
     if (!data.success || !data.quiz || !data.attempt || !data.answers) throw new Error("Invalid review data");
     _lessonTeacherReviewState.attemptId = data.attempt.attempt_id;
-    renderLessonTeacherReviewDetail(data);
-    const saveBtn = document.getElementById("lesson-teacher-review-save-btn");
-    if (saveBtn) saveBtn.classList.remove("hidden");
+    renderLessonTeacherReviewDetail(data, detail);
+    if (useAnswersModal && answersSaveBtn) answersSaveBtn.classList.remove("hidden");
+    else if (!useAnswersModal && saveBtn) saveBtn.classList.remove("hidden");
   } catch (err) {
     if (detail) detail.innerHTML = "<div class=\"text-destructive\">" + escapeHtml(err.message || "Failed to load answers.") + "</div>";
     _lessonTeacherReviewState.attemptId = null;
-    const saveBtn = document.getElementById("lesson-teacher-review-save-btn");
     if (saveBtn) saveBtn.classList.add("hidden");
+    if (answersSaveBtn) answersSaveBtn.classList.add("hidden");
   }
   if (window.lucide && typeof window.lucide.createIcons === "function") window.lucide.createIcons();
 }
 
-function renderLessonTeacherReviewDetail(data) {
-  const detail = document.getElementById("lesson-teacher-review-detail");
+function renderLessonTeacherReviewDetail(data, targetEl) {
+  const detail = targetEl || document.getElementById("lesson-teacher-review-detail");
   if (!detail) return;
   const attempt = ( _lessonTeacherReviewState.attempts || [] ).find(function (a) {
     return Number(a.student_id || a.user_id) === Number(_lessonTeacherReviewState.studentId);
@@ -2141,7 +2157,9 @@ async function saveLessonTeacherReviewOverrides() {
   if (!attemptId) return;
 
   const answers = [];
-  document.querySelectorAll("#lesson-teacher-review-detail .teacher-answer-row").forEach(function (row) {
+  const container = document.getElementById("lesson-teacher-review-answers-detail") || document.getElementById("lesson-teacher-review-detail");
+  if (!container) return;
+  container.querySelectorAll(".teacher-answer-row").forEach(function (row) {
     const answerId = Number(row.getAttribute("data-answer-id"));
     if (!answerId) return;
     const correctBox = row.querySelector(".teacher-is-correct");
@@ -3387,7 +3405,7 @@ async function generateAIQuizLesson() {
           div.innerHTML = `
             <div class="ai-question-item__header">
               <h4 class="ai-question-item__title">Question ${i + 1} <span class="ai-question-type-badge">Identification</span></h4>
-              <button type="button" class="ai-question-remove-btn" onclick="this.closest('.question-item').remove()">Remove</button>
+              <button type="button" class="ai-question-remove-btn" onclick="removeAILessonQuestion(this)">Remove</button>
             </div>
             <input type="text" class="form-input ai-question-input" placeholder="Enter question" value="${escapeHtml(questionText)}">
             <div class="ai-identification-answer">
@@ -3399,7 +3417,7 @@ async function generateAIQuizLesson() {
           div.innerHTML = `
             <div class="ai-question-item__header">
               <h4 class="ai-question-item__title">Question ${i + 1} <span class="ai-question-type-badge">True or False</span></h4>
-              <button type="button" class="ai-question-remove-btn" onclick="this.closest('.question-item').remove()">Remove</button>
+              <button type="button" class="ai-question-remove-btn" onclick="removeAILessonQuestion(this)">Remove</button>
             </div>
             <input type="text" class="form-input ai-question-input" placeholder="Enter statement" value="${escapeHtml(questionText)}">
             <div class="space-y-2 ai-question-options">
@@ -3417,7 +3435,7 @@ async function generateAIQuizLesson() {
           div.innerHTML = `
             <div class="ai-question-item__header">
               <h4 class="ai-question-item__title">Question ${i + 1} <span class="ai-question-type-badge">Multiple choice</span></h4>
-              <button type="button" class="ai-question-remove-btn" onclick="this.closest('.question-item').remove()">Remove</button>
+              <button type="button" class="ai-question-remove-btn" onclick="removeAILessonQuestion(this)">Remove</button>
             </div>
             <input type="text" class="form-input ai-question-input" placeholder="Enter question" value="${escapeHtml(questionText)}">
             <div class="space-y-2 ai-question-options">

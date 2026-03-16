@@ -2640,19 +2640,35 @@ function getInitials(name) {
     return initials || "S";
 }
 
+function isMobileOrTablet() {
+    return window.matchMedia && window.matchMedia('(max-width: 1024px)').matches;
+}
+
+function closeTeacherReadingReviewAnswersModal() {
+    const modal = document.getElementById('teacher-reading-review-answers-modal');
+    if (modal) modal.classList.add('hidden');
+    if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
+}
+
 function closeTeacherReadingReviewModal() {
     const modal = document.getElementById('teacher-reading-review-modal');
-    modal?.classList.add('hidden');
+    if (modal) modal.classList.add('hidden');
+    closeTeacherReadingReviewAnswersModal();
     teacherReadingReviewState = { quizId: null, attemptId: null, quiz: null, attempts: [] };
 
     const list = document.getElementById('teacher-reading-attempts-list');
     const detail = document.getElementById('teacher-reading-attempt-detail');
+    const answersDetail = document.getElementById('teacher-reading-attempt-answers-detail');
     const title = document.getElementById('teacher-reading-review-quiz-title');
     const saveBtn = document.getElementById('teacher-reading-review-save-btn');
+    const answersSaveBtn = document.getElementById('teacher-reading-review-answers-save-btn');
     if (list) list.innerHTML = '';
-    if (detail) detail.innerHTML = `<div class="lesson-teacher-review-empty"><i data-lucide="user-check" class="lesson-teacher-review-empty-icon" aria-hidden="true"></i><p class="lesson-teacher-review-empty-text">Select a student from the list to view their answers.</p></div>`;
+    const emptyHtml = `<div class="lesson-teacher-review-empty"><i data-lucide="user-check" class="lesson-teacher-review-empty-icon" aria-hidden="true"></i><p class="lesson-teacher-review-empty-text">Select a student from the list to view their answers.</p></div>`;
+    if (detail) detail.innerHTML = emptyHtml;
+    if (answersDetail) answersDetail.innerHTML = '';
     if (title) title.textContent = 'Quiz';
     if (saveBtn) saveBtn.classList.add('hidden');
+    if (answersSaveBtn) answersSaveBtn.classList.add('hidden');
     if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
 }
 
@@ -2767,22 +2783,34 @@ function renderTeacherReadingAttemptsList() {
 }
 
 async function loadTeacherReadingAttempt(attemptId) {
+    const useAnswersModal = isMobileOrTablet();
+    const detail = useAnswersModal ? document.getElementById('teacher-reading-attempt-answers-detail') : document.getElementById('teacher-reading-attempt-detail');
     const saveBtn = document.getElementById('teacher-reading-review-save-btn');
+    const answersSaveBtn = document.getElementById('teacher-reading-review-answers-save-btn');
     if (saveBtn) saveBtn.classList.add('hidden');
+    if (answersSaveBtn) answersSaveBtn.classList.add('hidden');
 
     teacherReadingReviewState.attemptId = attemptId;
-    // reflect active selection immediately
     renderTeacherReadingAttemptsList();
-    const detail = document.getElementById('teacher-reading-attempt-detail');
     if (detail) detail.innerHTML = `<div class="lesson-teacher-review-empty"><i data-lucide="loader" class="lesson-teacher-review-empty-icon" aria-hidden="true"></i><p class="lesson-teacher-review-empty-text">Loading answers...</p></div>`;
+    if (useAnswersModal) {
+        const answersModal = document.getElementById('teacher-reading-review-answers-modal');
+        const studentNameEl = document.getElementById('teacher-reading-review-answers-student-name');
+        const quizNameEl = document.getElementById('teacher-reading-review-answers-quiz-name');
+        const attempt = (teacherReadingReviewState.attempts || []).find(a => Number(a.attempt_id) === Number(attemptId));
+        if (studentNameEl) studentNameEl.textContent = attempt?.student_name || `Student #${attemptId}`;
+        if (quizNameEl) quizNameEl.textContent = teacherReadingReviewState.quiz?.title || 'Quiz';
+        if (answersModal) answersModal.classList.remove('hidden');
+    }
     if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
 
     try {
         const res = await fetch(`${window.API_BASE || ""}/api/reading-quiz-attempts/${attemptId}/answers`);
         const answers = await res.json();
 
-        renderTeacherReadingAttemptDetail(answers);
-        if (saveBtn) saveBtn.classList.remove('hidden');
+        renderTeacherReadingAttemptDetail(answers, detail);
+        if (useAnswersModal && answersSaveBtn) answersSaveBtn.classList.remove('hidden');
+        else if (!useAnswersModal && saveBtn) saveBtn.classList.remove('hidden');
 
         if (window.lucide && typeof window.lucide.createIcons === 'function') {
             window.lucide.createIcons();
@@ -2793,9 +2821,9 @@ async function loadTeacherReadingAttempt(attemptId) {
     }
 }
 
-function renderTeacherReadingAttemptDetail(answers) {
+function renderTeacherReadingAttemptDetail(answers, targetEl) {
     const quiz = teacherReadingReviewState.quiz;
-    const detail = document.getElementById('teacher-reading-attempt-detail');
+    const detail = targetEl || document.getElementById('teacher-reading-attempt-detail');
     if (!detail) return;
 
     const attempt = (teacherReadingReviewState.attempts || []).find(a => Number(a.attempt_id) === Number(teacherReadingReviewState.attemptId));
@@ -3019,7 +3047,9 @@ async function saveTeacherReadingOverrides() {
     if (!attemptId) return;
 
     const answers = [];
-    document.querySelectorAll('#teacher-reading-attempt-detail .teacher-answer-row').forEach(row => {
+    const container = document.getElementById('teacher-reading-attempt-answers-detail') || document.getElementById('teacher-reading-attempt-detail');
+    if (!container) return;
+    container.querySelectorAll('.teacher-answer-row').forEach(row => {
         const answerId = Number(row.getAttribute('data-answer-id'));
         const correctBox = row.querySelector('.teacher-is-correct');
 
@@ -3030,7 +3060,7 @@ async function saveTeacherReadingOverrides() {
     });
 
     const blanks = [];
-    document.querySelectorAll('#teacher-reading-attempt-detail .teacher-blank-row').forEach(row => {
+    container.querySelectorAll('.teacher-blank-row').forEach(row => {
         const studentBlankId = Number(row.getAttribute('data-student-blank-id'));
         const correctBox = row.querySelector('.teacher-blank-is-correct');
 

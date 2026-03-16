@@ -557,7 +557,7 @@ async function loadExams() {
           </p>
         </div>
         <div class="exam-list-card-actions">
-          <button type="button" class="export-btn exam-list-export-btn" title="Export to Excel">
+          <button type="button" class="export-btn exam-list-export-btn" title="Export to PDF">
             <i data-lucide="download" class="size-4"></i>
             Export
           </button>
@@ -599,7 +599,7 @@ async function loadExams() {
         }
 
         if (e.target.closest(".export-btn")) {
-          exportExamExcel(examId);
+          exportExamPDF(examId);
         }
       });
 
@@ -622,17 +622,198 @@ function capitalizeWords(str) {
   return str.replace(/\b\w/g, char => char.toUpperCase());
 }
 
-// ✅ Export Excel function (no modules, fully browser compatible)
-async function exportExamExcel(id) {
+// Strip duplicate school header / meta from exam content (AI sometimes includes it despite instructions)
+function stripDuplicateHeaderFromExamContent(content) {
+  if (!content || typeof content !== "string") return content;
+  const s = content.trim();
+  const lines = s.split("\n");
+  const sectionPattern = /^\s*(I\.|II\.|III\.|IV\.)\s*(MULTIPLE|TRUE|IDENTIFICATION|ESSAY|Identification|Essay|Multiple|True)/i;
+  const questionNumPattern = /^\s*\d+\.\s+/;
+  for (let i = 0; i < lines.length; i++) {
+    if (sectionPattern.test(lines[i]) || questionNumPattern.test(lines[i])) {
+      return lines.slice(i).join("\n").trim() || s;
+    }
+  }
+  return s;
+}
+
+// Format exam content for PDF: two-column options layout for multiple choice (like printed exam papers)
+function formatExamContentForPDF(content) {
+  if (!content || typeof content !== "string") return "";
+  const esc = (s) => String(s).replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const s = content.trim();
+
+  // Split by section headers (I., II., III., IV.) or ANSWER KEY
+  const sectionRegex = /(\n\s*(?:[IVX]+\.\s+[A-Z][A-Z\s]+|ANSWER\s+KEY)\s*\n)/gi;
+  const parts = s.split(sectionRegex);
+  let out = "";
+  let lastWasMultipleChoice = false;
+
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i];
+    const isHeader = /^\n\s*(?:[IVX]+\.\s+[A-Z]|ANSWER\s+KEY)/i.test(part);
+    if (isHeader) {
+      lastWasMultipleChoice = /I\.\s*MULTIPLE\s*CHOICE/i.test(part);
+      out += `<div class="exam-pdf-section-title">${esc(part.trim())}</div>`;
+      continue;
+    }
+    if (!part.trim()) continue;
+
+    if (lastWasMultipleChoice) {
+      out += `<p class="exam-pdf-direction">Direction: Choose the letter of the best answer. Shade the letter of the correct answer on the separate answer sheet provided.</p>`;
+      lastWasMultipleChoice = false;
+      const qBlocks = part.split(/(?=\n\s*\d+\.\s+)/);
+      for (const block of qBlocks) {
+        const trimmed = block.trim();
+        if (!trimmed || !/^\d+\.\s+/.test(trimmed)) continue;
+        const numMatch = trimmed.match(/^(\d+)\.\s+(.+)$/s);
+        if (!numMatch) continue;
+        const num = numMatch[1];
+        const rest = numMatch[2];
+        const firstOpt = rest.match(/\(\s*([a-d])\s*\)/i);
+        const questionText = firstOpt ? rest.slice(0, firstOpt.index).trim() : rest.trim();
+        const opts = [];
+        const optPat = /\(\s*([a-d])\s*\)\s*([\s\S]+?)(?=\s*\(\s*[a-d]\s*\)|$)/gi;
+        let om;
+        while ((om = optPat.exec(rest)) !== null) {
+          opts.push({ letter: om[1].toLowerCase(), text: om[2].trim() });
+        }
+        out += `<div class="exam-pdf-item"><div class="exam-pdf-question">${num}. ${esc(questionText).replace(/\n/g, " ")}</div>`;
+        if (opts.length >= 2) {
+          out += `<div class="exam-pdf-options-row"><span class="exam-pdf-opt">(${opts[0].letter}) ${esc(opts[0].text)}</span><span class="exam-pdf-opt">(${opts[1].letter}) ${esc(opts[1].text)}</span></div>`;
+        }
+        if (opts.length >= 4) {
+          out += `<div class="exam-pdf-options-row"><span class="exam-pdf-opt">(${opts[2].letter}) ${esc(opts[2].text)}</span><span class="exam-pdf-opt">(${opts[3].letter}) ${esc(opts[3].text)}</span></div>`;
+        } else if (opts.length === 3) {
+          out += `<div class="exam-pdf-options-row"><span class="exam-pdf-opt">(${opts[2].letter}) ${esc(opts[2].text)}</span><span class="exam-pdf-opt"></span></div>`;
+        } else if (opts.length === 1) {
+          out += `<div class="exam-pdf-options-row"><span class="exam-pdf-opt">(${opts[0].letter}) ${esc(opts[0].text)}</span><span class="exam-pdf-opt"></span></div>`;
+        }
+        out += `</div>`;
+      }
+    } else {
+      out += `<div class="exam-pdf-block">${esc(part).replace(/\n/g, "<br>")}</div>`;
+    }
+  }
+
+  return out || `<div class="exam-pdf-block">${esc(s).replace(/\n/g, "<br>")}</div>`;
+}
+
+// ✅ Export PDF – direct download (no print dialog)
+async function exportExamPDF(id) {
+  if (typeof html2canvas === "undefined" || (typeof jspdf === "undefined" && typeof window.jspdf === "undefined")) {
+    if (typeof showNotification === "function") showNotification("PDF libraries loading. Please try again.", "error");
+    else alert("PDF libraries not loaded. Refresh and try again.");
+    return;
+  }
+
   const res = await fetch(`${window.API_BASE || ""}/api/get-exam-content/${id}`);
   const data = await res.json();
-  if (!data.success) return alert("Failed to fetch exam content.");
+  if (!data.success) {
+    if (typeof showNotification === "function") showNotification("Failed to fetch exam content.", "error");
+    else alert("Failed to fetch exam content.");
+    return;
+  }
 
-  const rows = data.content.split("\n").map(line => [line]); // each line in a row
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.aoa_to_sheet(rows);
-  XLSX.utils.book_append_sheet(wb, ws, "Exam");
-  XLSX.writeFile(wb, `exam-${id}.xlsx`);
+  const displayTitle = (data.title && data.title.trim()) ? data.title.trim() : "Examination";
+  let rawContent = data.content || "";
+  rawContent = stripDuplicateHeaderFromExamContent(rawContent);
+  const examBodyHtml = formatExamContentForPDF(rawContent);
+  const base = window.location.href.replace(/\/[^/]*$/, "/");
+  const logoUrl = base + "image/school-logo.png";
+
+  const wrapper = document.createElement("div");
+  wrapper.id = "exam-pdf-temp";
+  wrapper.style.cssText = "position:fixed;top:0;left:0;width:612px;min-height:792px;z-index:999999;background:#fff;color:#1a1a1a;padding:40px;font-family:'Segoe UI',system-ui,sans-serif;font-size:14px;line-height:1.5;box-sizing:border-box;overflow:visible;";
+  wrapper.innerHTML = `
+    <div style="text-align:center;margin-bottom:24px;">
+      <img src="${logoUrl}" alt="School Logo" style="width:80px;height:80px;object-fit:contain;" onerror="this.style.display='none'">
+      <p style="font-size:12px;line-height:1.45;margin:0 0 4px 0;font-weight:500;color:#333;">Republic of the Philippines<br>Department of Education<br>Region III – Central Luzon<br>Schools Division of Bulacan</p>
+      <p style="font-size:15px;font-weight:700;margin:8px 0;color:#111;">NORZAGARAY NATIONAL HIGH SCHOOL</p>
+      <p style="font-size:12px;margin:0 0 16px 0;color:#555;">A. Villarama St., Poblacion, Norzagaray, Bulacan</p>
+      <hr style="width:100%;margin:16px 0;border:none;border-top:1.5px solid #333;">
+      <h1 style="font-size:18px;font-weight:700;margin:8px 0 16px 0;color:#111;">${displayTitle}</h1>
+      <div style="font-size:13px;margin-bottom:20px;text-align:left;color:#333;">
+        <div style="display:flex;align-items:baseline;flex-wrap:wrap;gap:6px;margin-bottom:6px;">
+          <span style="font-weight:600;">Name:</span><span style="flex:1;min-width:80px;border-bottom:1px solid #333;"></span>
+          <span style="font-weight:600;">Date:</span><span style="min-width:60px;max-width:80px;border-bottom:1px solid #333;"></span>
+          <span style="font-weight:600;">Score:</span><span style="min-width:40px;border-bottom:1px solid #333;"></span>
+        </div>
+        <div style="display:flex;align-items:baseline;flex-wrap:wrap;gap:6px;margin-bottom:6px;">
+          <span style="font-weight:600;">Grade Level / Section:</span><span style="flex:1;min-width:80px;border-bottom:1px solid #333;"></span>
+          <span style="font-weight:600;">Teacher:</span><span style="min-width:80px;border-bottom:1px solid #333;"></span>
+        </div>
+      </div>
+    </div>
+    <div class="exam-pdf-body" style="font-size:14px;line-height:1.65;color:#1a1a1a;">
+      <style>
+        .exam-pdf-section-title{font-weight:700;margin:16px 0 8px 0;font-size:15px;}
+        .exam-pdf-direction{text-align:center;margin:0 0 16px 0;font-size:13px;}
+        .exam-pdf-item{margin-bottom:14px;page-break-inside:avoid;}
+        .exam-pdf-question{margin-bottom:6px;text-align:justify;}
+        .exam-pdf-options-row{display:flex;justify-content:space-between;gap:24px;margin-bottom:4px;padding-left:20px;}
+        .exam-pdf-opt{flex:1;min-width:0;}
+        .exam-pdf-block{white-space:pre-wrap;margin-bottom:12px;}
+      </style>
+      ${examBodyHtml}
+    </div>
+    <div style="margin-top:24px;color:#555;">
+      <hr style="width:100%;margin:16px 0;border:none;border-top:1.5px solid #333;">
+      <p style="text-align:center;font-size:13px;font-style:italic;margin:0;">— End of Examination —</p>
+    </div>
+  `;
+
+  document.body.appendChild(wrapper);
+
+  try {
+    if (typeof showNotification === "function") showNotification("Generating PDF...", "info");
+    await new Promise(r => setTimeout(r, 400));
+
+    const canvas = await html2canvas(wrapper, {
+      scale: 2,
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: "#ffffff",
+      logging: false
+    });
+
+    const JsPDF = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : window.jsPDF;
+    if (!JsPDF) throw new Error("jsPDF not loaded");
+    const pdf = new JsPDF("p", "mm", "letter");
+    const pageW = 215.9;
+    const pageH = 279.4;
+    const scalePxToMm = pageW / canvas.width;
+    const pageHeightPx = Math.round(pageH / scalePxToMm);
+
+    let yPx = 0;
+    let pageNum = 0;
+    while (yPx < canvas.height) {
+      if (pageNum > 0) pdf.addPage();
+      const sliceH = Math.min(pageHeightPx, canvas.height - yPx);
+      const pageCanvas = document.createElement("canvas");
+      pageCanvas.width = canvas.width;
+      pageCanvas.height = sliceH;
+      const ctx = pageCanvas.getContext("2d");
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+      ctx.drawImage(canvas, 0, yPx, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
+      const pageImgData = pageCanvas.toDataURL("image/jpeg", 0.95);
+      const imgW = pageW;
+      const imgH = (sliceH * pageW) / canvas.width;
+      pdf.addImage(pageImgData, "JPEG", 0, 0, imgW, imgH);
+      yPx += sliceH;
+      pageNum++;
+    }
+    pdf.save(`exam-${displayTitle.replace(/[/\\?*:[\]]/g, "-").slice(0, 50)}.pdf`);
+
+    if (typeof showNotification === "function") showNotification("PDF downloaded.", "success");
+  } catch (err) {
+    console.error("PDF export failed:", err);
+    if (typeof showNotification === "function") showNotification("Failed to export PDF.", "error");
+    else alert("Failed to export PDF.");
+  } finally {
+    if (wrapper.parentNode) document.body.removeChild(wrapper);
+  }
 }
 
 // ✅ Confirm archive with SweetAlert, then move exam to cache

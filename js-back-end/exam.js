@@ -307,14 +307,14 @@ router.get("/api/get-exams", async (req, res) => {
 });
 
 
-// ✅ Get exam content by ID
+// ✅ Get exam content by ID (includes title for PDF export)
 router.get("/api/get-exam-content/:id", async (req, res) => {
   const { id } = req.params;
   const pool = req.pool;
   try {
-    const [rows] = await pool.query("SELECT content FROM exams WHERE id = ?", [id]);
+    const [rows] = await pool.query("SELECT content, title FROM exams WHERE id = ?", [id]);
     if (rows.length === 0) return res.status(404).json({ success: false, message: "Exam not found" });
-    res.json({ success: true, content: rows[0].content });
+    res.json({ success: true, content: rows[0].content, title: rows[0].title || "Examination" });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: "Failed to fetch exam content" });

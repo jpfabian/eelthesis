@@ -22,6 +22,28 @@ function generateClassCode(length = 8) {
   return code;
 }
 
+// List tracks (for signup dropdown)
+router.get("/api/tracks", async (req, res) => {
+  try {
+    const [rows] = await pool.query("SELECT track_id, track_name FROM tracks ORDER BY track_name");
+    res.json({ success: true, tracks: rows });
+  } catch (err) {
+    console.error("❌ Tracks API error:", err);
+    res.status(500).json({ success: false, error: "Database error" });
+  }
+});
+
+// List subjects (for Create Class dropdown) — uses curriculum subjects table
+router.get("/api/subjects", async (req, res) => {
+  try {
+    const [rows] = await pool.query("SELECT subject_id, subject_name FROM subjects ORDER BY subject_name");
+    res.json({ success: true, subjects: rows });
+  } catch (err) {
+    console.error("❌ Subjects API error:", err);
+    res.status(500).json({ success: false, error: "Database error" });
+  }
+});
+
 // Create Class API
 router.post("/api/classes", async (req, res) => {
   try {

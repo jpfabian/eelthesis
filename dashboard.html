@@ -457,6 +457,7 @@
     </div>
 
     <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="js/auth.js"></script>
     <script src="js/navigation.js"></script>
@@ -499,12 +500,7 @@
             const backBtn = document.getElementById('back-class-btn');
             if (backBtn) backBtn.addEventListener('click', () => window.location.href = 'classes.html');
 
-            // Logout
-            const logoutBtn = document.getElementById('logout-btn');
-            if (logoutBtn) logoutBtn.addEventListener('click', () => {
-                localStorage.removeItem('eel_user');
-                window.location.href = 'index.html';
-            });
+            // Logout (handled by setupSidebar -> handleLogoutWithConfirm with SweetAlert)
 
             // Hide loading
             setTimeout(() => {

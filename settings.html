@@ -7,6 +7,7 @@
     <link rel="icon" href="image/eel-character.png" type="image/png">
     <link rel="stylesheet" href="css/styles.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.1/lucide.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="js/theme.js"></script>
 </head>
 <body class="settings-page">
@@ -275,7 +276,19 @@
                 this.value = '';
             });
             if (removeBtn) {
-                removeBtn.addEventListener('click', function() {
+                removeBtn.addEventListener('click', async function() {
+                    if (typeof Swal !== "undefined" && Swal && typeof Swal.fire === "function") {
+                        const result = await Swal.fire({
+                            title: "Remove avatar?",
+                            text: "Your profile avatar will be removed.",
+                            icon: "question",
+                            showCancelButton: true,
+                            confirmButtonText: "Remove",
+                            cancelButtonText: "Cancel",
+                            confirmButtonColor: "#dc2626",
+                        });
+                        if (!result.isConfirmed) return;
+                    }
                     localStorage.removeItem(AVATAR_STORAGE_KEY);
                     applyProfileAvatar();
                     if (typeof showNotification === 'function') showNotification('Avatar removed.', 'success');

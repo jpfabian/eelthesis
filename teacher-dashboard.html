@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Teacher - EEL</title>
+    <link rel="icon" href="image/eel-character.png" type="image/png">
+    <link rel="stylesheet" href="css/styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.1/lucide.min.css" rel="stylesheet">
+    <script src="js/theme.js"></script>
+</head>
+<body class="teacher-dashboard-page lessons-page">
+    <div class="mobile-nav-header" id="mobileNavHeader" role="banner">
+        <button type="button" class="mobile-nav-btn mobile-nav-btn--menu" id="mobileNavMenuBtn" aria-label="Open menu"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+        <div class="mobile-nav-actions-right">
+            <button type="button" class="mobile-nav-btn mobile-nav-vocab-btn" id="mobileNavVocabBtn" aria-label="Open vocabulary search" aria-expanded="false">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+            </button>
+            <button type="button" class="mobile-nav-btn mobile-nav-notification-btn" id="mobileNavNotificationBtn" aria-label="Open notifications" aria-expanded="false">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 17h5l-1.4-1.4a2 2 0 0 1-.6-1.4V11a6 6 0 1 0-12 0v3.2a2 2 0 0 1-.6 1.4L4 17h5"/><path d="M9 17a3 3 0 0 0 6 0"/></svg>
+                <span id="mobileNavNotificationBadge" class="mobile-nav-notification-badge hidden" aria-hidden="true">0</span>
+            </button>
+            <button type="button" id="eel-theme-header-toggle" class="theme-header-toggle" aria-label="Toggle dark/light mode"><span class="theme-icon" aria-hidden="true">☀</span><span class="theme-label">light</span></button>
+        </div>
+    </div>
+    <div id="mobileNavVocabPanel" class="mobile-nav-vocab-panel hidden" role="region" aria-label="Vocabulary search">
+        <div class="mobile-nav-vocab-panel__header"><strong>Vocabulary</strong></div>
+        <form id="mobileNavVocabForm" class="mobile-nav-vocab-form">
+            <div class="mobile-nav-vocab-input-wrap">
+                <input id="mobileNavVocabInput" type="search" class="mobile-nav-vocab-input" placeholder="Search a word..." autocomplete="off" />
+                <button type="submit" class="mobile-nav-vocab-submit">Search</button>
+            </div>
+            <p class="mobile-nav-vocab-ref">Reference links: <a href="https://www.oxfordlearnersdictionaries.com/" target="_blank" rel="noopener noreferrer">Oxford</a> · <a href="https://dictionary.cambridge.org/" target="_blank" rel="noopener noreferrer">Cambridge</a></p>
+        </form>
+        <div id="mobileNavVocabResult" class="mobile-nav-vocab-result">
+            <p class="mobile-nav-vocab-empty">Type a word to search its meaning.</p>
+        </div>
+    </div>
+    <div id="mobileNavNotificationPanel" class="mobile-nav-notification-panel hidden" role="region" aria-label="Classroom notifications">
+        <div class="mobile-nav-notification-panel__header">
+            <strong id="mobileNavNotificationTitle">Notifications</strong>
+            <button type="button" id="mobileNavNotificationMarkAll" class="mobile-nav-notification-mark-read">Mark all read</button>
+        </div>
+        <div id="mobileNavNotificationList" class="mobile-nav-notification-list">
+            <p class="mobile-nav-notification-empty">No notifications yet for this classroom.</p>
+        </div>
+    </div>
+
+    <div id="loading-screen" class="loading-screen">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <p>Loading...</p>
+        </div>
+    </div>
+
+    <div id="main-app" class="flex h-screen bg-background hidden">
+        <div id="sidebar" class="w-64 bg-sidebar border-r border-sidebar-border h-full flex flex-col">
+            <div class="p-6">
+                <h1 id="sidebar-title" class="text-xl font-semibold">EEL</h1>
+                <p id="sidebar-welcome" class="text-sm text-muted-foreground mt-1">Welcome</p>
+            </div>
+            <nav id="sidebar-nav" class="flex-1 px-4 space-y-2"></nav>
+            <div class="p-4">
+                <button id="logout-btn" class="w-full p-3 logout-button btn-side-bar border">
+                    <i data-lucide="log-out"></i>
+                    Logout
+                </button>
+            </div>
+        </div>
+
+        <main id="main-content" class="flex-1 overflow-auto" role="main">
+            <div class="p-6 space-y-6">
+                <header class="page-header">
+                    <div class="page-header-icon" aria-hidden="true">
+                        <i data-lucide="layout-dashboard" class="size-8"></i>
+                    </div>
+                    <div>
+                        <h1 class="page-header-title">Teacher Dashboard</h1>
+                        <p class="page-header-subtitle">Overview of your classes, students, and teaching activity.</p>
+                    </div>
+                </header>
+
+                <div id="teacher-dashboard-stats" class="max-w-6xl">
+                    <div class="grid grid-cols-4 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 master-admin-stat-cards">
+                        <div class="card master-admin-stat-card master-admin-stat-card--primary">
+                            <div class="card-content p-6">
+                                <div class="master-admin-stat-icon-wrap master-admin-stat-icon-wrap--primary">
+                                    <i data-lucide="layers" class="size-5"></i>
+                                </div>
+                                <h3 class="text-sm font-medium text-muted-foreground mt-3 mb-1">Classes</h3>
+                                <div id="teacher-stat-classes" class="text-3xl font-bold tracking-tight">—</div>
+                                <p class="text-xs text-muted-foreground mt-1">Your classrooms</p>
+                            </div>
+                        </div>
+                        <div class="card master-admin-stat-card master-admin-stat-card--secondary">
+                            <div class="card-content p-6">
+                                <div class="master-admin-stat-icon-wrap master-admin-stat-icon-wrap--secondary">
+                                    <i data-lucide="users" class="size-5"></i>
+                                </div>
+                                <h3 class="text-sm font-medium text-muted-foreground mt-3 mb-1">Students</h3>
+                                <div id="teacher-stat-students" class="text-3xl font-bold tracking-tight">—</div>
+                                <p class="text-xs text-muted-foreground mt-1">Enrolled students</p>
+                            </div>
+                        </div>
+                        <div class="card master-admin-stat-card master-admin-stat-card--primary">
+                            <div class="card-content p-6">
+                                <div class="master-admin-stat-icon-wrap master-admin-stat-icon-wrap--primary">
+                                    <i data-lucide="file-question" class="size-5"></i>
+                                </div>
+                                <h3 class="text-sm font-medium text-muted-foreground mt-3 mb-1">Quizzes</h3>
+                                <div id="teacher-stat-quizzes" class="text-3xl font-bold tracking-tight">—</div>
+                                <p class="text-xs text-muted-foreground mt-1">Generated this month</p>
+                            </div>
+                        </div>
+                        <div class="card master-admin-stat-card master-admin-stat-card--secondary">
+                            <div class="card-content p-6">
+                                <div class="master-admin-stat-icon-wrap master-admin-stat-icon-wrap--secondary">
+                                    <i data-lucide="trending-up" class="size-5"></i>
+                                </div>
+                                <h3 class="text-sm font-medium text-muted-foreground mt-3 mb-1">Improvement Rate</h3>
+                                <div id="teacher-stat-improvement" class="text-3xl font-bold tracking-tight">—</div>
+                                <p class="text-xs text-muted-foreground mt-1">Average student performance</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card master-admin-verification-card">
+                        <div class="card-content p-6">
+                            <div class="flex items-start justify-between gap-4 mb-6 flex-wrap">
+                                <div>
+                                    <div class="master-admin-verification-header-icon teacher-dashboard-chart-icon">
+                                        <i data-lucide="trending-up" class="size-6"></i>
+                                    </div>
+                                    <h3 class="text-lg font-semibold mt-2">Student Progress by Skill</h3>
+                                    <p class="text-sm text-muted-foreground mt-1">Average scores across reading and pronunciation practice</p>
+                                </div>
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <label class="text-sm font-medium text-muted-foreground">Period:</label>
+                                    <select id="teacher-month-from" class="form-input teacher-period-select py-2 px-3 text-sm rounded-md border border-border bg-background" aria-label="From month">
+                                        <option value="1">Jan</option>
+                                        <option value="2">Feb</option>
+                                        <option value="3">Mar</option>
+                                        <option value="4">Apr</option>
+                                        <option value="5">May</option>
+                                        <option value="6">Jun</option>
+                                        <option value="7">Jul</option>
+                                        <option value="8">Aug</option>
+                                        <option value="9">Sep</option>
+                                        <option value="10">Oct</option>
+                                        <option value="11">Nov</option>
+                                        <option value="12">Dec</option>
+                                    </select>
+                                    <span class="text-muted-foreground">to</span>
+                                    <select id="teacher-month-to" class="form-input teacher-period-select py-2 px-3 text-sm rounded-md border border-border bg-background" aria-label="To month">
+                                        <option value="1">Jan</option>
+                                        <option value="2">Feb</option>
+                                        <option value="3">Mar</option>
+                                        <option value="4">Apr</option>
+                                        <option value="5">May</option>
+                                        <option value="6" selected>Jun</option>
+                                        <option value="7">Jul</option>
+                                        <option value="8">Aug</option>
+                                        <option value="9">Sep</option>
+                                        <option value="10">Oct</option>
+                                        <option value="11">Nov</option>
+                                        <option value="12">Dec</option>
+                                    </select>
+                                    <select id="teacher-year" class="form-input teacher-period-select py-2 px-3 text-sm rounded-md border border-border bg-background" aria-label="Year"></select>
+                                </div>
+                            </div>
+                            <div id="teacher-progress-chart" class="teacher-progress-chart-merged">
+                                <div class="teacher-progress-chart-legend">
+                                    <span class="teacher-progress-legend-badge teacher-progress-legend-badge--reading">
+                                        <span class="teacher-progress-legend-dot"></span>
+                                        Reading Practice
+                                    </span>
+                                    <span class="teacher-progress-legend-badge teacher-progress-legend-badge--pron">
+                                        <span class="teacher-progress-legend-dot"></span>
+                                        Pronunciation Practice
+                                    </span>
+                                </div>
+                                <div class="teacher-progress-line-wrap teacher-progress-line-wrap--has-tooltip" role="img" aria-label="Line graph of reading and pronunciation progress by month">
+                                    <div id="teacher-chart-tooltip" class="teacher-chart-tooltip hidden" role="tooltip"></div>
+                                    <svg id="teacher-merged-line-svg" class="teacher-progress-line-svg teacher-progress-line-svg--merged" viewBox="0 0 720 220" preserveAspectRatio="none"></svg>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="js/auth.js"></script>
+    <script src="js-front-end/api-config.js"></script>
+    <script src="js/navigation.js"></script>
+    <script src="js-front-end/front-teacher-dashboard.js"></script>
+</body>
+</html>

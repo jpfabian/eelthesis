@@ -692,6 +692,33 @@
         </div>
     </div>
 
+    <!-- Answers modal (mobile/tablet only): opens when teacher clicks a submission -->
+    <div id="teacher-pronunciation-review-answers-modal" class="modal-overlay hidden lesson-teacher-review-answers-overlay">
+        <div class="lesson-teacher-review-answers-card">
+            <header class="lesson-teacher-review-answers-header">
+                <button type="button" class="lesson-teacher-review-answers-back" onclick="closeTeacherPronunciationReviewAnswersModal()" aria-label="Back to submissions">
+                    <i data-lucide="arrow-left" class="size-5"></i>
+                </button>
+                <div class="lesson-teacher-review-answers-header-text">
+                    <h3 class="lesson-teacher-review-answers-title" id="teacher-pron-review-answers-student-name">View Answers</h3>
+                    <p class="lesson-teacher-review-answers-quiz" id="teacher-pron-review-answers-quiz-name">Quiz</p>
+                </div>
+            </header>
+            <div class="lesson-teacher-review-answers-body">
+                <div class="lesson-teacher-review-main-header">
+                    <h3 class="lesson-teacher-review-main-title">Answers &amp; grading</h3>
+                    <p class="lesson-teacher-review-main-desc">Adjust scores for near-miss spelling/case if needed.</p>
+                </div>
+                <div id="teacher-pron-attempt-answers-detail" class="lesson-teacher-review-detail"></div>
+            </div>
+            <footer class="lesson-teacher-review-footer">
+                <button type="button" id="teacher-pron-review-answers-save-btn" class="lesson-teacher-review-save-btn hidden" onclick="saveTeacherPronunciationOverrides()">
+                    <i data-lucide="save" class="size-4 mr-2"></i>Save
+                </button>
+            </footer>
+        </div>
+    </div>
+
     <!-- ============================================
      👁️ STUDENT REVIEW MODAL (Pronunciation)
      ============================================ -->

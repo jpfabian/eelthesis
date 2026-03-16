@@ -329,9 +329,6 @@ function renderAdminUsers(users) {
   const teachers = filtered.filter((u) => String(u.role || "").toLowerCase() === "teacher");
   const students = filtered.filter((u) => String(u.role || "").toLowerCase() === "student");
 
-  const countEl = document.getElementById("admin-count");
-  if (countEl) countEl.textContent = users?.length ? `${teachers.length} teachers, ${students.length} students` : "";
-
   const teachersCountEl = document.getElementById("admin-teachers-count");
   const studentsCountEl = document.getElementById("admin-students-count");
   if (teachersCountEl) teachersCountEl.textContent = teachers.length ? `(${teachers.length})` : "(0)";
@@ -354,15 +351,207 @@ function renderAdminUsers(users) {
   }
 }
 
+function isAdminPageWithSidebar() {
+  const path = window.location.pathname || "";
+  return path.includes("admin-dashboard.html") || path.includes("account-verification.html");
+}
+
+function isAdminDashboardStatsPage() {
+  return !!document.getElementById("admin-stat-teachers");
+}
+
+function isAccountVerificationPage() {
+  return !!document.getElementById("admin-teachers-body");
+}
+
+async function loadAdminDashboardStats() {
+  const token = getAdminToken();
+  const res = await fetch((window.API_BASE || "") + "/api/admin/dashboard-stats", {
+    headers: { "x-admin-token": token || "" },
+  });
+  const data = await readJsonOrThrow(res);
+  if (!data.success) throw new Error(data.error || "Failed to load stats");
+  return data.stats || {};
+}
+
+function renderAdminDashboardStats(stats) {
+  const ids = ["admin-stat-teachers", "admin-stat-students", "admin-stat-classes", "admin-stat-pending", "admin-stat-approved", "admin-stat-rejected"];
+  const keys = ["teachers", "students", "classes", "verification.pending", "verification.approved", "verification.rejected"];
+  ids.forEach((id, i) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    let val = stats;
+    keys[i].split(".").forEach((k) => {
+      val = val != null && typeof val === "object" ? val[k] : undefined;
+    });
+    el.textContent = val != null && Number.isFinite(Number(val)) ? String(val) : "—";
+  });
+  const v = stats?.verification || {};
+  const pending = Number(v.pending || 0);
+  const approved = Number(v.approved || 0);
+  const rejected = Number(v.rejected || 0);
+  const total = pending + approved + rejected;
+  let pPct = 0, aPct = 0, rPct = 0;
+  if (total > 0) {
+    pPct = Math.round((pending / total) * 100);
+    aPct = Math.round((approved / total) * 100);
+    rPct = 100 - pPct - aPct;
+    if (rPct < 0) rPct = 0;
+  }
+  ["admin-progress-pending", "admin-progress-approved", "admin-progress-rejected"].forEach((id, i) => {
+    const el = document.getElementById(id);
+    if (el) el.style.width = [pPct, aPct, rPct][i] + "%";
+  });
+}
+
+function updateAdminNotificationBadge(pendingCount) {
+  const badge = document.getElementById("adminNotificationBadge");
+  const listEl = document.getElementById("adminNotificationList");
+  const btn = document.getElementById("adminNotificationBtn");
+  if (btn) btn.setAttribute("aria-label", pendingCount > 0 ? `Open notifications (${pendingCount} pending)` : "Open notifications");
+  if (badge) {
+    if (pendingCount > 0) {
+      badge.textContent = pendingCount > 99 ? "99+" : String(pendingCount);
+      badge.classList.remove("hidden");
+    } else {
+      badge.classList.add("hidden");
+    }
+  }
+  if (listEl) {
+    if (pendingCount > 0) {
+      listEl.innerHTML = `
+        <a href="account-verification.html" class="mobile-nav-notification-item mobile-nav-notification-item--unread" style="display:flex;align-items:center;gap:0.75rem;padding:0.75rem 1rem;text-decoration:none;color:inherit;border-bottom:1px solid var(--border);">
+          <span class="mobile-nav-notification-avatar" style="background:linear-gradient(135deg,var(--primary),var(--secondary));color:white;width:2.5rem;height:2.5rem;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:0.875rem;">!</span>
+          <span class="mobile-nav-notification-content" style="flex:1;">
+            <span class="mobile-nav-notification-item-title" style="display:block;font-weight:500;">${pendingCount === 1 ? "1 account" : pendingCount + " accounts"} pending verification</span>
+            <span class="mobile-nav-notification-item-meta" style="font-size:0.75rem;color:var(--muted-foreground);">Click to review</span>
+          </span>
+        </a>
+      `;
+    } else {
+      listEl.innerHTML = "<p class=\"mobile-nav-notification-empty\">No notifications.</p>";
+    }
+  }
+}
+
+function initAdminNotification() {
+  const btn = document.getElementById("adminNotificationBtn");
+  const panel = document.getElementById("adminNotificationPanel");
+  if (!btn || !panel) return;
+  async function refreshNotificationCount() {
+    try {
+      const stats = await loadAdminDashboardStats();
+      const pending = Number(stats?.verification?.pending || 0);
+      updateAdminNotificationBadge(pending);
+    } catch (_) {
+      updateAdminNotificationBadge(0);
+    }
+  }
+  refreshNotificationCount();
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const isOpen = !panel.classList.contains("hidden");
+    panel.classList.toggle("hidden", isOpen);
+    btn.setAttribute("aria-expanded", !isOpen);
+  });
+  document.addEventListener("click", (e) => {
+    if (panel.classList.contains("hidden")) return;
+    if (panel.contains(e.target) || btn.contains(e.target)) return;
+    panel.classList.add("hidden");
+    btn.setAttribute("aria-expanded", "false");
+  });
+}
+
+function initAdminSidebarToggle() {
+  const sidebar = document.getElementById("sidebar");
+  const menuBtn = document.getElementById("mobileNavMenuBtn");
+  if (!sidebar || !menuBtn) return;
+  let overlay = document.getElementById("mobile-sidebar-overlay");
+  if (!overlay) {
+    overlay = document.createElement("div");
+    overlay.id = "mobile-sidebar-overlay";
+    overlay.className = "mobile-sidebar-overlay hidden";
+    document.body.appendChild(overlay);
+  }
+  const STORAGE_KEY = "eel-sidebar-open";
+  const isDesktop = window.matchMedia && window.matchMedia("(min-width: 769px)").matches;
+  const stored = sessionStorage.getItem(STORAGE_KEY);
+  if (stored !== null) {
+    if (stored === "true") { sidebar.classList.add("open"); overlay.classList.remove("hidden"); }
+    else { sidebar.classList.remove("open"); overlay.classList.add("hidden"); }
+  } else {
+    if (isDesktop) { sidebar.classList.add("open"); overlay.classList.remove("hidden"); sessionStorage.setItem(STORAGE_KEY, "true"); }
+    else { sidebar.classList.remove("open"); overlay.classList.add("hidden"); sessionStorage.setItem(STORAGE_KEY, "false"); }
+  }
+  function updateBurgerIcon(isOpen) {
+    menuBtn.setAttribute("aria-label", isOpen ? "Close menu" : "Open menu");
+    menuBtn.innerHTML = isOpen ? "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M18 6L6 18M6 6l12 12\"/></svg>" : "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M4 6h16M4 12h16M4 18h16\"/></svg>";
+  }
+  function closeSidebar() {
+    sidebar.classList.remove("open");
+    overlay.classList.add("hidden");
+    updateBurgerIcon(false);
+    sessionStorage.setItem(STORAGE_KEY, "false");
+  }
+  function openSidebar() {
+    sidebar.classList.add("open");
+    overlay.classList.remove("hidden");
+    updateBurgerIcon(true);
+    sessionStorage.setItem(STORAGE_KEY, "true");
+  }
+  updateBurgerIcon(sidebar.classList.contains("open"));
+  menuBtn.addEventListener("click", () => (sidebar.classList.contains("open") ? closeSidebar() : openSidebar()));
+  overlay.addEventListener("click", closeSidebar);
+  sidebar.addEventListener("click", (e) => {
+    if (window.matchMedia && window.matchMedia("(max-width: 768px)").matches()) {
+      const link = e.target.closest("a[href]");
+      const href = (link && link.getAttribute("href")) || "";
+      if (href && href.trim() !== "" && href !== "#" && !href.startsWith("javascript:")) closeSidebar();
+    }
+  });
+}
+
+async function initAdminDashboardStatsPage() {
+  if (!isAdminDashboardStatsPage()) return;
+  const token = getAdminToken();
+  if (!token) {
+    window.location.href = "login.html";
+    return;
+  }
+  document.getElementById("loading-screen")?.classList.add("hidden");
+  document.getElementById("main-app")?.classList.remove("hidden");
+  initAdminSidebarToggle();
+  initAdminNotification();
+  document.getElementById("logout-btn")?.addEventListener("click", async () => {
+    const result = await Swal.fire({ icon: "question", title: "Log out?", text: "Are you sure?", showCancelButton: true, confirmButtonText: "Yes", cancelButtonText: "No", confirmButtonColor: "#8b5cf6" });
+    if (!result.isConfirmed) return;
+    clearAdminToken();
+    try { localStorage.removeItem("eel_token"); localStorage.removeItem("eel_user"); } catch (_) {}
+    window.location.href = "login.html";
+  });
+  try {
+    const stats = await loadAdminDashboardStats();
+    renderAdminDashboardStats(stats);
+  } catch (err) {
+    console.error("Admin dashboard stats:", err);
+  }
+  if (window.lucide && typeof window.lucide.createIcons === "function") window.lucide.createIcons();
+}
+
 async function initAdminDashboardPage() {
-  const hasDashboard = document.getElementById("admin-teachers-body") || document.getElementById("admin-refresh-btn");
-  if (!hasDashboard) return;
+  const hasVerification = document.getElementById("admin-teachers-body");
+  if (!hasVerification) return;
 
   const token = getAdminToken();
   if (!token) {
     window.location.href = "login.html";
     return;
   }
+
+  document.getElementById("loading-screen")?.classList.add("hidden");
+  document.getElementById("main-app")?.classList.remove("hidden");
+  initAdminSidebarToggle();
+  initAdminNotification();
 
   const refresh = async () => {
     try {
@@ -383,6 +572,7 @@ async function initAdminDashboardPage() {
         });
         window.__adminUsers = [];
         updateNewAccountsBanner(0);
+        updateAdminNotificationBadge(0);
         // Important: don't overwrite the message with "No pending users"
         return;
       }
@@ -390,14 +580,16 @@ async function initAdminDashboardPage() {
       adminTeachersPager.page = 1;
       adminStudentsPager.page = 1;
       renderAdminUsers(window.__adminUsers);
-      updateNewAccountsBanner(data.pending_count ?? 0);
+      const pendingCount = data.pending_count ?? 0;
+      updateNewAccountsBanner(pendingCount);
+      updateAdminNotificationBadge(pendingCount);
     } catch (err) {
       Swal.fire({ icon: "error", title: "Error", text: err?.message || "Failed to load users" });
       updateNewAccountsBanner(0);
+      updateAdminNotificationBadge(0);
     }
   };
 
-  document.getElementById("admin-refresh-btn")?.addEventListener("click", refresh);
   document.getElementById("admin-view-pending-btn")?.addEventListener("click", () => {
     const filter = document.getElementById("admin-status-filter");
     if (filter) {
@@ -405,21 +597,19 @@ async function initAdminDashboardPage() {
       refresh();
     }
   });
-  document.getElementById("admin-logout-btn")?.addEventListener("click", async () => {
-    const result = await Swal.fire({
-      icon: "question",
-      title: "Log out?",
-      text: "Are you sure you want to log out?",
-      showCancelButton: true,
-      confirmButtonText: "Yes",
-      cancelButtonText: "No",
-      confirmButtonColor: "#8b5cf6",
+  function wireLogout(btn) {
+    if (!btn || btn._adminLogoutWired) return;
+    btn._adminLogoutWired = true;
+    btn.addEventListener("click", async () => {
+      const result = await Swal.fire({ icon: "question", title: "Log out?", text: "Are you sure?", showCancelButton: true, confirmButtonText: "Yes", cancelButtonText: "No", confirmButtonColor: "#8b5cf6" });
+      if (!result.isConfirmed) return;
+      clearAdminToken();
+      try { localStorage.removeItem("eel_token"); localStorage.removeItem("eel_user"); } catch (_) {}
+      window.location.href = "login.html";
     });
-    if (!result.isConfirmed) return;
-    clearAdminToken();
-    try { localStorage.removeItem("eel_token"); localStorage.removeItem("eel_user"); } catch (_) {}
-    window.location.href = "login.html";
-  });
+  }
+  wireLogout(document.getElementById("logout-btn"));
+  wireLogout(document.getElementById("admin-logout-btn"));
 
   document.getElementById("admin-search")?.addEventListener("input", () => {
     adminTeachersPager.page = 1;
@@ -566,6 +756,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   } catch (_) {}
   initAdminLoginPage();
+  initAdminDashboardStatsPage();
   initAdminDashboardPage();
 });
 

@@ -106,13 +106,40 @@ function selectClass(cls) {
     window.location.href = "lessons.html";
 }
 
-function openClassModal() {
+async function openClassModal() {
     document.getElementById('class-name').value = "";
     document.getElementById('class-section').value = "";
     document.getElementById('class-subject').value = "";
+    await loadSubjectsIntoDropdown();
     document.getElementById('create-class-modal').classList.remove('hidden');
     if (window.lucide && typeof window.lucide.createIcons === 'function') {
         window.lucide.createIcons();
+    }
+}
+
+async function loadSubjectsIntoDropdown() {
+    const select = document.getElementById('class-subject');
+    if (!select) return;
+    select.innerHTML = "";
+    const placeholder = document.createElement('option');
+    placeholder.value = "";
+    placeholder.disabled = true;
+    placeholder.selected = true;
+    placeholder.textContent = "Select a subject";
+    select.appendChild(placeholder);
+    try {
+        const res = await fetch((window.API_BASE || "") + "/api/subjects");
+        const data = await res.json();
+        if (data.success && Array.isArray(data.subjects)) {
+            data.subjects.forEach((s) => {
+                const opt = document.createElement('option');
+                opt.value = (s.subject_name || "").trim();
+                opt.textContent = (s.subject_name || "").trim();
+                select.appendChild(opt);
+            });
+        }
+    } catch (err) {
+        console.error("Failed to load subjects:", err);
     }
 }
 
