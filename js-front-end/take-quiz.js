@@ -749,7 +749,7 @@
     }
 
     var params = new URLSearchParams(window.location.search);
-    var quizId = params.get("quiz_id");
+    var quizId = params.get("quiz_id") || sessionStorage.getItem("eel_quiz_id");
     var source = params.get("source") || "teacher";
     var isReviewMode = params.get("review") === "1";
     if (!quizId) {

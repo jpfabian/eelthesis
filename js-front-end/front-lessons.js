@@ -12,7 +12,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   try {
     // Capture class_id if present
     const urlParams = new URLSearchParams(window.location.search);
-    const classId = urlParams.get("class_id");
+    const classId = urlParams.get("class_id") || localStorage.getItem("eel_selected_class_id");
     if (classId) {
       localStorage.setItem("eel_selected_class_id", classId);
       const newUrl = window.location.origin + window.location.pathname;

@@ -142,7 +142,15 @@ let selectedRole = null;
                         window.location.href = "login.html";
                     });
                 } else {
-                    showNotification(data.error || "Signup failed", "error");
+                    const msg = data.error || "Signup failed";
+                    const isEmailUsed = /email.*already|already.*registered|already.*in use/i.test(msg);
+                    Swal.fire({
+                        icon: "error",
+                        title: isEmailUsed ? "Email already in use" : "Signup failed",
+                        text: isEmailUsed ? "This email address is already registered. Please use a different email or sign in to your existing account." : msg,
+                        confirmButtonColor: "#3085d6",
+                        confirmButtonText: "OK"
+                    });
                 }
             } catch (err) {
                 console.error(err);

@@ -330,7 +330,7 @@
     }
 
     const params = new URLSearchParams(window.location.search);
-    const quizId = params.get("quiz_id");
+    const quizId = params.get("quiz_id") || sessionStorage.getItem("eel_quiz_id");
     const isReview = params.get("review") === "1";
 
     if (!quizId) {

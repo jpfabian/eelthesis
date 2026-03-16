@@ -60,13 +60,45 @@ document.addEventListener("DOMContentLoaded", () => {
   } catch (_) {}
 
   const params = new URLSearchParams(window.location.search);
-  const email = params.get("email") || "";
-  const token = params.get("token") || "";
+  let emailFromUrl = params.get("email") || sessionStorage.getItem("rp_email") || "";
+  let tokenFromUrl = params.get("token") || sessionStorage.getItem("rp_token") || "";
 
-  const emailEl = document.getElementById("rp-email");
-  const tokenEl = document.getElementById("rp-token");
-  if (emailEl) emailEl.value = email;
-  if (tokenEl) tokenEl.value = token;
+  if (params.toString()) {
+    if (emailFromUrl) sessionStorage.setItem("rp_email", emailFromUrl);
+    if (tokenFromUrl) sessionStorage.setItem("rp_token", tokenFromUrl);
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
+
+  const digitInputs = [0, 1, 2, 3, 4, 5].map((i) => document.getElementById("rp-digit-" + i));
+  if (tokenFromUrl && /^\d{6}$/.test(tokenFromUrl)) {
+    tokenFromUrl.split("").forEach((ch, i) => {
+      if (digitInputs[i]) digitInputs[i].value = ch;
+    });
+  }
+
+  function getTokenFromDigits() {
+    return digitInputs.map((el) => el?.value || "").join("");
+  }
+
+  digitInputs.forEach((input, idx) => {
+    if (!input) return;
+    input.addEventListener("input", (e) => {
+      const val = (e.target.value || "").replace(/\D/g, "").slice(0, 1);
+      e.target.value = val;
+      if (val && idx < 5) digitInputs[idx + 1]?.focus();
+    });
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Backspace" && !e.target.value && idx > 0) digitInputs[idx - 1]?.focus();
+    });
+    input.addEventListener("paste", (e) => {
+      e.preventDefault();
+      const pasted = (e.clipboardData?.getData("text") || "").replace(/\D/g, "").slice(0, 6);
+      pasted.split("").forEach((ch, i) => {
+        if (digitInputs[i]) digitInputs[i].value = ch;
+      });
+      digitInputs[Math.min(pasted.length, 5)]?.focus();
+    });
+  });
 
   const stepVerify = document.getElementById("rp-step-verify");
   const stepPassword = document.getElementById("rp-step-password");
@@ -79,10 +111,13 @@ document.addEventListener("DOMContentLoaded", () => {
     verifyForm.addEventListener("submit", async (e) => {
       e.preventDefault();
 
-      const emailVal = document.getElementById("rp-email")?.value?.trim();
-      const tokenVal = document.getElementById("rp-token")?.value?.trim();
+      const emailVal = emailFromUrl.trim() || "";
+      const tokenVal = getTokenFromDigits();
 
-      if (!emailVal || !tokenVal) return;
+      if (!emailVal || !tokenVal) {
+        if (!emailVal) return Swal.fire({ icon: "error", title: "Email required", text: "Please use the reset link from your email, which includes your email address." });
+        return;
+      }
       if (!/^\d{6}$/.test(tokenVal)) {
         return Swal.fire({ icon: "error", title: "Invalid code", text: "Please enter the 6-digit code from your email." });
       }
@@ -165,6 +200,8 @@ document.addEventListener("DOMContentLoaded", () => {
         text: "You can now sign in with your new password.",
         confirmButtonText: "Go to Login",
       });
+      sessionStorage.removeItem("rp_email");
+      sessionStorage.removeItem("rp_token");
       window.location.href = "login.html";
     } catch (err) {
       document.getElementById("loading-screen")?.classList.add("hidden");

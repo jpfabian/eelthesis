@@ -27,7 +27,7 @@ function initQuizViewToggle(storageKey) {
 
 document.addEventListener('DOMContentLoaded', () => {
     const urlParams = new URLSearchParams(window.location.search);
-    const classId = urlParams.get('class_id');
+    const classId = urlParams.get('class_id') || localStorage.getItem("eel_selected_class_id");
 
     if (classId) {
         // Store class ID in localStorage
@@ -57,7 +57,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (lessonsGrid) lessonsGrid.classList.remove('hidden');
         const createdGrid = document.getElementById('created-lessons-grid');
         const urlParams = new URLSearchParams(window.location.search);
-        const openQuizId = urlParams.get('open_quiz_id');
+        const openQuizId = urlParams.get('open_quiz_id') || sessionStorage.getItem("eel_open_quiz_id");
         if (createdGrid) {
             if (openQuizId) {
                 createdGrid.classList.remove('hidden');
@@ -72,6 +72,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             if (window.lucide && typeof window.lucide.createIcons === 'function') window.lucide.createIcons();
             const qid = parseInt(openQuizId, 10);
             if (!isNaN(qid)) {
+                try { sessionStorage.removeItem("eel_open_quiz_id"); } catch (_) {}
                 window.history.replaceState({}, document.title, window.location.pathname);
                 setTimeout(function () { startLesson(qid, true); }, 300);
             }

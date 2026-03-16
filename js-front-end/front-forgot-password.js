@@ -32,10 +32,17 @@ document.addEventListener("DOMContentLoaded", () => {
         confirmButtonText: "Continue",
       });
 
-      window.location.href = "reset-password.html?email=" + encodeURIComponent(email);
+      try { sessionStorage.setItem("rp_email", email); } catch (_) {}
+      window.location.href = "reset-password.html";
     } catch (err) {
       document.getElementById("loading-screen")?.classList.add("hidden");
-      Swal.fire({ icon: "error", title: "Error", text: err?.message || "Something went wrong." });
+      const msg = err?.message || "Something went wrong.";
+      const isNoAccount = /no account|not found|not registered/i.test(msg);
+      Swal.fire({
+        icon: "error",
+        title: isNoAccount ? "No account found" : "Error",
+        text: msg,
+      });
     }
   });
 });

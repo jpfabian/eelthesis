@@ -1392,7 +1392,6 @@ async function pollSharedClassNotifications(user) {
 function setupSharedClassNotifications(user, currentPageId) {
     const enabledPages = new Set([
         "dashboard",
-        "teacher-dashboard",
         "reading-lessons",
         "pronunciation-lessons",
         "recitation",

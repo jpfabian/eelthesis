@@ -112,8 +112,14 @@ router.post("/api/auth/forgot-password", async (req, res) => {
     const [rows] = await conn.execute("SELECT user_id FROM users WHERE email = ? LIMIT 1", [email]);
     const userId = rows?.[0]?.user_id ? Number(rows[0].user_id) : null;
 
-    if (userId) {
-      // Ensure table exists (friendly error if migration not run)
+    if (!userId) {
+      return res.status(404).json({
+        success: false,
+        error: "No account found with this email address.",
+      });
+    }
+
+    // Ensure table exists (friendly error if migration not run)
       await conn.execute(
         `CREATE TABLE IF NOT EXISTS password_reset_tokens (
           reset_id INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -149,12 +155,10 @@ router.post("/api/auth/forgot-password", async (req, res) => {
           error: "Email is not configured. Contact your administrator.",
         });
       }
-    }
 
-    // Always return success to avoid email enumeration.
     return res.json({
       success: true,
-      message: "If an account exists, a verification code was sent to your email.",
+      message: "A verification code was sent to your email.",
     });
   } catch (err) {
     console.error("❌ Forgot password error:", err);
