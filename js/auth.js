@@ -223,7 +223,7 @@ async function apiRequest(url, options = {}) {
     // Handle unauthorized responses
     if (response.status === 401) {
       clearAuthData();
-      window.location.href = '/';
+      window.location.replace('/');
       return;
     }
     
@@ -261,26 +261,40 @@ async function logout() {
     console.error('Logout error:', error);
   } finally {
     clearAuthData();
-    window.location.href = 'index.html';
+    window.location.replace('index.html');
   }
 }
 
 function requireAuth() {
   if (!isAuthenticated()) {
-    window.location.href = 'login.html';
+    window.location.replace('login.html');
     return false;
   }
   return true;
 }
 
+// Public pages that do not require authentication
+const PUBLIC_PAGES = [
+  '/', '/index.html', '/login.html', '/signup.html', '/forgot-password.html', '/reset-password.html',
+  '/features.html', '/services.html', '/for-teachers.html', '/for-students.html', '/about.html'
+];
+
+function isPublicPage(pathname) {
+  return PUBLIC_PAGES.some(page => !pathname || pathname === page || pathname.endsWith(page));
+}
+
+// When user clicks back and page is restored from cache, re-check auth and redirect if logged out
+window.addEventListener('pageshow', function (e) {
+  if (!e.persisted) return;
+  if (isPublicPage(window.location.pathname)) return;
+  if (isAuthenticated()) return;
+  window.location.replace('login.html');
+});
+
 // Initialize authentication check on page load
 function initAuth() {
-  // Only check auth on non-login pages
   const currentPath = window.location.pathname;
-  const publicPages = ['/', '/index.html', '/login.html', '/signup.html'];
-  const isPublicPage = publicPages.some(page => currentPath.endsWith(page));
-  
-  if (!isPublicPage) {
+  if (!isPublicPage(currentPath)) {
     requireAuth();
   }
 }

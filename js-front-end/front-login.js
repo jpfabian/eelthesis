@@ -4,15 +4,44 @@ function isAuthenticated() {
             return token && user;
         }
 
+        function getCurrentUser() {
+            try {
+                const u = localStorage.getItem("eel_user");
+                return u ? JSON.parse(u) : null;
+            } catch (_) { return null; }
+        }
+
+        function redirectIfAlreadyLoggedIn() {
+            if (!isAuthenticated()) return;
+            var user = getCurrentUser();
+            if (!user || !user.role) return;
+            var role = String(user.role || "").toLowerCase();
+            if (role === "master_admin" || localStorage.getItem("eel_master_admin_token")) {
+                window.location.replace("master-admin-dashboard.html");
+            } else if (role === "admin" || localStorage.getItem("eel_admin_token")) {
+                window.location.replace("admin-dashboard.html");
+            } else if (role === "teacher") {
+                window.location.replace("teacher-dashboard.html");
+            } else {
+                window.location.replace("classes.html");
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
+            redirectIfAlreadyLoggedIn();
+            if (isAuthenticated()) return;
             lucide.createIcons({ icons: lucide.icons });
             setupLoginForm();
+        });
+
+        window.addEventListener('pageshow', function(e) {
+            if (e.persisted) redirectIfAlreadyLoggedIn();
         });
 
         function logout() {
             localStorage.removeItem("eel_token");
             localStorage.removeItem("eel_user");
-            window.location.href = "login.html";
+            window.location.replace("login.html");
         }
 
         function setupLoginForm() {

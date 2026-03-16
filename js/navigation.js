@@ -694,7 +694,7 @@ async function handleLogoutWithConfirm() {
     try {
         localStorage.removeItem('eel_user');
     } catch (_) {}
-    window.location.href = 'login.html';
+    window.location.replace('login.html');
 }
 
 function getCurrentPageId() {
@@ -757,13 +757,13 @@ function initializePage() {
 
         // Check authentication
         if (!isAuthenticated()) {
-            window.location.href = 'login.html';
+            window.location.replace('login.html');
             return;
         }
 
         const user = getCurrentUser();
         if (!user) {
-            window.location.href = 'login.html';
+            window.location.replace('login.html');
             return;
         }
 

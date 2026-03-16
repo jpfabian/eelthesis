@@ -527,7 +527,7 @@ async function initAdminDashboardStatsPage() {
     if (!result.isConfirmed) return;
     clearAdminToken();
     try { localStorage.removeItem("eel_token"); localStorage.removeItem("eel_user"); } catch (_) {}
-    window.location.href = "login.html";
+    window.location.replace("login.html");
   });
   try {
     const stats = await loadAdminDashboardStats();
@@ -605,7 +605,7 @@ async function initAdminDashboardPage() {
       if (!result.isConfirmed) return;
       clearAdminToken();
       try { localStorage.removeItem("eel_token"); localStorage.removeItem("eel_user"); } catch (_) {}
-      window.location.href = "login.html";
+      window.location.replace("login.html");
     });
   }
   wireLogout(document.getElementById("logout-btn"));

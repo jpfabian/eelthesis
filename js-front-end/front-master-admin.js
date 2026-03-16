@@ -1544,7 +1544,7 @@
           localStorage.removeItem(MASTER_ADMIN_TOKEN_KEY);
           localStorage.removeItem("eel_admin_token");
         } catch (_) {}
-        window.location.href = "login.html";
+        window.location.replace("login.html");
       });
     } catch (err) {
       console.error("Master admin init:", err);
