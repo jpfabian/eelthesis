@@ -299,9 +299,21 @@
     }
   }
 
-  function nextQuestion() {
+  async function nextQuestion() {
     if (!quizData || !quizData.questions.length) return;
     if (currentQuestionIndex === -1) {
+      if (typeof Swal !== "undefined" && Swal && typeof Swal.fire === "function") {
+        var result = await Swal.fire({
+          icon: "question",
+          title: "Continue to questions?",
+          text: "Are you sure you want to continue? Once you proceed, you cannot go back to the reading passage.",
+          showCancelButton: true,
+          confirmButtonText: "Yes, continue",
+          cancelButtonText: "Cancel",
+          confirmButtonColor: "#6366f1"
+        });
+        if (!result.isConfirmed) return;
+      }
       currentQuestionIndex = 0;
       showSingleQuestion(quizData.questions[0]);
       return;
@@ -423,6 +435,7 @@
         okBtn.__cheatingBound = true;
         okBtn.addEventListener("click", function () {
           if (modal) modal.classList.add("hidden");
+          requestFullscreen();
         });
       }
     } else {

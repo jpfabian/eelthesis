@@ -381,6 +381,7 @@
         okBtn.__cheatingBound = true;
         okBtn.addEventListener("click", function () {
           if (modal) modal.classList.add("hidden");
+          requestFullscreen();
         });
       }
     } else {

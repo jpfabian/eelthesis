@@ -458,7 +458,7 @@ router.get("/api/teacher/reading-quizzes/:quizId/review", async (req, res) => {
     }
 
     const [[attempt]] = await pool.query(
-      `SELECT attempt_id, score, total_points, start_time, end_time
+      `SELECT attempt_id, score, total_points, start_time, end_time, cheating_violations, cheating_voided
        FROM teacher_reading_quiz_attempts
        WHERE quiz_id = ? AND student_id = ? AND status = 'completed'
        ORDER BY attempt_id DESC LIMIT 1`,
@@ -519,7 +519,9 @@ router.get("/api/teacher/reading-quizzes/:quizId/review", async (req, res) => {
         attempt_id: attempt.attempt_id,
         score: attempt.score,
         total_points: attempt.total_points,
-        end_time: attempt.end_time
+        end_time: attempt.end_time,
+        cheating_violations: attempt.cheating_violations,
+        cheating_voided: attempt.cheating_voided
       },
       answers
     });
@@ -832,7 +834,7 @@ router.post("/api/teacher/reading-quiz-attempts", async (req, res) => {
 router.patch("/api/teacher/reading-quiz-attempts/:id/submit", async (req, res) => {
   const pool = req.pool;
   const attemptId = Number(req.params.id);
-  const { answers } = req.body || {};
+  const { answers, cheating_violations, cheating_voided } = req.body || {};
   if (!attemptId || !Array.isArray(answers)) {
     return res.status(400).json({ success: false, error: "attempt id and answers array required" });
   }
@@ -907,14 +909,18 @@ router.patch("/api/teacher/reading-quiz-attempts/:id/submit", async (req, res) =
       );
     }
 
+    const violations = Number(cheating_violations) || 0;
+    const voided = !!cheating_voided;
+    const finalScore = voided ? 0 : totalScore;
+
     await pool.query(
       `UPDATE teacher_reading_quiz_attempts
-       SET end_time = ?, status = 'completed', score = ?, total_points = ?
+       SET end_time = ?, status = 'completed', score = ?, total_points = ?, cheating_violations = ?, cheating_voided = ?
        WHERE attempt_id = ?`,
-      [endTime, totalScore, totalPoints, attemptId]
+      [endTime, finalScore, totalPoints, violations, voided ? 1 : 0, attemptId]
     );
 
-    const percentScore = totalPoints > 0 ? (totalScore / totalPoints) * 100 : 0;
+    const percentScore = totalPoints > 0 ? (finalScore / totalPoints) * 100 : 0;
     let passing = 70, canRetake = true;
     try {
       const [[q]] = await pool.query(
@@ -930,7 +936,7 @@ router.patch("/api/teacher/reading-quiz-attempts/:id/submit", async (req, res) =
 
     res.json({
       success: true,
-      score: totalScore,
+      score: finalScore,
       total_points: totalPoints,
       end_time: endTime,
       show_retake: !!showRetake
@@ -1262,6 +1268,8 @@ router.post("/api/reading-quiz-answers", async (req, res) => {
 router.patch("/api/reading-quiz-attempts/:id/submit", async (req, res) => {
   const pool = req.pool;
   const attemptId = req.params.id;
+  const cheating_violations = Number(req.body?.cheating_violations) || 0;
+  const cheating_voided = !!req.body?.cheating_voided;
 
   try {
     // 1️⃣ Get quiz attempt and quiz info
@@ -1376,17 +1384,18 @@ router.patch("/api/reading-quiz-attempts/:id/submit", async (req, res) => {
       }
     }
 
-    // 3️⃣ Update attempt summary
+    // 3️⃣ Update attempt summary (apply cheating void: score = 0 when voided)
+    const finalScore = cheating_voided ? 0 : totalScore;
     await pool.query(`
       UPDATE reading_quiz_attempts
-      SET score = ?, total_points = ?, status = 'completed', end_time = ?
+      SET score = ?, total_points = ?, status = 'completed', end_time = ?, cheating_violations = ?, cheating_voided = ?
       WHERE attempt_id = ?
-    `, [totalScore, totalPoints, endTime, attemptId]);
+    `, [finalScore, totalPoints, endTime, cheating_violations, cheating_voided ? 1 : 0, attemptId]);
 
     // 4️⃣ Unlock next quiz in the subject track if passed
     let unlockedNext = false;
     let unlocked_quiz_number = null;
-    const percentScore = totalPoints > 0 ? (Number(totalScore) / Number(totalPoints)) * 100 : 0;
+    const percentScore = totalPoints > 0 ? (Number(finalScore) / Number(totalPoints)) * 100 : 0;
 
     try {
       const [[meta]] = await pool.query(
@@ -1442,7 +1451,7 @@ router.patch("/api/reading-quiz-attempts/:id/submit", async (req, res) => {
     const canRetake = !meta || String(meta.retake_option || "all").toLowerCase() !== "none";
     const showRetake = percentScore < passing && canRetake;
 
-    res.json({ success: true, totalScore, totalPoints, percentScore, timeTakenSeconds, unlockedNext, unlocked_quiz_number, passing_score: passing, show_retake: !!showRetake });
+    res.json({ success: true, totalScore: finalScore, totalPoints, percentScore, timeTakenSeconds, unlockedNext, unlocked_quiz_number, passing_score: passing, show_retake: !!showRetake });
 
   } catch (err) {
     console.error("❌ Error submitting quiz:", err);
@@ -1583,6 +1592,8 @@ router.get("/api/teacher/reading-attempts", async (req, res) => {
           a.status,
           a.start_time,
           a.end_time,
+          a.cheating_violations,
+          a.cheating_voided,
           sc.status AS class_status
         FROM ${table} a
         JOIN users u ON a.student_id = u.user_id
@@ -1609,6 +1620,8 @@ router.get("/api/teacher/reading-attempts", async (req, res) => {
           a.status,
           a.start_time,
           a.end_time,
+          a.cheating_violations,
+          a.cheating_voided,
           sc.status AS class_status
         FROM ${table} a
         JOIN users u ON a.student_id = u.user_id

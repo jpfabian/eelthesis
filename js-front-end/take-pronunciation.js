@@ -41,6 +41,15 @@
     };
   }
 
+  function requestFullscreenForQuiz() {
+    const el = document.documentElement;
+    try {
+      if (el && el.requestFullscreen) el.requestFullscreen().catch(function () {});
+      else if (el && el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+      else if (el && el.msRequestFullscreen) el.msRequestFullscreen();
+    } catch (e) {}
+  }
+
   function handleCheatingViolation() {
     if (cheatingVoided) return;
     cheatingViolations++;
@@ -52,6 +61,7 @@
         okBtn.__cheatingBound = true;
         okBtn.addEventListener("click", function () {
           if (modal) modal.classList.add("hidden");
+          requestFullscreenForQuiz();
         });
       }
     } else {
@@ -140,6 +150,8 @@
       }
       formData.append("student_id", user.user_id);
       formData.append("quiz_id", pronunciationQuizData.quiz_id);
+      formData.append("cheating_violations", String(cheatingViolations));
+      formData.append("cheating_voided", cheatingVoided ? "1" : "0");
       const selectedClass = (() => {
         try {
           return JSON.parse(localStorage.getItem("eel_selected_class") || "null");
