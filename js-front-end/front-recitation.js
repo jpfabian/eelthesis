@@ -384,6 +384,7 @@ async function loadClassStudents(classId) {
                 return {
                     id: s.id != null ? s.id : s.student_id,
                     name: name || 'Student',
+                    avatarUrl: s.avatar_url || null,
                     answered: s.answered === true
                 };
             });
@@ -661,8 +662,11 @@ function renderStudentSlider() {
         box.setAttribute('data-student-id', String(student.id));
         if (state.pickMode === 'manual') box.classList.add('student-box--clickable');
         const initials = getInitials(student.name);
-        const avatarHtml = student.avatarUrl
-            ? `<img class="recitation-student-avatar-img" src="${escapeHtmlRecitation(student.avatarUrl)}" alt="">`
+        const avatarSrc = student.avatarUrl
+            ? (student.avatarUrl.startsWith('/') ? (window.API_BASE || '') + student.avatarUrl : student.avatarUrl)
+            : null;
+        const avatarHtml = avatarSrc
+            ? `<img class="recitation-student-avatar-img" src="${escapeHtmlRecitation(avatarSrc)}" alt="">`
             : `<span class="recitation-student-avatar-initials" aria-hidden="true">${escapeHtmlRecitation(initials)}</span>`;
         box.innerHTML = `
             <div class="recitation-student-avatar">${avatarHtml}</div>

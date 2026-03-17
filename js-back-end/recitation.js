@@ -135,15 +135,17 @@ router.get('/api/recitation/class/:classId/students', async (req, res) => {
   if (!pool) return res.status(500).json({ error: 'Database not available' });
   try {
     const [rows] = await pool.query(
-      `SELECT student_id, student_fname, student_lname
-       FROM student_classes
-       WHERE class_id = ? AND status = 'accepted'
-       ORDER BY student_fname, student_lname`,
+      `SELECT sc.student_id, sc.student_fname, sc.student_lname, u.avatar_url
+       FROM student_classes sc
+       LEFT JOIN users u ON u.user_id = sc.student_id
+       WHERE sc.class_id = ? AND sc.status = 'accepted'
+       ORDER BY sc.student_fname, sc.student_lname`,
       [classId]
     );
     const students = rows.map(s => ({
       id: s.student_id,
       name: toNameCase(`${s.student_fname} ${s.student_lname}`),
+      avatar_url: s.avatar_url || null,
       answered: false
     }));
     res.json(students);
