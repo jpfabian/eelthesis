@@ -943,14 +943,16 @@ function pushNavNotification(classId, message, eventKey, targetUrl, actorName, a
     const items = getNavNotifItems(classId);
     if (items.some((item) => item.eventKey === eventKey)) return;
     const ts = eventTs ? (typeof eventTs === "number" ? new Date(eventTs).toISOString() : String(eventTs)) : new Date().toISOString();
+    const addedAt = Date.now();
     items.push({
-        id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        id: `${addedAt}-${Math.random().toString(16).slice(2)}`,
         message: String(message),
         eventKey: String(eventKey),
         targetUrl: targetUrl ? String(targetUrl) : "",
         actor_name: actorName ? String(actorName) : "",
         actor_avatar_url: actorAvatarUrl ? String(actorAvatarUrl) : "",
         ts,
+        addedAt,
         read: false
     });
     setNavNotifItems(classId, items);
@@ -1095,7 +1097,10 @@ function renderSharedNotifications(classId) {
         setNavNotifState(classId, { ...state, firstSeenAt });
     }
     const allItems = getNavNotifItems(classId);
-    const items = allItems.filter((item) => (new Date(item.ts || 0).getTime() || 0) >= firstSeenAt);
+    const items = allItems.filter((item) => {
+        const addedAt = item.addedAt != null ? Number(item.addedAt) : new Date(item.ts || 0).getTime();
+        return (addedAt || 0) >= firstSeenAt;
+    });
     const unread = items.filter((item) => !item.read).length;
     if (unread > 0) {
         badgeEl.classList.remove("hidden");
