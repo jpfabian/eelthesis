@@ -1,3 +1,25 @@
+// Hero EELi video: dark-eeli.mp4 for dark mode, light-eeli.mp4 for light mode
+function getResolvedTheme() {
+  var t = document.documentElement.dataset.theme;
+  if (t === "dark" || t === "light") return t;
+  return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+function updateHeroEeliVideo() {
+  var video = document.getElementById("hero-eeli-video");
+  if (!video) return;
+  var theme = getResolvedTheme();
+  var src = theme === "dark" ? "image/dark-eeli.mp4" : "image/light-eeli.mp4";
+  var currentFile = video.src ? (video.src.includes("dark-eeli") ? "dark" : video.src.includes("light-eeli") ? "light" : null) : null;
+  if (currentFile === theme) return;
+  video.src = src;
+  video.load();
+  video.play().catch(function() {});
+}
+document.addEventListener("DOMContentLoaded", function() {
+  updateHeroEeliVideo();
+  window.addEventListener("eel-theme-change", updateHeroEeliVideo);
+});
+
 // Mobile Menu Toggle
 document.addEventListener('DOMContentLoaded', function() {
     const mobileMenuBtn = document.getElementById('mobileMenuBtn');

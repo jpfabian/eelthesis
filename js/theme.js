@@ -25,6 +25,7 @@
     root.dataset.theme = resolved;
     // Let the browser render native controls appropriately
     root.style.colorScheme = resolved;
+    try { window.dispatchEvent(new CustomEvent("eel-theme-change", { detail: { theme: resolved } })); } catch (_) {}
   }
 
   function applyTheme(theme) {
