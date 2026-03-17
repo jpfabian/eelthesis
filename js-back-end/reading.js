@@ -1395,16 +1395,18 @@ router.patch("/api/reading-quiz-attempts/:id/submit", async (req, res) => {
     // 4️⃣ Unlock next quiz in the subject track if passed
     let unlockedNext = false;
     let unlocked_quiz_number = null;
+    let meta = null;
     const percentScore = totalPoints > 0 ? (Number(finalScore) / Number(totalPoints)) * 100 : 0;
 
     try {
-      const [[meta]] = await pool.query(
+      const [[row]] = await pool.query(
         `SELECT a.student_id, a.class_id, q.subject_id, q.quiz_number, q.passing_score, q.retake_option
          FROM reading_quiz_attempts a
          JOIN reading_quizzes q ON a.quiz_id = q.quiz_id
          WHERE a.attempt_id = ?`,
         [attemptId]
       );
+      meta = row;
 
       let progressSubjectId = meta?.subject_id;
       if (!progressSubjectId && meta?.class_id) {
@@ -1568,12 +1570,18 @@ router.get("/api/teacher/reading-attempts", async (req, res) => {
   const pool = req.pool;
   const quizId = req.query.quiz_id ? Number(req.query.quiz_id) : null;
   const classId = req.query.class_id ? Number(req.query.class_id) : null;
+  const source = String(req.query.source || "").toLowerCase();
 
   if (!quizId) return res.status(400).json({ success: false, error: "quiz_id is required" });
 
   try {
-    // Determine if this quiz is built-in (reading_quizzes) or teacher-created (teacher_reading_quizzes)
-    const [[builtIn]] = await pool.query("SELECT 1 FROM reading_quizzes WHERE quiz_id = ? LIMIT 1", [quizId]);
+    // source=teacher: AI-generated quizzes (lessons.html) → always use teacher_reading_quiz_attempts
+    // Otherwise: reading-lessons.html built-in → check reading_quizzes; teacher-created → teacher_reading_quiz_attempts
+    let useTeacherTable = source === "teacher";
+    if (!useTeacherTable) {
+      const [[builtIn]] = await pool.query("SELECT 1 FROM reading_quizzes WHERE quiz_id = ? LIMIT 1", [quizId]);
+      useTeacherTable = !builtIn;
+    }
 
     const useClassFilter = classId != null && Number.isFinite(classId);
     const classCondition = useClassFilter ? " AND a.class_id = ?" : "";
@@ -1587,6 +1595,7 @@ router.get("/api/teacher/reading-attempts", async (req, res) => {
           a.attempt_id,
           a.student_id,
           CONCAT(u.fname, ' ', u.lname) AS student_name,
+          u.avatar_url AS student_avatar_url,
           a.score,
           a.total_points,
           a.status,
@@ -1615,6 +1624,7 @@ router.get("/api/teacher/reading-attempts", async (req, res) => {
           a.attempt_id,
           a.student_id,
           CONCAT(u.fname, ' ', u.lname) AS student_name,
+          u.avatar_url AS student_avatar_url,
           a.score,
           a.total_points,
           a.status,
@@ -1635,7 +1645,7 @@ router.get("/api/teacher/reading-attempts", async (req, res) => {
       );
     };
 
-    const table = builtIn ? "reading_quiz_attempts" : "teacher_reading_quiz_attempts";
+    const table = useTeacherTable ? "teacher_reading_quiz_attempts" : "reading_quiz_attempts";
     let rows;
     try {
       [rows] = await runQuery(table);
@@ -1841,6 +1851,7 @@ router.patch("/api/teacher/reading-attempts/:attemptId/override", async (req, re
 router.get("/api/reading-quiz-leaderboard", async (req, res) => {
   const pool = req.pool;
   const quizId = req.query.quiz_id ? Number(req.query.quiz_id) : null;
+  const classId = req.query.class_id ? Number(req.query.class_id) : null;
   const isTeacherQuiz = String(req.query.teacher_quiz || "").toLowerCase() === "1" || req.query.teacher_quiz === "true";
 
   if (!quizId) return res.status(400).json({ success: false, error: "quiz_id is required" });
@@ -1848,6 +1859,8 @@ router.get("/api/reading-quiz-leaderboard", async (req, res) => {
   try {
     let quizTitle = "Quiz";
     let rows = [];
+    const useClassFilter = classId != null && Number.isFinite(classId);
+    const params = useClassFilter ? [classId, quizId] : [quizId];
 
     if (isTeacherQuiz) {
       const [quizRows] = await pool.query(
@@ -1855,6 +1868,9 @@ router.get("/api/reading-quiz-leaderboard", async (req, res) => {
         [quizId]
       );
       quizTitle = quizRows[0]?.title || "Quiz";
+      const classJoin = useClassFilter
+        ? " JOIN student_classes sc ON sc.student_id = a.student_id AND sc.class_id = ?"
+        : "";
       const sql = `
         SELECT
           a.attempt_id,
@@ -1870,11 +1886,12 @@ router.get("/api/reading-quiz-leaderboard", async (req, res) => {
           TIMESTAMPDIFF(SECOND, a.start_time, a.end_time) AS time_taken_seconds
         FROM teacher_reading_quiz_attempts a
         JOIN users u ON a.student_id = u.user_id
+        ${classJoin}
         WHERE a.status = 'completed' AND a.quiz_id = ?
         ORDER BY a.score DESC, TIMESTAMPDIFF(SECOND, a.start_time, a.end_time) ASC, a.end_time ASC
         LIMIT 20
       `;
-      const [r] = await pool.query(sql, [quizId]);
+      const [r] = await pool.query(sql, params);
       rows = r;
     } else {
       const [quizRows] = await pool.query(
@@ -1882,6 +1899,8 @@ router.get("/api/reading-quiz-leaderboard", async (req, res) => {
         [quizId]
       );
       quizTitle = quizRows[0]?.title || "Quiz";
+      const builtInClassCondition = useClassFilter ? " AND a.class_id = ?" : "";
+      const builtInParams = useClassFilter ? [quizId, classId] : [quizId];
 
       const sql = `
         SELECT 
@@ -1896,11 +1915,11 @@ router.get("/api/reading-quiz-leaderboard", async (req, res) => {
           TIMESTAMPDIFF(SECOND, a.start_time, a.end_time) AS time_taken_seconds
         FROM reading_quiz_attempts a
         JOIN users u ON a.student_id = u.user_id
-        WHERE a.status = 'completed' AND a.quiz_id = ?
+        WHERE a.status = 'completed' AND a.quiz_id = ?${builtInClassCondition}
         ORDER BY a.score DESC, TIMESTAMPDIFF(SECOND, a.start_time, a.end_time) ASC, a.end_time ASC
         LIMIT 20
       `;
-      const [r] = await pool.query(sql, [quizId]);
+      const [r] = await pool.query(sql, builtInParams);
       rows = r;
     }
 

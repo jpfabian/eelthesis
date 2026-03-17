@@ -584,6 +584,24 @@ router.post("/api/pronunciation-submit", upload.any(), async (req, res) => {
       return res.status(400).json({ success: false, message: "No audio files uploaded" });
     }
 
+    // 0️⃣ Idempotency: reject duplicate submit within 60s (prevents double-click / double-save)
+    const [recentRows] = await pool.query(
+      `SELECT attempt_id, score, pronunciation_score FROM pronunciation_quiz_attempts
+       WHERE student_id = ? AND quiz_id = ? AND status = 'completed'
+         AND end_time >= DATE_SUB(NOW(), INTERVAL 60 SECOND)
+       ORDER BY attempt_id DESC LIMIT 1`,
+      [student_id, quiz_id]
+    );
+    if (recentRows.length) {
+      const r = recentRows[0];
+      return res.json({
+        success: true,
+        accuracy: Number(r.pronunciation_score ?? r.score ?? 0),
+        attempt_id: r.attempt_id,
+        message: "Already submitted"
+      });
+    }
+
     // 1️⃣ Fetch quiz difficulty (built-in or teacher)
     let quizDifficulty = "beginner";
     const [builtInRows] = await pool.query(
@@ -800,6 +818,7 @@ router.get("/api/teacher/pronunciation-attempts", async (req, res) => {
         a.attempt_id,
         a.student_id,
         CONCAT(u.fname, ' ', u.lname) AS student_name,
+        u.avatar_url AS student_avatar_url,
         a.score,
         a.total_points,
         a.pronunciation_score,

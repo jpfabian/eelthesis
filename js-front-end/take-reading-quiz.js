@@ -468,8 +468,20 @@
     };
   }
 
+  var takeReadingQuizSubmitting = false;
   function submitQuiz() {
-    if (!quizData) return;
+    if (takeReadingQuizSubmitting) return;
+    takeReadingQuizSubmitting = true;
+    var mainSubmitBtn = document.getElementById("take-quiz-submit-btn");
+    var confirmSubmitBtn = document.getElementById("quiz-submit-confirm-submit");
+    if (mainSubmitBtn) { mainSubmitBtn.disabled = true; mainSubmitBtn.style.pointerEvents = "none"; mainSubmitBtn.style.opacity = "0.6"; }
+    if (confirmSubmitBtn) { confirmSubmitBtn.disabled = true; confirmSubmitBtn.style.pointerEvents = "none"; confirmSubmitBtn.style.opacity = "0.6"; }
+    if (!quizData) {
+        takeReadingQuizSubmitting = false;
+        if (mainSubmitBtn) { mainSubmitBtn.disabled = false; mainSubmitBtn.style.pointerEvents = ""; mainSubmitBtn.style.opacity = ""; }
+        if (confirmSubmitBtn) { confirmSubmitBtn.disabled = false; confirmSubmitBtn.style.pointerEvents = ""; confirmSubmitBtn.style.opacity = ""; }
+        return;
+    }
     closeSubmitConfirmModal();
     saveCurrentAnswer();
     clearInterval(countdownInterval);
@@ -536,6 +548,9 @@
         .catch(function () {
           renderDone(null, null, false);
           if (doneMsg) doneMsg.textContent = "Quiz completed. There was a problem saving your attempt.";
+          takeReadingQuizSubmitting = false;
+          if (mainSubmitBtn) { mainSubmitBtn.disabled = false; mainSubmitBtn.style.pointerEvents = ""; mainSubmitBtn.style.opacity = ""; }
+          if (confirmSubmitBtn) { confirmSubmitBtn.disabled = false; confirmSubmitBtn.style.pointerEvents = ""; confirmSubmitBtn.style.opacity = ""; }
         });
     } else if (builtinAttemptId != null) {
       var builtinAnswers = buildBuiltinAnswersPayload();
@@ -564,6 +579,9 @@
         .catch(function () {
           renderDone(null, null, false);
           if (doneMsg) doneMsg.textContent = "Quiz completed. There was a problem saving your attempt.";
+          takeReadingQuizSubmitting = false;
+          if (mainSubmitBtn) { mainSubmitBtn.disabled = false; mainSubmitBtn.style.pointerEvents = ""; mainSubmitBtn.style.opacity = ""; }
+          if (confirmSubmitBtn) { confirmSubmitBtn.disabled = false; confirmSubmitBtn.style.pointerEvents = ""; confirmSubmitBtn.style.opacity = ""; }
         });
     } else {
       renderDone(null, null, true);

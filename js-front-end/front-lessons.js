@@ -1784,7 +1784,11 @@ async function loadLeaderboardLesson(quizId) {
   if (!tbody) return;
 
   try {
-    const res = await fetch(`${window.API_BASE || ""}/api/reading-quiz-leaderboard?quiz_id=${qid}&teacher_quiz=1`);
+    const selectedClass = (() => { try { return JSON.parse(localStorage.getItem("eel_selected_class") || "null"); } catch (_) { return null; } })();
+    const classId = selectedClass?.id ?? selectedClass?.class_id ?? localStorage.getItem("eel_selected_class_id");
+    let url = `${window.API_BASE || ""}/api/reading-quiz-leaderboard?quiz_id=${qid}&teacher_quiz=1`;
+    if (classId) url += `&class_id=${encodeURIComponent(classId)}`;
+    const res = await fetch(url);
     const data = await res.json();
     if (nameEl) nameEl.textContent = data.quizTitle || "Quiz";
 
@@ -2492,8 +2496,14 @@ async function loadLessonsAIGeneratedList() {
                 <button type="button" class="btn btn-primary flex-1" data-schedule='${scheduleData}' onclick="event.stopPropagation(); openScheduleModalLesson(${quiz.quiz_id}, this.getAttribute('data-schedule'))">
                   <i data-lucide="send" class="size-3 mr-1"></i>Publish
                 </button>`;
+        const teacherSubmissionsSlot = `
+          <div class="quiz-card-seen" data-quiz-submissions>
+            <div class="quiz-card-seen__avatars" aria-label="Students who completed this quiz"></div>
+          </div>
+        `;
         const card = document.createElement("div");
         card.className = "card created-quiz-card lessons-ai-quiz-item group";
+        card.dataset.quizId = String(quiz.quiz_id);
         card.innerHTML = `
           <div class="created-quiz-card__inner">
             <div class="created-quiz-card__header" role="button" tabindex="0" aria-expanded="false" aria-label="Expand quiz details">
@@ -2520,16 +2530,18 @@ async function loadLessonsAIGeneratedList() {
                 <i data-lucide="calendar-clock" class="created-quiz-card__schedule-icon" aria-hidden="true"></i>
                 <span class="created-quiz-card__schedule-text">${escapeHtml(scheduleLabel)}</span>
               </div>
+              ${teacherSubmissionsSlot}
               <div class="quiz-actions created-quiz-card__actions">${actionButtons}</div>
             </div>
           </div>`;
         const header = card.querySelector(".created-quiz-card__header");
         const details = card.querySelector(".created-quiz-card__details");
         const toggle = () => {
-          const isOpen = !details.classList.contains("hidden");
-          details.classList.toggle("hidden", isOpen);
-          header.setAttribute("aria-expanded", !isOpen);
-          card.classList.toggle("created-quiz-card--open", !isOpen);
+          const wasHidden = details.classList.contains("hidden");
+          details.classList.toggle("hidden", !wasHidden);
+          header.setAttribute("aria-expanded", wasHidden);
+          card.classList.toggle("created-quiz-card--open", wasHidden);
+          if (wasHidden) try { ensureTeacherQuizSubmissionsLesson(card); } catch (e) { /* ignore */ }
           if (window.lucide && typeof window.lucide.createIcons === "function") window.lucide.createIcons();
         };
         header.addEventListener("click", (e) => {
@@ -2587,6 +2599,74 @@ async function loadLessonsAIGeneratedList() {
         <p class="lessons-ai-quiz-list__empty-text">We couldn’t load your quizzes. Please try again later.</p>
       </div>`;
     if (window.lucide && typeof window.lucide.createIcons === "function") window.lucide.createIcons();
+  }
+}
+
+const __lessonTeacherQuizSubmissionsCache = new Map();
+
+async function ensureTeacherQuizSubmissionsLesson(card) {
+  const user = typeof getCurrentUser === "function" ? getCurrentUser() : null;
+  if (!user || String(user.role || "").toLowerCase() !== "teacher") return;
+
+  const quizId = Number(card?.dataset?.quizId || 0);
+  if (!quizId) return;
+
+  const host = card.querySelector("[data-quiz-submissions]");
+  if (!host) return;
+
+  const avatarsHost = host.querySelector(".quiz-card-seen__avatars");
+  if (!avatarsHost) return;
+
+  const cached = __lessonTeacherQuizSubmissionsCache.get(quizId);
+  if (cached?.html) {
+    avatarsHost.innerHTML = cached.html;
+    return;
+  }
+
+  avatarsHost.innerHTML = `<span class="mini-avatar mini-avatar--sm" style="opacity:.75;" aria-label="Loading">…</span>`;
+
+  const selectedClass = (() => { try { return JSON.parse(localStorage.getItem("eel_selected_class")); } catch { return null; } })();
+  const classId = Number(selectedClass?.id || localStorage.getItem("eel_selected_class_id") || 0) || null;
+
+  try {
+    const url = `${window.API_BASE || ""}/api/teacher/reading-attempts?quiz_id=${quizId}&source=teacher` + (classId ? `&class_id=${classId}` : "");
+    const res = await fetch(url);
+    const data = await res.json();
+    const attempts = Array.isArray(data?.attempts) ? data.attempts : [];
+
+    const seen = new Set();
+    const students = [];
+    for (const a of attempts) {
+      if (String(a?.status || "").toLowerCase() !== "completed") continue;
+      const sid = Number(a.student_id || 0);
+      if (!sid || seen.has(sid)) continue;
+      seen.add(sid);
+      students.push({ student_id: sid, student_name: a.student_name || "Student #" + sid, avatar_url: a.student_avatar_url || null });
+      if (students.length >= 6) break;
+    }
+
+    const totalCompleted = attempts.filter((a) => String(a?.status || "").toLowerCase() === "completed").length;
+
+    let html = "";
+    if (totalCompleted) {
+      const getInitials = (name) => (name || "").trim().split(/\s+/).map(function (n) { return n[0]; }).join("").slice(0, 2).toUpperCase() || "?";
+      const avatars = students.map((s) => {
+        const avatarUrl = String(s.avatar_url || "").trim();
+        const content = avatarUrl
+          ? `<img src="${escapeHtml(avatarUrl)}" alt="" loading="lazy" />`
+          : escapeHtml(getInitials(s.student_name));
+        return `<span class="mini-avatar mini-avatar--sm" title="${escapeHtml(s.student_name)}" aria-label="${escapeHtml(s.student_name)}">${content}</span>`;
+      }).join("");
+      const extra = Math.max(0, totalCompleted - students.length);
+      const extraBubble = extra ? `<span class="mini-avatar mini-avatar--sm" title="+${extra} more" aria-label="+${extra} more">+${extra}</span>` : "";
+      html = avatars + extraBubble;
+    }
+
+    __lessonTeacherQuizSubmissionsCache.set(quizId, { html, loadedAt: Date.now() });
+    avatarsHost.innerHTML = html;
+  } catch (err) {
+    console.error("ensureTeacherQuizSubmissionsLesson:", err);
+    avatarsHost.innerHTML = "";
   }
 }
 
@@ -2669,6 +2749,9 @@ async function loadLessonsAIQuizzesForStudent() {
         else takeLabel = "Unpublished";
       }
       const hasCompleted = completedQuizIds.indexOf(quiz.quiz_id) !== -1;
+      const myName = user ? (user.fname || "") + " " + (user.lname || "") : "";
+      const myInitials = (myName || "").trim().split(/\s+/).map(function (n) { return n[0]; }).join("").slice(0, 2).toUpperCase() || "?";
+      const completedBadge = "";
       const latestAttempt = latestCompletedByQuiz.get(Number(quiz.quiz_id));
       const allowedStudents = parseAllowedStudentsLesson(quiz.allowed_students);
       const retakeOption = String(quiz.retake_option || "none").toLowerCase();
@@ -2717,6 +2800,7 @@ async function loadLessonsAIQuizzesForStudent() {
             </div>
             <div class="created-quiz-card__title-wrap">
               <h3 class="created-quiz-card__title">${escapeHtml(quiz.title)}</h3>
+              ${completedBadge}
               <span class="lessons-ai-quiz-status-badge ${statusClass}">${escapeHtml(statusLabel)}</span>
             </div>
             <i data-lucide="chevron-down" class="created-quiz-card__chevron" aria-hidden="true"></i>
@@ -2815,8 +2899,11 @@ async function openLessonQuizModal(quizId) {
 
 function proceedToLessonQuizPage() {
   if (_lessonQuizIdToTake == null) return;
-  const url = `take-quiz.html?quiz_id=${_lessonQuizIdToTake}`;
-  window.open(url, "_blank", "noopener,noreferrer");
+  const selectedClass = (() => { try { return JSON.parse(localStorage.getItem("eel_selected_class")); } catch { return null; } })();
+  const classId = (selectedClass && selectedClass.id != null) ? selectedClass.id : localStorage.getItem("eel_selected_class_id");
+  let url = `take-quiz.html?quiz_id=${_lessonQuizIdToTake}`;
+  if (classId) url += `&class_id=${encodeURIComponent(classId)}`;
+  window.open(url, "_blank");
   closeLessonQuizModal();
 }
 
@@ -3173,7 +3260,10 @@ async function loadLessonsAndTopicsForAI() {
   }
 }
 
+let aiQuizLessonGenerating = false;
 async function generateAIQuizLesson() {
+  if (aiQuizLessonGenerating) return;
+  aiQuizLessonGenerating = true;
   const topicEl = document.getElementById("ai-topic");
   const topicId = topicEl ? String(topicEl.value || "").trim() : "";
   const questionCounts = getAIQuizQuestionCountsLesson();
@@ -3191,10 +3281,15 @@ async function generateAIQuizLesson() {
   }
   var tosLevels = getTOSSelectedLevelsLesson();
   const btn = document.getElementById("ai-generate-btn");
+  const regenBtn = document.querySelector(".ai-modal-regenerate-btn");
   const generatedSection = document.getElementById("ai-generated-section");
   const container = document.getElementById("ai-questions-container");
-  if (!btn || !generatedSection || !container) return;
+  if (!btn || !generatedSection || !container) {
+    aiQuizLessonGenerating = false;
+    return;
+  }
   btn.disabled = true;
+  if (regenBtn) regenBtn.disabled = true;
   btn.innerHTML = "<span>⏳ Generating...</span>";
   const payload = { topic_id: topicId, question_counts: questionCounts, additional_context: additionalContext };
   if (tosLevels.length > 0) payload.tos_levels = tosLevels;
@@ -3209,14 +3304,26 @@ async function generateAIQuizLesson() {
       data = await res.json();
     } catch (parseErr) {
       if (typeof showNotification === "function") showNotification("Server returned invalid response. Try again.", "error");
+      aiQuizLessonGenerating = false;
+      if (btn) { btn.disabled = false; btn.innerHTML = "<i data-lucide=\"sparkles\" class=\"size-5\"></i><span>Generate quiz with AI</span>"; }
+      if (regenBtn) regenBtn.disabled = false;
+      if (window.lucide && typeof window.lucide.createIcons === "function") window.lucide.createIcons();
       return;
     }
     if (!res.ok) {
       if (typeof showNotification === "function") showNotification(data.message || "Request failed. Try again.", "error");
+      aiQuizLessonGenerating = false;
+      if (btn) { btn.disabled = false; btn.innerHTML = "<i data-lucide=\"sparkles\" class=\"size-5\"></i><span>Generate quiz with AI</span>"; }
+      if (regenBtn) regenBtn.disabled = false;
+      if (window.lucide && typeof window.lucide.createIcons === "function") window.lucide.createIcons();
       return;
     }
     if (!data.success) {
       if (typeof showNotification === "function") showNotification(data.message || "Generation failed.", "error");
+      aiQuizLessonGenerating = false;
+      if (btn) { btn.disabled = false; btn.innerHTML = "<i data-lucide=\"sparkles\" class=\"size-5\"></i><span>Generate quiz with AI</span>"; }
+      if (regenBtn) regenBtn.disabled = false;
+      if (window.lucide && typeof window.lucide.createIcons === "function") window.lucide.createIcons();
       return;
     }
     const rawQuiz = (data.quiz != null ? String(data.quiz) : "").replace(/\r\n/g, "\n").replace(/\r/g, "\n").trim();
@@ -3225,6 +3332,10 @@ async function generateAIQuizLesson() {
       document.getElementById("ai-generated-passage").value = "";
       container.innerHTML = "<p class=\"text-muted-foreground text-sm\">No content was returned. Try again or add more instructions.</p>";
       document.getElementById("ai-save-btn").disabled = true;
+      aiQuizLessonGenerating = false;
+      if (btn) { btn.disabled = false; btn.innerHTML = "<i data-lucide=\"sparkles\" class=\"size-5\"></i><span>Generate quiz with AI</span>"; }
+      if (regenBtn) regenBtn.disabled = false;
+      if (window.lucide && typeof window.lucide.createIcons === "function") window.lucide.createIcons();
       return;
     }
     const passageArea = document.getElementById("ai-generated-passage");
@@ -3459,18 +3570,27 @@ async function generateAIQuizLesson() {
     if (generatedSection) generatedSection.classList.remove("hidden");
     if (container) container.innerHTML = "<p class=\"text-muted-foreground text-sm\">Generation failed. Check your connection and try again.</p>";
   } finally {
+    aiQuizLessonGenerating = false;
     if (btn) {
       btn.disabled = false;
       btn.innerHTML = "<i data-lucide=\"sparkles\" class=\"size-5\"></i><span>Generate quiz with AI</span>";
     }
+    if (regenBtn) regenBtn.disabled = false;
     if (window.lucide && typeof window.lucide.createIcons === "function") window.lucide.createIcons();
   }
 }
 
+let aiQuizLessonSaving = false;
 async function saveAIQuizLesson() {
+  if (aiQuizLessonSaving) return;
+  aiQuizLessonSaving = true;
+  const saveBtn = document.getElementById("ai-save-btn");
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.style.pointerEvents = "none"; saveBtn.style.opacity = "0.6"; }
   const user = typeof getCurrentUser === "function" ? getCurrentUser() : null;
   if (!user || user.role !== "teacher") {
     if (typeof showNotification === "function") showNotification("You are not authorized to save quizzes.", "error");
+    aiQuizLessonSaving = false;
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.style.pointerEvents = ""; saveBtn.style.opacity = ""; }
     return;
   }
   const titleInput = document.getElementById("ai-topic-title");
@@ -3478,10 +3598,16 @@ async function saveAIQuizLesson() {
   const passageEl = document.getElementById("ai-generated-passage");
   const passage = passageEl ? passageEl.value.trim() : "";
   const container = document.getElementById("ai-questions-container");
-  if (!container) return;
+  if (!container) {
+    aiQuizLessonSaving = false;
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.style.pointerEvents = ""; saveBtn.style.opacity = ""; }
+    return;
+  }
   const questionItems = container.querySelectorAll(".ai-question-item");
   if (questionItems.length === 0) {
     if (typeof showNotification === "function") showNotification("Add at least one question or generate a quiz first.", "warning");
+    aiQuizLessonSaving = false;
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.style.pointerEvents = ""; saveBtn.style.opacity = ""; }
     return;
   }
   const questions = [];
@@ -3524,6 +3650,8 @@ async function saveAIQuizLesson() {
   const subjectId = getSelectedSubjectIdLesson();
   if (!subjectId) {
     if (typeof showNotification === "function") showNotification("Select a class with a subject first.", "warning");
+    aiQuizLessonSaving = false;
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.style.pointerEvents = ""; saveBtn.style.opacity = ""; }
     return;
   }
   const selectedClass = JSON.parse(localStorage.getItem("eel_selected_class") || "{}");
@@ -3550,9 +3678,13 @@ async function saveAIQuizLesson() {
       switchLessonsView("quizzes");
     } else {
       if (typeof showNotification === "function") showNotification(data.message || "Failed to save quiz.", "error");
+      aiQuizLessonSaving = false;
+      if (saveBtn) { saveBtn.disabled = false; saveBtn.style.pointerEvents = ""; saveBtn.style.opacity = ""; }
     }
   } catch (err) {
     console.error("saveAIQuizLesson:", err);
     if (typeof showNotification === "function") showNotification("Failed to save quiz. Check your connection.", "error");
+    aiQuizLessonSaving = false;
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.style.pointerEvents = ""; saveBtn.style.opacity = ""; }
   }
 }

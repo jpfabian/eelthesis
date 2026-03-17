@@ -214,12 +214,16 @@ function setupExamGenerator() {
     return;
   }
 
+  let examGenerating = false;
   generateBtn.addEventListener("click", async () => {
+    if (examGenerating) return;
+    examGenerating = true;
     const methodInput = document.querySelector('input[name="method"]:checked');
     if (!methodInput) {
       if (typeof Swal !== "undefined") {
         Swal.fire({ icon: "warning", title: "No method selected", text: "Please select a generation method (Topic or Text).", confirmButtonColor: "#3085d6" });
       } else alert("Please select a generation method (Topic or Text).");
+      examGenerating = false;
       return;
     }
 
@@ -251,18 +255,21 @@ function setupExamGenerator() {
       } else {
         alert("Please select at least one topic.");
       }
+      examGenerating = false;
       return;
     }
     if (method === "text" && !text) {
       if (typeof Swal !== "undefined") {
         Swal.fire({ icon: "warning", title: "No content", text: "Please enter text content to generate the exam.", confirmButtonColor: "#3085d6" });
       } else alert("Please enter text content.");
+      examGenerating = false;
       return;
     }
     if (questionTypes.length === 0) {
       if (typeof Swal !== "undefined") {
         Swal.fire({ icon: "warning", title: "No question type selected", text: "Please select at least one question type and quantity.", confirmButtonColor: "#3085d6" });
       } else alert("Please select at least one question type.");
+      examGenerating = false;
       return;
     }
 
@@ -309,6 +316,7 @@ function setupExamGenerator() {
       console.error("❌ Error generating exam:", err);
       showNotification("Error generating exam.");
     } finally {
+      examGenerating = false;
       generateBtn.disabled = false;
       generateBtn.innerHTML = `<i data-lucide="brain" class="size-4 mr-2"></i> Generate Exam with AI`;
       lucide.createIcons({ icons: lucide.icons });
@@ -404,7 +412,13 @@ function showExamPreview(examText, subject, selectedTopics, questionTypes, examT
     }
   };
 
+  let examSaving = false;
   saveBtn.onclick = async () => {
+    if (examSaving) return;
+    examSaving = true;
+    saveBtn.disabled = true;
+    saveBtn.style.pointerEvents = "none";
+    saveBtn.style.opacity = "0.6";
     const updatedContent = content.textContent.trim();
 
     // ✅ Get current teacher ID
@@ -413,6 +427,10 @@ function showExamPreview(examText, subject, selectedTopics, questionTypes, examT
 
     if (!currentTeacherId) {
       showNotification("⚠️ User not logged in. Cannot save exam.", "error");
+      examSaving = false;
+      saveBtn.disabled = false;
+      saveBtn.style.pointerEvents = "";
+      saveBtn.style.opacity = "";
       return;
     }
 
@@ -421,6 +439,10 @@ function showExamPreview(examText, subject, selectedTopics, questionTypes, examT
     const classId = localStorage.getItem("eel_selected_class_id") || selectedClass?.id;
     if (!classId) {
       showNotification("⚠️ Please select a class/section before saving.", "error");
+      examSaving = false;
+      saveBtn.disabled = false;
+      saveBtn.style.pointerEvents = "";
+      saveBtn.style.opacity = "";
       return;
     }
 
@@ -463,10 +485,18 @@ function showExamPreview(examText, subject, selectedTopics, questionTypes, examT
         }, 500);
       } else {
         showNotification(result.error || "⚠️ Failed to save exam.", "error");
+        examSaving = false;
+        saveBtn.disabled = false;
+        saveBtn.style.pointerEvents = "";
+        saveBtn.style.opacity = "";
       }
     } catch (err) {
       console.error("❌ Error saving exam:", err);
       showNotification("Error saving exam.", "error");
+      examSaving = false;
+      saveBtn.disabled = false;
+      saveBtn.style.pointerEvents = "";
+      saveBtn.style.opacity = "";
     }
   };
 }

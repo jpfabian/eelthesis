@@ -992,15 +992,34 @@ function prevQuestion() {
 // 1️⃣ Record start time when quiz opens
 let quizStartTime = new Date(); // store this globally when quiz starts
 
+let readingQuizSubmitting = false;
 async function submitQuiz() {
-    if (!quizData) return;
+    if (readingQuizSubmitting) return;
+    readingQuizSubmitting = true;
+    const submitButton = document.getElementById("submit-btn");
+    if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.style.pointerEvents = "none";
+        submitButton.style.opacity = "0.6";
+    }
+    if (!quizData) {
+        readingQuizSubmitting = false;
+        if (submitButton) { submitButton.disabled = false; submitButton.style.pointerEvents = ""; submitButton.style.opacity = ""; }
+        return;
+    }
     if (currentQuizIsTeacher) {
+        readingQuizSubmitting = false;
+        if (submitButton) { submitButton.disabled = false; submitButton.style.pointerEvents = ""; submitButton.style.opacity = ""; }
         saveCurrentAnswer();
         showNotification("Quiz completed. Results for teacher-created quizzes are not saved yet.", "info");
         closeQuizModal();
         return;
     }
-    if (!attemptId) return;
+    if (!attemptId) {
+        readingQuizSubmitting = false;
+        if (submitButton) { submitButton.disabled = false; submitButton.style.pointerEvents = ""; submitButton.style.opacity = ""; }
+        return;
+    }
 
     saveCurrentAnswer();
 
@@ -1039,7 +1058,11 @@ async function submitQuiz() {
         });
 
         const saveData = await saveRes.json();
-        if (!saveData.success) return showNotification("Failed to save answers.", "error");
+        if (!saveData.success) {
+            readingQuizSubmitting = false;
+            if (submitButton) { submitButton.disabled = false; submitButton.style.pointerEvents = ""; submitButton.style.opacity = ""; }
+            return showNotification("Failed to save answers.", "error");
+        }
 
         // 🧾 Submit attempt
         const submitRes = await fetch(`${window.API_BASE || ""}/api/reading-quiz-attempts/${attemptId}/submit`, { 
@@ -1077,10 +1100,14 @@ async function submitQuiz() {
             }
         } else {
             showNotification("Quiz submitted, but grading failed.", "warning");
+            readingQuizSubmitting = false;
+            if (submitButton) { submitButton.disabled = false; submitButton.style.pointerEvents = ""; submitButton.style.opacity = ""; }
         }
     } catch (err) {
         console.error(err);
         showNotification("An error occurred while submitting the quiz.", "error");
+        readingQuizSubmitting = false;
+        if (submitButton) { submitButton.disabled = false; submitButton.style.pointerEvents = ""; submitButton.style.opacity = ""; }
     }
 }
 
@@ -1329,7 +1356,10 @@ function getSelectedAIQuizTypes() {
   return checked.length > 0 ? checked : ['multiple-choice'];
 }
 
+let aiQuizGenerating = false;
 async function generateAIQuiz() {
+  if (aiQuizGenerating) return;
+  aiQuizGenerating = true;
   const topicEl = document.getElementById('ai-topic');
   const topicId = topicEl ? String(topicEl.value || "").trim() : "";
   const numQuestionsInput = document.getElementById('ai-num-questions');
@@ -1348,11 +1378,15 @@ async function generateAIQuiz() {
   }
 
   const btn = document.getElementById('ai-generate-btn');
+  const regenBtn = document.querySelector('.ai-modal-regenerate-btn');
   const generatedSection = document.getElementById("ai-generated-section");
   const container = document.getElementById("ai-questions-container");
-  if (!btn || !generatedSection || !container) return;
-
+  if (!btn || !generatedSection || !container) {
+    aiQuizGenerating = false;
+    return;
+  }
   btn.disabled = true;
+  if (regenBtn) regenBtn.disabled = true;
   btn.innerHTML = "<span>⏳ Generating...</span>";
 
   const payload = {
@@ -1375,15 +1409,27 @@ async function generateAIQuiz() {
     } catch (parseErr) {
       console.error("Parse error:", parseErr);
       showNotification("Server returned invalid response. Try again.", "error");
+      aiQuizGenerating = false;
+      if (btn) { btn.disabled = false; btn.innerHTML = "<i data-lucide=\"sparkles\" class=\"size-5\"></i><span>Generate quiz with AI</span>"; }
+      if (regenBtn) regenBtn.disabled = false;
+      if (window.lucide && typeof window.lucide.createIcons === "function") window.lucide.createIcons();
       return;
     }
 
     if (!res.ok) {
       showNotification(data.message || "Request failed (" + res.status + "). Try again.", "error");
+      aiQuizGenerating = false;
+      if (btn) { btn.disabled = false; btn.innerHTML = "<i data-lucide=\"sparkles\" class=\"size-5\"></i><span>Generate quiz with AI</span>"; }
+      if (regenBtn) regenBtn.disabled = false;
+      if (window.lucide && typeof window.lucide.createIcons === "function") window.lucide.createIcons();
       return;
     }
     if (!data.success) {
       showNotification(data.message || "Generation failed.", "error");
+      aiQuizGenerating = false;
+      if (btn) { btn.disabled = false; btn.innerHTML = "<i data-lucide=\"sparkles\" class=\"size-5\"></i><span>Generate quiz with AI</span>"; }
+      if (regenBtn) regenBtn.disabled = false;
+      if (window.lucide && typeof window.lucide.createIcons === "function") window.lucide.createIcons();
       return;
     }
 
@@ -1394,6 +1440,10 @@ async function generateAIQuiz() {
       document.getElementById("ai-generated-passage").value = "";
       container.innerHTML = "<p class=\"text-muted-foreground text-sm\">No content was returned. Try again or add more instructions.</p>";
       document.getElementById("ai-save-btn").disabled = true;
+      aiQuizGenerating = false;
+      if (btn) { btn.disabled = false; btn.innerHTML = "<i data-lucide=\"sparkles\" class=\"size-5\"></i><span>Generate quiz with AI</span>"; }
+      if (regenBtn) regenBtn.disabled = false;
+      if (window.lucide && typeof window.lucide.createIcons === "function") window.lucide.createIcons();
       return;
     }
 
@@ -1593,7 +1643,9 @@ async function generateAIQuiz() {
     generatedSection.classList.remove("hidden");
     container.innerHTML = "<p class=\"text-muted-foreground text-sm\">Generation failed. Check your connection and try again.</p>";
   } finally {
+    aiQuizGenerating = false;
     btn.disabled = false;
+    if (regenBtn) regenBtn.disabled = false;
     btn.innerHTML = "<i data-lucide=\"sparkles\" class=\"size-5\"></i><span>Generate quiz with AI</span>";
     if (window.lucide && typeof window.lucide.createIcons === "function") window.lucide.createIcons();
   }
@@ -1622,9 +1674,16 @@ function openAIModal(subjectId) {
 }
 
 // Save AI-generated quiz (collects from modal and POSTs to teacher/reading-quizzes)
+let aiQuizSaving = false;
 async function saveAIQuiz() {
+  if (aiQuizSaving) return;
+  aiQuizSaving = true;
+  const saveBtn = document.getElementById("ai-save-btn");
+  if (saveBtn) { saveBtn.disabled = true; saveBtn.style.pointerEvents = "none"; saveBtn.style.opacity = "0.6"; }
   const user = getCurrentUser();
   if (!user || user.role !== "teacher") {
+    aiQuizSaving = false;
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.style.pointerEvents = ""; saveBtn.style.opacity = ""; }
     showNotification("You are not authorized to save quizzes.", "error");
     return;
   }
@@ -1634,11 +1693,17 @@ async function saveAIQuiz() {
   const passageEl = document.getElementById("ai-generated-passage");
   const passage = passageEl ? passageEl.value.trim() : "";
   const container = document.getElementById("ai-questions-container");
-  if (!container) return;
+  if (!container) {
+    aiQuizSaving = false;
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.style.pointerEvents = ""; saveBtn.style.opacity = ""; }
+    return;
+  }
 
   const questionItems = container.querySelectorAll(".ai-question-item");
   if (questionItems.length === 0) {
     showNotification("Add at least one question or generate a quiz first.", "warning");
+    aiQuizSaving = false;
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.style.pointerEvents = ""; saveBtn.style.opacity = ""; }
     return;
   }
 
@@ -1705,10 +1770,14 @@ async function saveAIQuiz() {
       setTimeout(function () { reloadCreatedLessonsGrid(); }, 150);
     } else {
       showNotification(data.message || "Failed to save quiz.", "error");
+      aiQuizSaving = false;
+      if (saveBtn) { saveBtn.disabled = false; saveBtn.style.pointerEvents = ""; saveBtn.style.opacity = ""; }
     }
   } catch (err) {
     console.error("saveAIQuiz error:", err);
     showNotification("Failed to save quiz. Check your connection.", "error");
+    aiQuizSaving = false;
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.style.pointerEvents = ""; saveBtn.style.opacity = ""; }
   }
 }
 
@@ -1950,9 +2019,7 @@ async function loadQuizzes(user = getCurrentUser()) {
               </div>
             ` : '';
 
-            const completedBadge = (!isTeacher && typeof isCompleted !== 'undefined' && isCompleted) ? `
-                <span class="mini-avatar mini-avatar--sm" title="Completed by you" aria-label="Completed by you">${escapeHtml(myInitials)}</span>
-            ` : '';
+            const completedBadge = '';
 
             const scheduleStatusLabel = isTeacher
                 ? (effectiveLocked ? 'Unpublished' : 'Open to students')
@@ -2263,9 +2330,13 @@ async function loadLeaderboard(quizId = null, isTeacherQuiz = null) {
         if (quizId !== null) currentQuizId = quizId;
         if (isTeacherQuiz !== null) currentLeaderboardIsTeacher = !!isTeacherQuiz;
 
+        const selectedClass = (() => { try { return JSON.parse(localStorage.getItem("eel_selected_class") || "null"); } catch (_) { return null; } })();
+        const classId = selectedClass?.id ?? selectedClass?.class_id ?? localStorage.getItem("eel_selected_class_id");
+
         let url = (window.API_BASE || "") + "/api/reading-quiz-leaderboard";
         if (currentQuizId) url += `?quiz_id=${currentQuizId}`;
         if (currentLeaderboardIsTeacher) url += "&teacher_quiz=1";
+        if (classId) url += `&class_id=${encodeURIComponent(classId)}`;
 
         const res = await fetch(url);
         const data = await res.json();
@@ -2516,7 +2587,8 @@ async function ensureTeacherQuizSubmissions(card) {
         seen.add(sid);
         students.push({
             student_id: sid,
-            student_name: a.student_name || `Student #${sid}`
+            student_name: a.student_name || `Student #${sid}`,
+            avatar_url: a.student_avatar_url || null
         });
         if (students.length >= 6) break;
     }
@@ -2526,10 +2598,13 @@ async function ensureTeacherQuizSubmissions(card) {
     let html = '';
     if (totalCompleted) {
         const avatars = students.map(s => {
-            const initials = getInitials(s.student_name);
+            const avatarUrl = String(s.avatar_url || '').trim();
+            const content = avatarUrl
+                ? `<img src="${escapeHtml(avatarUrl)}" alt="" loading="lazy" />`
+                : escapeHtml(getInitials(s.student_name));
             return `
               <span class="mini-avatar mini-avatar--sm" title="${escapeHtml(s.student_name)}" aria-label="${escapeHtml(s.student_name)}">
-                ${escapeHtml(initials)}
+                ${content}
               </span>
             `;
         }).join('');

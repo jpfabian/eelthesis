@@ -11472,6 +11472,14 @@ body.pronunciation-lessons-page .quiz-page[data-view="list"] #lessons-grid {
   font-size: 10px;
 }
 
+.mini-avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: 9999px;
+  object-fit: cover;
+  display: block;
+}
+
 :root[data-theme="dark"] .mini-avatar {
   background: linear-gradient(
     135deg,
@@ -12191,6 +12199,9 @@ body.pronunciation-lessons-page .quiz-page[data-view="list"] #lessons-grid {
 .quiz-card-seen {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
+  margin-top: 0.5rem;
+  min-height: 1.5rem;
 }
 
 .quiz-card-seen__avatars {

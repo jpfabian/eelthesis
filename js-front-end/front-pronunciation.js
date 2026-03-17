@@ -648,6 +648,7 @@ async function loadPronunciationQuizzes(user) {
 
         // ✅ Get selected class and resolve subject_id (class has subject name, not subject_id)
         const selectedClass = JSON.parse(localStorage.getItem("eel_selected_class") || "null");
+        const classIdForLeaderboard = selectedClass?.id ?? selectedClass?.class_id ?? localStorage.getItem("eel_selected_class_id") ?? null;
         let subjectId = selectedClass?.subject_id != null ? Number(selectedClass.subject_id) : null;
         if (subjectId == null || !Number.isFinite(subjectId)) {
             subjectId = resolveSubjectIdFromName(selectedClass?.subject) ?? 1;
@@ -757,7 +758,7 @@ async function loadPronunciationQuizzes(user) {
                     <button class="btn btn-primary flex-1" onclick="event.stopPropagation(); openTeacherPronunciationReviewModal(${quiz.quiz_id})">
                         <i data-lucide="check-square" class="size-3 mr-1"></i>Review Answers
                     </button>
-                    <button class="btn btn-outline flex-1" onclick="openLeaderboardModal(${quiz.quiz_id})">
+                    <button class="btn btn-outline flex-1" onclick="openLeaderboardModal(${quiz.quiz_id}, ${classIdForLeaderboard ?? 'null'})">
                         <i data-lucide="bar-chart-3" class="size-3 mr-1"></i>Leaderboard
                     </button>
                 `;
@@ -811,7 +812,7 @@ async function loadPronunciationQuizzes(user) {
                     ` : ""}
                     <button 
                         class="btn btn-outline flex-1"
-                        onclick="event.stopPropagation(); openLeaderboardModal(${quiz.quiz_id})"
+                        onclick="event.stopPropagation(); openLeaderboardModal(${quiz.quiz_id}, ${classIdForLeaderboard ?? 'null'})"
                     >
                         <i data-lucide="bar-chart-3" class="size-3 mr-1"></i>
                         Leaderboard
@@ -828,9 +829,7 @@ async function loadPronunciationQuizzes(user) {
                 </div>
             ` : "";
 
-            const completedBadge = (!isTeacher && isCompleted) ? `
-                <span class="mini-avatar mini-avatar--sm" title="Completed by you" aria-label="Completed by you">${escapeHtml(myInitials)}</span>
-            ` : "";
+            const completedBadge = "";
 
             const scheduleStatusLabel = isTeacher
                 ? (effectiveLocked ? "Locked" : "Open to students")
@@ -870,6 +869,7 @@ async function loadPronunciationQuizzes(user) {
                 details.classList.toggle("hidden");
                 header.setAttribute("aria-expanded", wasHidden);
                 quizCard.classList.toggle("created-quiz-card--open", wasHidden);
+                if (wasHidden && isTeacher) try { ensureTeacherPronunciationSubmissions(quizCard); } catch (e) { /* ignore */ }
                 if (window.lucide && typeof window.lucide.createIcons === "function") window.lucide.createIcons();
             };
             header.addEventListener("click", (e) => { e.stopPropagation(); toggle(); });
@@ -898,6 +898,9 @@ async function loadPronunciationQuizzes(user) {
 async function loadPronunciationQuizzesTeacher(user) {
     try {
         if (!user || user.role !== "teacher") return;
+
+        const selectedClass = JSON.parse(localStorage.getItem("eel_selected_class") || "null");
+        const classIdForLeaderboard = selectedClass?.id ?? selectedClass?.class_id ?? localStorage.getItem("eel_selected_class_id") ?? null;
 
         // ✅ Fetch teacher's quizzes
         const res = await fetch(`${window.API_BASE || ""}/api/teacher/pronunciation-quizzes?user_id=${user.user_id}`);
@@ -932,7 +935,7 @@ async function loadPronunciationQuizzesTeacher(user) {
 
             // ✅ Teacher action buttons
             const actionButtons = `
-                <button class="btn btn-outline flex-1" onclick="openLeaderboardModal(${quiz.quiz_id})">
+                <button class="btn btn-outline flex-1" onclick="openLeaderboardModal(${quiz.quiz_id}, ${classIdForLeaderboard ?? 'null'})">
                     <i data-lucide="bar-chart-3" class="size-3 mr-1"></i>Leaderboard
                 </button>
                 <button 
@@ -945,6 +948,13 @@ async function loadPronunciationQuizzesTeacher(user) {
 
             // ✅ Determine numbering (consecutive)
             const quizNumber = seq++;
+
+            // ✅ Teacher submissions avatars (like reading-lessons)
+            const teacherSubmissionsSlot = `
+                <div class="quiz-card-seen" data-quiz-submissions>
+                    <div class="quiz-card-seen__avatars" aria-label="Students who completed this quiz"></div>
+                </div>
+            `;
 
             // ✅ Quiz card — same structure as reading (created-quiz-card__inner)
             const quizCard = document.createElement("div");
@@ -967,6 +977,7 @@ async function loadPronunciationQuizzesTeacher(user) {
                             <i data-lucide="calendar-clock" class="created-quiz-card__schedule-icon" aria-hidden="true"></i>
                             <span class="created-quiz-card__schedule-text">Start: ${quiz.unlock_time ? formatDateTime(quiz.unlock_time) : "Not set"} · Deadline: ${quiz.lock_time ? formatDateTime(quiz.lock_time) : "Not set"}</span>
                         </div>
+                        ${teacherSubmissionsSlot}
                         <div class="quiz-actions created-quiz-card__actions">${actionButtons}</div>
                     </div>
                 </div>
@@ -979,6 +990,7 @@ async function loadPronunciationQuizzesTeacher(user) {
                 details.classList.toggle("hidden");
                 header.setAttribute("aria-expanded", wasHidden);
                 quizCard.classList.toggle("created-quiz-card--open", wasHidden);
+                if (wasHidden) try { ensureTeacherPronunciationSubmissions(quizCard); } catch (e) { /* ignore */ }
                 if (window.lucide && typeof window.lucide.createIcons === "function") window.lucide.createIcons();
             };
             header.addEventListener("click", (e) => { e.stopPropagation(); toggle(); });
@@ -994,6 +1006,77 @@ async function loadPronunciationQuizzesTeacher(user) {
         console.error("Error loading teacher quizzes:", err);
         const container = document.getElementById("created-lessons-grid");
         container.innerHTML = '<p class="text-center text-red-500">Failed to load your quizzes.</p>';
+    }
+}
+
+const __teacherPronunciationSubmissionsCache = new Map();
+
+async function ensureTeacherPronunciationSubmissions(card) {
+    const user = getCurrentUser();
+    if (!user || String(user.role || "").toLowerCase() !== "teacher") return;
+
+    const quizId = Number(card?.dataset?.quizId || 0);
+    if (!quizId) return;
+
+    const host = card.querySelector("[data-quiz-submissions]");
+    if (!host) return;
+
+    const avatarsHost = host.querySelector(".quiz-card-seen__avatars");
+    if (!avatarsHost) return;
+
+    const cached = __teacherPronunciationSubmissionsCache.get(quizId);
+    if (cached?.html) {
+        avatarsHost.innerHTML = cached.html;
+        return;
+    }
+
+    avatarsHost.innerHTML = `
+      <span class="mini-avatar mini-avatar--sm" style="opacity:.75;" aria-label="Loading">…</span>
+    `;
+
+    const selectedClass = (() => {
+        try { return JSON.parse(localStorage.getItem("eel_selected_class")); } catch { return null; }
+    })();
+    const classId = Number(selectedClass?.id || localStorage.getItem("eel_selected_class_id") || 0) || null;
+
+    try {
+        const url = `${window.API_BASE || ""}/api/teacher/pronunciation-attempts?quiz_id=${quizId}` + (classId ? `&class_id=${classId}` : "");
+        const res = await fetch(url);
+        const data = await res.json();
+        const attempts = Array.isArray(data?.attempts) ? data.attempts : [];
+
+        const seen = new Set();
+        const students = [];
+        for (const a of attempts) {
+            if (String(a?.status || "").toLowerCase() !== "completed") continue;
+            const sid = Number(a.student_id || 0);
+            if (!sid || seen.has(sid)) continue;
+            seen.add(sid);
+            students.push({ student_id: sid, student_name: a.student_name || `Student #${sid}`, avatar_url: a.student_avatar_url || null });
+            if (students.length >= 6) break;
+        }
+
+        const totalCompleted = attempts.filter((a) => String(a?.status || "").toLowerCase() === "completed").length;
+
+        let html = "";
+        if (totalCompleted) {
+            const avatars = students.map((s) => {
+                const avatarUrl = String(s.avatar_url || "").trim();
+                const content = avatarUrl
+                    ? `<img src="${escapeHtml(avatarUrl)}" alt="" loading="lazy" />`
+                    : escapeHtml(getInitials(s.student_name));
+                return `<span class="mini-avatar mini-avatar--sm" title="${escapeHtml(s.student_name)}" aria-label="${escapeHtml(s.student_name)}">${content}</span>`;
+            }).join("");
+            const extra = Math.max(0, totalCompleted - students.length);
+            const extraBubble = extra ? `<span class="mini-avatar mini-avatar--sm" title="+${extra} more" aria-label="+${extra} more">+${extra}</span>` : "";
+            html = `${avatars}${extraBubble}`;
+        }
+
+        __teacherPronunciationSubmissionsCache.set(quizId, { html, loadedAt: Date.now() });
+        avatarsHost.innerHTML = html;
+    } catch (err) {
+        console.error("ensureTeacherPronunciationSubmissions:", err);
+        avatarsHost.innerHTML = "";
     }
 }
 
@@ -1485,7 +1568,17 @@ function resetRecordingUI() {
 // ============================================
 // SUBMIT QUIZ
 // ============================================
+let pronunciationSubmitting = false;
 async function submitPronunciationQuiz() {
+  if (pronunciationSubmitting) return;
+  pronunciationSubmitting = true;
+  const submitBtn = document.getElementById("pronunciation-submit-btn");
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.style.pointerEvents = "none";
+    submitBtn.style.opacity = "0.6";
+  }
+
   clearInterval(pronunciationTimer);
 
   const user = getCurrentUser();
@@ -1529,10 +1622,14 @@ async function submitPronunciationQuiz() {
 
     } else {
       showNotification("❌ Failed to submit quiz.", "error");
+      pronunciationSubmitting = false;
+      if (submitBtn) { submitBtn.disabled = false; submitBtn.style.pointerEvents = ""; submitBtn.style.opacity = ""; }
     }
   } catch (err) {
     localStorage.setItem('quiz_error', err.message || JSON.stringify(err));
     showNotification("❌ Error submitting quiz.", "error");
+    pronunciationSubmitting = false;
+    if (submitBtn) { submitBtn.disabled = false; submitBtn.style.pointerEvents = ""; submitBtn.style.opacity = ""; }
   }
 }
 
@@ -1854,7 +1951,10 @@ async function loadLessonsAndTopics() {
   }
 }
 
+let pronunciationQuizGenerating = false;
 async function generatePronunciationQuiz() {
+  if (pronunciationQuizGenerating) return;
+  pronunciationQuizGenerating = true;
   const topicId = document.getElementById('ai-topic').value;
   const difficulty = document.getElementById('ai-difficulty').value;
   const numQuestions = parseInt(document.getElementById('ai-num-questions').value, 10) || 5;
@@ -1869,9 +1969,13 @@ async function generatePronunciationQuiz() {
   const btn = document.getElementById('ai-generate-btn');
   const generatedSection = document.getElementById("ai-generated-section");
   const container = document.getElementById("ai-questions-container");
-  if (!btn || !generatedSection || !container) return;
+  if (!btn || !generatedSection || !container) {
+    pronunciationQuizGenerating = false;
+    return;
+  }
 
   btn.disabled = true;
+  if (regenBtn) regenBtn.disabled = true;
   btn.innerHTML = "<span>⏳ Generating...</span>";
 
   try {
@@ -1955,14 +2059,21 @@ async function generatePronunciationQuiz() {
     generatedSection.classList.remove("hidden");
     container.innerHTML = "<p class=\"text-muted-foreground text-sm\">Generation failed. Check your connection and try again.</p>";
   } finally {
+    pronunciationQuizGenerating = false;
     btn.disabled = false;
+    if (regenBtn) regenBtn.disabled = false;
     btn.innerHTML = "<i data-lucide=\"sparkles\" class=\"size-5\"></i><span>Generate quiz with AI</span>";
     if (window.lucide && typeof window.lucide.createIcons === "function") window.lucide.createIcons();
   }
 }
 
 
+let pronunciationQuizSaving = false;
 async function saveAIPronunciationQuiz() {
+    if (pronunciationQuizSaving) return;
+    pronunciationQuizSaving = true;
+    const saveBtn = document.getElementById("ai-save-btn");
+    if (saveBtn) { saveBtn.disabled = true; saveBtn.style.pointerEvents = "none"; saveBtn.style.opacity = "0.6"; }
     const titleEl = document.getElementById("ai-topic"); // using topic as title
     const subjectIdEl = document.getElementById("ai-topic"); // same select for subject_id?
     const difficultyEl = document.getElementById("ai-difficulty");
@@ -1970,6 +2081,8 @@ async function saveAIPronunciationQuiz() {
 
     if (!titleEl || !subjectIdEl || !difficultyEl || !passageEl) {
         console.error("One or more required fields are missing in the HTML.");
+        pronunciationQuizSaving = false;
+        if (saveBtn) { saveBtn.disabled = false; saveBtn.style.pointerEvents = ""; saveBtn.style.opacity = ""; }
         return;
     }
 
@@ -1984,8 +2097,9 @@ async function saveAIPronunciationQuiz() {
         answer: q.querySelector('input[placeholder="Correct Pronunciation"]').value
     }));
 
-    const teacher_id = window.currentUserId;  
+    const teacher_id = window.currentUserId;
 
+    try {
     const res = await fetch((window.API_BASE || "") + "/api/save-pronunciation-quiz", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1993,8 +2107,18 @@ async function saveAIPronunciationQuiz() {
     });
 
     const data = await res.json();
-    if (data.success) alert("Quiz saved! ID: " + data.quiz_id);
-    else alert("Error saving quiz: " + data.message);
+    if (data.success) {
+        alert("Quiz saved! ID: " + data.quiz_id);
+    } else {
+        alert("Error saving quiz: " + data.message);
+        pronunciationQuizSaving = false;
+        if (saveBtn) { saveBtn.disabled = false; saveBtn.style.pointerEvents = ""; saveBtn.style.opacity = ""; }
+    }
+  } catch (err) {
+    console.error("saveAIPronunciationQuiz:", err);
+    pronunciationQuizSaving = false;
+    if (saveBtn) { saveBtn.disabled = false; saveBtn.style.pointerEvents = ""; saveBtn.style.opacity = ""; }
+  }
 }
 
 

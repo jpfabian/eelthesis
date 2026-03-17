@@ -414,8 +414,20 @@
     };
   }
 
+  var takeQuizSubmitting = false;
   function submitQuiz() {
-    if (!quizData) return;
+    if (takeQuizSubmitting) return;
+    takeQuizSubmitting = true;
+    var mainSubmitBtn = document.getElementById("take-quiz-submit-btn");
+    var confirmSubmitBtn = document.getElementById("quiz-submit-confirm-submit");
+    if (mainSubmitBtn) { mainSubmitBtn.disabled = true; mainSubmitBtn.style.pointerEvents = "none"; mainSubmitBtn.style.opacity = "0.6"; }
+    if (confirmSubmitBtn) { confirmSubmitBtn.disabled = true; confirmSubmitBtn.style.pointerEvents = "none"; confirmSubmitBtn.style.opacity = "0.6"; }
+    if (!quizData) {
+        takeQuizSubmitting = false;
+        if (mainSubmitBtn) { mainSubmitBtn.disabled = false; mainSubmitBtn.style.pointerEvents = ""; mainSubmitBtn.style.opacity = ""; }
+        if (confirmSubmitBtn) { confirmSubmitBtn.disabled = false; confirmSubmitBtn.style.pointerEvents = ""; confirmSubmitBtn.style.opacity = ""; }
+        return;
+    }
     closeSubmitConfirmModal();
     saveCurrentAnswer();
     clearInterval(countdownInterval);
@@ -487,6 +499,9 @@
         .catch(function () {
           renderDone(null, null, false);
           if (doneMsg) doneMsg.textContent = "Quiz completed. There was a problem saving your attempt.";
+          takeQuizSubmitting = false;
+          if (mainSubmitBtn) { mainSubmitBtn.disabled = false; mainSubmitBtn.style.pointerEvents = ""; mainSubmitBtn.style.opacity = ""; }
+          if (confirmSubmitBtn) { confirmSubmitBtn.disabled = false; confirmSubmitBtn.style.pointerEvents = ""; confirmSubmitBtn.style.opacity = ""; }
         });
     } else if (builtinAttemptId != null) {
       var builtinAnswers = buildBuiltinAnswersPayload();
@@ -513,6 +528,9 @@
         .catch(function () {
           renderDone(null, null, false);
           if (doneMsg) doneMsg.textContent = "Quiz completed. There was a problem saving your attempt.";
+          takeQuizSubmitting = false;
+          if (mainSubmitBtn) { mainSubmitBtn.disabled = false; mainSubmitBtn.style.pointerEvents = ""; mainSubmitBtn.style.opacity = ""; }
+          if (confirmSubmitBtn) { confirmSubmitBtn.disabled = false; confirmSubmitBtn.style.pointerEvents = ""; confirmSubmitBtn.style.opacity = ""; }
         });
     } else {
       renderDone(null, null, true);
@@ -752,6 +770,7 @@
     var params = new URLSearchParams(window.location.search);
     var quizId = params.get("quiz_id") || sessionStorage.getItem("eel_quiz_id");
     var source = params.get("source") || "teacher";
+    var urlClassId = params.get("class_id");
     var isReviewMode = params.get("review") === "1";
     if (!quizId) {
       showError("Missing quiz. Open the quiz from Lessons.");
@@ -843,7 +862,7 @@
         try {
           selectedClass = JSON.parse(localStorage.getItem("eel_selected_class") || "null");
         } catch (_) {}
-        var classId = (selectedClass && selectedClass.id != null) ? selectedClass.id : (localStorage.getItem("eel_selected_class_id") || null);
+        var classId = urlClassId || (selectedClass && selectedClass.id != null ? selectedClass.id : null) || localStorage.getItem("eel_selected_class_id");
         fetch((window.API_BASE || "") + "/api/teacher/reading-quiz-attempts", {
           method: "POST",
           headers: { "Content-Type": "application/json" },

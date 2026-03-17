@@ -132,6 +132,10 @@
       if (!isTakePronunciationPage()) {
         return originalSubmitPronunciationQuiz.call(this, event);
       }
+      if (window.pronunciationSubmitting) return;
+      window.pronunciationSubmitting = true;
+      const submitBtn = document.getElementById("pronunciation-submit-btn");
+      if (submitBtn) { submitBtn.disabled = true; submitBtn.style.pointerEvents = "none"; submitBtn.style.opacity = "0.6"; }
       clearInterval(pronunciationTimer);
       const user = typeof getCurrentUser === "function" ? getCurrentUser() : null;
       if (!user) return;
@@ -183,9 +187,13 @@
           }
         } else {
           if (typeof showNotification === "function") showNotification("Failed to submit quiz.", "error");
+          window.pronunciationSubmitting = false;
+          if (submitBtn) { submitBtn.disabled = false; submitBtn.style.pointerEvents = ""; submitBtn.style.opacity = ""; }
         }
       } catch (err) {
         if (typeof showNotification === "function") showNotification("Error submitting quiz.", "error");
+        window.pronunciationSubmitting = false;
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.style.pointerEvents = ""; submitBtn.style.opacity = ""; }
       }
     };
   }
