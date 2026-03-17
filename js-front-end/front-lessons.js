@@ -1284,18 +1284,18 @@ async function fetchLessonsQuizListForNotifications(user, classInfo) {
   const classId = classInfo.classId;
   const subjectId = classInfo.subjectId;
   if (!classId) return [];
+  if (Number.isFinite(subjectId)) {
+    const res = await fetch(`${window.API_BASE || ""}/api/teacher/reading-quizzes?subject_id=${encodeURIComponent(subjectId)}&class_id=${encodeURIComponent(classId)}`);
+    if (!res.ok) throw new Error("Failed to load quizzes");
+    return await res.json();
+  }
   if (String(user?.role || "").toLowerCase() === "teacher") {
-    const params = new URLSearchParams({ user_id: String(user.user_id) });
-    if (Number.isFinite(subjectId)) params.set("subject_id", String(subjectId));
-    params.set("class_id", classId);
+    const params = new URLSearchParams({ user_id: String(user.user_id), class_id: classId });
     const res = await fetch(`${window.API_BASE || ""}/api/teacher/reading-quizzes?${params.toString()}`);
     if (!res.ok) throw new Error("Failed to load teacher quizzes");
     return await res.json();
   }
-  if (!Number.isFinite(subjectId)) return [];
-  const res = await fetch(`${window.API_BASE || ""}/api/teacher/reading-quizzes?subject_id=${encodeURIComponent(subjectId)}&class_id=${encodeURIComponent(classId)}`);
-  if (!res.ok) throw new Error("Failed to load student quizzes");
-  return await res.json();
+  return [];
 }
 
 async function pollLessonsNotifications(user) {

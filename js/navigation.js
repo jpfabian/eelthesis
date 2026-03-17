@@ -985,17 +985,18 @@ function getNavQuizStatuses(quizzes) {
 async function fetchNavQuizList(user, classInfo) {
     if (!classInfo.classId) return [];
     const role = String(user?.role || "").toLowerCase();
+    if (Number.isFinite(classInfo.subjectId)) {
+        const res = await fetch(`${window.API_BASE || ""}/api/teacher/reading-quizzes?subject_id=${encodeURIComponent(classInfo.subjectId)}&class_id=${encodeURIComponent(classInfo.classId)}`);
+        if (!res.ok) throw new Error("Failed to fetch quizzes");
+        return await res.json();
+    }
     if (role === "teacher") {
         const params = new URLSearchParams({ user_id: String(user.user_id), class_id: classInfo.classId });
-        if (Number.isFinite(classInfo.subjectId)) params.set("subject_id", String(classInfo.subjectId));
         const res = await fetch(`${window.API_BASE || ""}/api/teacher/reading-quizzes?${params.toString()}`);
         if (!res.ok) throw new Error("Failed to fetch teacher quizzes");
         return await res.json();
     }
-    if (!Number.isFinite(classInfo.subjectId)) return [];
-    const res = await fetch(`${window.API_BASE || ""}/api/teacher/reading-quizzes?subject_id=${encodeURIComponent(classInfo.subjectId)}&class_id=${encodeURIComponent(classInfo.classId)}`);
-    if (!res.ok) throw new Error("Failed to fetch student quizzes");
-    return await res.json();
+    return [];
 }
 
 function ensureSharedNotificationUI() {
