@@ -106,7 +106,7 @@
         pronunciationQuizData = null;
         pronunciationAnswers = {};
         document.getElementById("quiz-page").classList.add("hidden");
-        showPronunciationQuizDone(0);
+        showPronunciationQuizDone(0, false);
         const msgEl = document.getElementById("pronunciation-quiz-done-msg");
         if (msgEl) msgEl.textContent = "Quiz voided. You received 0 points due to leaving fullscreen or switching tabs.";
       }
@@ -161,7 +161,7 @@
           pronunciationAnswers = {};
           document.getElementById("quiz-page").classList.add("hidden");
           const accuracy = cheatingVoided ? 0 : (data.accuracy != null ? data.accuracy : 0);
-          showPronunciationQuizDone(accuracy);
+          showPronunciationQuizDone(accuracy, !!data.show_retake);
           if (cheatingVoided) {
             const msgEl = document.getElementById("pronunciation-quiz-done-msg");
             if (msgEl) msgEl.textContent = "Quiz voided. You received 0 points due to leaving fullscreen or switching tabs.";
@@ -278,12 +278,13 @@
     };
   }
 
-  function showPronunciationQuizDone(accuracyValue) {
+  function showPronunciationQuizDone(accuracyValue, showRetake) {
     const doneEl = document.getElementById("quiz-done");
     const card = document.getElementById("pronunciation-quiz-done-card");
     const charImg = document.getElementById("pronunciation-quiz-done-character");
     const percentEl = document.getElementById("pronunciation-quiz-done-percent");
     const msgEl = document.getElementById("pronunciation-quiz-done-msg");
+    const retakeBtn = document.getElementById("pronunciation-quiz-done-retake-btn");
     if (!doneEl) return;
     const totalAccuracy = Math.max(0, Math.min(parseFloat(accuracyValue) || 0, 100));
     if (card) card.classList.remove("quiz-done--high", "quiz-done--low");
@@ -300,6 +301,10 @@
       else if (totalAccuracy >= 50) msgEl.textContent = "📢 Keep practicing! Focus on clear pronunciation.";
       else msgEl.textContent = "🎯 Don't give up! Listen to the word again and practice.";
     }
+    if (retakeBtn) {
+      if (showRetake) retakeBtn.classList.remove("hidden");
+      else retakeBtn.classList.add("hidden");
+    }
     doneEl.classList.remove("hidden");
     if (window.lucide && typeof window.lucide.createIcons === "function") window.lucide.createIcons();
   }
@@ -313,6 +318,16 @@
         goBack();
       });
     });
+    const retakeBtn = document.getElementById("pronunciation-quiz-done-retake-btn");
+    if (retakeBtn) {
+      retakeBtn.addEventListener("click", function (e) {
+        e.preventDefault();
+        const params = new URLSearchParams(window.location.search);
+        params.set("retake", "1");
+        params.delete("review");
+        window.location.href = window.location.pathname + "?" + params.toString();
+      });
+    }
 
     const user = (() => {
       try {

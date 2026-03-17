@@ -914,11 +914,26 @@ router.patch("/api/teacher/reading-quiz-attempts/:id/submit", async (req, res) =
       [endTime, totalScore, totalPoints, attemptId]
     );
 
+    const percentScore = totalPoints > 0 ? (totalScore / totalPoints) * 100 : 0;
+    let passing = 70, canRetake = true;
+    try {
+      const [[q]] = await pool.query(
+        "SELECT passing_score, retake_option FROM teacher_reading_quizzes WHERE quiz_id = ?",
+        [attempt.quiz_id]
+      );
+      if (q) {
+        passing = Number(q.passing_score ?? 70);
+        canRetake = String(q.retake_option || "all").toLowerCase() !== "none";
+      }
+    } catch (_) {}
+    const showRetake = percentScore < passing && canRetake;
+
     res.json({
       success: true,
       score: totalScore,
       total_points: totalPoints,
-      end_time: endTime
+      end_time: endTime,
+      show_retake: !!showRetake
     });
   } catch (err) {
     console.error("❌ Submit teacher quiz attempt error:", err);
@@ -1375,7 +1390,7 @@ router.patch("/api/reading-quiz-attempts/:id/submit", async (req, res) => {
 
     try {
       const [[meta]] = await pool.query(
-        `SELECT a.student_id, a.class_id, q.subject_id, q.quiz_number, q.passing_score
+        `SELECT a.student_id, a.class_id, q.subject_id, q.quiz_number, q.passing_score, q.retake_option
          FROM reading_quiz_attempts a
          JOIN reading_quizzes q ON a.quiz_id = q.quiz_id
          WHERE a.attempt_id = ?`,
@@ -1423,7 +1438,11 @@ router.patch("/api/reading-quiz-attempts/:id/submit", async (req, res) => {
       console.warn("⚠️ Unlock progression skipped:", e?.message || e);
     }
 
-    res.json({ success: true, totalScore, totalPoints, percentScore, timeTakenSeconds, unlockedNext, unlocked_quiz_number });
+    const passing = meta ? Number(meta.passing_score ?? 70) : 70;
+    const canRetake = !meta || String(meta.retake_option || "all").toLowerCase() !== "none";
+    const showRetake = percentScore < passing && canRetake;
+
+    res.json({ success: true, totalScore, totalPoints, percentScore, timeTakenSeconds, unlockedNext, unlocked_quiz_number, passing_score: passing, show_retake: !!showRetake });
 
   } catch (err) {
     console.error("❌ Error submitting quiz:", err);

@@ -166,8 +166,8 @@ function startLesson(lessonId) {
 
 let _pendingPronunciationQuiz = null;
 
-function openPronunciationQuizTermsModal(quizId, isReview = false, quizTitle = '') {
-    _pendingPronunciationQuiz = { quizId, isReview };
+function openPronunciationQuizTermsModal(quizId, isReview = false, quizTitle = '', isRetake = false) {
+    _pendingPronunciationQuiz = { quizId, isReview, isRetake };
     const modal = document.getElementById('pronunciation-quiz-terms-modal');
     const nameEl = document.getElementById('pronunciation-quiz-terms-quiz-name');
     if (modal) modal.classList.remove('hidden');
@@ -183,9 +183,10 @@ function closePronunciationQuizTermsModal() {
 
 function proceedToPronunciationQuizPage() {
     if (!_pendingPronunciationQuiz) return;
-    const { quizId, isReview } = _pendingPronunciationQuiz;
+    const { quizId, isReview, isRetake } = _pendingPronunciationQuiz;
     let url = `take-pronunciation.html?quiz_id=${encodeURIComponent(quizId)}&return=pronunciation-lessons.html`;
     if (isReview) url += '&review=1';
+    if (isRetake) url += '&retake=1';
     window.open(url, '_blank');
     closePronunciationQuizTermsModal();
 }
@@ -804,7 +805,7 @@ async function loadPronunciationQuizzes(user) {
                         ${btnText}
                     </button>
                     ${showRetake ? `
-                    <button class="btn btn-outline flex-1" data-quiz-title="${quizTitle}" onclick="event.stopPropagation(); openPronunciationQuizTermsModal(${quiz.quiz_id}, false, this.getAttribute('data-quiz-title'))">
+                    <button class="btn btn-outline flex-1" data-quiz-title="${quizTitle}" onclick="event.stopPropagation(); openPronunciationQuizTermsModal(${quiz.quiz_id}, false, this.getAttribute('data-quiz-title'), true)">
                         <i data-lucide="refresh-cw" class="size-3 mr-1"></i>Retake
                     </button>
                     ` : ""}

@@ -476,11 +476,13 @@
     var scoreTotal = doneEl ? document.getElementById("quiz-done-score-total") : null;
     var percentEl = doneEl ? document.getElementById("quiz-done-percent") : null;
 
-    function renderDone(score, totalPoints, success) {
+    var retakeBtn = document.getElementById("quiz-done-retake-btn");
+    function renderDone(score, totalPoints, success, showRetake) {
       if (card) card.classList.remove("quiz-done--high", "quiz-done--low");
       if (scoreWrap) scoreWrap.classList.add("hidden");
       if (doneMsg) doneMsg.textContent = "Quiz completed. Your attempt has been saved.";
       if (charImg) { charImg.src = "image/eel-character-celebrate.png"; charImg.alt = "EEL character celebrating"; }
+      if (retakeBtn) retakeBtn.classList.add("hidden");
       if (success && score != null && totalPoints != null && totalPoints > 0) {
         var pct = Math.round((score / totalPoints) * 100);
         var isHigh = pct >= 70;
@@ -496,6 +498,7 @@
           if (percentEl) percentEl.textContent = pct + "%";
         }
         if (doneMsg) doneMsg.textContent = isHigh ? "Great job! Your attempt has been saved." : "Keep practicing! Your attempt has been saved.";
+        if (retakeBtn && showRetake) retakeBtn.classList.remove("hidden");
       } else if (doneMsg && !success) {
         doneMsg.textContent = "Quiz completed. There was a problem saving your attempt.";
       }
@@ -513,7 +516,8 @@
         .then(function (data) {
           var score = cheatingVoided ? 0 : (data.score != null ? data.score : null);
           var total = data.total_points != null ? data.total_points : null;
-          renderDone(score, total, !!data.success);
+          var showRetake = !!data.show_retake;
+          renderDone(score, total, !!data.success, showRetake);
           if (cheatingVoided && doneMsg) doneMsg.textContent = "Quiz voided. You received 0 points due to leaving fullscreen or switching tabs.";
         })
         .catch(function () {
@@ -540,7 +544,8 @@
         .then(function (data) {
           var score = cheatingVoided ? 0 : (data.totalScore != null ? data.totalScore : null);
           var total = data.totalPoints != null ? data.totalPoints : null;
-          renderDone(score, total, !!data.success);
+          var showRetake = !!data.show_retake;
+          renderDone(score, total, !!data.success, showRetake);
           if (cheatingVoided && doneMsg) doneMsg.textContent = "Quiz voided. You received 0 points due to leaving fullscreen or switching tabs.";
         })
         .catch(function () {
@@ -616,9 +621,21 @@
             var existing = attempts.find(function (a) { return Number(a.quiz_id) === Number(quizId); });
             if (existing) {
               builtinAttemptId = existing.attempt_id;
-              if (existing.status === "completed") {
+              var isRetake = (new URLSearchParams(window.location.search)).get("retake") === "1";
+              if (existing.status === "completed" && !isRetake) {
                 window.location.href = "take-reading-quiz.html?quiz_id=" + encodeURIComponent(quizId) + "&source=builtin&review=1&return=reading-lessons.html";
                 return Promise.reject({ redirect: true });
+              }
+              if (existing.status === "completed" && isRetake) {
+                return fetch((window.API_BASE || "") + "/api/reading-quiz-attempts", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ student_id: user.user_id, quiz_id: quizId, class_id: classId || undefined })
+                }).then(function (r) { return r.json(); }).then(function (data) {
+                  if (!data.attempt_id) throw new Error("Retake not allowed");
+                  builtinAttemptId = data.attempt_id;
+                  return Promise.resolve();
+                });
               }
               return fetch((window.API_BASE || "") + "/api/reading-quiz-attempts/" + existing.attempt_id + "/answers")
                 .then(function (r) { return r.ok ? r.json() : []; })
@@ -769,6 +786,16 @@
         goBackToLessons();
       });
     });
+    var retakeBtn = document.getElementById("quiz-done-retake-btn");
+    if (retakeBtn) {
+      retakeBtn.addEventListener("click", function (e) {
+        e.preventDefault();
+        var params = new URLSearchParams(window.location.search);
+        params.set("retake", "1");
+        params.delete("review");
+        window.location.href = window.location.pathname + "?" + params.toString();
+      });
+    }
 
     var user = null;
     try {

@@ -679,7 +679,7 @@ router.post("/api/pronunciation-submit", upload.any(), async (req, res) => {
 
     try {
       const [[meta]] = await pool.query(
-        `SELECT q.subject_id, q.quiz_number, q.passing_score
+        `SELECT q.subject_id, q.quiz_number, q.passing_score, q.retake_option
          FROM pronunciation_quizzes q
          WHERE q.quiz_id = ?`,
         [quiz_id]
@@ -715,12 +715,18 @@ router.post("/api/pronunciation-submit", upload.any(), async (req, res) => {
       console.warn("⚠️ Pronunciation unlock progression skipped:", e?.message || e);
     }
 
+    const passing = meta ? Number(meta.passing_score ?? 70) : 70;
+    const canRetake = !meta || String(meta.retake_option || "all").toLowerCase() !== "none";
+    const showRetake = avgAccuracy < passing && canRetake;
+
     res.json({
       success: true,
       message: "Pronunciation quiz submitted successfully.",
       accuracy: avgAccuracy,
       unlockedNext,
-      unlocked_quiz_number
+      unlocked_quiz_number,
+      passing_score: passing,
+      show_retake: !!showRetake
     });
 
   } catch (err) {

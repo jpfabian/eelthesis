@@ -331,8 +331,8 @@ function startLesson(lessonId, isTeacherQuiz = false, quizTitle = '') {
 let _pendingReadingQuiz = null;
 
 /** Show terms & conditions modal; Proceed opens quiz in new tab. */
-function openReadingQuizTermsModal(lessonId, isTeacherQuiz = false, isReview = false, quizTitle = '') {
-    _pendingReadingQuiz = { lessonId, isTeacherQuiz, isReview };
+function openReadingQuizTermsModal(lessonId, isTeacherQuiz = false, isReview = false, quizTitle = '', isRetake = false) {
+    _pendingReadingQuiz = { lessonId, isTeacherQuiz, isReview, isRetake };
     const modal = document.getElementById('reading-quiz-terms-modal');
     const nameEl = document.getElementById('reading-quiz-terms-quiz-name');
     if (modal) modal.classList.remove('hidden');
@@ -350,10 +350,11 @@ function closeReadingQuizTermsModal() {
 /** Proceed: open quiz in new tab and close terms modal. */
 function proceedToReadingQuizPage() {
     if (!_pendingReadingQuiz) return;
-    const { lessonId, isTeacherQuiz, isReview } = _pendingReadingQuiz;
+    const { lessonId, isTeacherQuiz, isReview, isRetake } = _pendingReadingQuiz;
     const source = isTeacherQuiz ? 'teacher' : 'builtin';
     let url = `take-reading-quiz.html?quiz_id=${encodeURIComponent(lessonId)}&source=${source}&return=reading-lessons.html`;
     if (isReview) url += '&review=1';
+    if (isRetake) url += '&retake=1';
     window.open(url, '_blank');
     closeReadingQuizTermsModal();
 }
@@ -1930,7 +1931,7 @@ async function loadQuizzes(user = getCurrentUser()) {
                         ${btnText}
                     </button>
                     ${showRetake ? `
-                    <button class="btn btn-outline flex-1" data-quiz-title="${escapeHtml(quiz.title || '')}" onclick="event.stopPropagation(); openReadingQuizTermsModal(${quiz.quiz_id}, false, false, this.getAttribute('data-quiz-title'))">
+                    <button class="btn btn-outline flex-1" data-quiz-title="${escapeHtml(quiz.title || '')}" onclick="event.stopPropagation(); openReadingQuizTermsModal(${quiz.quiz_id}, false, false, this.getAttribute('data-quiz-title'), true)">
                         <i data-lucide="refresh-cw" class="size-3 mr-1"></i>Retake
                     </button>
                     ` : ''}
