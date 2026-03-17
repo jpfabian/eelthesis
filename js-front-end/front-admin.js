@@ -105,6 +105,7 @@ async function adminLogin(username, password) {
   try {
     localStorage.setItem("eel_token", "admin_token");
     localStorage.setItem("eel_user", JSON.stringify({ user_id: 0, fname: "Admin", lname: "", role: "admin" }));
+    localStorage.removeItem("eel_avatar_url");
   } catch (_) {}
   return data;
 }
@@ -526,7 +527,7 @@ async function initAdminDashboardStatsPage() {
     const result = await Swal.fire({ icon: "question", title: "Log out?", text: "Are you sure?", showCancelButton: true, confirmButtonText: "Yes", cancelButtonText: "No", confirmButtonColor: "#8b5cf6" });
     if (!result.isConfirmed) return;
     clearAdminToken();
-    try { localStorage.removeItem("eel_token"); localStorage.removeItem("eel_user"); } catch (_) {}
+    try { localStorage.removeItem("eel_token"); localStorage.removeItem("eel_user"); localStorage.removeItem("eel_avatar_url"); } catch (_) {}
     window.location.replace("login.html");
   });
   try {
@@ -604,7 +605,7 @@ async function initAdminDashboardPage() {
       const result = await Swal.fire({ icon: "question", title: "Log out?", text: "Are you sure?", showCancelButton: true, confirmButtonText: "Yes", cancelButtonText: "No", confirmButtonColor: "#8b5cf6" });
       if (!result.isConfirmed) return;
       clearAdminToken();
-      try { localStorage.removeItem("eel_token"); localStorage.removeItem("eel_user"); } catch (_) {}
+      try { localStorage.removeItem("eel_token"); localStorage.removeItem("eel_user"); localStorage.removeItem("eel_avatar_url"); } catch (_) {}
       window.location.replace("login.html");
     });
   }

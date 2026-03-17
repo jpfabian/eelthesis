@@ -1541,6 +1541,7 @@
         try {
           localStorage.removeItem("eel_token");
           localStorage.removeItem("eel_user");
+          localStorage.removeItem("eel_avatar_url");
           localStorage.removeItem(MASTER_ADMIN_TOKEN_KEY);
           localStorage.removeItem("eel_admin_token");
         } catch (_) {}

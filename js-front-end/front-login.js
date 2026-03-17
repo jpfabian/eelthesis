@@ -41,6 +41,7 @@ function isAuthenticated() {
         function logout() {
             localStorage.removeItem("eel_token");
             localStorage.removeItem("eel_user");
+            localStorage.removeItem("eel_avatar_url");
             window.location.replace("login.html");
         }
 
@@ -82,6 +83,11 @@ function isAuthenticated() {
                         role: result.user.role,
                         avatar_url: result.user.avatar_url || null
                     }));
+                    if (result.user.avatar_url) {
+                        localStorage.setItem("eel_avatar_url", result.user.avatar_url);
+                    } else {
+                        localStorage.removeItem("eel_avatar_url");
+                    }
                     if (result.adminToken) {
                         try { localStorage.setItem("eel_admin_token", result.adminToken); } catch (_) {}
                     }

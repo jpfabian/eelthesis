@@ -112,7 +112,7 @@ function setupSidebar(user, currentPage) {
                 : "");
 
         const userEmail = user.email || "";
-        const avatarUrl = user.avatar_url || (typeof localStorage !== "undefined" ? localStorage.getItem("eel_avatar_url") : null);
+        const avatarUrl = user.avatar_url || null;
         const avatarHtml = avatarUrl
             ? `<img class="sidebar-avatar sidebar-avatar-img" src="${escapeHtml(avatarUrl)}" alt="">`
             : `<span class="sidebar-avatar" aria-hidden="true">${initials}</span>`;
@@ -570,6 +570,7 @@ async function handleLogoutWithConfirm() {
     }
     try {
         localStorage.removeItem('eel_user');
+        localStorage.removeItem('eel_avatar_url');
     } catch (_) {}
     window.location.replace('login.html');
 }
