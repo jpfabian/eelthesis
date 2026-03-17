@@ -208,9 +208,10 @@
                     this.value = '';
                     return;
                 }
+                this.disabled = true;
                 const formData = new FormData();
+                formData.append('user_id', String(user.user_id));
                 formData.append('avatar', file);
-                formData.append('user_id', user.user_id);
                 try {
                     const res = await fetch(`${API_BASE}/users/avatar`, {
                         method: 'POST',
@@ -218,8 +219,8 @@
                     });
                     const data = await res.json().catch(() => ({}));
                     if (!res.ok) {
-                        if (typeof showNotification === 'function') showNotification(data?.error || 'Failed to upload avatar', 'error');
-                        this.value = '';
+                        const errMsg = data?.error || (res.status === 413 ? 'Image too large.' : 'Failed to upload avatar');
+                        if (typeof showNotification === 'function') showNotification(errMsg, 'error');
                         return;
                     }
                     const avatarUrl = data.avatar_url;
@@ -229,8 +230,10 @@
                 } catch (err) {
                     console.error(err);
                     if (typeof showNotification === 'function') showNotification('Could not upload avatar. Try again.', 'error');
+                } finally {
+                    this.disabled = false;
+                    this.value = '';
                 }
-                this.value = '';
             });
             if (removeBtn) {
                 removeBtn.addEventListener('click', async function() {
