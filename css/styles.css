@@ -14628,6 +14628,32 @@ body.take-quiz-page .take-quiz-questions .mt-4.p-4 .grid > div {
     color: var(--muted-foreground);
   }
 
+  /* Retake dropdown: ensure it responds and renders correctly in light/dark mode */
+  #schedule-modal select.schedule-modal-input,
+  #schedule-modal #lesson-modal-retake-option,
+  #schedule-modal #retake-option,
+  #lesson-schedule-modal select.schedule-modal-input,
+  #lesson-schedule-modal #lesson-modal-retake-option {
+    cursor: pointer;
+    color-scheme: light;
+    appearance: auto;
+  }
+  :root[data-theme="dark"] #schedule-modal select.schedule-modal-input,
+  :root[data-theme="dark"] #schedule-modal #lesson-modal-retake-option,
+  :root[data-theme="dark"] #schedule-modal #retake-option,
+  :root[data-theme="dark"] #lesson-schedule-modal select.schedule-modal-input,
+  :root[data-theme="dark"] #lesson-schedule-modal #lesson-modal-retake-option {
+    color-scheme: dark;
+  }
+  #schedule-modal select.schedule-modal-input option,
+  #schedule-modal #lesson-modal-retake-option option,
+  #schedule-modal #retake-option option,
+  #lesson-schedule-modal select.schedule-modal-input option,
+  #lesson-schedule-modal #lesson-modal-retake-option option {
+    background: var(--card);
+    color: var(--foreground);
+  }
+
   #schedule-modal .schedule-modal-input-narrow {
     max-width: 30rem;
   }

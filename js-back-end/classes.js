@@ -238,6 +238,7 @@ router.get("/api/class/:classId/students", async (req, res) => {
           sc.student_fname,
           sc.student_lname,
           sc.status,
+          sc.joined_at,
           u.email
        FROM student_classes sc
        JOIN users u ON sc.student_id = u.user_id

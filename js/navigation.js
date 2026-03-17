@@ -669,7 +669,7 @@ const NAV_NOTIF_ITEMS_KEY = "eel_lessons_class_notifications_v1";
 const NAV_NOTIF_STATE_KEY = "eel_lessons_class_notifications_state_v1";
 const NAV_NOTIF_USER_KEY = "eel_notif_user_id_v1";
 let __navNotifPollHandle = null;
-const NAV_USER_NAME_CACHE = {};
+const NAV_USER_INFO_CACHE = {};
 
 function getNavNotifUserId() {
     try {
@@ -819,20 +819,27 @@ function getNavNotificationAvatarHtml(item) {
 }
 
 async function fetchNavUserName(userId) {
+    const info = await fetchNavUserInfo(userId);
+    return info?.name || "";
+}
+
+async function fetchNavUserInfo(userId) {
     const key = String(userId || "").trim();
-    if (!key) return "";
-    if (NAV_USER_NAME_CACHE[key]) return NAV_USER_NAME_CACHE[key];
+    if (!key) return { name: "", avatarUrl: "" };
+    if (NAV_USER_INFO_CACHE[key]) return NAV_USER_INFO_CACHE[key];
     try {
         const res = await fetch(`${window.API_BASE || ""}/api/users/me?user_id=${encodeURIComponent(key)}`);
         const data = await res.json().catch(() => ({}));
         if (res.ok && data.success && data.user) {
-            const fullName = `${data.user.fname || ""} ${data.user.lname || ""}`.trim();
-            NAV_USER_NAME_CACHE[key] = fullName || "";
-            return NAV_USER_NAME_CACHE[key];
+            const u = data.user;
+            const name = `${u.fname || ""} ${u.lname || ""}`.trim();
+            const avatarUrl = String(u.avatar_url || "").trim();
+            NAV_USER_INFO_CACHE[key] = { name, avatarUrl };
+            return NAV_USER_INFO_CACHE[key];
         }
     } catch {}
-    NAV_USER_NAME_CACHE[key] = "";
-    return "";
+    NAV_USER_INFO_CACHE[key] = { name: "", avatarUrl: "" };
+    return NAV_USER_INFO_CACHE[key];
 }
 
 async function backfillNavQuizOpenActors(classId, quizList, role, user) {
@@ -862,9 +869,10 @@ async function backfillNavQuizOpenActors(classId, quizList, role, user) {
         }
         const ownerId = ownerByQuizId.get(quizId);
         if (!ownerId) continue;
-        const teacherName = await fetchNavUserName(ownerId);
-        if (teacherName) {
-            item.actor_name = teacherName;
+        const teacherInfo = await fetchNavUserInfo(ownerId);
+        if (teacherInfo?.name) {
+            item.actor_name = teacherInfo.name;
+            item.actor_avatar_url = teacherInfo?.avatarUrl || "";
             changed = true;
         }
     }
@@ -930,10 +938,11 @@ function formatNavNotifTime(ts) {
     }
 }
 
-function pushNavNotification(classId, message, eventKey, targetUrl, actorName, actorAvatarUrl) {
+function pushNavNotification(classId, message, eventKey, targetUrl, actorName, actorAvatarUrl, eventTs) {
     if (!classId || !message || !eventKey) return;
     const items = getNavNotifItems(classId);
     if (items.some((item) => item.eventKey === eventKey)) return;
+    const ts = eventTs ? (typeof eventTs === "number" ? new Date(eventTs).toISOString() : String(eventTs)) : new Date().toISOString();
     items.push({
         id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
         message: String(message),
@@ -941,7 +950,7 @@ function pushNavNotification(classId, message, eventKey, targetUrl, actorName, a
         targetUrl: targetUrl ? String(targetUrl) : "",
         actor_name: actorName ? String(actorName) : "",
         actor_avatar_url: actorAvatarUrl ? String(actorAvatarUrl) : "",
-        ts: new Date().toISOString(),
+        ts,
         read: false
     });
     setNavNotifItems(classId, items);
@@ -1168,7 +1177,9 @@ async function pollSharedClassNotifications(user) {
                 actorName = `${user?.fname || ""} ${user?.lname || ""}`.trim() || "You";
                 actorAvatarUrl = localStorage.getItem("eel_avatar_url") || "";
             } else if (quiz.opened_by_user_id) {
-                actorName = await fetchNavUserName(quiz.opened_by_user_id);
+                const info = await fetchNavUserInfo(quiz.opened_by_user_id);
+                actorName = info?.name || "";
+                actorAvatarUrl = info?.avatarUrl || "";
             }
             pushNavNotification(
                 classInfo.classId,
@@ -1176,7 +1187,8 @@ async function pollSharedClassNotifications(user) {
                 `quiz-open:${quiz.id}`,
                 buildNavNotificationUrl("quiz-open", classInfo.classId),
                 actorName || "Teacher",
-                actorAvatarUrl
+                actorAvatarUrl,
+                Number.isFinite(quiz.start_ms) ? quiz.start_ms : undefined
             );
             seen.add(quiz.id);
         }
@@ -1189,7 +1201,9 @@ async function pollSharedClassNotifications(user) {
                 actorName = `${user?.fname || ""} ${user?.lname || ""}`.trim() || "You";
                 actorAvatarUrl = localStorage.getItem("eel_avatar_url") || "";
             } else if (quiz.opened_by_user_id) {
-                actorName = await fetchNavUserName(quiz.opened_by_user_id);
+                const info = await fetchNavUserInfo(quiz.opened_by_user_id);
+                actorName = info?.name || "";
+                actorAvatarUrl = info?.avatarUrl || "";
             }
             pushNavNotification(
                 classInfo.classId,
@@ -1197,7 +1211,8 @@ async function pollSharedClassNotifications(user) {
                 `quiz-closing:${quiz.id}`,
                 buildNavNotificationUrl("quiz-open", classInfo.classId),
                 actorName || "Teacher",
-                actorAvatarUrl
+                actorAvatarUrl,
+                Number.isFinite(quiz.start_ms) ? quiz.start_ms : undefined
             );
             seenClosing.add(quiz.id);
         }
@@ -1210,7 +1225,9 @@ async function pollSharedClassNotifications(user) {
                 actorName = `${user?.fname || ""} ${user?.lname || ""}`.trim() || "You";
                 actorAvatarUrl = localStorage.getItem("eel_avatar_url") || "";
             } else if (quiz.opened_by_user_id) {
-                actorName = await fetchNavUserName(quiz.opened_by_user_id);
+                const info = await fetchNavUserInfo(quiz.opened_by_user_id);
+                actorName = info?.name || "";
+                actorAvatarUrl = info?.avatarUrl || "";
             }
             pushNavNotification(
                 classInfo.classId,
@@ -1218,7 +1235,8 @@ async function pollSharedClassNotifications(user) {
                 `quiz-closed:${quiz.id}`,
                 buildNavNotificationUrl("quiz-open", classInfo.classId),
                 actorName || "Teacher",
-                actorAvatarUrl
+                actorAvatarUrl,
+                Number.isFinite(quiz.end_ms) ? quiz.end_ms : undefined
             );
             seenClosed.add(quiz.id);
         }
@@ -1246,12 +1264,15 @@ async function pollSharedClassNotifications(user) {
                         const msg = status === "pending"
                             ? `${fullName} requested to join ${classInfo.className}.`
                             : `${fullName} enrolled in ${classInfo.className}.`;
+                        const enrollTs = s.joined_at ? (typeof s.joined_at === "number" ? s.joined_at : new Date(s.joined_at).getTime()) : undefined;
                         pushNavNotification(
                             classInfo.classId,
                             msg,
                             `enroll:${enrollId}:${status || "unknown"}`,
                             buildNavNotificationUrl("enroll", classInfo.classId),
-                            fullName
+                            fullName,
+                            undefined,
+                            Number.isFinite(enrollTs) ? enrollTs : undefined
                         );
                     });
                 }

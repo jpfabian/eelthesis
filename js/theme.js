@@ -1,5 +1,16 @@
 // Theme manager for EEL (light / dark / system)
 // Persists to localStorage: eel_theme = 'light' | 'dark' | 'system'
+// On startup: uses device theme (prefers-color-scheme) when stored as "system" or not set
+
+// Apply theme immediately (before first paint) – load this script before CSS in <head>
+(function applyThemeEarly() {
+  try {
+    var s = localStorage.getItem("eel_theme");
+    var r = (s === "dark" || s === "light") ? s : (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    document.documentElement.dataset.theme = r;
+    document.documentElement.style.colorScheme = r;
+  } catch (_) {}
+})();
 
 (function () {
   const STORAGE_KEY = "eel_theme";
