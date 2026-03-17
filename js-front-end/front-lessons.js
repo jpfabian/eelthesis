@@ -1219,9 +1219,10 @@ function renderLessonsNotificationPanel(classId) {
     const firstFiveHeight = rows.slice(0, 5).reduce((sum, row) => sum + row.offsetHeight, 0);
     listEl.style.maxHeight = `${firstFiveHeight}px`;
     listEl.style.overflowY = "auto";
+    listEl.style.overflowX = "hidden";
   } else {
     listEl.style.maxHeight = "none";
-    listEl.style.overflowY = "hidden";
+    listEl.style.overflow = "visible";
   }
 }
 

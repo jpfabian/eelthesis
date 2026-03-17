@@ -5344,7 +5344,7 @@ body.eel-modal-open #password-modal {
   box-shadow:
     0 28px 60px -28px rgba(0, 0, 0, 0.45),
     0 0 0 1px color-mix(in srgb, var(--primary) 12%, transparent);
-  overflow: hidden;
+  overflow: visible;
   display: flex;
   flex-direction: column;
 }

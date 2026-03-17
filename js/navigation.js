@@ -1145,9 +1145,10 @@ function renderSharedNotifications(classId) {
         const h = rows.slice(0, 5).reduce((sum, row) => sum + row.offsetHeight, 0);
         listEl.style.maxHeight = `${h}px`;
         listEl.style.overflowY = "auto";
+        listEl.style.overflowX = "hidden";
     } else {
         listEl.style.maxHeight = "none";
-        listEl.style.overflowY = "hidden";
+        listEl.style.overflow = "visible";
     }
 }
 
