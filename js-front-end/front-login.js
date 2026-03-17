@@ -79,7 +79,8 @@ function isAuthenticated() {
                         fname: result.user.fname,
                         lname: result.user.lname,
                         email: result.user.email,
-                        role: result.user.role
+                        role: result.user.role,
+                        avatar_url: result.user.avatar_url || null
                     }));
                     if (result.adminToken) {
                         try { localStorage.setItem("eel_admin_token", result.adminToken); } catch (_) {}

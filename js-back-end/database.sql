@@ -33,6 +33,7 @@ CREATE TABLE IF NOT EXISTS users (
   rejected_reason VARCHAR(255) NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+  avatar_url VARCHAR(512) NULL COMMENT 'Profile picture URL (e.g. S3)',
   PRIMARY KEY (user_id),
   UNIQUE KEY uq_users_email (email),
   KEY idx_users_verification_status (verification_status)

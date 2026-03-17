@@ -33,7 +33,7 @@ router.post("/api/auth/login", async (req, res) => {
       // Newer schema (supports deactivate)
       const [r] = await conn.execute(
         `
-        SELECT user_id, fname, lname, email, password, role,
+        SELECT user_id, fname, lname, email, password, role, avatar_url,
                verification_status, rejected_reason,
                is_active, deactivated_reason
         FROM users
@@ -115,6 +115,7 @@ router.post("/api/auth/login", async (req, res) => {
         lname: toNameCase(user.lname),
         email: user.email,
         role: user.role,
+        avatar_url: user.avatar_url || null,
       },
     };
     if (user.role === "admin") {
