@@ -1,6 +1,29 @@
 let selectedRole = null;
 
         document.addEventListener('DOMContentLoaded', async function() {
+            // Auto-select role from URL (e.g. from "Start Teaching" on for-teachers page)
+            const urlParams = new URLSearchParams(window.location.search);
+            const urlRole = urlParams.get('role');
+            if (urlRole && (urlRole === 'teacher' || urlRole === 'student')) {
+                selectedRole = urlRole;
+                const teacherCard = document.querySelector('.role-card-small[data-role="teacher"]');
+                const studentCard = document.querySelector('.role-card-small[data-role="student"]');
+                if (urlRole === 'teacher' && teacherCard) {
+                    teacherCard.classList.add('selected');
+                    if (studentCard) studentCard.classList.remove('selected');
+                } else if (urlRole === 'student' && studentCard) {
+                    studentCard.classList.add('selected');
+                    if (teacherCard) teacherCard.classList.remove('selected');
+                }
+                const roleContinueBtn = document.getElementById('role-continue-btn');
+                if (roleContinueBtn) roleContinueBtn.disabled = false;
+                showRegistrationStep();
+                urlParams.delete('role');
+                const cleanSearch = urlParams.toString();
+                const cleanUrl = window.location.pathname + (cleanSearch ? '?' + cleanSearch : '');
+                try { window.history.replaceState({}, document.title, cleanUrl); } catch (_) {}
+            }
+
             const roleCards = document.querySelectorAll('.role-card-small');
             const strandSelect = document.getElementById('strand');
             if (strandSelect) {

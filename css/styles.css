@@ -1400,89 +1400,6 @@ body,
   display: none !important;
 }
 
-/* ==========================================================
-   New user tutorial overlay
-   ========================================================== */
-.eel-tutorial-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 9999;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1rem;
-  box-sizing: border-box;
-}
-
-.eel-tutorial-backdrop {
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
-  cursor: pointer;
-}
-
-.eel-tutorial-card {
-  position: relative;
-  width: 100%;
-  max-width: 420px;
-  padding: 1.75rem 1.5rem;
-  background: var(--card);
-  color: var(--card-foreground);
-  border: 1px solid var(--border);
-  border-radius: calc(var(--radius) + 8px);
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
-}
-
-.eel-tutorial-icon-wrap {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 1rem;
-}
-
-.eel-tutorial-icon {
-  width: 48px;
-  height: 48px;
-  color: var(--primary);
-}
-
-.eel-tutorial-title {
-  font-size: 1.25rem;
-  font-weight: 700;
-  margin-bottom: 0.75rem;
-  text-align: center;
-}
-
-.eel-tutorial-body {
-  font-size: 0.95rem;
-  line-height: 1.5;
-  color: var(--muted-foreground);
-  margin-bottom: 1.25rem;
-  text-align: center;
-}
-
-.eel-tutorial-progress {
-  font-size: 0.8rem;
-  color: var(--muted-foreground);
-  text-align: center;
-  margin-bottom: 1.25rem;
-}
-
-.eel-tutorial-actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-}
-
-.eel-tutorial-nav {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
 .sidebar-name-row {
   display: flex;
   align-items: center;
@@ -5297,7 +5214,6 @@ body:has(.mobile-nav-header) .recitation-picker-overlay,
 body:has(.mobile-nav-header) .recitation-question-overlay,
 body:has(.mobile-nav-header) .lesson-slideshow-overlay,
 body:has(.mobile-nav-header) .take-quiz-fullscreen-gate,
-body:has(.mobile-nav-header) .eel-tutorial-overlay,
 body:has(.mobile-nav-header) #password-modal {
   top: var(--app-header-height);
   right: 0;
@@ -5320,7 +5236,6 @@ body.eel-modal-open .recitation-picker-overlay,
 body.eel-modal-open .recitation-question-overlay,
 body.eel-modal-open .lesson-slideshow-overlay,
 body.eel-modal-open .take-quiz-fullscreen-gate,
-body.eel-modal-open .eel-tutorial-overlay,
 body.eel-modal-open #password-modal {
   top: 0 !important;
   height: 100% !important;
@@ -6866,6 +6781,16 @@ body.landing .hero .image-container .hero-character {
   object-fit: contain;
   object-position: center;
   transform: scale(1.3);
+}
+/* Hide native video control overlay (fullscreen, PiP, etc.) on hero EELi video */
+#hero-eeli-video::-webkit-media-controls,
+#hero-eeli-video::-webkit-media-controls-enclosure,
+#hero-eeli-video::-webkit-media-controls-panel,
+#hero-eeli-video::-webkit-media-controls-start-playback-button {
+  display: none !important;
+}
+#hero-eeli-video::-webkit-media-controls-overlay-play-button {
+  display: none !important;
 }
 
 body.landing .students-image {
@@ -20956,7 +20881,6 @@ body.deleted-archive-page #main-content .scores-table-scroll {
   .recitation-picker-overlay,
   .recitation-question-overlay,
   .lesson-slideshow-overlay,
-  .eel-tutorial-overlay,
   .master-admin-modal-overlay {
     padding: 0;
     align-items: flex-start;

@@ -44,129 +44,6 @@ function setupProfilePopover(headerContainer, user) {
     });
 }
 
-const TUTORIAL_STORAGE_KEY = "eel_tutorial_done";
-
-function getTutorialSteps(user, currentPageId) {
-    const isTeacher = user.role === "teacher";
-    return [
-        {
-            title: "Welcome to EEL",
-            body: "English Enhancement Learning helps you improve reading and pronunciation. This short tour will show you around.",
-            icon: "sparkles"
-        },
-        {
-            title: "Your sidebar",
-            body: isTeacher
-                ? "Use the sidebar to open Subject Lessons, Reading, Pronunciation, Recitation, Exam Generator, and Student Progress. Click your avatar at the top to see your profile and Settings."
-                : "Use the sidebar to open Subject Lessons, Reading, Pronunciation, and My Progress to track your learning. Click your avatar at the top to see your profile and Settings.",
-            icon: "panel-left"
-        },
-        {
-            title: currentPageId === "classes" ? "Classes" : "Getting started",
-            body: isTeacher
-                ? "From the Classroom you can create classes and share the class code with students. Select a class to manage lessons and view progress."
-                : "Join a class using the code from your teacher. After joining, select a class to access lessons, reading, and pronunciation activities.",
-            icon: "layers"
-        },
-        {
-            title: "You're all set",
-            body: "You can change theme (light/dark) from the button in the top-right corner. Need this tour again? Open Settings to replay the tutorial.",
-            icon: "check-circle"
-        }
-    ];
-}
-
-function showTutorialIfNew(user, currentPageId) {
-    if (localStorage.getItem(TUTORIAL_STORAGE_KEY)) return;
-    if (user.role === "admin") return;
-
-    const steps = getTutorialSteps(user, currentPageId);
-    let stepIndex = 0;
-
-    const overlay = document.createElement("div");
-    overlay.id = "eel-tutorial-overlay";
-    overlay.className = "eel-tutorial-overlay";
-    overlay.setAttribute("role", "dialog");
-    overlay.setAttribute("aria-modal", "true");
-    overlay.setAttribute("aria-labelledby", "eel-tutorial-title");
-
-    function closeTutorial() {
-        localStorage.setItem(TUTORIAL_STORAGE_KEY, "1");
-        overlay.remove();
-        if (window.lucide && typeof window.lucide.createIcons === "function") {
-            window.lucide.createIcons();
-        }
-    }
-
-    function renderStep() {
-        const step = steps[stepIndex];
-        if (!step) return;
-        const titleEl = overlay.querySelector("#eel-tutorial-title");
-        const bodyEl = overlay.querySelector("#eel-tutorial-body");
-        const iconEl = overlay.querySelector("#eel-tutorial-icon");
-        const backBtn = overlay.querySelector("#eel-tutorial-back");
-        const nextBtn = overlay.querySelector("#eel-tutorial-next");
-        const progressEl = overlay.querySelector("#eel-tutorial-progress");
-        if (titleEl) titleEl.textContent = step.title;
-        if (bodyEl) bodyEl.textContent = step.body;
-        if (iconEl) {
-            iconEl.setAttribute("data-lucide", step.icon);
-            if (window.lucide && typeof window.lucide.createIcons === "function") {
-                window.lucide.createIcons();
-            }
-        }
-        if (backBtn) {
-            backBtn.style.display = stepIndex === 0 ? "none" : "inline-flex";
-        }
-        if (nextBtn) {
-            nextBtn.textContent = stepIndex === steps.length - 1 ? "Finish" : "Next";
-        }
-        if (progressEl) {
-            progressEl.textContent = (stepIndex + 1) + " / " + steps.length;
-        }
-    }
-
-    overlay.innerHTML = `
-        <div class="eel-tutorial-backdrop"></div>
-        <div class="eel-tutorial-card">
-            <div class="eel-tutorial-icon-wrap">
-                <i id="eel-tutorial-icon" data-lucide="sparkles" class="eel-tutorial-icon"></i>
-            </div>
-            <h2 id="eel-tutorial-title" class="eel-tutorial-title"></h2>
-            <p id="eel-tutorial-body" class="eel-tutorial-body"></p>
-            <div class="eel-tutorial-progress" id="eel-tutorial-progress"></div>
-            <div class="eel-tutorial-actions">
-                <button type="button" id="eel-tutorial-skip" class="btn btn-outline btn-sm">Skip</button>
-                <div class="eel-tutorial-nav">
-                    <button type="button" id="eel-tutorial-back" class="btn btn-outline btn-sm" style="display:none;">Back</button>
-                    <button type="button" id="eel-tutorial-next" class="btn btn-primary btn-sm">Next</button>
-                </div>
-            </div>
-        </div>
-    `;
-
-    overlay.querySelector("#eel-tutorial-skip").addEventListener("click", closeTutorial);
-    overlay.querySelector("#eel-tutorial-back").addEventListener("click", () => {
-        if (stepIndex > 0) {
-            stepIndex--;
-            renderStep();
-        }
-    });
-    overlay.querySelector("#eel-tutorial-next").addEventListener("click", () => {
-        if (stepIndex < steps.length - 1) {
-            stepIndex++;
-            renderStep();
-        } else {
-            closeTutorial();
-        }
-    });
-    overlay.querySelector(".eel-tutorial-backdrop").addEventListener("click", closeTutorial);
-
-    document.body.appendChild(overlay);
-    renderStep();
-    if (typeof hideLoading === "function") hideLoading();
-}
-
 function setupSidebar(user, currentPage) {
     const sidebar = document.getElementById('sidebar');
     const sidebarTitle = document.getElementById('sidebar-title');
@@ -782,9 +659,6 @@ function initializePage() {
         setupHeaderHideWhenModalOpen();
         setupSharedClassNotifications(user, currentPageId);
         // Theme toggle is now the top-right corner button (js/theme.js)
-
-        // Tutorial for new users (teacher or student)
-        showTutorialIfNew(user, currentPageId);
 
         resolve(user);
     });
@@ -1572,7 +1446,6 @@ function isModalElement(el) {
         el.classList.contains("recitation-question-overlay") ||
         el.classList.contains("join-class-modal-overlay") ||
         el.classList.contains("create-class-modal-overlay") ||
-        el.classList.contains("eel-tutorial-overlay") ||
         el.getAttribute("role") === "dialog" ||
         el.id === "password-modal" ||
         (el.id && String(el.id).toLowerCase().includes("modal"))
@@ -1588,7 +1461,7 @@ function countVisibleModals() {
         ".modal-overlay, .modal-quiz-overlay, .modal-create-overlay, " +
         ".recitation-picker-overlay, .recitation-question-overlay, " +
         ".join-class-modal-overlay, .create-class-modal-overlay, " +
-        "#password-modal, #eel-tutorial-overlay, [role=dialog]"
+        "#password-modal, [role=dialog]"
     );
     return Array.from(candidates).filter((el) => {
         if (el.id === "sidebar-profile-popover") return false;

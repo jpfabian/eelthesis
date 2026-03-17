@@ -147,10 +147,6 @@
                                 <i data-lucide="key" class="size-4 mr-2"></i>
                                 Change Password
                             </button>
-                            <button type="button" class="btn btn-outline" onclick="replayTutorial()">
-                                <i data-lucide="play-circle" class="size-4 mr-2"></i>
-                                Replay tutorial
-                            </button>
                         </div>
                     </div>
                 </div>
@@ -495,11 +491,6 @@
             for (let i = 0; i < localStorage.length; i++) keys.push(localStorage.key(i));
             keys.forEach(k => { if (k && !keep.includes(k)) localStorage.removeItem(k); });
             if (typeof showNotification === 'function') showNotification('Cache cleared. You remain logged in.', 'success');
-        }
-
-        function replayTutorial() {
-            localStorage.removeItem('eel_tutorial_done');
-            window.location.href = 'classes.html';
         }
 
         function deleteAccount() {
