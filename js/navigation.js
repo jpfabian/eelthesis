@@ -1280,7 +1280,12 @@ async function pollSharedClassNotifications(user) {
                         const msg = status === "pending"
                             ? `${fullName} requested to join ${classInfo.className}.`
                             : `${fullName} enrolled in ${classInfo.className}.`;
-                        const enrollTs = s.joined_at ? (typeof s.joined_at === "number" ? s.joined_at : new Date(s.joined_at).getTime()) : undefined;
+                        // joined_at from DB often looks like "YYYY-MM-DD HH:mm:ss" which is not reliably parsed by Date() in all browsers.
+                        const enrollTs = s.joined_at
+                            ? (typeof s.joined_at === "number"
+                                ? s.joined_at
+                                : new Date(String(s.joined_at).replace(" ", "T")).getTime())
+                            : undefined;
                         pushNavNotification(
                             classInfo.classId,
                             msg,
