@@ -10238,6 +10238,18 @@ body.auth-page .login-screen .btn.btn-primary:hover {
   flex: 0 0 auto;
 }
 
+.sp-student-avatar--img {
+  padding: 0;
+  overflow: hidden;
+}
+
+.sp-student-avatar--img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
 .sp-student-meta {
   min-width: 0;
   display: grid;

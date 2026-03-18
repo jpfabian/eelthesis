@@ -239,7 +239,8 @@ router.get("/api/class/:classId/students", async (req, res) => {
           sc.student_lname,
           sc.status,
           sc.joined_at,
-          u.email
+          u.email,
+          u.avatar_url
        FROM student_classes sc
        JOIN users u ON sc.student_id = u.user_id
        WHERE sc.class_id = ?`,
@@ -250,6 +251,7 @@ router.get("/api/class/:classId/students", async (req, res) => {
       ...r,
       student_fname: toNameCase(r.student_fname),
       student_lname: toNameCase(r.student_lname),
+      avatar_url: r.avatar_url || null,
     })));
   } catch (err) {
     console.error(err);

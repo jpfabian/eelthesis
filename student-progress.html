@@ -977,6 +977,13 @@
                 return (a || "U").toUpperCase();
             }
 
+            function avatarHtmlForStudent(s, initials) {
+                const url = String(s.avatar_url || '').trim();
+                if (!url) return `<div class="sp-student-avatar" aria-hidden="true">${escapeHtml(initials)}</div>`;
+                const cacheBusted = url + (url.includes('?') ? '&' : '?') + 'v=' + encodeURIComponent(String(s.joined_at || Date.now()));
+                return `<div class="sp-student-avatar sp-student-avatar--img" aria-hidden="true"><img src="${escapeHtml(cacheBusted)}" alt="" loading="lazy" /></div>`;
+            }
+
             enrolled.forEach(s => {
                 const fname = capitalizeName(s.student_fname);
                 const lname = capitalizeName(s.student_lname);
@@ -985,7 +992,7 @@
                 enrolledContainer.innerHTML += `
                     <div class="sp-student-row">
                         <div class="sp-student-left">
-                            <div class="sp-student-avatar" aria-hidden="true">${escapeHtml(initials)}</div>
+                            ${avatarHtmlForStudent(s, initials)}
                             <div class="sp-student-meta">
                                 <div class="sp-student-name">${escapeHtml(name)}</div>
                                 <div class="sp-student-email">${escapeHtml(maskEmail(s.email || ""))}</div>
@@ -1012,7 +1019,7 @@
                 pendingContainer.innerHTML += `
                     <div class="sp-student-row">
                         <div class="sp-student-left">
-                            <div class="sp-student-avatar" aria-hidden="true">${escapeHtml(initials)}</div>
+                            ${avatarHtmlForStudent(s, initials)}
                             <div class="sp-student-meta">
                                 <div class="sp-student-name">${escapeHtml(name)}</div>
                                 <div class="sp-student-email">${escapeHtml(maskEmail(s.email || ""))}</div>
