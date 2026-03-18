@@ -121,6 +121,42 @@ body.auth-page .auth-header > * {
   pointer-events: auto;
 }
 
+/* Archive toolbar (deleted AI quizzes) */
+.archive-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.archive-controls__search {
+  flex: 1 1 18rem;
+  min-width: 0;
+}
+
+.archive-controls__sort {
+  flex: 0 1 14rem;
+  min-width: 10.5rem;
+  max-width: 16rem;
+}
+
+.archive-controls__clear {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 768px) {
+  .archive-controls {
+    align-items: stretch;
+  }
+  .archive-controls__search,
+  .archive-controls__sort,
+  .archive-controls__clear {
+    width: 100%;
+    flex: 1 1 100%;
+    max-width: none;
+  }
+}
+
 /* =========================
    EEL Alert (nice banners)
    ========================= */
@@ -11584,6 +11620,7 @@ body.pronunciation-lessons-page .quiz-page[data-view="list"] #lessons-grid {
   gap: 0.75rem;
   padding: 0.75rem 1rem;
   margin-top: 0.6rem;
+  margin-bottom: 0.85rem;
   border-radius: calc(var(--radius) + 4px);
   border: 1px solid var(--border);
   background: color-mix(in srgb, var(--muted) 55%, transparent);

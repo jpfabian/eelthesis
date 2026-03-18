@@ -67,16 +67,16 @@
                     </div>
                 </div>
 
-                <div class="card">
-                    <div class="card-content p-4 flex flex-wrap items-center gap-3">
-                        <input id="deleted-ai-quiz-search" class="form-input" type="search" placeholder="Search title, class, subject..." style="min-width: 340px; flex: 1.6;">
-                        <select id="deleted-ai-quiz-sort" class="form-input" style="min-width: 170px; max-width: 220px; flex: 0.7;">
+                    <div class="card">
+                    <div class="card-content p-4 archive-controls">
+                        <input id="deleted-ai-quiz-search" class="form-input archive-controls__search" type="search" placeholder="Search title, class, subject...">
+                        <select id="deleted-ai-quiz-sort" class="form-input archive-controls__sort">
                             <option value="deleted_desc">Sort: Latest archived</option>
                             <option value="deleted_asc">Sort: Oldest archived</option>
                             <option value="title_asc">Sort: Title A-Z</option>
                             <option value="title_desc">Sort: Title Z-A</option>
                         </select>
-                        <button id="deleted-ai-quiz-clear" type="button" class="btn btn-outline">
+                        <button id="deleted-ai-quiz-clear" type="button" class="btn btn-outline archive-controls__clear">
                             <i data-lucide="trash" class="size-4"></i>
                             Clear Cache
                         </button>
@@ -117,15 +117,15 @@
                     </div>
 
                     <div class="card mt-2">
-                        <div class="card-content p-4 flex flex-wrap items-center gap-3">
-                            <input id="exam-archive-search" class="form-input" type="search" placeholder="Search title, class, subject..." style="min-width: 340px; flex: 1.6;">
-                            <select id="exam-archive-sort" class="form-input" style="min-width: 170px; max-width: 220px; flex: 0.7;">
+                        <div class="card-content p-4 archive-controls">
+                            <input id="exam-archive-search" class="form-input archive-controls__search" type="search" placeholder="Search title, class, subject...">
+                            <select id="exam-archive-sort" class="form-input archive-controls__sort">
                                 <option value="archived_desc">Sort: Latest archived</option>
                                 <option value="archived_asc">Sort: Oldest archived</option>
                                 <option value="title_asc">Sort: Title A-Z</option>
                                 <option value="title_desc">Sort: Title Z-A</option>
                             </select>
-                            <button id="exam-archive-clear" type="button" class="btn btn-outline">
+                            <button id="exam-archive-clear" type="button" class="btn btn-outline archive-controls__clear">
                                 <i data-lucide="trash" class="size-4"></i>
                                 Clear Cache
                             </button>
