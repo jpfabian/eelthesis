@@ -1120,7 +1120,16 @@ function renderSharedNotifications(classId) {
         return;
     }
 
-    listEl.innerHTML = items.slice().reverse().map((item) => {
+    // Sort by actual event time (ts) descending; fallback to addedAt.
+    const sortedItems = items.slice().sort((a, b) => {
+        const aTs = a?.ts ? new Date(a.ts).getTime() : NaN;
+        const bTs = b?.ts ? new Date(b.ts).getTime() : NaN;
+        const aKey = Number.isFinite(aTs) ? aTs : (a?.addedAt != null ? Number(a.addedAt) : 0);
+        const bKey = Number.isFinite(bTs) ? bTs : (b?.addedAt != null ? Number(b.addedAt) : 0);
+        return bKey - aKey;
+    });
+
+    listEl.innerHTML = sortedItems.map((item) => {
         const unreadClass = item.read ? "" : " mobile-nav-notification-item--unread";
         const targetUrl = resolveNavNotificationTarget(item, classId);
         const targetAttr = targetUrl ? ` data-target-url="${escapeHtml(targetUrl)}"` : "";
