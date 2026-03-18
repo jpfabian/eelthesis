@@ -1903,7 +1903,9 @@ router.get("/api/reading-quiz-leaderboard", async (req, res) => {
           a.status,
           a.start_time,
           a.end_time,
-          TIMESTAMPDIFF(SECOND, a.start_time, a.end_time) AS time_taken_seconds
+          TIMESTAMPDIFF(SECOND, a.start_time, a.end_time) AS time_taken_seconds,
+          a.cheating_violations,
+          a.cheating_voided
         FROM teacher_reading_quiz_attempts a
         JOIN users u ON a.student_id = u.user_id
         ${classJoin}
@@ -1911,8 +1913,37 @@ router.get("/api/reading-quiz-leaderboard", async (req, res) => {
         ORDER BY a.score DESC, TIMESTAMPDIFF(SECOND, a.start_time, a.end_time) ASC, a.end_time ASC
         LIMIT 20
       `;
-      const [r] = await pool.query(sql, params);
-      rows = r;
+      try {
+        const [r] = await pool.query(sql, params);
+        rows = r;
+      } catch (qerr) {
+        if (qerr.errno === 1054 && String(qerr.sqlMessage || "").toLowerCase().includes("cheating")) {
+          const sqlFallback = `
+            SELECT
+              a.attempt_id,
+              a.student_id,
+              u.user_id,
+              CONCAT(u.fname, ' ', u.lname) AS student_name,
+              a.quiz_id,
+              a.score,
+              a.total_points,
+              a.status,
+              a.start_time,
+              a.end_time,
+              TIMESTAMPDIFF(SECOND, a.start_time, a.end_time) AS time_taken_seconds
+            FROM teacher_reading_quiz_attempts a
+            JOIN users u ON a.student_id = u.user_id
+            ${classJoin}
+            WHERE a.status = 'completed' AND a.quiz_id = ?
+            ORDER BY a.score DESC, TIMESTAMPDIFF(SECOND, a.start_time, a.end_time) ASC, a.end_time ASC
+            LIMIT 20
+          `;
+          const [r2] = await pool.query(sqlFallback, params);
+          rows = r2;
+        } else {
+          throw qerr;
+        }
+      }
     } else {
       const [quizRows] = await pool.query(
         "SELECT title FROM reading_quizzes WHERE quiz_id = ?",
@@ -1932,15 +1963,43 @@ router.get("/api/reading-quiz-leaderboard", async (req, res) => {
           a.status,
           a.start_time,
           a.end_time,
-          TIMESTAMPDIFF(SECOND, a.start_time, a.end_time) AS time_taken_seconds
+          TIMESTAMPDIFF(SECOND, a.start_time, a.end_time) AS time_taken_seconds,
+          a.cheating_violations,
+          a.cheating_voided
         FROM reading_quiz_attempts a
         JOIN users u ON a.student_id = u.user_id
         WHERE a.status = 'completed' AND a.quiz_id = ?${builtInClassCondition}
         ORDER BY a.score DESC, TIMESTAMPDIFF(SECOND, a.start_time, a.end_time) ASC, a.end_time ASC
         LIMIT 20
       `;
-      const [r] = await pool.query(sql, builtInParams);
-      rows = r;
+      try {
+        const [r] = await pool.query(sql, builtInParams);
+        rows = r;
+      } catch (qerr) {
+        if (qerr.errno === 1054 && String(qerr.sqlMessage || "").toLowerCase().includes("cheating")) {
+          const sqlFallback = `
+            SELECT 
+              u.user_id,
+              CONCAT(u.fname, ' ', u.lname) AS student_name,
+              a.quiz_id,
+              a.score,
+              a.total_points,
+              a.status,
+              a.start_time,
+              a.end_time,
+              TIMESTAMPDIFF(SECOND, a.start_time, a.end_time) AS time_taken_seconds
+            FROM reading_quiz_attempts a
+            JOIN users u ON a.student_id = u.user_id
+            WHERE a.status = 'completed' AND a.quiz_id = ?${builtInClassCondition}
+            ORDER BY a.score DESC, TIMESTAMPDIFF(SECOND, a.start_time, a.end_time) ASC, a.end_time ASC
+            LIMIT 20
+          `;
+          const [r2] = await pool.query(sqlFallback, builtInParams);
+          rows = r2;
+        } else {
+          throw qerr;
+        }
+      }
     }
 
     const formatted = rows.map(r => {
@@ -1955,7 +2014,9 @@ router.get("/api/reading-quiz-leaderboard", async (req, res) => {
         score: Math.round(r.score),
         total_points: Math.round(r.total_points),
         time_taken_seconds: seconds,
-        time_taken: `${h > 0 ? h + 'h ' : ''}${m > 0 ? m + 'm ' : ''}${s}s`
+        time_taken: `${h > 0 ? h + 'h ' : ''}${m > 0 ? m + 'm ' : ''}${s}s`,
+        cheating_violations: r.cheating_violations != null ? Number(r.cheating_violations) : 0,
+        cheating_voided: r.cheating_voided != null ? Number(r.cheating_voided) : 0
       };
     });
 

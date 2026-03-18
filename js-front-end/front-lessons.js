@@ -2005,9 +2005,15 @@ function renderLessonTeacherReviewAttemptsList() {
     const timeStr = a.time_taken || (a.end_time ? formatDateTimePhilippineMilitary(a.end_time) : "");
     const cheated = !!(a.cheating_voided || (a.cheating_violations && a.cheating_violations > 0));
     const cheatTitle = a.cheating_voided
-      ? "Left fullscreen or switched tabs multiple times. Score set to 0."
+      ? "Quiz invalidated (score of 0): The student exited fullscreen or switched tabs multiple times, resulting in an automatic zero score."
       : "Left fullscreen or switched tabs (" + (a.cheating_violations || 0) + " time(s)).";
-    const cheatBadge = cheated ? "<span class=\"text-xs px-1 py-0.5 rounded bg-destructive/20 text-destructive shrink-0\" title=\"" + escapeHtml(cheatTitle) + "\">⚠</span>" : "";
+    const cheatBadge = cheated
+      ? "<span class=\"text-xs px-1 py-0.5 rounded bg-destructive/20 text-destructive shrink-0\" title=\"" +
+        escapeHtml(cheatTitle) +
+        "\" aria-label=\"Cheating detected\">" +
+        "<i data-lucide=\"alert-triangle\" class=\"size-3\" aria-hidden=\"true\"></i>" +
+        "</span>"
+      : "";
     return (
       "<button type=\"button\" class=\"btn btn-outline w-full justify-between lesson-teacher-attempt-item " + (isActive ? "is-active" : "") + "\" " +
       "data-student-id=\"" + escapeHtml(String(a.student_id != null ? a.student_id : a.user_id)) + "\" " +
@@ -2023,6 +2029,9 @@ function renderLessonTeacherReviewAttemptsList() {
       "</button>"
     );
   }).join("");
+
+  // Render any newly injected lucide icons (e.g. warning badge)
+  if (window.lucide && typeof window.lucide.createIcons === "function") window.lucide.createIcons();
 
   list.querySelectorAll(".lesson-teacher-attempt-item").forEach(function (btn) {
     btn.addEventListener("click", function () {
@@ -2139,16 +2148,18 @@ function renderLessonTeacherReviewDetail(data, targetEl) {
 
   const cheated = !!(data.attempt && (data.attempt.cheating_voided || (data.attempt.cheating_violations && data.attempt.cheating_violations > 0)));
   const cheatBanner = cheated
-    ? "<div class=\"p-3 mb-4 rounded-lg flex items-start gap-2 " + (data.attempt.cheating_voided ? "bg-destructive/20 text-destructive" : "bg-amber-500/20 text-amber-700 dark:text-amber-400") + "\">" +
-      "<span class=\"text-lg shrink-0\" aria-hidden=\"true\">⚠️</span>" +
-      "<div>" +
-      "<strong>" + (data.attempt.cheating_voided ? "Quiz voided (0 score)" : "Warning") + ":</strong> " +
+    ? "<div class=\"eel-alert " + (data.attempt.cheating_voided ? "eel-alert--danger" : "eel-alert--warning") + "\">" +
+      "<span class=\"eel-alert__icon\" aria-hidden=\"true\">⚠️</span>" +
+      "<span class=\"eel-alert__content\">" +
+      "<span class=\"eel-alert__title\">" + (data.attempt.cheating_voided ? "Quiz invalidated (score of 0)" : "Warning") + "</span>" +
+      "<span class=\"eel-alert__text\">" +
       (data.attempt.cheating_voided
-        ? "Student left fullscreen or switched tabs multiple times. Score set to 0."
+        ? "The student exited fullscreen or switched tabs multiple times, resulting in an automatic zero score."
         : "Student left fullscreen or switched tabs (" + (data.attempt.cheating_violations || 0) + " time(s)).") +
-      "</div></div>"
+      "</span></span></div>"
     : "";
 
+  const isVoided = !!(data.attempt && data.attempt.cheating_voided);
   detail.innerHTML =
     (cheatBanner || "") +
     "<div class=\"teacher-review-summary\">" +
@@ -2162,21 +2173,31 @@ function renderLessonTeacherReviewDetail(data, targetEl) {
     "<div class=\"teacher-review-summary__chip\">" + escapeHtml(score) + "</div>" +
     (submitted ? "<div class=\"text-xs text-muted-foreground\">" + escapeHtml(submitted) + "</div>" : "") +
     "</div></div>" +
-    "<div class=\"teacher-review-answers\">" + (blocks || "<div class=\"text-muted-foreground\">No questions found.</div>") + "</div>";
-  detail.querySelectorAll(".teacher-answer-row").forEach(function (row) {
-    const box = row.querySelector(".teacher-is-correct");
-    const chip = row.querySelector(".teacher-answer-chip");
-    const text = row.querySelector(".teacher-answer-text");
-    if (!box || !chip || !text) return;
-    box.addEventListener("change", function () {
-      const status = box.checked ? "correct" : "wrong";
-      text.setAttribute("data-status", status);
-      chip.className = "teacher-answer-chip teacher-answer-chip--" + status;
-      chip.innerHTML = "<i data-lucide=\"" + (box.checked ? "check-circle" : "x-circle") + "\" class=\"size-3\"></i>" + (box.checked ? "Correct" : "Wrong");
-      chip.setAttribute("aria-label", "Answer status: " + (box.checked ? "Correct" : "Wrong"));
-      if (window.lucide && typeof window.lucide.createIcons === "function") window.lucide.createIcons();
+    "</div>" +
+    (isVoided
+      ? ""
+      : "<div class=\"teacher-review-answers\">" + (blocks || "<div class=\"text-muted-foreground\">No questions found.</div>") + "</div>");
+
+  if (!isVoided) {
+    detail.querySelectorAll(".teacher-answer-row").forEach(function (row) {
+      const box = row.querySelector(".teacher-is-correct");
+      const chip = row.querySelector(".teacher-answer-chip");
+      const text = row.querySelector(".teacher-answer-text");
+      if (!box || !chip || !text) return;
+      box.addEventListener("change", function () {
+        const status = box.checked ? "correct" : "wrong";
+        text.setAttribute("data-status", status);
+        chip.className = "teacher-answer-chip teacher-answer-chip--" + status;
+        chip.innerHTML =
+          "<i data-lucide=\"" +
+          (box.checked ? "check-circle" : "x-circle") +
+          "\" class=\"size-3\"></i>" +
+          (box.checked ? "Correct" : "Wrong");
+        chip.setAttribute("aria-label", "Answer status: " + (box.checked ? "Correct" : "Wrong"));
+        if (window.lucide && typeof window.lucide.createIcons === "function") window.lucide.createIcons();
+      });
     });
-  });
+  }
   if (window.lucide && typeof window.lucide.createIcons === "function") window.lucide.createIcons();
 }
 

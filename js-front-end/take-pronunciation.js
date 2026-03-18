@@ -123,11 +123,22 @@
         document.getElementById("quiz-page").classList.add("hidden");
         showPronunciationQuizDone(0, false);
         const msgEl = document.getElementById("pronunciation-quiz-done-msg");
-        if (msgEl) msgEl.textContent = "Quiz voided. You received 0 points due to leaving fullscreen or switching tabs.";
+        if (msgEl) setQuizInvalidatedMessage(msgEl);
       }
     } catch (err) {
       if (typeof showNotification === "function") showNotification("Error submitting quiz.", "error");
     }
+  }
+
+  function setQuizInvalidatedMessage(el) {
+    if (!el) return;
+    el.classList.add("eel-alert", "eel-alert--danger");
+    el.innerHTML =
+      '<span class="eel-alert__icon" aria-hidden="true">⚠️</span>' +
+      '<span class="eel-alert__content">' +
+      '<span class="eel-alert__title">Quiz invalidated (score of 0)</span>' +
+      '<span class="eel-alert__text">The student exited fullscreen or switched tabs multiple times, resulting in an automatic zero score.</span>' +
+      "</span>";
   }
 
   const originalSubmitPronunciationQuiz = window.submitPronunciationQuiz;
@@ -187,7 +198,7 @@
           showPronunciationQuizDone(accuracy, !!data.show_retake);
           if (cheatingVoided) {
             const msgEl = document.getElementById("pronunciation-quiz-done-msg");
-            if (msgEl) msgEl.textContent = "Quiz voided. You received 0 points due to leaving fullscreen or switching tabs.";
+            if (msgEl) setQuizInvalidatedMessage(msgEl);
           }
           if (data.unlockedNext && typeof showNotification === "function") {
             showNotification("Great job! Next quiz unlocked.", "success");

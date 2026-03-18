@@ -543,7 +543,15 @@
           var total = data.total_points != null ? data.total_points : null;
           var showRetake = !!data.show_retake;
           renderDone(score, total, !!data.success, showRetake);
-          if (cheatingVoided && doneMsg) doneMsg.textContent = "Quiz voided. You received 0 points due to leaving fullscreen or switching tabs.";
+          if (cheatingVoided && doneMsg) {
+            doneMsg.classList.add("eel-alert", "eel-alert--danger");
+            doneMsg.innerHTML =
+              '<span class="eel-alert__icon" aria-hidden="true">⚠️</span>' +
+              '<span class="eel-alert__content">' +
+              '<span class="eel-alert__title">Quiz invalidated (score of 0)</span>' +
+              '<span class="eel-alert__text">The student exited fullscreen or switched tabs multiple times, resulting in an automatic zero score.</span>' +
+              "</span>";
+          }
         })
         .catch(function () {
           renderDone(null, null, false);
@@ -574,7 +582,7 @@
           var total = data.totalPoints != null ? data.totalPoints : null;
           var showRetake = !!data.show_retake;
           renderDone(score, total, !!data.success, showRetake);
-          if (cheatingVoided && doneMsg) doneMsg.textContent = "Quiz voided. You received 0 points due to leaving fullscreen or switching tabs.";
+          if (cheatingVoided && doneMsg) doneMsg.textContent = "Quiz invalidated (score of 0): The student exited fullscreen or switched tabs multiple times, resulting in an automatic zero score.";
         })
         .catch(function () {
           renderDone(null, null, false);

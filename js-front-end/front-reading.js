@@ -2022,8 +2022,8 @@ async function loadQuizzes(user = getCurrentUser()) {
             const completedBadge = '';
 
             const scheduleStatusLabel = isTeacher
-                ? (effectiveLocked ? 'Unpublished' : 'Open to students')
-                : (effectiveLocked ? 'Unpublished (finish previous quiz to unlock)' : 'Published');
+                ? (effectiveLocked ? 'Unpublished' : 'Published')
+                : (effectiveLocked ? 'Unpublished (complete previous quiz to proceed)' : 'Published');
 
             card.innerHTML = `
                 <div class="created-quiz-card__inner">
@@ -2834,7 +2834,7 @@ function renderTeacherReadingAttemptsList() {
         const time = a.end_time ? formatAttemptListTime(a.end_time) : (a.start_time ? formatAttemptListTime(a.start_time) : '');
         const cheated = !!(a.cheating_voided || (a.cheating_violations && a.cheating_violations > 0));
         const cheatTitle = a.cheating_voided
-            ? 'Left fullscreen or switched tabs multiple times. Score set to 0.'
+            ? 'Quiz invalidated (score of 0): The student exited fullscreen or switched tabs multiple times, resulting in an automatic zero score.'
             : `Left fullscreen or switched tabs (${a.cheating_violations || 0} time(s)).`;
         const cheatBadge = cheated ? `<span class="text-xs px-1 py-0.5 rounded bg-destructive/20 text-destructive shrink-0" title="${escapeHtml(cheatTitle)}">⚠</span>` : '';
         return `
@@ -2912,14 +2912,17 @@ function renderTeacherReadingAttemptDetail(answers, targetEl) {
     const submitted = attempt?.end_time ? formatDateTimePhilippineMilitary(attempt.end_time) : '';
     const cheated = !!(attempt && (attempt.cheating_voided || (attempt.cheating_violations && attempt.cheating_violations > 0)));
     const cheatBanner = cheated
-        ? `<div class="p-3 mb-4 rounded-lg flex items-start gap-2 ${attempt.cheating_voided ? 'bg-destructive/20 text-destructive' : 'bg-amber-500/20 text-amber-700 dark:text-amber-400'}">
-            <span class="text-lg shrink-0" aria-hidden="true">⚠️</span>
-            <div>
-            <strong>${attempt.cheating_voided ? 'Quiz voided (0 score)' : 'Warning'}:</strong>` +
+        ? `<div class="eel-alert ${attempt.cheating_voided ? 'eel-alert--danger' : 'eel-alert--warning'}">
+            <span class="eel-alert__icon" aria-hidden="true">⚠️</span>
+            <span class="eel-alert__content">
+              <span class="eel-alert__title">${attempt.cheating_voided ? 'Quiz invalidated (score of 0)' : 'Warning'}</span>
+              <span class="eel-alert__text">` +
             (attempt.cheating_voided
-                ? ' Student left fullscreen or switched tabs multiple times. Score set to 0.'
-                : ` Student left fullscreen or switched tabs (${attempt.cheating_violations || 0} time(s)).`) +
-            '</div></div>'
+                ? 'The student exited fullscreen or switched tabs multiple times, resulting in an automatic zero score.'
+                : `Student left fullscreen or switched tabs (${attempt.cheating_violations || 0} time(s)).`) +
+            `</span>
+            </span>
+          </div>`
         : '';
 
     const byQuestionId = new Map((answers || []).map(a => [Number(a.question_id), a]));
@@ -3070,6 +3073,7 @@ function renderTeacherReadingAttemptDetail(answers, targetEl) {
         return '';
     }).join('');
 
+    const isVoided = !!(attempt && attempt.cheating_voided);
     detail.innerHTML = (cheatBanner || '') + `
       <div class="teacher-review-summary">
         <div style="min-width:0;">
@@ -3086,13 +3090,16 @@ function renderTeacherReadingAttemptDetail(answers, targetEl) {
           ${submitted ? `<div class="text-xs text-muted-foreground">${escapeHtml(submitted)}</div>` : ''}
         </div>
       </div>
-      <div class="teacher-review-answers">
-        ${blocks || `<div class="text-muted-foreground">No questions found for this quiz.</div>`}
-      </div>
+      ${isVoided
+        ? ``
+        : `<div class="teacher-review-answers">
+            ${blocks || `<div class="text-muted-foreground">No questions found for this quiz.</div>`}
+          </div>`
+      }
     `;
 
     // Live highlight updates when teacher toggles correctness
-    detail.querySelectorAll('.teacher-answer-row').forEach(row => {
+    if (!isVoided) detail.querySelectorAll('.teacher-answer-row').forEach(row => {
         const box = row.querySelector('.teacher-is-correct');
         const chip = row.querySelector('.teacher-answer-chip');
         const text = row.querySelector('.teacher-answer-text');
