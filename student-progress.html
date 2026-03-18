@@ -812,6 +812,24 @@
           </section>
         `).join('');
 
+        const isMobile = () => window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
+        const wrapLabel = (label) => {
+            const t = String(label || '').trim();
+            if (!t) return '';
+            // Prefer "Last, First" split into 2 lines on mobile for readability
+            if (t.includes(',')) {
+                const parts = t.split(',');
+                const a = (parts[0] || '').trim();
+                const b = parts.slice(1).join(',').trim();
+                return b ? [a + ',', b] : [a];
+            }
+            // Fallback: split long names into two chunks
+            const words = t.split(/\s+/).filter(Boolean);
+            if (words.length <= 2) return words;
+            const mid = Math.ceil(words.length / 2);
+            return [words.slice(0, mid).join(' '), words.slice(mid).join(' ')];
+        };
+
         groups.forEach((g, idx) => {
             const canvas = document.getElementById(`avg-score-chart-${idx}`);
             if (!canvas) return;
@@ -826,6 +844,13 @@
             const labels = data.map(x => x.label);
             const values = data.map(x => Math.round(x.value));
             const palette = studentProgressChartPalette(g.key);
+
+            // Make sure mobile has enough height for y-axis labels
+            const minH = 170;
+            const perRow = isMobile() ? 34 : 26;
+            const dynamicH = Math.max(minH, (labels.length || 1) * perRow + 40);
+            canvas.height = dynamicH;
+
             const chart = new Chart(canvas.getContext('2d'), {
                 type: 'bar',
                 data: {
@@ -837,14 +862,22 @@
                         backgroundColor: palette.fill,
                         borderColor: palette.border,
                         borderWidth: 1.5,
-                        barThickness: 22,
-                        maxBarThickness: 24
+                        barThickness: isMobile() ? 18 : 22,
+                        maxBarThickness: isMobile() ? 20 : 24
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     indexAxis: 'y',
+                    layout: {
+                        padding: {
+                            left: isMobile() ? 18 : 8,
+                            right: 8,
+                            top: 8,
+                            bottom: 6
+                        }
+                    },
                     scales: {
                         x: {
                             beginAtZero: true,
@@ -857,13 +890,25 @@
                         },
                         y: {
                             grid: { display: false },
-                            ticks: { color: chartTextColor() }
+                            ticks: {
+                                color: chartTextColor(),
+                                autoSkip: false,
+                                font: { size: isMobile() ? 10 : 12 },
+                                callback: function (value, index) {
+                                    const label = (this.getLabelForValue ? this.getLabelForValue(value) : labels[index]) || labels[index] || '';
+                                    if (isMobile()) return wrapLabel(label);
+                                    // Desktop: keep single line but shorten very long names
+                                    const t = String(label || '');
+                                    return t.length > 26 ? (t.slice(0, 24) + '…') : t;
+                                }
+                            }
                         }
                     },
                     plugins: {
                         legend: { display: false },
                         tooltip: {
                             callbacks: {
+                                title: (items) => (items?.[0]?.label ? String(items[0].label) : ''),
                                 label: (ctx) => ` ${ctx.parsed.x}%`
                             }
                         }
