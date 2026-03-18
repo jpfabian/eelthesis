@@ -153,16 +153,54 @@ router.post("/api/join-class", async (req, res) => {
     const student_fname = toNameCase(fname);
     const student_lname = toNameCase(lname);
 
-    // 3. Insert both names into student_classes (capitalized)
+    // 3. If student was previously removed/rejected, allow re-join by reactivating record.
+    const [[existing]] = await pool.query(
+      `SELECT id, status
+       FROM student_classes
+       WHERE student_id = ? AND class_id = ?
+       LIMIT 1`,
+      [student_id, classId]
+    );
+
+    const now = nowPhilippineDatetime();
+    if (existing) {
+      const status = String(existing.status || "").toLowerCase();
+      if (status === "rejected") {
+        await pool.query(
+          `UPDATE student_classes
+           SET status = 'pending', student_fname = ?, student_lname = ?, joined_at = ?
+           WHERE id = ?`,
+          [student_fname, student_lname, now, existing.id]
+        );
+        return res.json({ success: true, message: "Re-join request sent! Please wait for your teacher's approval." });
+      }
+      if (status === "pending") {
+        return res.status(400).json({ success: false, message: "Your join request is already pending approval." });
+      }
+      if (status === "accepted") {
+        return res.status(400).json({ success: false, message: "Already joined this class" });
+      }
+      // Fallback: for any other unknown status, treat as re-joinable.
+      await pool.query(
+        `UPDATE student_classes
+         SET status = 'pending', student_fname = ?, student_lname = ?, joined_at = ?
+         WHERE id = ?`,
+        [student_fname, student_lname, now, existing.id]
+      );
+      return res.json({ success: true, message: "Please wait for your teacher's approval!" });
+    }
+
+    // 4. Insert both names into student_classes (capitalized)
     await pool.query(
       `INSERT INTO student_classes (student_id, student_fname, student_lname, class_id, status, joined_at)
-      VALUES (?, ?, ?, ?, 'pending', ?)`,
-      [student_id, student_fname, student_lname, classId, nowPhilippineDatetime()]
+       VALUES (?, ?, ?, ?, 'pending', ?)`,
+      [student_id, student_fname, student_lname, classId, now]
     );
 
     res.json({ success: true, message: "Please wait for your teacher's approval!" });
   } catch (err) {
     if (err.code === "ER_DUP_ENTRY") {
+      // Back-compat: if unique constraint triggers, treat it as already joined/requested.
       return res.status(400).json({ success: false, message: "Already joined this class" });
     }
     console.error(err);
