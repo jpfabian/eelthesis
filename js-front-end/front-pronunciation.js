@@ -767,37 +767,44 @@ async function loadPronunciationQuizzes(user) {
             displayNumberByQuizId.set(Number(q.quiz_id), n);
         });
 
-        // ✅ Unlock progression (prefer backend progress, fallback to attempts)
+        // ✅ Unlock progression (STRICT): use the LATEST completed attempt per quiz.
+        // This ensures retake scores affect unlocking (e.g. if you retake and score below passing,
+        // the next quiz becomes locked again).
         let unlockedUpTo = 1;
-        if (!isTeacher) {
-            const backendUnlockedUpTo = Math.max(
-                1,
-                ...quizzes.map(q => Number(q?.unlocked_quiz_number || 1))
-            );
-            unlockedUpTo = backendUnlockedUpTo;
+        if (!isTeacher && Array.isArray(studentAttempts) && studentAttempts.length) {
+            const latestByQuizId = new Map();
+            studentAttempts.forEach(a => {
+                if (a.status !== "completed") return;
+                const qid = Number(a.quiz_id);
+                if (!Number.isFinite(qid)) return;
+                const prev = latestByQuizId.get(qid);
+                const prevAttemptId = prev ? Number(prev.attempt_id || 0) : 0;
+                const curAttemptId = Number(a.attempt_id || 0);
+                if (!prev || (Number.isFinite(curAttemptId) && curAttemptId > prevAttemptId)) {
+                    latestByQuizId.set(qid, a);
+                }
+            });
 
-            if (Array.isArray(studentAttempts) && studentAttempts.length) {
-                const passedNums = new Set(
-                    studentAttempts
-                        .filter(a => {
-                            if (a.status !== "completed") return false;
-                            const q = quizzes.find(x => Number(x.quiz_id) === Number(a.quiz_id));
-                            const passing = Number(q?.passing_score ?? 70);
-                            const scoreNum = Number(a.score);
-                            const totalNum = Number(a.total_points);
-                            if (!Number.isFinite(scoreNum)) return false;
-                            if (Number.isFinite(totalNum) && totalNum > 0) {
-                                return ((scoreNum / totalNum) * 100) >= passing;
-                            }
-                            return scoreNum >= passing;
-                        })
-                        .map(a => displayNumberByQuizId.get(Number(a.quiz_id)))
-                        .filter(Boolean)
-                );
-                let inferred = 1;
-                while (passedNums.has(inferred)) inferred++;
-                unlockedUpTo = Math.max(unlockedUpTo, inferred);
-            }
+            const passedNums = new Set(
+                Array.from(latestByQuizId.entries())
+                    .map(([quizId, a]) => {
+                        const q = quizzes.find(x => Number(x.quiz_id) === Number(quizId));
+                        const passing = Number(q?.passing_score ?? 70);
+                        const scoreNum = Number(a.score);
+                        const totalNum = Number(a.total_points);
+                        if (!Number.isFinite(scoreNum)) return null;
+                        const percent = (Number.isFinite(totalNum) && totalNum > 0)
+                            ? ((scoreNum / totalNum) * 100)
+                            : scoreNum;
+                        if (percent < passing) return null;
+                        return displayNumberByQuizId.get(Number(quizId)) || null;
+                    })
+                    .filter(Boolean)
+            );
+
+            let inferred = 1;
+            while (passedNums.has(inferred)) inferred++;
+            unlockedUpTo = inferred;
         }
 
         // ✅ Loop through quizzes

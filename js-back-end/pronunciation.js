@@ -77,19 +77,100 @@ async function transcribeWithGroq(file) {
   }
 }
 
+function normalizeTranscriptText(t) {
+  return String(t || "")
+    .toLowerCase()
+    .trim()
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function clampPronunciationScore(raw, { min = 20, max = 95 } = {}) {
+  const n = Number(raw);
+  if (!Number.isFinite(n)) return null;
+  return Math.max(min, Math.min(max, n));
+}
+
+function letterToName(letter) {
+  const L = String(letter || "").trim().toUpperCase();
+  const map = {
+    A: "ay",
+    B: "bee",
+    C: "cee",
+    D: "dee",
+    E: "ee",
+    F: "ef",
+    G: "gee",
+    H: "aitch",
+    I: "eye",
+    J: "jay",
+    K: "kay",
+    L: "el",
+    M: "em",
+    N: "en",
+    O: "oh",
+    P: "pee",
+    Q: "cue",
+    R: "ar",
+    S: "ess",
+    T: "tee",
+    U: "you",
+    V: "vee",
+    W: "double u",
+    X: "ex",
+    Y: "why",
+    Z: "zee",
+  };
+  return map[L] || null;
+}
+
+/**
+ * Deterministic scoring for single-letter expected prompts.
+ * Returns 0..100, or null if expected is not a single letter A-Z.
+ */
+function scoreLetterPronunciation(expectedWord, transcript) {
+  const expected = String(expectedWord || "").trim();
+  if (!/^[A-Za-z]$/.test(expected)) return null;
+  const name = letterToName(expected);
+  if (!name) return null;
+  const t = normalizeTranscriptText(transcript);
+  if (!t) return 20;
+
+  const expectedLetter = expected.toLowerCase();
+  const nameNorm = normalizeTranscriptText(name);
+  const accepted = new Set([
+    expectedLetter,
+    "letter " + expectedLetter,
+    nameNorm,
+    "the letter " + expectedLetter,
+  ]);
+
+  if (accepted.has(t)) return 95;
+
+  // If transcript contains the expected letter-name but has extra filler, give partial credit.
+  // Example: "okay" when expected is "K" (kay) should not be 100.
+  if (nameNorm && t.includes(nameNorm)) return 60;
+  if (t === "ok" || t === "okay") return 20; // common false positive for K
+  return 20;
+}
+
 /** Assess pronunciation using Groq LLM. Returns score 0-100 or null on error. */
 async function assessPronunciationWithGroq(expectedWord, transcript) {
   if (!groq) return null;
   const expected = String(expectedWord || "").trim();
   const transcriptText = String(transcript || "").trim();
   if (!expected) return null;
+  const letterScore = scoreLetterPronunciation(expected, transcriptText);
+  if (letterScore != null) return letterScore;
   try {
     const completion = await groq.chat.completions.create({
       model: "llama-3.3-70b-versatile",
       messages: [
         {
           role: "system",
-          content: "You are a pronunciation assessment expert for English. Given the expected English word/phrase and the student's transcription (from speech-to-text), rate pronunciation accuracy from 0 to 100. Reply with ONLY a number.\n\nIMPORTANT: The student must say the EXPECTED word in English. Give a LOW score (0-25) if:\n- The student said a different word entirely (e.g. 'komunikasyon' when expected is 'communication')\n- The student said a translation or cognate in another language (e.g. Filipino, Tagalog) instead of the English word\n- The student said a different English word with similar meaning\n\nScoring: 100 = perfect match of the expected word; 80-99 = phonetically correct; 50-79 = partially correct (same word, minor errors); 25-49 = wrong word or heavily mispronounced; 0-24 = completely wrong word, different language, or unrelated.",
+          content:
+            "You are a pronunciation assessment expert for English. Given the expected English word/phrase and the student's transcription (from speech-to-text), rate pronunciation accuracy from 0 to 100. Reply with ONLY a number.\n\nIMPORTANT:\n- The student must say the EXPECTED word/phrase in English.\n- Give a LOW score (0-25) if the student said a different word entirely, a translation in another language, or a different English word.\n- If the expected is a SINGLE LETTER (A-Z), the student must say the LETTER NAME (e.g. J -> 'jay', K -> 'kay'). Do NOT give 100 for unrelated words like 'okay'.\n\nScoring: 100 = perfect match; 80-99 = phonetically correct; 50-79 = partially correct (same target, minor errors); 25-49 = wrong word or heavily mispronounced; 0-24 = completely wrong.",
         },
         {
           role: "user",
@@ -101,7 +182,8 @@ async function assessPronunciationWithGroq(expectedWord, transcript) {
     });
     const text = (completion?.choices?.[0]?.message?.content || "").trim();
     const num = parseInt(text.replace(/\D/g, ""), 10);
-    return Number.isFinite(num) ? Math.max(0, Math.min(100, num)) : null;
+    if (!Number.isFinite(num)) return null;
+    return clampPronunciationScore(num, { min: 20, max: 95 });
   } catch (e) {
     console.warn("Groq pronunciation assessment error:", e?.message || e);
     return null;
@@ -810,7 +892,8 @@ router.post("/api/pronunciation-submit", upload.any(), async (req, res) => {
         }
         if (transcribed && !transcript.trim()) transcript = transcribed;
       }
-      const score = pronunciationScore != null ? pronunciationScore : Math.floor(70 + Math.random() * 30);
+      const rawScore = pronunciationScore != null ? pronunciationScore : Math.floor(70 + Math.random() * 30);
+      const score = clampPronunciationScore(rawScore, { min: 20, max: 95 }) ?? 20;
       totalAccuracy += score;
       answerCount++;
 
