@@ -16,6 +16,63 @@ if (typeof showNotification !== 'function') {
 
 let currentUser = null;
 let pronunciationQuizData = null;
+
+// Preferred voices for cute cartoon child sound (bata, masigla)
+const PREFERRED_VOICE_NAMES = [
+    'Google US English',
+    'Microsoft Zira',
+    'Microsoft Aria',
+    'Microsoft Jenny',
+    'Samantha',
+    'Karen',
+    'Victoria',
+    'Google UK English Female',
+    'Microsoft Susan',
+    'Moira',
+    'Tessa'
+];
+
+let _cachedPreferredVoice = null;
+
+function getPreferredPronunciationVoice() {
+    if (_cachedPreferredVoice) return _cachedPreferredVoice;
+    if (!window.speechSynthesis) return null;
+    const voices = window.speechSynthesis.getVoices();
+    for (const name of PREFERRED_VOICE_NAMES) {
+        const v = voices.find((x) => x.name && x.name.includes(name));
+        if (v) {
+            _cachedPreferredVoice = v;
+            return v;
+        }
+    }
+    const enUs = voices.filter((v) => v.lang && (v.lang.startsWith('en-US') || v.lang === 'en-US'));
+    const female = enUs.find((v) => v.name && /female|zira|aria|samantha|karen|victoria|susan|jenny|moira|tessa/i.test(v.name));
+    if (female) {
+        _cachedPreferredVoice = female;
+        return female;
+    }
+    if (enUs.length > 0) {
+        _cachedPreferredVoice = enUs[0];
+        return enUs[0];
+    }
+    return null;
+}
+
+function ensureVoicesLoaded(cb) {
+    if (!window.speechSynthesis) {
+        if (cb) cb();
+        return;
+    }
+    const voices = window.speechSynthesis.getVoices();
+    if (voices.length > 0) {
+        if (cb) cb();
+        return;
+    }
+    window.speechSynthesis.onvoiceschanged = function () {
+        window.speechSynthesis.onvoiceschanged = null;
+        if (cb) cb();
+    };
+}
 let pronunciationCurrentIndex = 0;
 let pronunciationTimer = null;
 let pronunciationRemainingSeconds = 0;
@@ -1177,12 +1234,17 @@ function speakPronunciationWord(text, slowMo) {
         if (typeof showNotification === 'function') showNotification('Audio playback is not supported in this browser.', 'warning');
         return;
     }
-    const utterance = new SpeechSynthesisUtterance(t);
-    utterance.lang = 'en-US';
-    utterance.rate = slowMo ? 0.5 : 0.9;
-    utterance.pitch = 1;
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(utterance);
+    function doSpeak() {
+        const utterance = new SpeechSynthesisUtterance(t);
+        utterance.lang = 'en-US';
+        utterance.rate = slowMo ? 0.5 : 1.05;
+        utterance.pitch = 1.75;
+        const voice = getPreferredPronunciationVoice();
+        if (voice) utterance.voice = voice;
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(utterance);
+    }
+    ensureVoicesLoaded(doSpeak);
 }
 
 function loadPronunciationQuestion(index) {
@@ -1206,11 +1268,11 @@ function loadPronunciationQuestion(index) {
             <div class="pronunciation-prompt-card">
                 <span class="pronunciation-prompt-label">Word to Pronounce</span>
                 <div class="pronunciation-word-block">
-                    <div class="pronunciation-word-row">
+                    <div class="pronunciation-word-ipa-group">
                         <span class="word-large">${q.word || q.sentence || '(No content)'}</span>
-                        ${wordToSpeak ? `<button type="button" class="pronunciation-speaker-btn" data-speak="${escapeAttr(wordToSpeak)}" data-slowmo="0" aria-label="Listen to pronunciation">${speakerSvg}</button><button type="button" class="pronunciation-speaker-btn pronunciation-speaker-btn-slowmo" data-speak="${escapeAttr(wordToSpeak)}" data-slowmo="1" aria-label="Listen at slow speed">${slowmoSvg}</button>` : ''}
+                        ${ipa ? `<span class="pronunciation-ipa">${ipa}</span>` : ''}
                     </div>
-                    ${ipa ? `<span class="pronunciation-ipa">${ipa}</span>` : ''}
+                    ${wordToSpeak ? `<div class="pronunciation-audio-controls"><button type="button" class="pronunciation-speaker-btn" data-speak="${escapeAttr(wordToSpeak)}" data-slowmo="0" aria-label="Listen to pronunciation">${speakerSvg}</button><button type="button" class="pronunciation-speaker-btn pronunciation-speaker-btn-slowmo" data-speak="${escapeAttr(wordToSpeak)}" data-slowmo="1" aria-label="Listen at slow speed">${slowmoSvg}</button></div>` : ''}
                 </div>
             </div>
         `;
@@ -1757,15 +1819,17 @@ function speakPronunciation(text) {
     alert("Speech synthesis not supported in this browser.");
     return;
   }
-
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = "en-US";
-  utterance.rate = 0.9;
-  utterance.pitch = 1;
-
-  // Optional: cancel ongoing speech before playing new one
-  speechSynthesis.cancel();
-  speechSynthesis.speak(utterance);
+  function doSpeak() {
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = "en-US";
+    utterance.rate = 1.05;
+    utterance.pitch = 1.75;
+    const voice = getPreferredPronunciationVoice();
+    if (voice) utterance.voice = voice;
+    speechSynthesis.cancel();
+    speechSynthesis.speak(utterance);
+  }
+  ensureVoicesLoaded(doSpeak);
 }
 
 function closeLeaderboardModal() {

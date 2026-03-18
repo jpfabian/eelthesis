@@ -3,12 +3,17 @@
 // On startup: uses device theme (prefers-color-scheme) when stored as "system" or not set
 
 // Apply theme immediately (before first paint) – load this script before CSS in <head>
+// Default: follow device (prefers-color-scheme). Only use stored value when user explicitly chose light/dark.
 (function applyThemeEarly() {
   try {
     var s = localStorage.getItem("eel_theme");
-    var r = (s === "dark" || s === "light") ? s : (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    var useDevice = !s || s === "system" || (s !== "dark" && s !== "light");
+    var r = useDevice
+      ? (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
+      : s;
     document.documentElement.dataset.theme = r;
     document.documentElement.style.colorScheme = r;
+    if (!s || s === "system") localStorage.setItem("eel_theme", "system");
   } catch (_) {}
 })();
 
