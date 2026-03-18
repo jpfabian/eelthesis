@@ -131,22 +131,50 @@ function findMatchingBrace(str, startIdx) {
 // Student progress page uses GET /api/class/:classId/students from classes.js (pending + accepted, full fields).
 router.get('/api/recitation/class/:classId/students', async (req, res) => {
   const classId = req.params.classId;
+  const topicId = req.query.topic_id != null && String(req.query.topic_id).trim() !== ''
+    ? Number(req.query.topic_id)
+    : null;
   const pool = req.pool;
   if (!pool) return res.status(500).json({ error: 'Database not available' });
   try {
+    // If topic_id provided, include recitation performance for that topic (percentage 0-100).
+    if (Number.isFinite(topicId)) {
+      await ensureRecitationScoresTable(pool);
+    }
+
     const [rows] = await pool.query(
-      `SELECT sc.student_id, sc.student_fname, sc.student_lname, u.avatar_url
-       FROM student_classes sc
-       LEFT JOIN users u ON u.user_id = sc.student_id
-       WHERE sc.class_id = ? AND sc.status = 'accepted'
-       ORDER BY sc.student_fname, sc.student_lname`,
-      [classId]
+      Number.isFinite(topicId)
+        ? `SELECT
+            sc.student_id,
+            sc.student_fname,
+            sc.student_lname,
+            u.avatar_url,
+            CASE
+              WHEN SUM(rs.points_possible) > 0 THEN ROUND((SUM(rs.points_earned) / SUM(rs.points_possible)) * 100, 2)
+              ELSE NULL
+            END AS topic_percent
+           FROM student_classes sc
+           LEFT JOIN users u ON u.user_id = sc.student_id
+           LEFT JOIN recitation_scores rs
+             ON rs.class_id = sc.class_id
+            AND rs.student_id = sc.student_id
+            AND rs.topic_id = ?
+           WHERE sc.class_id = ? AND sc.status = 'accepted'
+           GROUP BY sc.student_id, sc.student_fname, sc.student_lname, u.avatar_url
+           ORDER BY sc.student_fname, sc.student_lname`
+        : `SELECT sc.student_id, sc.student_fname, sc.student_lname, u.avatar_url
+           FROM student_classes sc
+           LEFT JOIN users u ON u.user_id = sc.student_id
+           WHERE sc.class_id = ? AND sc.status = 'accepted'
+           ORDER BY sc.student_fname, sc.student_lname`,
+      Number.isFinite(topicId) ? [topicId, classId] : [classId]
     );
     const students = rows.map(s => ({
       id: s.student_id,
       name: toNameCase(`${s.student_fname} ${s.student_lname}`),
       avatar_url: s.avatar_url || null,
-      answered: false
+      answered: false,
+      topic_percent: s.topic_percent != null ? Number(s.topic_percent) : null
     }));
     res.json(students);
   } catch (err) {

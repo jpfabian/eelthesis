@@ -18,6 +18,8 @@ let state = {
     nextQuestionRandom: false // true after Cancel/Close/Remove so next pick gets random question
 };
 
+const RECITATION_LOW_SCORE_THRESHOLD = 70; // below this = "low score" for selected topic
+
 // Ticking sound for the slider (Web Audio API – no file needed)
 let sliderTickAudioContext = null;
 function playSliderTick() {
@@ -372,7 +374,11 @@ document.addEventListener('DOMContentLoaded', () => {
 async function loadClassStudents(classId) {
     try {
         console.log("Loading students for class:", classId);
-        const res = await fetch(`${window.API_BASE || ""}/api/recitation/class/${classId}/students`);
+        const topicId = state.selectedTopicId != null && String(state.selectedTopicId).trim() !== ''
+            ? encodeURIComponent(String(state.selectedTopicId))
+            : null;
+        const url = `${window.API_BASE || ""}/api/recitation/class/${classId}/students` + (topicId ? `?topic_id=${topicId}` : '');
+        const res = await fetch(url);
         const data = await res.json();
 
         // data itself is an array already ✅ (API may send { id, name, answered } or { student_id, student_fname, student_lname })
@@ -385,7 +391,8 @@ async function loadClassStudents(classId) {
                     id: s.id != null ? s.id : s.student_id,
                     name: name || 'Student',
                     avatarUrl: s.avatar_url || null,
-                    answered: s.answered === true
+                    answered: s.answered === true,
+                    topicPercent: s.topic_percent != null ? Number(s.topic_percent) : null
                 };
             });
 
@@ -412,6 +419,9 @@ function setupEventListeners() {
             const val = (topicSelect.value || '').trim();
             state.selectedTopicId = val || null;
             updateGenerateButton();
+            // Refresh student stats for weighted roulette
+            const classId = localStorage.getItem("eel_selected_class_id");
+            if (classId) loadClassStudents(classId);
         });
     }
 
@@ -759,6 +769,23 @@ function toggleSpin(autoPick = false) {
     }
 }
 
+function pickWeightedStudent(availableStudents) {
+    const list = Array.isArray(availableStudents) ? availableStudents : [];
+    if (list.length === 0) return null;
+    // If no topic selected, keep uniform behavior.
+    if (!state.selectedTopicId) return list[Math.floor(Math.random() * list.length)];
+
+    const low = list.filter(s => Number.isFinite(Number(s.topicPercent)) && Number(s.topicPercent) < RECITATION_LOW_SCORE_THRESHOLD);
+    const high = list.filter(s => !(Number.isFinite(Number(s.topicPercent)) && Number(s.topicPercent) < RECITATION_LOW_SCORE_THRESHOLD));
+
+    if (low.length === 0) return list[Math.floor(Math.random() * list.length)];
+    if (high.length === 0) return low[Math.floor(Math.random() * low.length)];
+
+    // 60% chance pick from low-score group, 40% from others
+    const group = Math.random() < 0.6 ? low : high;
+    return group[Math.floor(Math.random() * group.length)];
+}
+
 function speedUpAndStop(availableStudents) {
     const btn = document.getElementById('play-button');
     const btnText = document.getElementById('play-btn-text');
@@ -781,10 +808,11 @@ function speedUpAndStop(availableStudents) {
             clearInterval(state.intervalId);
             state.isSpinning = false;
 
-            // Randomly pick the final student each stop.
-            const idx = Math.floor(Math.random() * availableStudents.length);
+            // Pick the final student each stop (weighted by low score in selected topic).
+            const chosen = pickWeightedStudent(availableStudents) || availableStudents[Math.floor(Math.random() * availableStudents.length)];
+            const idx = Math.max(0, availableStudents.findIndex(s => s && chosen && s.id === chosen.id));
             state.currentSlideIndex = idx;
-            state.selectedStudent = availableStudents[idx];
+            state.selectedStudent = availableStudents[idx] || chosen;
             highlightSelectedStudent();
             setTimeout(showQuestionModal, 500);
 

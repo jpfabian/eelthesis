@@ -19177,6 +19177,24 @@ body.my-progress-page #main-content {
     box-shadow: 0 4px 20px -4px color-mix(in srgb, var(--primary) 15%, transparent);
 }
 
+.my-progress-certificate-actions {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+@media (max-width: 640px) {
+    .my-progress-certificate-actions {
+        width: 100%;
+        margin-left: 0;
+    }
+    .my-progress-certificate-actions .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
 .my-progress-page .my-progress-header .page-header-icon {
     background: linear-gradient(135deg, var(--primary), var(--secondary));
     box-shadow: 0 4px 12px color-mix(in srgb, var(--primary) 35%, transparent);

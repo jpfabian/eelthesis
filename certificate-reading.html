@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reading Certificate - EEL</title>
+  <link rel="icon" href="image/eel-character.png" type="image/png">
+  <script src="js/theme.js"></script>
+  <link rel="stylesheet" href="css/styles.css" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.1/lucide.min.css" rel="stylesheet">
+  <style>
+    /* styles.css sets body overflow:hidden globally; override so certificate can scroll */
+    html, body.certificate-page { height: auto !important; min-height: 100% !important; }
+    body.certificate-page {
+      background: var(--background);
+      color: var(--foreground);
+      overflow-y: auto !important;
+      overflow-x: hidden !important;
+    }
+    .cert-shell { max-width: 11in; margin: 0 auto; padding: 20px; }
+    .cert-toolbar { display: flex; gap: 10px; align-items: center; justify-content: space-between; margin: 12px 0 18px; }
+    .cert-toolbar .btn { display: inline-flex; align-items: center; gap: 8px; }
+    .cert-card {
+      background: transparent;
+      border: none;
+      border-radius: 0;
+      padding: 0;
+      box-shadow: none;
+      display: flex;
+      justify-content: center;
+      width: 100%;
+    }
+    .cert-paper {
+      position: relative;
+      /* On-screen Letter LANDSCAPE preview (11 x 8.5 inches) */
+      width: 100%;
+      max-width: 11in;
+      aspect-ratio: 11 / 8.5;
+      height: auto;
+      /* Academic paper-like look */
+      background:
+        radial-gradient(800px 520px at 18% 28%, rgba(214, 169, 77, 0.10), transparent 62%),
+        radial-gradient(900px 520px at 92% 86%, rgba(109, 40, 217, 0.10), transparent 62%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(248, 250, 252, 0.92));
+      border: 1px solid rgba(214, 169, 77, 0.42);
+      border-radius: 18px;
+      padding: 44px 36px;
+      overflow: hidden;
+      min-height: 560px;
+      margin: 0;
+      box-shadow: 0 18px 44px rgba(0,0,0,0.18);
+    }
+    :root[data-theme="dark"] .cert-paper {
+      background:
+        radial-gradient(820px 520px at 18% 28%, rgba(214, 169, 77, 0.12), transparent 62%),
+        radial-gradient(900px 520px at 92% 86%, rgba(139, 92, 246, 0.14), transparent 62%),
+        linear-gradient(180deg, rgba(15, 26, 45, 0.96), rgba(11, 18, 32, 0.96));
+      border-color: rgba(214, 169, 77, 0.34);
+      box-shadow: 0 18px 44px rgba(0,0,0,0.32);
+    }
+    .cert-paper::before {
+      content: "";
+      position: absolute;
+      right: -234px;
+      bottom: -230px;
+      transform: rotate(2deg);
+      width: 1000px;
+      height: 1000px;
+      background-image: url("image/eel-character.png");
+      background-repeat: no-repeat;
+      background-position: right bottom;
+      background-size: contain;
+      opacity: 0.14;
+      filter: blur(0.85px) saturate(1.0);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .cert-paper > * { position: relative; z-index: 1; }
+    .cert-frame {
+      position: absolute;
+      inset: 14px;
+      border-radius: 14px;
+      border: 2px solid rgba(214, 169, 77, 0.52);
+      pointer-events: none;
+      opacity: 0.9;
+    }
+    :root[data-theme="dark"] .cert-frame { border-color: rgba(214, 169, 77, 0.40); }
+    .cert-topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+    .cert-brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .cert-logo {
+      width: 54px;
+      height: 54px;
+      border-radius: 14px;
+      background: rgba(255,255,255,0.75);
+      border: 1px solid rgba(214, 169, 77, 0.38);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+      object-fit: contain;
+      padding: 6px;
+    }
+    :root[data-theme="dark"] .cert-logo { background: rgba(2,6,23,0.22); border-color: rgba(214, 169, 77, 0.24); }
+    .cert-brand-name { font-weight: 900; letter-spacing: -0.02em; margin: 0; font-size: 15px; }
+    .cert-badge {
+      width: 66px; height: 66px; border-radius: 18px;
+      display: inline-flex; align-items: center; justify-content: center;
+      background: radial-gradient(circle at 30% 30%, rgba(214, 169, 77, 0.42), rgba(214, 169, 77, 0.18));
+      border: 1px solid rgba(214, 169, 77, 0.55);
+      box-shadow: 0 10px 22px rgba(0,0,0,0.14);
+    }
+    .cert-title { font-size: 42px; font-weight: 900; margin: 4px 0 10px; letter-spacing: 0.6px; text-align: center; font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif; }
+    .cert-subtitle { margin: 0 auto 22px; color: var(--muted-foreground); font-size: 15px; text-align: center; max-width: 980px; }
+    .cert-name { font-size: 48px; font-weight: 900; margin: 10px 0 8px; text-align: center; font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif; letter-spacing: 0.3px; }
+    .cert-name-underline { height: 2px; width: 100%; max-width: 720px; background: rgba(2,6,23,0.18); border-radius: 999px; margin: 0 auto; }
+    :root[data-theme="dark"] .cert-name-underline { background: rgba(226,232,240,0.22); }
+    .cert-body { font-size: 16.5px; line-height: 1.75; margin: 22px auto 0; max-width: 980px; text-align: center; color: color-mix(in srgb, var(--foreground) 92%, var(--muted-foreground)); }
+    .cert-meta { margin-top: 34px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: stretch; max-width: 980px; margin-left: auto; margin-right: auto; }
+    .cert-meta .meta {
+      background: rgba(255,255,255,0.70);
+      border: 1px solid rgba(214, 169, 77, 0.22);
+      border-radius: 14px;
+      padding: 14px 16px;
+      min-height: 84px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    :root[data-theme="dark"] .cert-meta .meta { background: rgba(2,6,23,0.22); border-color: rgba(214, 169, 77, 0.18); }
+    .meta .label { color: var(--muted-foreground); font-size: 12px; margin-bottom: 4px; }
+    .meta .value { font-weight: 700; }
+    .cert-watermark {
+      position: absolute; left: -120px; bottom: -120px;
+      width: 420px; height: 420px; border-radius: 999px;
+      background: radial-gradient(circle at 30% 30%, rgba(214, 169, 77, 0.22), transparent 65%),
+                  radial-gradient(circle at 70% 70%, rgba(109, 40, 217, 0.16), transparent 65%);
+      filter: blur(0.2px);
+      opacity: 0.85;
+      z-index: 0;
+      pointer-events: none;
+    }
+    .cert-status { margin: 10px 0 0; }
+    @media (max-width: 640px) {
+      .cert-shell { max-width: none; padding: 14px; }
+      .cert-paper { padding: 36px 22px; width: 100%; }
+      .cert-title { font-size: 28px; }
+      .cert-name { font-size: 32px; }
+      .cert-meta { grid-template-columns: 1fr; }
+    }
+    @media print {
+      @page { size: letter landscape; margin: 0.5in; }
+      .cert-toolbar { display: none !important; }
+      body { background: #fff !important; }
+      .cert-shell { padding: 0 !important; max-width: none !important; }
+      .cert-paper {
+        width: 11in !important;
+        min-height: 8.5in !important;
+        height: 8.5in !important;
+        border-radius: 0.25in !important;
+        padding: 0.65in 0.7in !important;
+        page-break-inside: avoid;
+      }
+      .cert-frame { inset: 0.28in !important; border-radius: 0.18in !important; }
+      .cert-watermark { left: -1.1in !important; bottom: -1.1in !important; }
+      .cert-paper::before { right: -1.15in !important; bottom: -1.15in !important; width: 6.6in !important; height: 6.6in !important; opacity: 0.18 !important; filter: blur(0.55px) saturate(1.0) !important; }
+    }
+  </style>
+</head>
+<body class="certificate-page">
+  <div class="cert-shell">
+    <div class="cert-toolbar">
+      <div>
+        <h2 style="margin:0; font-size:18px; font-weight:800;">Reading Certificate</h2>
+        <p id="cert-status" class="cert-status" style="margin:6px 0 0; color: var(--muted-foreground);">Checking eligibility…</p>
+      </div>
+      <div style="display:flex; gap:10px;">
+        <a class="btn btn-secondary" href="my-progress.html">
+          <i data-lucide="arrow-left" class="size-4"></i>
+          Back
+        </a>
+        <button id="cert-print-btn" class="btn btn-primary" type="button" disabled>
+          <i data-lucide="printer" class="size-4"></i>
+          Print / Save PDF
+        </button>
+      </div>
+    </div>
+
+    <div class="cert-card">
+      <div id="cert-paper" class="cert-paper" aria-live="polite">
+        <div class="cert-frame" aria-hidden="true"></div>
+        <div class="cert-watermark" aria-hidden="true"></div>
+
+        <div class="cert-topbar">
+          <div class="cert-brand">
+            <img class="cert-logo" src="image/logo.png" alt="EEL logo" />
+            <div>
+              <p class="cert-brand-name">EEL — Enhancing English Literacy</p>
+            </div>
+          </div>
+          <div class="cert-badge" aria-hidden="true">
+            <i data-lucide="award" class="size-6"></i>
+          </div>
+        </div>
+
+        <h1 class="cert-title">Certificate of Appreciation</h1>
+        <p class="cert-subtitle">Awarded for completing all Reading practice quizzes.</p>
+
+        <div style="margin-top: 26px; text-align: center;">
+          <div style="color: var(--muted-foreground); font-weight: 600;">Presented to</div>
+          <div id="cert-student-name" class="cert-name">—</div>
+          <div class="cert-name-underline"></div>
+        </div>
+
+        <div class="cert-body" id="cert-body">
+          In recognition of your commitment and hard work, you have successfully accomplished all required Reading practice quizzes. Your dedication is sincerely appreciated—keep striving for excellence.
+        </div>
+
+        <div class="cert-meta">
+          <div class="meta">
+            <div class="label">Class</div>
+            <div class="value" id="cert-class">—</div>
+          </div>
+          <div class="meta">
+            <div class="label">Date Issued</div>
+            <div class="value" id="cert-date">—</div>
+          </div>
+          <div class="meta">
+            <div class="label">Subject</div>
+            <div class="value" id="cert-subject">—</div>
+          </div>
+          <div class="meta">
+            <div class="label">EEL</div>
+            <div class="value">English Enhancement Literacy</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const API_BASE = window.API_BASE || "";
+      const statusEl = document.getElementById("cert-status");
+      const printBtn = document.getElementById("cert-print-btn");
+      const nameEl = document.getElementById("cert-student-name");
+      const classEl = document.getElementById("cert-class");
+      const subjectEl = document.getElementById("cert-subject");
+      const dateEl = document.getElementById("cert-date");
+
+      function fmtDate(d) {
+        try { return d.toLocaleDateString(undefined, { dateStyle: "long" }); } catch (_) { return String(d); }
+      }
+
+      async function load() {
+        const userStr = localStorage.getItem("eel_user");
+        const user = userStr ? JSON.parse(userStr) : null;
+        const selectedClass = JSON.parse(localStorage.getItem("eel_selected_class") || "{}");
+        const classId = selectedClass?.id || selectedClass?.class_id || localStorage.getItem("eel_selected_class_id") || null;
+        const studentId = user?.user_id || null;
+
+        if (!studentId || !classId) {
+          statusEl.textContent = "Missing student or class context.";
+          return;
+        }
+
+        try {
+          const url = API_BASE + "/api/certificates/reading?student_id=" + encodeURIComponent(studentId) + "&class_id=" + encodeURIComponent(classId);
+          const res = await fetch(url);
+          const data = await res.json().catch(() => null);
+          if (!res.ok || !data || !data.success) {
+            statusEl.textContent = "Unable to check eligibility.";
+            return;
+          }
+
+          const eligible = !!data.eligible;
+          const studentName = data.student?.name || "Student";
+          const className = [data.class?.name, data.class?.section].filter(Boolean).join(" • ");
+          const subjectName = data.class?.subject || "—";
+
+          nameEl.textContent = studentName;
+          classEl.textContent = className || "—";
+          subjectEl.textContent = subjectName;
+          dateEl.textContent = fmtDate(new Date());
+
+          if (!eligible) {
+            const p = data.progress || {};
+            statusEl.textContent = "Not eligible yet — complete all Reading practice quizzes first. (Reading: " +
+              (p.reading_completed ?? 0) + "/" + (p.reading_total ?? 0) + ")";
+            printBtn.disabled = true;
+            return;
+          }
+
+          statusEl.textContent = "Eligible — you can now print or save as PDF.";
+          printBtn.disabled = false;
+        } catch (e) {
+          console.error(e);
+          statusEl.textContent = "Error checking eligibility.";
+        }
+      }
+
+      printBtn.addEventListener("click", function () {
+        if (printBtn.disabled) return;
+        window.print();
+      });
+
+      if (window.lucide && typeof window.lucide.createIcons === "function") window.lucide.createIcons();
+      if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", load);
+      else load();
+    })();
+  </script>
+</body>
+</html>
+

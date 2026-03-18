@@ -341,12 +341,18 @@
                 renderStats(data);
                 renderCharts(data);
                 renderQuizHistory(data.quizzes || []);
+                try {
+                    await updateCertificateButtons(studentId, classId);
+                } catch (_) {}
             } else {
                 if (!res.ok && !data) console.error("My progress fetch error: " + res.status + " " + res.statusText);
                 __lastProgressData = { completed_count: 0, total_quizzes: 0, quizzes: [] };
                 renderStats(__lastProgressData);
                 renderCharts(__lastProgressData);
                 renderQuizHistory([]);
+                try {
+                    await updateCertificateButtons(studentId, classId);
+                } catch (_) {}
             }
         } catch (err) {
             console.error("My progress fetch error:", err);
@@ -354,10 +360,56 @@
             renderStats(__lastProgressData);
             renderCharts(__lastProgressData);
             renderQuizHistory([]);
+            try {
+                await updateCertificateButtons(studentId, classId);
+            } catch (_) {}
         } finally {
             hideLoading();
             if (window.lucide && typeof window.lucide.createIcons === "function") {
                 window.lucide.createIcons();
+            }
+        }
+    }
+
+    async function updateCertificateButtons(studentId, classId) {
+        const btnReading = document.getElementById("my-progress-reading-certificate-btn");
+        const btnPron = document.getElementById("my-progress-pronunciation-certificate-btn");
+        if (!btnReading && !btnPron) return;
+        if (!studentId || !classId) {
+            if (btnReading) btnReading.classList.add("hidden");
+            if (btnPron) btnPron.classList.add("hidden");
+            return;
+        }
+        // Reading certificate
+        if (btnReading) {
+            try {
+                const urlR = API_BASE + "/api/certificates/reading?student_id=" + encodeURIComponent(studentId) + "&class_id=" + encodeURIComponent(classId);
+                const resR = await fetch(urlR);
+                const dataR = await resR.json().catch(function () { return null; });
+                if (resR.ok && dataR && dataR.success && dataR.eligible) {
+                    btnReading.href = "certificate-reading.html";
+                    btnReading.classList.remove("hidden");
+                } else {
+                    btnReading.classList.add("hidden");
+                }
+            } catch (_) {
+                btnReading.classList.add("hidden");
+            }
+        }
+        // Pronunciation certificate
+        if (btnPron) {
+            try {
+                const urlP = API_BASE + "/api/certificates/pronunciation?student_id=" + encodeURIComponent(studentId) + "&class_id=" + encodeURIComponent(classId);
+                const resP = await fetch(urlP);
+                const dataP = await resP.json().catch(function () { return null; });
+                if (resP.ok && dataP && dataP.success && dataP.eligible) {
+                    btnPron.href = "certificate-pronunciation.html";
+                    btnPron.classList.remove("hidden");
+                } else {
+                    btnPron.classList.add("hidden");
+                }
+            } catch (_) {
+                btnPron.classList.add("hidden");
             }
         }
     }

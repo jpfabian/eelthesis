@@ -926,4 +926,348 @@ router.get("/api/class/:classId/completion-rate", async (req, res) => {
   }
 });
 
+// ================= CERTIFICATE ELIGIBILITY (student) =================
+// GET /api/certificates/appreciation?student_id=:id&class_id=:classId
+// Eligible when the student completed ALL built-in reading_quizzes and pronunciation_quizzes for the class subject.
+router.get("/api/certificates/appreciation", async (req, res) => {
+  const pool = req.pool;
+  const studentId = req.query.student_id ? Number(req.query.student_id) : null;
+  const classId = req.query.class_id ? Number(req.query.class_id) : null;
+  if (!studentId || !Number.isFinite(studentId)) {
+    return res.status(400).json({ success: false, error: "student_id required" });
+  }
+  if (!classId || !Number.isFinite(classId)) {
+    return res.status(400).json({ success: false, error: "class_id required" });
+  }
+
+  try {
+    const [[c]] = await pool.query("SELECT id, name, section, subject FROM classes WHERE id = ?", [classId]);
+    if (!c) return res.status(404).json({ success: false, error: "Class not found" });
+
+    const [[u]] = await pool.query("SELECT user_id, fname, lname FROM users WHERE user_id = ?", [studentId]);
+    if (!u) return res.status(404).json({ success: false, error: "Student not found" });
+
+    // Resolve subject_id from class.subject (same mapping as /api/my-progress)
+    let subjectId = null;
+    if (c.subject) {
+      const subjectMapping = {
+        "Reading and Writing Skills": 1,
+        "Oral Communication in Context": 2,
+        "Creative Writing": 3,
+        "Creative Non-Fiction": 4,
+        "English for Academic and Professional Purposes": 5,
+      };
+      const normalized = String(c.subject).toLowerCase();
+      subjectId =
+        normalized.includes("oral") ? 2 :
+        normalized.includes("reading") ? 1 :
+        normalized.includes("creative writing") ? 3 :
+        normalized.includes("creative non") ? 4 :
+        normalized.includes("academic") ? 5 :
+        subjectMapping[c.subject] || null;
+      if (subjectId != null) subjectId = Number(subjectId);
+    }
+
+    const [[rq]] = await pool.query(
+      `SELECT COUNT(*) AS c
+       FROM reading_quizzes
+       WHERE (? IS NULL OR subject_id = ? OR subject_id IS NULL)`,
+      [subjectId, subjectId]
+    );
+    const [[pq]] = await pool.query(
+      `SELECT COUNT(*) AS c
+       FROM pronunciation_quizzes
+       WHERE (? IS NULL OR subject_id = ? OR subject_id IS NULL)`,
+      [subjectId, subjectId]
+    );
+    const totalReading = Number(rq?.c || 0);
+    const totalPron = Number(pq?.c || 0);
+
+    // Completed unique quizzes for this student (class-scoped when column exists)
+    let readingCompleted = 0;
+    try {
+      const [[row]] = await pool.query(
+        `SELECT COUNT(DISTINCT a.quiz_id) AS c
+         FROM reading_quiz_attempts a
+         JOIN reading_quizzes q ON q.quiz_id = a.quiz_id
+         WHERE a.status = 'completed'
+           AND a.student_id = ?
+           AND (? IS NULL OR q.subject_id = ? OR q.subject_id IS NULL)
+           AND a.class_id = ?`,
+        [studentId, subjectId, subjectId, classId]
+      );
+      readingCompleted = Number(row?.c || 0);
+    } catch (e) {
+      // fallback if a.class_id missing
+      const [[row]] = await pool.query(
+        `SELECT COUNT(DISTINCT a.quiz_id) AS c
+         FROM reading_quiz_attempts a
+         JOIN reading_quizzes q ON q.quiz_id = a.quiz_id
+         WHERE a.status = 'completed'
+           AND a.student_id = ?
+           AND (? IS NULL OR q.subject_id = ? OR q.subject_id IS NULL)`,
+        [studentId, subjectId, subjectId]
+      );
+      readingCompleted = Number(row?.c || 0);
+    }
+
+    let pronCompleted = 0;
+    try {
+      const [[row]] = await pool.query(
+        `SELECT COUNT(DISTINCT a.quiz_id) AS c
+         FROM pronunciation_quiz_attempts a
+         LEFT JOIN pronunciation_quizzes q ON q.quiz_id = a.quiz_id
+         WHERE a.status IN ('completed', 'submitted')
+           AND a.student_id = ?
+           AND (? IS NULL OR q.subject_id = ? OR q.subject_id IS NULL)
+           AND (a.class_id = ? OR a.class_id IS NULL)`,
+        [studentId, subjectId, subjectId, classId]
+      );
+      pronCompleted = Number(row?.c || 0);
+    } catch (e) {
+      const [[row]] = await pool.query(
+        `SELECT COUNT(DISTINCT a.quiz_id) AS c
+         FROM pronunciation_quiz_attempts a
+         LEFT JOIN pronunciation_quizzes q ON q.quiz_id = a.quiz_id
+         WHERE a.status IN ('completed', 'submitted')
+           AND a.student_id = ?
+           AND (? IS NULL OR q.subject_id = ? OR q.subject_id IS NULL)`,
+        [studentId, subjectId, subjectId]
+      );
+      pronCompleted = Number(row?.c || 0);
+    }
+
+    const eligible = totalReading > 0 && totalPron > 0 && readingCompleted >= totalReading && pronCompleted >= totalPron;
+
+    res.json({
+      success: true,
+      eligible,
+      student: {
+        user_id: u.user_id,
+        name: toNameCase(`${u.fname || ""} ${u.lname || ""}`.trim()),
+      },
+      class: {
+        id: c.id,
+        name: c.name,
+        section: c.section,
+        subject: c.subject,
+        subject_id: subjectId,
+      },
+      progress: {
+        reading_completed: readingCompleted,
+        reading_total: totalReading,
+        pronunciation_completed: pronCompleted,
+        pronunciation_total: totalPron,
+      },
+    });
+  } catch (err) {
+    console.error("❌ certificate eligibility error:", err);
+    res.status(500).json({ success: false, error: "Database error" });
+  }
+});
+
+// ================= CERTIFICATE ELIGIBILITY (reading only) =================
+// GET /api/certificates/reading?student_id=:id&class_id=:classId
+router.get("/api/certificates/reading", async (req, res) => {
+  const pool = req.pool;
+  const studentId = req.query.student_id ? Number(req.query.student_id) : null;
+  const classId = req.query.class_id ? Number(req.query.class_id) : null;
+  if (!studentId || !Number.isFinite(studentId)) {
+    return res.status(400).json({ success: false, error: "student_id required" });
+  }
+  if (!classId || !Number.isFinite(classId)) {
+    return res.status(400).json({ success: false, error: "class_id required" });
+  }
+
+  try {
+    const [[c]] = await pool.query("SELECT id, name, section, subject FROM classes WHERE id = ?", [classId]);
+    if (!c) return res.status(404).json({ success: false, error: "Class not found" });
+
+    const [[u]] = await pool.query("SELECT user_id, fname, lname FROM users WHERE user_id = ?", [studentId]);
+    if (!u) return res.status(404).json({ success: false, error: "Student not found" });
+
+    // Resolve subject_id from class.subject (same mapping as /api/my-progress)
+    let subjectId = null;
+    if (c.subject) {
+      const subjectMapping = {
+        "Reading and Writing Skills": 1,
+        "Oral Communication in Context": 2,
+        "Creative Writing": 3,
+        "Creative Non-Fiction": 4,
+        "English for Academic and Professional Purposes": 5,
+      };
+      const normalized = String(c.subject).toLowerCase();
+      subjectId =
+        normalized.includes("oral") ? 2 :
+        normalized.includes("reading") ? 1 :
+        normalized.includes("creative writing") ? 3 :
+        normalized.includes("creative non") ? 4 :
+        normalized.includes("academic") ? 5 :
+        subjectMapping[c.subject] || null;
+      if (subjectId != null) subjectId = Number(subjectId);
+    }
+
+    const [[rq]] = await pool.query(
+      `SELECT COUNT(*) AS c
+       FROM reading_quizzes
+       WHERE (? IS NULL OR subject_id = ? OR subject_id IS NULL)`,
+      [subjectId, subjectId]
+    );
+    const totalReading = Number(rq?.c || 0);
+
+    let readingCompleted = 0;
+    try {
+      const [[row]] = await pool.query(
+        `SELECT COUNT(DISTINCT a.quiz_id) AS c
+         FROM reading_quiz_attempts a
+         JOIN reading_quizzes q ON q.quiz_id = a.quiz_id
+         WHERE a.status = 'completed'
+           AND a.student_id = ?
+           AND (? IS NULL OR q.subject_id = ? OR q.subject_id IS NULL)
+           AND a.class_id = ?`,
+        [studentId, subjectId, subjectId, classId]
+      );
+      readingCompleted = Number(row?.c || 0);
+    } catch (e) {
+      const [[row]] = await pool.query(
+        `SELECT COUNT(DISTINCT a.quiz_id) AS c
+         FROM reading_quiz_attempts a
+         JOIN reading_quizzes q ON q.quiz_id = a.quiz_id
+         WHERE a.status = 'completed'
+           AND a.student_id = ?
+           AND (? IS NULL OR q.subject_id = ? OR q.subject_id IS NULL)`,
+        [studentId, subjectId, subjectId]
+      );
+      readingCompleted = Number(row?.c || 0);
+    }
+
+    const eligible = totalReading > 0 && readingCompleted >= totalReading;
+
+    res.json({
+      success: true,
+      eligible,
+      student: {
+        user_id: u.user_id,
+        name: toNameCase(`${u.fname || ""} ${u.lname || ""}`.trim()),
+      },
+      class: {
+        id: c.id,
+        name: c.name,
+        section: c.section,
+        subject: c.subject,
+        subject_id: subjectId,
+      },
+      progress: {
+        reading_completed: readingCompleted,
+        reading_total: totalReading,
+      },
+    });
+  } catch (err) {
+    console.error("❌ reading certificate eligibility error:", err);
+    res.status(500).json({ success: false, error: "Database error" });
+  }
+});
+
+// ================= CERTIFICATE ELIGIBILITY (pronunciation only) =================
+// GET /api/certificates/pronunciation?student_id=:id&class_id=:classId
+router.get("/api/certificates/pronunciation", async (req, res) => {
+  const pool = req.pool;
+  const studentId = req.query.student_id ? Number(req.query.student_id) : null;
+  const classId = req.query.class_id ? Number(req.query.class_id) : null;
+  if (!studentId || !Number.isFinite(studentId)) {
+    return res.status(400).json({ success: false, error: "student_id required" });
+  }
+  if (!classId || !Number.isFinite(classId)) {
+    return res.status(400).json({ success: false, error: "class_id required" });
+  }
+
+  try {
+    const [[c]] = await pool.query("SELECT id, name, section, subject FROM classes WHERE id = ?", [classId]);
+    if (!c) return res.status(404).json({ success: false, error: "Class not found" });
+
+    const [[u]] = await pool.query("SELECT user_id, fname, lname FROM users WHERE user_id = ?", [studentId]);
+    if (!u) return res.status(404).json({ success: false, error: "Student not found" });
+
+    // Resolve subject_id from class.subject (same mapping as /api/my-progress)
+    let subjectId = null;
+    if (c.subject) {
+      const subjectMapping = {
+        "Reading and Writing Skills": 1,
+        "Oral Communication in Context": 2,
+        "Creative Writing": 3,
+        "Creative Non-Fiction": 4,
+        "English for Academic and Professional Purposes": 5,
+      };
+      const normalized = String(c.subject).toLowerCase();
+      subjectId =
+        normalized.includes("oral") ? 2 :
+        normalized.includes("reading") ? 1 :
+        normalized.includes("creative writing") ? 3 :
+        normalized.includes("creative non") ? 4 :
+        normalized.includes("academic") ? 5 :
+        subjectMapping[c.subject] || null;
+      if (subjectId != null) subjectId = Number(subjectId);
+    }
+
+    const [[pq]] = await pool.query(
+      `SELECT COUNT(*) AS c
+       FROM pronunciation_quizzes
+       WHERE (? IS NULL OR subject_id = ? OR subject_id IS NULL)`,
+      [subjectId, subjectId]
+    );
+    const totalPronunciation = Number(pq?.c || 0);
+
+    let pronunciationCompleted = 0;
+    try {
+      const [[row]] = await pool.query(
+        `SELECT COUNT(DISTINCT a.quiz_id) AS c
+         FROM pronunciation_quiz_attempts a
+         LEFT JOIN pronunciation_quizzes q ON q.quiz_id = a.quiz_id
+         WHERE a.status IN ('completed', 'submitted')
+           AND a.student_id = ?
+           AND (? IS NULL OR q.subject_id = ? OR q.subject_id IS NULL)
+           AND (a.class_id = ? OR a.class_id IS NULL)`,
+        [studentId, subjectId, subjectId, classId]
+      );
+      pronunciationCompleted = Number(row?.c || 0);
+    } catch (e) {
+      const [[row]] = await pool.query(
+        `SELECT COUNT(DISTINCT a.quiz_id) AS c
+         FROM pronunciation_quiz_attempts a
+         LEFT JOIN pronunciation_quizzes q ON q.quiz_id = a.quiz_id
+         WHERE a.status IN ('completed', 'submitted')
+           AND a.student_id = ?
+           AND (? IS NULL OR q.subject_id = ? OR q.subject_id IS NULL)`,
+        [studentId, subjectId, subjectId]
+      );
+      pronunciationCompleted = Number(row?.c || 0);
+    }
+
+    const eligible = totalPronunciation > 0 && pronunciationCompleted >= totalPronunciation;
+
+    res.json({
+      success: true,
+      eligible,
+      student: {
+        user_id: u.user_id,
+        name: toNameCase(`${u.fname || ""} ${u.lname || ""}`.trim()),
+      },
+      class: {
+        id: c.id,
+        name: c.name,
+        section: c.section,
+        subject: c.subject,
+        subject_id: subjectId,
+      },
+      progress: {
+        pronunciation_completed: pronunciationCompleted,
+        pronunciation_total: totalPronunciation,
+      },
+    });
+  } catch (err) {
+    console.error("❌ pronunciation certificate eligibility error:", err);
+    res.status(500).json({ success: false, error: "Database error" });
+  }
+});
+
 module.exports = router;
