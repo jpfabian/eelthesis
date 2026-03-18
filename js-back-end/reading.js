@@ -40,6 +40,26 @@ function toNameCase(input) {
 
 const { nowPhilippineDatetime } = require("./utils/datetime");
 
+function parseSqlDatetimePhilippines(value) {
+  if (!value) return null;
+  if (value instanceof Date) return value;
+  const s = String(value).trim();
+  if (!s) return null;
+  // MySQL DATETIME string (no timezone): treat as Asia/Manila (+08:00) since the app uses nowPhilippineDatetime.
+  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(s)) {
+    return new Date(s.replace(" ", "T") + "+08:00");
+  }
+  // ISO without timezone: assume +08:00
+  if (/^\d{4}-\d{2}-\d{2}T/.test(s) && !/[zZ]|[+-]\d{2}:?\d{2}$/.test(s)) {
+    return new Date(s + "+08:00");
+  }
+  return new Date(s);
+}
+
+function nowPhilippinesDate() {
+  return parseSqlDatetimePhilippines(nowPhilippineDatetime());
+}
+
 // ================= CREATE TEACHER READING QUIZ =================
 router.post("/api/teacher/reading-quizzes", async (req, res) => {
     const pool = req.pool;
@@ -716,9 +736,9 @@ router.post("/api/teacher/reading-quiz-attempts", async (req, res) => {
       }
     }
     if (!quiz) return res.status(404).json({ success: false, error: "Quiz not found" });
-    const now = new Date();
-    const unlockTime = quiz.unlock_time ? new Date(quiz.unlock_time) : null;
-    const lockTime = quiz.lock_time ? new Date(quiz.lock_time) : null;
+    const now = nowPhilippinesDate();
+    const unlockTime = parseSqlDatetimePhilippines(quiz.unlock_time);
+    const lockTime = parseSqlDatetimePhilippines(quiz.lock_time);
     if (unlockTime && now < unlockTime) return res.status(403).json({ success: false, error: "Quiz is not yet open." });
     if (lockTime && now > lockTime) return res.status(403).json({ success: false, error: "Quiz has closed." });
 
