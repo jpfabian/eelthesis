@@ -4,8 +4,8 @@ const multer = require("multer");
 const fs = require("fs");
 const path = require("path");
 const FormData = require("form-data");
-const fetch = require("node-fetch");
-const { S3Client } = require("@aws-sdk/client-s3");
+const axios = require("axios");
+const { S3Client, GetObjectCommand } = require("@aws-sdk/client-s3");
 const multerS3 = require("multer-s3");
 require("dotenv").config();
 const Groq = require("groq-sdk");
@@ -34,12 +34,29 @@ async function transcribeWithGroq(file) {
   if (!apiKey) return null;
   try {
     const form = new FormData();
+    const filename = file.originalname || "audio.webm";
     if (file.path && fs.existsSync(file.path)) {
-      form.append("file", fs.createReadStream(file.path), { filename: file.originalname || "audio.webm" });
+      form.append("file", fs.createReadStream(file.path), { filename });
     } else if (file.buffer) {
-      form.append("file", file.buffer, { filename: file.originalname || "audio.webm" });
-    } else if (file.location && (file.location.startsWith("http://") || file.location.startsWith("https://"))) {
-      form.append("url", file.location);
+      form.append("file", file.buffer, { filename });
+    } else if (file.location || (file.bucket && file.key)) {
+      let buf = null;
+      if (file.location && (file.location.startsWith("http://") || file.location.startsWith("https://"))) {
+        try {
+          const fileRes = await axios.get(file.location, { responseType: "arraybuffer", timeout: 15000 });
+          if (fileRes.data) buf = Buffer.from(fileRes.data);
+        } catch (_) {}
+      }
+      if (!buf && s3Client && voiceBucketName && file.key) {
+        const bucket = file.bucket || voiceBucketName;
+        const cmd = new GetObjectCommand({ Bucket: bucket, Key: file.key });
+        const obj = await s3Client.send(cmd);
+        const chunks = [];
+        for await (const chunk of obj.Body) chunks.push(chunk);
+        buf = Buffer.concat(chunks);
+      }
+      if (buf) form.append("file", buf, { filename });
+      else return null;
     } else {
       return null;
     }
@@ -47,17 +64,13 @@ async function transcribeWithGroq(file) {
     form.append("language", "en");
     form.append("response_format", "text");
     const headers = { ...form.getHeaders(), Authorization: `Bearer ${apiKey}` };
-    const res = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
-      method: "POST",
+    const res = await axios.post("https://api.groq.com/openai/v1/audio/transcriptions", form, {
       headers,
-      body: form,
+      maxBodyLength: Infinity,
+      maxContentLength: Infinity,
+      responseType: "text",
     });
-    if (!res.ok) {
-      const errText = await res.text();
-      console.warn("Groq transcription error:", res.status, errText);
-      return null;
-    }
-    return (await res.text()).trim();
+    return (res.data && typeof res.data === "string" ? res.data : String(res.data || "")).trim();
   } catch (e) {
     console.warn("Groq transcription error:", e?.message || e);
     return null;
@@ -120,6 +133,25 @@ async function getExpectedWordForQuestion(pool, quizId, questionId) {
   return null;
 }
 
+/** Get total number of questions in a quiz (built-in or teacher). */
+async function getPronunciationQuizQuestionCount(pool, quizId, difficulty, isTeacherQuiz) {
+  const qzId = Number(quizId);
+  if (!Number.isFinite(qzId)) return 0;
+  const diff = String(difficulty || "").toLowerCase();
+  const prefix = isTeacherQuiz ? "teacher_pronunciation_" : "pronunciation_";
+  let table = null;
+  if (diff === "beginner") table = `${prefix}beginner_questions`;
+  else if (diff === "intermediate") table = `${prefix}intermediate_questions`;
+  else if (diff === "advanced") table = `${prefix}advanced_questions`;
+  if (!table) return 0;
+  try {
+    const [[row]] = await pool.query(`SELECT COUNT(*) AS cnt FROM ${table} WHERE quiz_id = ?`, [qzId]);
+    return Number(row?.cnt || 0) || 0;
+  } catch (_) {
+    return 0;
+  }
+}
+
 /** Ensure first letter is uppercase when saving to DB. */
 function capitalizeFirst(s) {
   if (s == null || typeof s !== "string") return s;
@@ -145,8 +177,10 @@ const hasS3 =
   String(process.env.AWS_REGION || "").trim();
 
 let upload;
+let s3Client = null;
+let voiceBucketName = null;
 if (hasS3) {
-  const s3 = new S3Client({
+  s3Client = new S3Client({
     region: process.env.AWS_REGION,
     credentials: {
       accessKeyId: process.env.AWS_ACCESS_KEY_ID,
@@ -154,12 +188,12 @@ if (hasS3) {
     },
   });
 
-  const voiceBucket = process.env.AWS_VOICE_BUCKET_NAME || process.env.AWS_BUCKET_NAME;
+  voiceBucketName = process.env.AWS_VOICE_BUCKET_NAME || process.env.AWS_BUCKET_NAME;
   const voiceKeyPrefix = "voices/";
   upload = multer({
     storage: multerS3({
-      s3,
-      bucket: voiceBucket,
+      s3: s3Client,
+      bucket: voiceBucketName,
       key: (req, file, cb) => {
         const filename = `${voiceKeyPrefix}${Date.now()}-${file.originalname}`;
         cb(null, filename);
@@ -537,6 +571,7 @@ router.get("/api/pronunciation-attempts", async (req, res) => {
 });
 
 // ==================== Handle Cheating Void (0 score, no answers) ====================
+// Update existing attempt instead of creating new - prevents duplicate attempts
 router.post("/api/pronunciation-void", async (req, res) => {
   const pool = req.pool;
   const { student_id, quiz_id, class_id } = req.body || {};
@@ -546,6 +581,48 @@ router.post("/api/pronunciation-void", async (req, res) => {
   }
   try {
     const attemptNow = nowPhilippineDatetime();
+    // Find most recent attempt for this student+quiz - update instead of create (no duplicate attempts)
+    let [existingRows] = await pool.query(
+      `SELECT attempt_id FROM pronunciation_quiz_attempts
+       WHERE student_id = ? AND quiz_id = ? AND (class_id <=> ?)
+       ORDER BY attempt_id DESC LIMIT 1`,
+      [student_id, quiz_id, classIdParam]
+    );
+    if (!existingRows.length && classIdParam != null) {
+      [existingRows] = await pool.query(
+        `SELECT attempt_id FROM pronunciation_quiz_attempts
+         WHERE student_id = ? AND quiz_id = ?
+         ORDER BY attempt_id DESC LIMIT 1`,
+        [student_id, quiz_id]
+      );
+    }
+    if (existingRows.length) {
+      const attempt_id = existingRows[0].attempt_id;
+      await pool.query(
+        `DELETE FROM pronunciation_quiz_answers WHERE attempt_id = ?`,
+        [attempt_id]
+      );
+      try {
+        await pool.query(
+          `UPDATE pronunciation_quiz_attempts
+           SET end_time = ?, status = 'completed', score = 0, pronunciation_score = 0, total_points = 100,
+               cheating_violations = 2, cheating_voided = 1
+           WHERE attempt_id = ?`,
+          [attemptNow, attempt_id]
+        );
+      } catch (colErr) {
+        if (colErr.errno === 1054 && colErr.sqlMessage && colErr.sqlMessage.includes("cheating")) {
+          await pool.query(
+            `UPDATE pronunciation_quiz_attempts
+             SET end_time = ?, status = 'completed', score = 0, pronunciation_score = 0, total_points = 100
+             WHERE attempt_id = ?`,
+            [attemptNow, attempt_id]
+          );
+        } else throw colErr;
+      }
+      return res.json({ success: true, accuracy: 0, attempt_id });
+    }
+    // No recent attempt - create new void only when no existing
     const [result] = await pool.query(
       `INSERT INTO pronunciation_quiz_attempts 
          (student_id, quiz_id, class_id, start_time, end_time, status, score, pronunciation_score, total_points, cheating_violations, cheating_voided)
@@ -574,36 +651,58 @@ router.post("/api/pronunciation-submit", upload.any(), async (req, res) => {
   const pool = req.pool;
 
   try {
-    const { student_id, quiz_id, class_id, cheating_violations, cheating_voided } = req.body;
+    const { student_id, quiz_id, class_id, cheating_violations, cheating_voided, retake } = req.body;
     const files = req.files;
     const classIdParam = class_id != null && class_id !== "" ? Number(class_id) : null;
     const violations = Number(cheating_violations) || 0;
-    const voided = !!cheating_voided;
+    let isRetake = retake === "1" || retake === true;
 
     if (!files || files.length === 0) {
       return res.status(400).json({ success: false, message: "No audio files uploaded" });
     }
 
+    // Infer retake: if we find existing attempt with answers, treat as retake (fallback when retake=1 not sent)
+    if (!isRetake) {
+      const [[existing]] = await pool.query(
+        `SELECT attempt_id FROM pronunciation_quiz_attempts
+         WHERE student_id = ? AND quiz_id = ?
+         ORDER BY attempt_id DESC LIMIT 1`,
+        [student_id, quiz_id]
+      );
+      if (existing) {
+        const [[ac]] = await pool.query(
+          `SELECT COUNT(*) AS cnt FROM pronunciation_quiz_answers WHERE attempt_id = ?`,
+          [existing.attempt_id]
+        );
+        if (Number(ac?.cnt || 0) > 0) isRetake = true;
+      }
+    }
+    const voided = isRetake ? false : (cheating_voided === "1" || cheating_voided === true);
+
     // 0️⃣ Idempotency: reject duplicate submit within 60s (prevents double-click / double-save)
-    const [recentRows] = await pool.query(
-      `SELECT attempt_id, score, pronunciation_score FROM pronunciation_quiz_attempts
-       WHERE student_id = ? AND quiz_id = ? AND status = 'completed'
-         AND end_time >= DATE_SUB(NOW(), INTERVAL 60 SECOND)
-       ORDER BY attempt_id DESC LIMIT 1`,
-      [student_id, quiz_id]
-    );
-    if (recentRows.length) {
-      const r = recentRows[0];
-      return res.json({
-        success: true,
-        accuracy: Number(r.pronunciation_score ?? r.score ?? 0),
-        attempt_id: r.attempt_id,
-        message: "Already submitted"
-      });
+    // Skip for retake - we are updating existing attempt
+    if (!isRetake) {
+      const [recentRows] = await pool.query(
+        `SELECT attempt_id, score, pronunciation_score FROM pronunciation_quiz_attempts
+         WHERE student_id = ? AND quiz_id = ? AND status = 'completed'
+           AND end_time >= DATE_SUB(NOW(), INTERVAL 60 SECOND)
+         ORDER BY attempt_id DESC LIMIT 1`,
+        [student_id, quiz_id]
+      );
+      if (recentRows.length) {
+        const r = recentRows[0];
+        return res.json({
+          success: true,
+          accuracy: Number(r.pronunciation_score ?? r.score ?? 0),
+          attempt_id: r.attempt_id,
+          message: "Already submitted"
+        });
+      }
     }
 
     // 1️⃣ Fetch quiz difficulty (built-in or teacher)
     let quizDifficulty = "beginner";
+    let isTeacherQuiz = false;
     const [builtInRows] = await pool.query(
       "SELECT difficulty FROM pronunciation_quizzes WHERE quiz_id = ?",
       [quiz_id]
@@ -617,20 +716,70 @@ router.post("/api/pronunciation-submit", upload.any(), async (req, res) => {
       );
       if (teacherRows.length) {
         quizDifficulty = teacherRows[0].difficulty;
+        isTeacherQuiz = true;
       } else {
         return res.status(404).json({ success: false, message: "Quiz not found" });
       }
     }
 
-    // 2️⃣ Create a new quiz attempt (scoped to class when provided)
+    // Total questions for scoring: unanswered = 0 points.
+    const totalQuestions = await getPronunciationQuizQuestionCount(pool, quiz_id, quizDifficulty, isTeacherQuiz);
+
+    // 2️⃣ Create or reuse quiz attempt (on retake: update existing instead of new row)
     const attemptNow = nowPhilippineDatetime();
-    const [attemptResult] = await pool.query(
-      `INSERT INTO pronunciation_quiz_attempts 
-         (student_id, quiz_id, class_id, start_time, end_time, status)
-       VALUES (?, ?, ?, ?, ?, 'completed')`,
-      [student_id, quiz_id, classIdParam, attemptNow, attemptNow]
-    );
-    const attempt_id = attemptResult.insertId;
+    let attempt_id;
+
+    if (isRetake) {
+      // Find most recent attempt (any status) - always update, never create duplicate
+      let [existingRows] = await pool.query(
+        `SELECT attempt_id FROM pronunciation_quiz_attempts
+         WHERE student_id = ? AND quiz_id = ? AND (class_id <=> ?)
+         ORDER BY attempt_id DESC LIMIT 1`,
+        [student_id, quiz_id, classIdParam]
+      );
+      // Fallback: try without class_id (e.g. retake from different context, or class_id mismatch)
+      if (!existingRows.length) {
+        [existingRows] = await pool.query(
+          `SELECT attempt_id FROM pronunciation_quiz_attempts
+           WHERE student_id = ? AND quiz_id = ?
+           ORDER BY attempt_id DESC LIMIT 1`,
+          [student_id, quiz_id]
+        );
+      }
+      if (existingRows.length) {
+        const candidateId = existingRows[0].attempt_id;
+        const [[answerCheck]] = await pool.query(
+          `SELECT COUNT(*) AS cnt FROM pronunciation_quiz_answers WHERE attempt_id = ?`,
+          [candidateId]
+        );
+        const hasAnswers = Number(answerCheck?.cnt || 0) > 0;
+        if (hasAnswers) {
+          attempt_id = candidateId;
+          await pool.query(
+            `DELETE FROM pronunciation_quiz_answers WHERE attempt_id = ?`,
+            [attempt_id]
+          );
+          await pool.query(
+            `UPDATE pronunciation_quiz_attempts
+             SET start_time = ?, end_time = ?, status = 'completed', score = NULL, pronunciation_score = NULL, total_points = NULL
+             WHERE attempt_id = ?`,
+            [attemptNow, attemptNow, attempt_id]
+          );
+          console.log("[Pronunciation retake] Reusing attempt_id=" + attempt_id + " for student=" + student_id + " quiz=" + quiz_id);
+        }
+        // If no answers (e.g. void attempt), create new - student hasn't submitted yet
+      }
+    }
+
+    if (!attempt_id) {
+      const [attemptResult] = await pool.query(
+        `INSERT INTO pronunciation_quiz_attempts 
+           (student_id, quiz_id, class_id, start_time, end_time, status)
+         VALUES (?, ?, ?, ?, ?, 'completed')`,
+        [student_id, quiz_id, classIdParam, attemptNow, attemptNow]
+      );
+      attempt_id = attemptResult.insertId;
+    }
 
     let totalAccuracy = 0;
     let answerCount = 0;
@@ -673,8 +822,12 @@ router.post("/api/pronunciation-submit", upload.any(), async (req, res) => {
       );
     }
 
-    // 4️⃣ Compute overall accuracy (0 if voided)
-    const avgAccuracy = voided ? 0 : (totalAccuracy / answerCount).toFixed(2);
+    // 4️⃣ Compute overall accuracy (0 if voided; retake always uses computed score)
+    if (answerCount === 0 && files.length > 0) {
+      console.warn("[Pronunciation] No answers processed; files may have wrong fieldnames. Expected audio_0..audio_N, got:", files.map(f => f.fieldname));
+    }
+    const denom = totalQuestions > 0 ? totalQuestions : answerCount;
+    const avgAccuracy = voided ? 0 : (denom > 0 ? Number((totalAccuracy / denom).toFixed(2)) : 0);
     try {
       await pool.query(
         `UPDATE pronunciation_quiz_attempts
@@ -694,14 +847,16 @@ router.post("/api/pronunciation-submit", upload.any(), async (req, res) => {
     // 5️⃣ Unlock next quiz in the subject track if passed
     let unlockedNext = false;
     let unlocked_quiz_number = null;
+    let meta = null;
 
     try {
-      const [[meta]] = await pool.query(
+      const [[metaRow]] = await pool.query(
         `SELECT q.subject_id, q.quiz_number, q.passing_score, q.retake_option
          FROM pronunciation_quizzes q
          WHERE q.quiz_id = ?`,
         [quiz_id]
       );
+      meta = metaRow;
 
       if (meta?.subject_id) {
         const quizNumber = Number(meta.quiz_number || 1);

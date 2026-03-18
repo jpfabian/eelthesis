@@ -11885,6 +11885,8 @@ body.pronunciation-lessons-page .quiz-page[data-view="list"] #lessons-grid {
   border-right: 1px solid var(--border);
   background: color-mix(in srgb, var(--muted) 25%, var(--card));
   min-width: 0;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .lesson-teacher-review-sidebar-header {
@@ -11951,11 +11953,14 @@ body.pronunciation-lessons-page .quiz-page[data-view="list"] #lessons-grid {
 .lesson-teacher-review-attempts-list {
   flex: 1;
   min-height: 0;
+  max-height: min(65vh, 600px);
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 0.75rem 1rem;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  -webkit-overflow-scrolling: touch;
 }
 
 .lesson-teacher-review-attempts-list .lesson-teacher-review-list-empty {
@@ -12175,7 +12180,15 @@ body.pronunciation-lessons-page .quiz-page[data-view="list"] #lessons-grid {
   #teacher-reading-review-modal .lesson-teacher-review-sidebar,
   #teacher-pronunciation-review-modal .lesson-teacher-review-sidebar {
     border-right: none;
+    max-height: 70vh;
+    overflow: hidden;
+  }
+  #lesson-teacher-review-modal .lesson-teacher-review-attempts-list,
+  #teacher-reading-review-modal .lesson-teacher-review-attempts-list,
+  #teacher-pronunciation-review-modal .lesson-teacher-review-attempts-list {
     max-height: none;
+    flex: 1;
+    min-height: 200px;
   }
 }
 

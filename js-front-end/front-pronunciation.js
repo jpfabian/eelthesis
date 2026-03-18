@@ -734,7 +734,9 @@ async function loadPronunciationQuizzes(user) {
         let studentAttempts = [];
         if (!isTeacher) {
             try {
-                const attemptRes = await fetch(`${window.API_BASE || ""}/api/pronunciation-attempts?student_id=${user.user_id}`);
+                let attemptUrl = `${window.API_BASE || ""}/api/pronunciation-attempts?student_id=${user.user_id}`;
+                if (classIdForLeaderboard != null) attemptUrl += `&class_id=${classIdForLeaderboard}`;
+                const attemptRes = await fetch(attemptUrl);
                 const attemptData = await attemptRes.json();
                 studentAttempts = attemptData.success ? attemptData.attempts : [];
             } catch (attemptErr) {
@@ -1391,6 +1393,7 @@ async function toggleRecording() {
                 if (!recognition) recognition = initVoiceRecognition();
                 if (!recognition) return;
 
+                recognition._stopRequested = false;
                 recognitionTranscript = '';
 
                 recognition.onresult = (event) => {
@@ -1399,21 +1402,22 @@ async function toggleRecording() {
                 };
 
                 recognition.onerror = (err) => {
-                    console.error("Speech Recognition Error:", err);
                     if (err.error === 'no-speech') {
                         showNotification("⚠️ No speech detected. Try speaking clearly.", "warning");
+                    } else if (err.error !== 'aborted' && err.error !== 'network') {
+                        console.warn("Speech Recognition:", err.error || err);
                     }
                 };
 
                 recognition.onend = () => {
-                    if (mediaRecorder && mediaRecorder.state === 'recording') {
-                        // restart only if stopped unexpectedly
-                        try { recognition.start(); } catch (err) {}
+                    if (mediaRecorder && mediaRecorder.state === 'recording' && !recognition._stopRequested) {
+                        try { recognition.start(); } catch (e) {}
                     }
                 };
             };
 
             mediaRecorder.onstop = () => {
+                if (recognition) recognition._stopRequested = true;
                 active?.classList.add('hidden');
                 complete?.classList.remove('hidden');
                 recordedControls?.classList.remove('hidden');
@@ -1463,9 +1467,10 @@ async function toggleRecording() {
             };
 
             recognition.onerror = (err) => {
-                console.error("Speech Recognition Error:", err);
                 if (err.error === 'no-speech') {
                     showNotification("⚠️ No speech detected. Try speaking clearly.", "warning");
+                } else if (err.error !== 'aborted' && err.error !== 'network') {
+                    console.warn("Speech Recognition:", err.error || err);
                 }
             };
         } catch (err) {
@@ -1483,10 +1488,11 @@ async function toggleRecording() {
             showNotification(msg, "error");
         }
     } else if (mediaRecorder.state === 'recording') {
+        if (recognition) recognition._stopRequested = true;
         mediaRecorder.stop();
         if (mediaStream) mediaStream.getTracks().forEach(t => t.stop());
         mediaStream = null;
-        if (recognition) recognition.stop();
+        if (recognition) try { recognition.stop(); } catch (e) {}
     }
 }
 
@@ -2241,7 +2247,8 @@ let teacherPronReviewState = {
     quizId: null,
     attemptId: null,
     quiz: null,
-    attempts: []
+    attempts: [],
+    search: ''
 };
 
 function isMobileOrTablet() {
@@ -2258,7 +2265,7 @@ function closeTeacherPronunciationReviewModal() {
     const modal = document.getElementById('teacher-pronunciation-review-modal');
     if (modal) modal.classList.add('hidden');
     closeTeacherPronunciationReviewAnswersModal();
-    teacherPronReviewState = { quizId: null, attemptId: null, quiz: null, attempts: [] };
+    teacherPronReviewState = { quizId: null, attemptId: null, quiz: null, attempts: [], search: '' };
 
     const list = document.getElementById('teacher-pron-attempts-list');
     const detail = document.getElementById('teacher-pron-attempt-detail');
@@ -2303,6 +2310,19 @@ async function openTeacherPronunciationReviewModal(quizId) {
         );
         const attemptsData = await attemptsRes.json();
         teacherPronReviewState.attempts = attemptsData?.attempts || [];
+
+        const searchInput = document.getElementById('teacher-pron-attempt-search');
+        if (searchInput && !searchInput.__eelBound) {
+            searchInput.__eelBound = true;
+            searchInput.addEventListener('input', () => {
+                teacherPronReviewState.search = String(searchInput.value || '');
+                renderTeacherPronAttemptsList();
+            });
+        }
+        if (searchInput) {
+            searchInput.value = teacherPronReviewState.search || '';
+        }
+
         renderTeacherPronAttemptsList();
 
         if (window.lucide && typeof window.lucide.createIcons === 'function') {
@@ -2318,7 +2338,19 @@ function renderTeacherPronAttemptsList() {
     const list = document.getElementById('teacher-pron-attempts-list');
     if (!list) return;
 
-    const attempts = teacherPronReviewState.attempts || [];
+    const attemptsAll = teacherPronReviewState.attempts || [];
+    const q = String(teacherPronReviewState.search || '').trim().toLowerCase();
+    const attempts = q
+        ? attemptsAll.filter(a => String(a.student_name || '').toLowerCase().includes(q))
+        : attemptsAll;
+
+    const countEl = document.getElementById('teacher-pron-attempts-count');
+    if (countEl) {
+        countEl.textContent = attemptsAll.length
+            ? `${attempts.length}/${attemptsAll.length}`
+            : '';
+    }
+
     if (!attempts.length) {
         list.innerHTML = `<div class="lesson-teacher-review-list-empty">No submissions yet.</div>`;
         return;

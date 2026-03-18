@@ -50,8 +50,12 @@
     } catch (e) {}
   }
 
+  let quizStartTime = 0;
   function handleCheatingViolation() {
+    if ((new URLSearchParams(window.location.search)).get("retake") === "1") return;
     if (cheatingVoided) return;
+    const graceMs = 15000;
+    if (quizStartTime && Date.now() - quizStartTime < graceMs) return;
     cheatingViolations++;
     if (cheatingViolations === 1) {
       const modal = document.getElementById("quiz-cheating-warning-modal");
@@ -95,6 +99,7 @@
   }
 
   async function voidPronunciationQuiz() {
+    try { clearInterval(pronunciationTimer); } catch (e) {}
     const user = typeof getCurrentUser === "function" ? getCurrentUser() : null;
     if (!user || !pronunciationQuizData) return;
     const selectedClass = (() => {
@@ -143,19 +148,13 @@
         cheatingListenersCleanup();
         cheatingListenersCleanup = null;
       }
+      const isRetake = (new URLSearchParams(window.location.search)).get("retake") === "1";
       const formData = new FormData();
-      for (let i = 0; i < pronunciationQuizData.questions.length; i++) {
-        const answer = pronunciationAnswers[i];
-        if (!answer) continue;
-        formData.append("audio_" + i, answer.blob, "answer_q" + answer.questionId + ".webm");
-        formData.append("question_id_" + i, answer.questionId);
-        formData.append("answer_" + i, answer.transcript || "");
-        formData.append("difficulty_" + i, pronunciationQuizData.questions[i].difficulty || pronunciationQuizData.difficulty);
-      }
       formData.append("student_id", user.user_id);
       formData.append("quiz_id", pronunciationQuizData.quiz_id);
-      formData.append("cheating_violations", String(cheatingViolations));
-      formData.append("cheating_voided", cheatingVoided ? "1" : "0");
+      if (isRetake) formData.append("retake", "1");
+      formData.append("cheating_violations", isRetake ? "0" : String(cheatingViolations));
+      formData.append("cheating_voided", isRetake ? "0" : (cheatingVoided ? "1" : "0"));
       const selectedClass = (() => {
         try {
           return JSON.parse(localStorage.getItem("eel_selected_class") || "null");
@@ -165,6 +164,14 @@
       })();
       const classId = selectedClass?.id != null ? selectedClass.id : localStorage.getItem("eel_selected_class_id");
       if (classId) formData.append("class_id", classId);
+      for (let i = 0; i < pronunciationQuizData.questions.length; i++) {
+        const answer = pronunciationAnswers[i];
+        if (!answer) continue;
+        formData.append("audio_" + i, answer.blob, "answer_q" + answer.questionId + ".webm");
+        formData.append("question_id_" + i, answer.questionId);
+        formData.append("answer_" + i, answer.transcript || "");
+        formData.append("difficulty_" + i, pronunciationQuizData.questions[i].difficulty || pronunciationQuizData.difficulty);
+      }
 
       try {
         const res = await fetch((window.API_BASE || "") + "/api/pronunciation-submit", {
@@ -176,7 +183,7 @@
           pronunciationQuizData = null;
           pronunciationAnswers = {};
           document.getElementById("quiz-page").classList.add("hidden");
-          const accuracy = cheatingVoided ? 0 : (data.accuracy != null ? data.accuracy : 0);
+          const accuracy = data.accuracy != null ? Number(data.accuracy) : 0;
           showPronunciationQuizDone(accuracy, !!data.show_retake);
           if (cheatingVoided) {
             const msgEl = document.getElementById("pronunciation-quiz-done-msg");
@@ -490,6 +497,7 @@
           if (el && el.requestFullscreen) el.requestFullscreen().catch(function () {});
         }
         function startQuizInFullscreen() {
+          quizStartTime = Date.now();
           requestFullscreen();
           if (gateEl) gateEl.classList.add("hidden");
           if (quizPageEl) quizPageEl.classList.remove("hidden");
