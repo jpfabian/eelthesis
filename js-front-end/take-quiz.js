@@ -10,6 +10,16 @@
       .replaceAll("'", "&#39;");
   }
 
+  // Hide Bloom's/TOS level tags from student-facing question text.
+  function stripTosLevel(text) {
+    var s = String(text == null ? "" : text);
+    // Remove trailing or inline tags like "(remembering)" / "(analyzing)" etc (case-insensitive).
+    return s
+      .replace(/\s*\(\s*(remembering|understanding|applying|analyzing|evaluating|creating)\s*\)\s*/gi, " ")
+      .replace(/\s{2,}/g, " ")
+      .trim();
+  }
+
   let quizData = null;
   let currentQuestionIndex = 0;
   let studentAnswers = {};
@@ -62,7 +72,7 @@
     div.appendChild(headerRow);
 
     var p = document.createElement("p");
-    p.textContent = q.question_text || "";
+    p.textContent = stripTosLevel(q.question_text || "");
     p.style.marginBottom = "1rem";
     p.classList.add("quiz-question-text");
     div.appendChild(p);
@@ -310,8 +320,9 @@
       var ans = studentAnswers[q.question_id];
       var hasAnswer = hasAnswerForQuestion(q, ans);
       var text = getAnswerDisplayText(q, ans);
-      var shortQ = (q.question_text || "Question " + (i + 1)).slice(0, 80);
-      if ((q.question_text || "").length > 80) shortQ += "…";
+      var strippedQ = stripTosLevel(q.question_text || "");
+      var shortQ = (strippedQ || "Question " + (i + 1)).slice(0, 80);
+      if (strippedQ.length > 80) shortQ += "…";
       var itemClass = "quiz-confirm-item " + (hasAnswer ? "quiz-confirm-item--answered" : "quiz-confirm-item--unanswered");
       html.push(
         '<div class="' + itemClass + '">' +
@@ -733,7 +744,7 @@
                     }
                     var badgeClass = a.is_correct ? "quiz-review-badge--correct" : "quiz-review-badge--incorrect";
                     var badgeText = a.is_correct ? "Correct" : "Incorrect";
-                    return "<div class=\"quiz-review-item\"><div class=\"quiz-review-item__header\"><span class=\"quiz-review-item__num\">Question " + (i + 1) + "</span><span class=\"quiz-review-badge " + badgeClass + "\">" + badgeText + "</span></div><p class=\"quiz-review-item__q\">" + escapeHtml((q && q.question_text) || "") + "</p><div class=\"quiz-review-item__row\"><strong>Your answer:</strong> " + yourAnswerText + "</div><div class=\"quiz-review-item__row\"><strong>Correct answer:</strong> " + correctText + "</div></div>";
+                    return "<div class=\"quiz-review-item\"><div class=\"quiz-review-item__header\"><span class=\"quiz-review-item__num\">Question " + (i + 1) + "</span><span class=\"quiz-review-badge " + badgeClass + "\">" + badgeText + "</span></div><p class=\"quiz-review-item__q\">" + escapeHtml(stripTosLevel((q && q.question_text) || "")) + "</p><div class=\"quiz-review-item__row\"><strong>Your answer:</strong> " + yourAnswerText + "</div><div class=\"quiz-review-item__row\"><strong>Correct answer:</strong> " + correctText + "</div></div>";
                   }).join("");
                 }
                 if (reviewWrap) reviewWrap.classList.remove("hidden");
@@ -828,7 +839,7 @@
                     "<span class=\"quiz-review-item__num\">Question " + (i + 1) + "</span>" +
                     "<span class=\"quiz-review-badge " + badgeClass + "\">" + badgeText + "</span>" +
                   "</div>" +
-                  "<p class=\"quiz-review-item__q\">" + escapeHtml(a.question_text || "") + "</p>" +
+                  "<p class=\"quiz-review-item__q\">" + escapeHtml(stripTosLevel(a.question_text || "")) + "</p>" +
                   "<div class=\"quiz-review-item__row\"><strong>Your answer:</strong> " + yourAnswerText + "</div>" +
                   "<div class=\"quiz-review-item__row\"><strong>Correct answer:</strong> " + correctText + "</div>" +
                 "</div>"

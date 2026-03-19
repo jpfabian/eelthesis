@@ -840,13 +840,12 @@ async function loadPronunciationQuizzes(user) {
                 const quizTitle = (quiz.title || "").replace(/"/g, "&quot;");
                 let openAction = `openPronunciationQuizTermsModal(${quiz.quiz_id}, false, this.getAttribute('data-quiz-title'))`;
 
-                const passingScore = Number(quiz.passing_score ?? 70);
                 const retakeOption = String(quiz.retake_option || "all").toLowerCase();
                 const canRetake = retakeOption !== "none";
                 const scoreNum = studentAttempt?.score != null ? Number(studentAttempt.score) : null;
                 const totalNum = studentAttempt?.total_points != null ? Number(studentAttempt.total_points) : 100;
                 const scorePercent = (scoreNum != null && totalNum > 0) ? (scoreNum / totalNum) * 100 : scoreNum;
-                const showRetake = isReview && canRetake && scorePercent != null && scorePercent < passingScore;
+                const showRetake = isReview && canRetake && scorePercent != null && scorePercent < 100;
 
                 if (studentAttempt) {
                     if (studentAttempt.status === "completed") {
@@ -1794,8 +1793,7 @@ async function openStudentPronunciationReviewModal(quizId, quizTitle = '') {
     const answers = data.answers || [];
     const scores = answers.map(a => Number(a.pronunciation_score || 0)).filter(Number.isFinite);
     const avg = scores.length ? Math.round(scores.reduce((s, n) => s + n, 0) / scores.length) : 0;
-    const passingScore = Number(quiz.passing_score ?? 70);
-    const hideRightAnswer = avg < passingScore;
+    const hideRightAnswer = avg < 100;
 
     titleEl.textContent = quiz.title || quizTitle || "Pronunciation Review";
     scoreEl.innerHTML = `Your average score: <strong>${avg} / 100</strong>`;
@@ -1806,7 +1804,7 @@ async function openStudentPronunciationReviewModal(quizId, quizTitle = '') {
       const audioSrc = a.student_audio ? (a.student_audio.startsWith('/') ? (window.API_BASE || '') + a.student_audio : a.student_audio) : '';
       const score = Math.round(Number(a.pronunciation_score || 0));
       const badgeClass = score >= 80 ? "quiz-review-badge--correct" : (score >= 60 ? "quiz-review-badge--mid" : "quiz-review-badge--incorrect");
-      const targetValue = hideRightAnswer ? "Hidden because your score is below the passing score." : expected;
+      const targetValue = hideRightAnswer ? "Hidden until you get a perfect score." : expected;
       return `<div class="quiz-review-item ${score >= 80 ? 'quiz-review-item--correct' : (score < 60 ? 'quiz-review-item--incorrect' : '')}"><div class="quiz-review-item__header"><span class="quiz-review-item__num">Question ${i + 1}</span><span class="quiz-review-badge ${badgeClass}">${score}/100</span></div><div class="quiz-review-item__row"><span class="quiz-review-item__row-label">Word / letter</span><span class="quiz-review-item__row-value">${promptText}</span></div><div class="quiz-review-item__row"><span class="quiz-review-item__row-label">Target pronunciation</span><span class="quiz-review-item__row-value">${targetValue}</span></div><div class="quiz-review-item__row"><span class="quiz-review-item__row-label">Your recording</span><div class="quiz-review-audio-wrap"><audio controls src="${escapeHtml(audioSrc)}" class="quiz-review-audio"></audio></div></div></div>`;
     }).join("");
 

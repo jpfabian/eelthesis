@@ -415,8 +415,8 @@ async function openStudentReadingReviewModal(quizId, quizTitle = '') {
         const scoreValue = Number(completed.score || 0);
         const totalValue = Number(completed.total_points || 0);
         const percent = totalValue > 0 ? Math.round((scoreValue / totalValue) * 100) : 0;
-        const passingScore = Number(quiz.passing_score ?? 70);
-        const hideCorrectAnswers = percent < passingScore;
+        const isPerfect = totalValue > 0 && scoreValue >= totalValue;
+        const hideCorrectAnswers = !isPerfect;
         scoreEl.innerHTML = `Your score: <strong>${Math.round(scoreValue)} / ${Math.round(totalValue)}</strong> (${percent}%)`;
         passageEl.textContent = quiz.passage || '(No passage)';
 
@@ -437,7 +437,7 @@ async function openStudentReadingReviewModal(quizId, quizTitle = '') {
             const badgeClass = a.is_correct ? 'quiz-review-badge--correct' : 'quiz-review-badge--incorrect';
             const badgeText = a.is_correct ? 'Correct' : 'Incorrect';
             const correctAnswerValue = hideCorrectAnswers
-                ? 'Hidden because your score is below the passing score.'
+                ? 'Hidden until you get a perfect score.'
                 : correctText;
             return `<div class="quiz-review-item ${a.is_correct ? 'quiz-review-item--correct' : 'quiz-review-item--incorrect'}"><div class="quiz-review-item__header"><span class="quiz-review-item__num">Question ${i + 1}</span><span class="quiz-review-badge ${badgeClass}">${badgeText}</span></div><p class="quiz-review-item__q">${escapeHtml((q && q.question_text) || '')}</p><div class="quiz-review-item__row"><span class="quiz-review-item__row-label">Your answer</span><span class="quiz-review-item__row-value">${yourAnswerText}</span></div><div class="quiz-review-item__row"><span class="quiz-review-item__row-label">Correct answer</span><span class="quiz-review-item__row-value">${correctAnswerValue}</span></div></div>`;
         }).join('');
@@ -461,6 +461,7 @@ let quizData = null;
 let attemptId = null;
 let studentAnswers = {}; 
 let readonly = false;
+let revealCorrectAnswersInReadonly = false;
 let countdownInterval = null;
 let remainingTimePerQuiz = {}; // store remaining time per quiz
 let currentQuizIsTeacher = false;
@@ -532,6 +533,7 @@ async function openQuizModal(lessonId, isTeacherQuiz = false) {
         const user = JSON.parse(localStorage.getItem('eel_user'));
         attemptId = null;
         readonly = false;
+        revealCorrectAnswersInReadonly = false;
 
         if (!isTeacherQuiz) {
             // 2️⃣ Check for previous attempts (built-in quizzes only), scoped to current class
@@ -548,6 +550,14 @@ async function openQuizModal(lessonId, isTeacherQuiz = false) {
                 attemptId = existingAttempt.attempt_id;
                 studentAnswers = existingAttempt.answers || {};
                 readonly = existingAttempt.status === 'completed';
+                const scoreNum = Number(existingAttempt.score);
+                const totalNum = Number(existingAttempt.total_points);
+                revealCorrectAnswersInReadonly =
+                    readonly &&
+                    Number.isFinite(scoreNum) &&
+                    Number.isFinite(totalNum) &&
+                    totalNum > 0 &&
+                    scoreNum >= totalNum;
             } else {
                 const newAttemptRes = await fetch((window.API_BASE || "") + "/api/reading-quiz-attempts", {
                     method: "POST",
@@ -558,6 +568,7 @@ async function openQuizModal(lessonId, isTeacherQuiz = false) {
                 attemptId = newAttempt.attempt_id;
                 studentAnswers = {};
                 readonly = false;
+                revealCorrectAnswersInReadonly = false;
             }
         }
 
@@ -705,9 +716,15 @@ function renderQuestion(q, index, readonly = false) {
             label.classList.add('quiz-option');
 
             if (readonly) {
-                if (opt.is_correct) label.classList.add('quiz-option--correct');
-                else if (Number(studentAnswer) === opt.option_id && !opt.is_correct) {
-                    label.classList.add('quiz-option--wrong');
+                if (revealCorrectAnswersInReadonly) {
+                    if (opt.is_correct) label.classList.add('quiz-option--correct');
+                    else if (Number(studentAnswer) === opt.option_id && !opt.is_correct) {
+                        label.classList.add('quiz-option--wrong');
+                    }
+                } else {
+                    if (Number(studentAnswer) === opt.option_id && !opt.is_correct) {
+                        label.classList.add('quiz-option--wrong');
+                    }
                 }
             }
 
@@ -727,7 +744,7 @@ function renderQuestion(q, index, readonly = false) {
             label.appendChild(input);
             label.appendChild(span);
 
-            if (readonly && !opt.is_correct && Number(studentAnswer) === opt.option_id) {
+            if (readonly && revealCorrectAnswersInReadonly && !opt.is_correct && Number(studentAnswer) === opt.option_id) {
                 const correctText = document.createElement('span');
                 correctText.textContent = ` ✓ Correct: ${q.options.find(o => o.is_correct).option_text}`;
                 correctText.classList.add('quiz-option-correct-text');
@@ -1973,13 +1990,12 @@ async function loadQuizzes(user = getCurrentUser()) {
                 const attempt = attemptsForQuiz.find(a => a.status === 'in_progress') || attemptsForQuiz[0] || null;
                 let btnText = 'Start Quiz', btnIcon = 'play', btnDisabled = effectiveLocked;
                 const isCompleted = !!attempt && attempt.status === 'completed';
-                const passingScore = Number(quiz.passing_score ?? 70);
                 const retakeOption = String(quiz.retake_option || 'all').toLowerCase();
                 const canRetake = retakeOption !== 'none';
                 const scoreNum = attempt?.score != null ? Number(attempt.score) : null;
                 const totalNum = attempt?.total_points != null ? Number(attempt.total_points) : null;
                 const scorePercent = (scoreNum != null && totalNum != null && totalNum > 0) ? (scoreNum / totalNum) * 100 : null;
-                const showRetake = isCompleted && canRetake && scorePercent != null && scorePercent < passingScore;
+                const showRetake = isCompleted && canRetake && scorePercent != null && scorePercent < 100;
 
                 let openAction = `openReadingQuizTermsModal(${quiz.quiz_id}, false, false, this.getAttribute('data-quiz-title'))`;
                 if (attempt) {
