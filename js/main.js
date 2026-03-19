@@ -116,7 +116,7 @@ const App = {
             { id: 'pronunciation-lessons', label: 'Pronunciation', icon: 'brain' },
             { id: 'quiz-generator', label: 'Quiz Generator', icon: 'pen-tool' },
             { id: 'student-progress', label: 'Student Progress', icon: 'users' },
-            { id: 'settings', label: 'Settings', icon: 'settings' }
+            { id: 'settings', label: 'My Account', icon: 'user' }
         ] : [
             { id: 'dashboard', label: 'Dashboard', icon: 'bar-chart-3' },
             { id: 'reading-practice', label: 'Reading Practice', icon: 'book-open' },
@@ -124,7 +124,7 @@ const App = {
             { id: 'spelling-practice', label: 'Spelling', icon: 'spell-check-2' },
             { id: 'take-quiz', label: 'Take Quiz', icon: 'trophy' },
             { id: 'my-progress', label: 'My Progress', icon: 'bar-chart-3' },
-            { id: 'settings', label: 'Settings', icon: 'settings' }
+            { id: 'settings', label: 'My Account', icon: 'user' }
         ];
 
         sidebarNav.innerHTML = sections.map(section => `
@@ -1750,7 +1750,7 @@ const App = {
         return `
             <div class="p-6 space-y-6">
                 <div>
-                    <h2 class="text-2xl font-semibold mb-2">Settings</h2>
+                    <h2 class="text-2xl font-semibold mb-2">My Account</h2>
                     <p class="text-muted-foreground">Manage your account and application preferences</p>
                 </div>
 

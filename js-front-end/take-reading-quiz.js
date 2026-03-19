@@ -180,9 +180,7 @@
     warning.textContent = "Warning: Once you continue to questions, you cannot go back to the reading passage.";
     container.appendChild(warning);
     if (prevBtn) {
-      prevBtn.disabled = true;
-      prevBtn.style.opacity = "0.5";
-      prevBtn.classList.remove("hidden");
+      prevBtn.classList.add("hidden");
     }
     if (submitBtn) submitBtn.classList.add("hidden");
     if (nextBtn) {

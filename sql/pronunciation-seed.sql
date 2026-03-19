@@ -1,4 +1,614 @@
 -- =========================================================
+-- Pronunciation: Built-in Quizzes (Category-based)
+-- Run after database.sql.
+--
+-- Categories and difficulty mapping:
+--  - Consonant Cluster          -> beginner      (10 quizzes, #1–10)
+--  - Word Stress                -> intermediate  (10 quizzes, #11–20)
+--  - Linking & Connected Speech -> advanced      (10 quizzes, #21–30)
+--
+-- Each quiz contains EXACTLY 5 words / sentences.
+-- =========================================================
+
+SET NAMES utf8mb4;
+
+-- Allow subject_id to be NULL for "built-in for all subjects"
+ALTER TABLE pronunciation_quizzes
+  MODIFY subject_id INT UNSIGNED NULL DEFAULT NULL;
+
+-- Reset existing built-in content (safe in dev/seed environments)
+DELETE FROM pronunciation_quiz_answers;
+DELETE FROM pronunciation_quiz_attempts;
+DELETE FROM pronunciation_beginner_questions;
+DELETE FROM pronunciation_intermediate_questions;
+DELETE FROM pronunciation_advanced_questions;
+DELETE FROM pronunciation_quizzes;
+
+-- ---------------------------------------------------------
+--  BEGINNER (Consonant Cluster) — quiz_number 1..10
+--  category = 'consonant_cluster'
+-- ---------------------------------------------------------
+
+INSERT INTO pronunciation_quizzes (quiz_number, title, difficulty, category, passage, status, passing_score)
+VALUES
+  (1, 'Consonant Cluster 1: ST / SP / SK', 'beginner', 'consonant_cluster',
+   'Practice initial consonant clusters like st-, sp-, and sk-.', 'active', 70.00);
+SET @b1 = LAST_INSERT_ID();
+
+INSERT INTO pronunciation_beginner_questions (quiz_id, word, correct_pronunciation, position) VALUES
+(@b1, 'street', '/striːt/', 1),
+(@b1, 'spring', '/sprɪŋ/', 2),
+(@b1, 'strong', '/strɒŋ/', 3),
+(@b1, 'skate', '/skeɪt/', 4),
+(@b1, 'school', '/skuːl/', 5);
+
+INSERT INTO pronunciation_quizzes (quiz_number, title, difficulty, category, passage, status, passing_score)
+VALUES
+  (2, 'Consonant Cluster 2: TR / DR / CL', 'beginner', 'consonant_cluster',
+   'Practice tr-, dr-, and cl- clusters clearly at the beginning of words.', 'active', 70.00);
+SET @b2 = LAST_INSERT_ID();
+
+INSERT INTO pronunciation_beginner_questions (quiz_id, word, correct_pronunciation, position) VALUES
+(@b2, 'train', '/treɪn/', 1),
+(@b2, 'tree', '/triː/', 2),
+(@b2, 'drum', '/drʌm/', 3),
+(@b2, 'cloud', '/klaʊd/', 4),
+(@b2, 'class', '/klɑːs/', 5);
+
+INSERT INTO pronunciation_quizzes (quiz_number, title, difficulty, category, passage, status, passing_score)
+VALUES
+  (3, 'Consonant Cluster 3: PL / PR / BR', 'beginner', 'consonant_cluster',
+   'Focus on clusters with l and r after the first consonant.', 'active', 70.00);
+SET @b3 = LAST_INSERT_ID();
+
+INSERT INTO pronunciation_beginner_questions (quiz_id, word, correct_pronunciation, position) VALUES
+(@b3, 'play', '/pleɪ/', 1),
+(@b3, 'plant', '/plɑːnt/', 2),
+(@b3, 'proud', '/praʊd/', 3),
+(@b3, 'bring', '/brɪŋ/', 4),
+(@b3, 'brush', '/brʌʃ/', 5);
+
+INSERT INTO pronunciation_quizzes (quiz_number, title, difficulty, category, passage, status, passing_score)
+VALUES
+  (4, 'Consonant Cluster 4: GL / GR / FL', 'beginner', 'consonant_cluster',
+   'Practice gl-, gr-, and fl- clusters in everyday words.', 'active', 70.00);
+SET @b4 = LAST_INSERT_ID();
+
+INSERT INTO pronunciation_beginner_questions (quiz_id, word, correct_pronunciation, position) VALUES
+(@b4, 'glass', '/ɡlɑːs/', 1),
+(@b4, 'glove', '/ɡlʌv/', 2),
+(@b4, 'green', '/ɡriːn/', 3),
+(@b4, 'flower', '/ˈflaʊə/', 4),
+(@b4, 'floor', '/flɔː/', 5);
+
+INSERT INTO pronunciation_quizzes (quiz_number, title, difficulty, category, passage, status, passing_score)
+VALUES
+  (5, 'Consonant Cluster 5: SM / SN / SW', 'beginner', 'consonant_cluster',
+   'Practice clusters with s + m/n/w.', 'active', 70.00);
+SET @b5 = LAST_INSERT_ID();
+
+INSERT INTO pronunciation_beginner_questions (quiz_id, word, correct_pronunciation, position) VALUES
+(@b5, 'smile', '/smaɪl/', 1),
+(@b5, 'smoke', '/sməʊk/', 2),
+(@b5, 'snow', '/snəʊ/', 3),
+(@b5, 'snake', '/sneɪk/', 4),
+(@b5, 'sweet', '/swiːt/', 5);
+
+INSERT INTO pronunciation_quizzes (quiz_number, title, difficulty, category, passage, status, passing_score)
+VALUES
+  (6, 'Consonant Cluster 6: SPL / SPR / STR', 'beginner', 'consonant_cluster',
+   'Practice three-consonant clusters at the beginning of words.', 'active', 70.00);
+SET @b6 = LAST_INSERT_ID();
+
+INSERT INTO pronunciation_beginner_questions (quiz_id, word, correct_pronunciation, position) VALUES
+(@b6, 'splash', '/splæʃ/', 1),
+(@b6, 'sprint', '/sprɪnt/', 2),
+(@b6, 'spring', '/sprɪŋ/', 3),
+(@b6, 'street', '/striːt/', 4),
+(@b6, 'strong', '/strɒŋ/', 5);
+
+INSERT INTO pronunciation_quizzes (quiz_number, title, difficulty, category, passage, status, passing_score)
+VALUES
+  (7, 'Consonant Cluster 7: FINAL CLUSTERS', 'beginner', 'consonant_cluster',
+   'Focus on word-final clusters like -st, -nd, and -mp.', 'active', 70.00);
+SET @b7 = LAST_INSERT_ID();
+
+INSERT INTO pronunciation_beginner_questions (quiz_id, word, correct_pronunciation, position) VALUES
+(@b7, 'fast', '/fɑːst/', 1),
+(@b7, 'hand', '/hænd/', 2),
+(@b7, 'help', '/help/', 3),
+(@b7, 'jump', '/dʒʌmp/', 4),
+(@b7, 'milk', '/mɪlk/', 5);
+
+INSERT INTO pronunciation_quizzes (quiz_number, title, difficulty, category, passage, status, passing_score)
+VALUES
+  (8, 'Consonant Cluster 8: BLENDS IN PAST TENSE', 'beginner', 'consonant_cluster',
+   'Practice consonant clusters with -ed endings.', 'active', 70.00);
+SET @b8 = LAST_INSERT_ID();
+
+INSERT INTO pronunciation_beginner_questions (quiz_id, word, correct_pronunciation, position) VALUES
+(@b8, 'asked', '/ɑːskt/', 1),
+(@b8, 'helped', '/helpt/', 2),
+(@b8, 'stopped', '/stɒpt/', 3),
+(@b8, 'walked', '/wɔːkt/', 4),
+(@b8, 'jumped', '/dʒʌmpt/', 5);
+
+INSERT INTO pronunciation_quizzes (quiz_number, title, difficulty, category, passage, status, passing_score)
+VALUES
+  (9, 'Consonant Cluster 9: TRICKY S-CLUSTERS', 'beginner', 'consonant_cluster',
+   'Practice s-clusters that are often confusing for learners.', 'active', 70.00);
+SET @b9 = LAST_INSERT_ID();
+
+INSERT INTO pronunciation_beginner_questions (quiz_id, word, correct_pronunciation, position) VALUES
+(@b9, 'school', '/skuːl/', 1),
+(@b9, 'screen', '/skriːn/', 2),
+(@b9, 'scream', '/skriːm/', 3),
+(@b9, 'skirt', '/skɜːt/', 4),
+(@b9, 'score', '/skɔːr/', 5);
+
+INSERT INTO pronunciation_quizzes (quiz_number, title, difficulty, category, passage, status, passing_score)
+VALUES
+  (10, 'Consonant Cluster 10: MIXED CLUSTERS', 'beginner', 'consonant_cluster',
+   'Review mixed initial and final consonant clusters.', 'active', 70.00);
+SET @b10 = LAST_INSERT_ID();
+
+INSERT INTO pronunciation_beginner_questions (quiz_id, word, correct_pronunciation, position) VALUES
+(@b10, 'clock', '/klɒk/', 1),
+(@b10, 'friend', '/frend/', 2),
+(@b10, 'smart', '/smɑːt/', 3),
+(@b10, 'world', '/wɜːld/', 4),
+(@b10, 'please', '/pliːz/', 5);
+
+-- ---------------------------------------------------------
+--  INTERMEDIATE (Word Stress) — quiz_number 11..20
+--  category = 'word_stress'
+-- ---------------------------------------------------------
+
+INSERT INTO pronunciation_quizzes (quiz_number, title, difficulty, category, passage, status, passing_score)
+VALUES
+  (11, 'Word Stress 1: Daily Nouns', 'intermediate', 'word_stress',
+   'Practice primary stress in common daily nouns.', 'active', 70.00);
+SET @i1 = LAST_INSERT_ID();
+
+INSERT INTO pronunciation_intermediate_questions (quiz_id, word, stressed_syllable, position) VALUES
+(@i1, 'banana', 'ba-NA-na', 1),
+(@i1, 'family', 'FA-mi-ly', 2),
+(@i1, 'teacher', 'TEA-cher', 3),
+(@i1, 'student', 'STU-dent', 4),
+(@i1, 'holiday', 'HO-li-day', 5);
+
+INSERT INTO pronunciation_quizzes (quiz_number, title, difficulty, category, passage, status, passing_score)
+VALUES
+  (12, 'Word Stress 2: Long Words', 'intermediate', 'word_stress',
+   'Practice three- and four-syllable words with clear stress.', 'active', 70.00);
+SET @i2 = LAST_INSERT_ID();
+
+INSERT INTO pronunciation_intermediate_questions (quiz_id, word, stressed_syllable, position) VALUES
+(@i2, 'photograph', 'PHO-to-graph', 1),
+(@i2, 'photography', 'pho-TO-gra-phy', 2),
+(@i2, 'comfortable', 'COM-for-ta-ble', 3),
+(@i2, 'chocolate', 'CHO-co-late', 4),
+(@i2, 'vegetable', 'VE-ge-ta-ble', 5);
+
+INSERT INTO pronunciation_quizzes (quiz_number, title, difficulty, category, passage, status, passing_score)
+VALUES
+  (13, 'Word Stress 3: Professions', 'intermediate', 'word_stress',
+   'Practice stress patterns in profession words.', 'active', 70.00);
+SET @i3 = LAST_INSERT_ID();
+
+INSERT INTO pronunciation_intermediate_questions (quiz_id, word, stressed_syllable, position) VALUES
+(@i3, 'engineer', 'en-gin-EER', 1),
+(@i3, 'doctor', 'DOC-tor', 2),
+(@i3, 'assistant', 'as-SIS-tant', 3),
+(@i3, 'manager', 'MAN-a-ger', 4),
+(@i3, 'musician', 'mu-SI-cian', 5);
+
+INSERT INTO pronunciation_quizzes (quiz_number, title, difficulty, category, passage, status, passing_score)
+VALUES
+  (14, 'Word Stress 4: School Words', 'intermediate', 'word_stress',
+   'Practice stress in school-related vocabulary.', 'active', 70.00);
+SET @i4 = LAST_INSERT_ID();
+
+INSERT INTO pronunciation_intermediate_questions (quiz_id, word, stressed_syllable, position) VALUES
+(@i4, 'library', 'LI-bra-ry', 1),
+(@i4, 'computer', 'com-PU-ter', 2),
+(@i4, 'paragraph', 'PAR-a-graph', 3),
+(@i4, 'exercise', 'EX-er-cise', 4),
+(@i4, 'notebook', 'NOTE-book', 5);
+
+INSERT INTO pronunciation_quizzes (quiz_number, title, difficulty, category, passage, status, passing_score)
+VALUES
+  (15, 'Word Stress 5: Abstract Nouns', 'intermediate', 'word_stress',
+   'Practice stress in abstract nouns like decision and opinion.', 'active', 70.00);
+SET @i5 = LAST_INSERT_ID();
+
+INSERT INTO pronunciation_intermediate_questions (quiz_id, word, stressed_syllable, position) VALUES
+(@i5, 'decision', 'de-CI-sion', 1),
+(@i5, 'opinion', 'o-PIN-ion', 2),
+(@i5, 'information', 'in-for-MA-tion', 3),
+(@i5, 'direction', 'di-REC-tion', 4),
+(@i5, 'relation', 're-LA-tion', 5);
+
+INSERT INTO pronunciation_quizzes (quiz_number, title, difficulty, category, passage, status, passing_score)
+VALUES
+  (16, 'Word Stress 6: Numbers & Teens', 'intermediate', 'word_stress',
+   'Contrast “-teen” numbers with tens (thirteen vs thirty).', 'active', 70.00);
+SET @i6 = LAST_INSERT_ID();
+
+INSERT INTO pronunciation_intermediate_questions (quiz_id, word, stressed_syllable, position) VALUES
+(@i6, 'thirteen', 'thir-TEEN', 1),
+(@i6, 'thirty', 'THIR-ty', 2),
+(@i6, 'fourteen', 'four-TEEN', 3),
+(@i6, 'forty', 'FOR-ty', 4),
+(@i6, 'seventeen', 'se-ven-TEEN', 5);
+
+INSERT INTO pronunciation_quizzes (quiz_number, title, difficulty, category, passage, status, passing_score)
+VALUES
+  (17, 'Word Stress 7: Food Words', 'intermediate', 'word_stress',
+   'Practice stress in common food-related words.', 'active', 70.00);
+SET @i7 = LAST_INSERT_ID();
+
+INSERT INTO pronunciation_intermediate_questions (quiz_id, word, stressed_syllable, position) VALUES
+(@i7, 'banana', 'ba-NA-na', 1),
+(@i7, 'tomato', 'to-MA-to', 2),
+(@i7, 'avocado', 'a-vo-CA-do', 3),
+(@i7, 'spaghetti', 'spa-GHE-tti', 4),
+(@i7, 'restaurant', 'RES-tau-rant', 5);
+
+INSERT INTO pronunciation_quizzes (quiz_number, title, difficulty, category, passage, status, passing_score)
+VALUES
+  (18, 'Word Stress 8: Nature Words', 'intermediate', 'word_stress',
+   'Practice stress in nature and environment vocabulary.', 'active', 70.00);
+SET @i8 = LAST_INSERT_ID();
+
+INSERT INTO pronunciation_intermediate_questions (quiz_id, word, stressed_syllable, position) VALUES
+(@i8, 'mountain', 'MOUN-tain', 1),
+(@i8, 'ocean', 'O-cean', 2),
+(@i8, 'forest', 'FO-rest', 3),
+(@i8, 'hurricane', 'HUR-ri-cane', 4),
+(@i8, 'environment', 'en-VI-ron-ment', 5);
+
+INSERT INTO pronunciation_quizzes (quiz_number, title, difficulty, category, passage, status, passing_score)
+VALUES
+  (19, 'Word Stress 9: Home & Family', 'intermediate', 'word_stress',
+   'Practice stress in home and family words.', 'active', 70.00);
+SET @i9 = LAST_INSERT_ID();
+
+INSERT INTO pronunciation_intermediate_questions (quiz_id, word, stressed_syllable, position) VALUES
+(@i9, 'kitchen', 'KIT-chen', 1),
+(@i9, 'bedroom', 'BED-room', 2),
+(@i9, 'grandmother', 'GRAND-mo-ther', 3),
+(@i9, 'grandfather', 'GRAND-fa-ther', 4),
+(@i9, 'wedding', 'WED-ding', 5);
+
+INSERT INTO pronunciation_quizzes (quiz_number, title, difficulty, category, passage, status, passing_score)
+VALUES
+  (20, 'Word Stress 10: Feelings & Opinion', 'intermediate', 'word_stress',
+   'Practice stress in feeling and opinion words.', 'active', 70.00);
+SET @i10 = LAST_INSERT_ID();
+
+INSERT INTO pronunciation_intermediate_questions (quiz_id, word, stressed_syllable, position) VALUES
+(@i10, 'interesting', 'IN-ter-est-ing', 1),
+(@i10, 'exciting', 'ex-CI-ting', 2),
+(@i10, 'terrible', 'TER-ri-ble', 3),
+(@i10, 'amazing', 'a-MA-zing', 4),
+(@i10, 'boring', 'BOR-ing', 5);
+
+-- ---------------------------------------------------------
+--  ADVANCED (Linking & Connected Speech) — quiz_number 21..30
+--  category = 'linking_connected_speech'
+-- ---------------------------------------------------------
+
+INSERT INTO pronunciation_quizzes (quiz_number, title, difficulty, category, passage, status, passing_score)
+VALUES
+  (21, 'Linking 1: Flowers & Garden', 'advanced', 'linking_connected_speech',
+   'Practice linking and reductions in sentences about flowers and gardens.', 'active', 70.00);
+SET @a1 = LAST_INSERT_ID();
+
+INSERT INTO pronunciation_advanced_questions (quiz_id, sentence, reduced_form, full_sentence, position) VALUES
+(@a1, 'I am going to buy some flowers.', 'I''m gonna buy some flowers', 'I am going to buy some flowers.', 1),
+(@a1, 'She loves roses and tulips.', 'She loves roses ''n tulips', 'She loves roses and tulips.', 2),
+(@a1, 'The flowers are beautiful.', 'The flowers''re beautiful', 'The flowers are beautiful.', 3),
+(@a1, 'I want to plant a garden.', 'I wanna plant a garden', 'I want to plant a garden.', 4),
+(@a1, 'We have to water the plants.', 'We hafta water the plants', 'We have to water the plants.', 5);
+
+INSERT INTO pronunciation_quizzes (quiz_number, title, difficulty, category, passage, status, passing_score)
+VALUES
+  (22, 'Linking 2: Animals at the Zoo', 'advanced', 'linking_connected_speech',
+   'Practice connected speech in sentences about animals.', 'active', 70.00);
+SET @a2 = LAST_INSERT_ID();
+
+INSERT INTO pronunciation_advanced_questions (quiz_id, sentence, reduced_form, full_sentence, position) VALUES
+(@a2, 'I have a cat and a dog.', 'I''ve got a cat ''n a dog', 'I have a cat and a dog.', 1),
+(@a2, 'The elephant is very big.', 'The elephant''s very big', 'The elephant is very big.', 2),
+(@a2, 'Did you see the butterfly?', 'Didja see the butterfly?', 'Did you see the butterfly?', 3),
+(@a2, 'We are going to the zoo.', 'We''re gonna the zoo', 'We are going to the zoo.', 4),
+(@a2, 'There are many birds here.', 'There''re many birds here', 'There are many birds here.', 5);
+
+INSERT INTO pronunciation_quizzes (quiz_number, title, difficulty, category, passage, status, passing_score)
+VALUES
+  (23, 'Linking 3: Numbers in Context', 'advanced', 'linking_connected_speech',
+   'Practice linking numbers in natural speech.', 'active', 70.00);
+SET @a3 = LAST_INSERT_ID();
+
+INSERT INTO pronunciation_advanced_questions (quiz_id, sentence, reduced_form, full_sentence, position) VALUES
+(@a3, 'I have three apples.', 'I''ve got three apples', 'I have three apples.', 1),
+(@a3, 'It is twenty past five.', 'It''s twenty past five', 'It is twenty past five.', 2),
+(@a3, 'There are about a hundred people.', 'There''re about a hundred people', 'There are about a hundred people.', 3),
+(@a3, 'She is fifteen years old.', 'She''s fifteen years old', 'She is fifteen years old.', 4),
+(@a3, 'That will be fifty dollars.', 'That''ll be fifty dollars', 'That will be fifty dollars.', 5);
+
+INSERT INTO pronunciation_quizzes (quiz_number, title, difficulty, category, passage, status, passing_score)
+VALUES
+  (24, 'Linking 4: Food & Cafe', 'advanced', 'linking_connected_speech',
+   'Practice reductions in food and cafe conversations.', 'active', 70.00);
+SET @a4 = LAST_INSERT_ID();
+
+INSERT INTO pronunciation_advanced_questions (quiz_id, sentence, reduced_form, full_sentence, position) VALUES
+(@a4, 'I would like some coffee.', 'I''d like some coffee', 'I would like some coffee.', 1),
+(@a4, 'What do you want to eat?', 'What d''you wanna eat?', 'What do you want to eat?', 2),
+(@a4, 'We have to go to the grocery store.', 'We gotta go to the grocery store', 'We have to go to the grocery store.', 3),
+(@a4, 'There is no bread left.', 'There''s no bread left', 'There is no bread left.', 4),
+(@a4, 'Could you pass the salt?', 'Couldja pass the salt?', 'Could you pass the salt?', 5);
+
+INSERT INTO pronunciation_quizzes (quiz_number, title, difficulty, category, passage, status, passing_score)
+VALUES
+  (25, 'Linking 5: Family & Home', 'advanced', 'linking_connected_speech',
+   'Practice connected speech about family and home.', 'active', 70.00);
+SET @a5 = LAST_INSERT_ID();
+
+INSERT INTO pronunciation_advanced_questions (quiz_id, sentence, reduced_form, full_sentence, position) VALUES
+(@a5, 'We have a big family.', 'We''ve got a big family', 'We have a big family.', 1),
+(@a5, 'There are five people in my family.', 'There''re five people in my family', 'There are five people in my family.', 2),
+(@a5, 'My father is a teacher.', 'My father''s a teacher', 'My father is a teacher.', 3),
+(@a5, 'Let us have a family dinner.', 'Let''s have a family dinner', 'Let us have a family dinner.', 4),
+(@a5, 'We are going to the wedding.', 'We''re gonna the wedding', 'We are going to the wedding.', 5);
+
+INSERT INTO pronunciation_quizzes (quiz_number, title, difficulty, category, passage, status, passing_score)
+VALUES
+  (26, 'Linking 6: Weather & Nature', 'advanced', 'linking_connected_speech',
+   'Practice linking in weather and nature sentences.', 'active', 70.00);
+SET @a6 = LAST_INSERT_ID();
+
+INSERT INTO pronunciation_advanced_questions (quiz_id, sentence, reduced_form, full_sentence, position) VALUES
+(@a6, 'It is going to rain tomorrow.', 'It''s gonna rain tomorrow', 'It is going to rain tomorrow.', 1),
+(@a6, 'The mountain is very tall.', 'The mountain''s very tall', 'The mountain is very tall.', 2),
+(@a6, 'We have to protect the environment.', 'We gotta protect the environment', 'We have to protect the environment.', 3),
+(@a6, 'There is a river in the forest.', 'There''s a river in the forest', 'There is a river in the forest.', 4),
+(@a6, 'I want to go to the beach.', 'I wanna go to the beach', 'I want to go to the beach.', 5);
+
+INSERT INTO pronunciation_quizzes (quiz_number, title, difficulty, category, passage, status, passing_score)
+VALUES
+  (27, 'Linking 7: Health & Body', 'advanced', 'linking_connected_speech',
+   'Practice connected speech in health-related sentences.', 'active', 70.00);
+SET @a7 = LAST_INSERT_ID();
+
+INSERT INTO pronunciation_advanced_questions (quiz_id, sentence, reduced_form, full_sentence, position) VALUES
+(@a7, 'I have a headache.', 'I''ve got a headache', 'I have a headache.', 1),
+(@a7, 'She has to see a doctor.', 'She''s gotta see a doctor', 'She has to see a doctor.', 2),
+(@a7, 'Could you wash your hands?', 'Couldja wash your hands?', 'Could you wash your hands?', 3),
+(@a7, 'It is important to take care of your heart.', 'It''s important to take care of your heart', 'It is important to take care of your heart.', 4),
+(@a7, 'I am going to the hospital.', 'I''m gonna the hospital', 'I am going to the hospital.', 5);
+
+INSERT INTO pronunciation_quizzes (quiz_number, title, difficulty, category, passage, status, passing_score)
+VALUES
+  (28, 'Linking 8: Home & City', 'advanced', 'linking_connected_speech',
+   'Practice linking in sentences about home and city life.', 'active', 70.00);
+SET @a8 = LAST_INSERT_ID();
+
+INSERT INTO pronunciation_advanced_questions (quiz_id, sentence, reduced_form, full_sentence, position) VALUES
+(@a8, 'I am going to clean the kitchen.', 'I''m gonna clean the kitchen', 'I am going to clean the kitchen.', 1),
+(@a8, 'There is a lamp in the bedroom.', 'There''s a lamp in the bedroom', 'There is a lamp in the bedroom.', 2),
+(@a8, 'We have to fix the refrigerator.', 'We gotta fix the refrigerator', 'We have to fix the refrigerator.', 3),
+(@a8, 'Could you close the door?', 'Couldja close the door?', 'Could you close the door?', 4),
+(@a8, 'We are going to move to a new apartment.', 'We''re gonna move to a new apartment', 'We are going to move to a new apartment.', 5);
+
+INSERT INTO pronunciation_quizzes (quiz_number, title, difficulty, category, passage, status, passing_score)
+VALUES
+  (29, 'Linking 9: Colors & Clothes', 'advanced', 'linking_connected_speech',
+   'Practice linking with color and clothing vocabulary.', 'active', 70.00);
+SET @a9 = LAST_INSERT_ID();
+
+INSERT INTO pronunciation_advanced_questions (quiz_id, sentence, reduced_form, full_sentence, position) VALUES
+(@a9, 'She is wearing a red dress.', 'She''s wearing a red dress', 'She is wearing a red dress.', 1),
+(@a9, 'I am going to buy a black shirt.', 'I''m gonna buy a black shirt', 'I am going to buy a black shirt.', 2),
+(@a9, 'Could you pass me the yellow one?', 'Couldja pass me the yellow one?', 'Could you pass me the yellow one?', 3),
+(@a9, 'The sky is very blue today.', 'The sky''s very blue today', 'The sky is very blue today.', 4),
+(@a9, 'The grass is green in spring.', 'The grass''s green in spring', 'The grass is green in spring.', 5);
+
+INSERT INTO pronunciation_quizzes (quiz_number, title, difficulty, category, passage, status, passing_score)
+VALUES
+  (30, 'Linking 10: Mixed Daily Speech', 'advanced', 'linking_connected_speech',
+   'Review mixed daily-life sentences with linking and reductions.', 'active', 70.00);
+SET @a10 = LAST_INSERT_ID();
+
+INSERT INTO pronunciation_advanced_questions (quiz_id, sentence, reduced_form, full_sentence, position) VALUES
+(@a10, 'We are going to have dinner soon.', 'We''re gonna have dinner soon', 'We are going to have dinner soon.', 1),
+(@a10, 'Let us watch a movie tonight.', 'Let''s watch a movie tonight', 'Let us watch a movie tonight.', 2),
+(@a10, 'I want to call my brother later.', 'I wanna call my brother later', 'I want to call my brother later.', 3),
+(@a10, 'There are many things to do.', 'There''re many things to do', 'There are many things to do.', 4),
+(@a10, 'Could you give me a minute?', 'Couldja give me a minute?', 'Could you give me a minute?', 5);
+
+-- =========================================================
+-- End seed
+-- =========================================================
+
+-- =========================================================
+-- Pronunciation: Built-in Quizzes (Category-based)
+-- Run after database.sql.
+--
+-- This seed resets pronunciation quizzes and inserts quizzes for:
+--  - Consonant Cluster (difficulty = beginner)
+--  - Word Stress (difficulty = intermediate)
+--  - Linking & Connected Speech (difficulty = advanced)
+--
+-- Requirement: each quiz contains exactly 5 words/sentences.
+-- =========================================================
+
+SET NAMES utf8mb4;
+
+-- Allow subject_id to be NULL for "built-in for all subjects"
+ALTER TABLE pronunciation_quizzes
+  MODIFY subject_id INT UNSIGNED NULL DEFAULT NULL;
+
+-- Reset existing built-in content
+DELETE FROM pronunciation_quiz_answers;
+DELETE FROM pronunciation_quiz_attempts;
+DELETE FROM pronunciation_beginner_questions;
+DELETE FROM pronunciation_intermediate_questions;
+DELETE FROM pronunciation_advanced_questions;
+DELETE FROM pronunciation_quizzes;
+
+-- ---------------------------------------------------------
+-- BEGINNER: Consonant Cluster (quiz_number 1..3)
+-- ---------------------------------------------------------
+
+INSERT INTO pronunciation_quizzes (quiz_number, title, difficulty, category, passage, status, passing_score)
+VALUES
+  (1, 'Consonant Cluster: Street & Tricky Clusters', 'beginner', 'consonant_cluster', 'Practice consonant cluster words with clear articulation.', 'active', 70.00);
+SET @quiz1 = LAST_INSERT_ID();
+
+INSERT INTO pronunciation_beginner_questions (quiz_id, word, correct_pronunciation, position) VALUES
+(@quiz1, 'street', '/striːt/', 1),
+(@quiz1, 'spring', '/sprɪŋ/', 2),
+(@quiz1, 'string', '/strɪŋ/', 3),
+(@quiz1, 'blue', '/bluː/', 4),
+(@quiz1, 'train', '/treɪn/', 5);
+
+INSERT INTO pronunciation_quizzes (quiz_number, title, difficulty, category, passage, status, passing_score)
+VALUES
+  (2, 'Consonant Cluster: Br / Tr / Cl', 'beginner', 'consonant_cluster', 'Practice more consonant clusters in word-initial position.', 'active', 70.00);
+SET @quiz2 = LAST_INSERT_ID();
+
+INSERT INTO pronunciation_beginner_questions (quiz_id, word, correct_pronunciation, position) VALUES
+(@quiz2, 'bring', '/brɪŋ/', 1),
+(@quiz2, 'train', '/treɪn/', 2),
+(@quiz2, 'clock', '/klɒk/', 3),
+(@quiz2, 'cream', '/kriːm/', 4),
+(@quiz2, 'sleep', '/sliːp/', 5);
+
+INSERT INTO pronunciation_quizzes (quiz_number, title, difficulty, category, passage, status, passing_score)
+VALUES
+  (3, 'Consonant Cluster: Strong / Smart / Quick', 'beginner', 'consonant_cluster', 'Practice consonant clusters with smooth connected sounds.', 'active', 70.00);
+SET @quiz3 = LAST_INSERT_ID();
+
+INSERT INTO pronunciation_beginner_questions (quiz_id, word, correct_pronunciation, position) VALUES
+(@quiz3, 'strong', '/strɒŋ/', 1),
+(@quiz3, 'smart', '/smɑːt/', 2),
+(@quiz3, 'bright', '/braɪt/', 3),
+(@quiz3, 'scarf', '/skɑːf/', 4),
+(@quiz3, 'please', '/pliːz/', 5);
+
+-- ---------------------------------------------------------
+-- INTERMEDIATE: Word Stress (quiz_number 4..6)
+-- ---------------------------------------------------------
+
+INSERT INTO pronunciation_quizzes (quiz_number, title, difficulty, category, passage, status, passing_score)
+VALUES
+  (4, 'Word Stress: Banana / Photograph / Family', 'intermediate', 'word_stress', 'Practice word stress by saying the stressed syllable clearly.', 'active', 70.00);
+SET @quiz4 = LAST_INSERT_ID();
+
+INSERT INTO pronunciation_intermediate_questions (quiz_id, word, stressed_syllable, position) VALUES
+(@quiz4, 'banana', 'ba-NA-na', 1),
+(@quiz4, 'photograph', 'PHO-to-graph', 2),
+(@quiz4, 'family', 'FA-mi-ly', 3),
+(@quiz4, 'comfortable', 'COM-for-ta-ble', 4),
+(@quiz4, 'decision', 'de-SI-sion', 5);
+
+INSERT INTO pronunciation_quizzes (quiz_number, title, difficulty, category, passage, status, passing_score)
+VALUES
+  (5, 'Word Stress: Engineer / Paragraph / Computer', 'intermediate', 'word_stress', 'Practice stress patterns in common academic words.', 'active', 70.00);
+SET @quiz5 = LAST_INSERT_ID();
+
+INSERT INTO pronunciation_intermediate_questions (quiz_id, word, stressed_syllable, position) VALUES
+(@quiz5, 'engineer', 'en-JIN-eer', 1),
+(@quiz5, 'paragraph', 'PAR-a-graph', 2),
+(@quiz5, 'chocolate', 'CHO-co-late', 3),
+(@quiz5, 'computer', 'com-PU-ter', 4),
+(@quiz5, 'education', 'ed-u-CA-tion', 5);
+
+INSERT INTO pronunciation_quizzes (quiz_number, title, difficulty, category, passage, status, passing_score)
+VALUES
+  (6, 'Word Stress: Different / Important / Interesting', 'intermediate', 'word_stress', 'Practice stress in everyday adjectives and adjectives ending in -ing.', 'active', 70.00);
+SET @quiz6 = LAST_INSERT_ID();
+
+INSERT INTO pronunciation_intermediate_questions (quiz_id, word, stressed_syllable, position) VALUES
+(@quiz6, 'different', 'dif-FER-ent', 1),
+(@quiz6, 'interesting', 'IN-ter-es-ting', 2),
+(@quiz6, 'supposed', 'su-POZ-ed', 3),
+(@quiz6, 'important', 'im-POR-tant', 4),
+(@quiz6, 'photography', 'pho-TO-gra-phy', 5);
+
+-- ---------------------------------------------------------
+-- ADVANCED: Linking & Connected Speech (quiz_number 7..11)
+-- ---------------------------------------------------------
+
+INSERT INTO pronunciation_quizzes (quiz_number, title, difficulty, category, passage, status, passing_score)
+VALUES
+  (7, 'Linking: Flowers in a Sentence', 'advanced', 'linking_connected_speech', 'Practice linking and reductions in natural sentences.', 'active', 70.00);
+SET @quiz7 = LAST_INSERT_ID();
+
+INSERT INTO pronunciation_advanced_questions (quiz_id, sentence, reduced_form, full_sentence, position) VALUES
+(@quiz7, 'I am going to buy some flowers.', 'I''m gonna buy some flowers', 'I am going to buy some flowers.', 1),
+(@quiz7, 'She loves roses and tulips.', 'She loves roses ''n tulips', 'She loves roses and tulips.', 2),
+(@quiz7, 'The flowers are beautiful.', 'The flowers''re beautiful', 'The flowers are beautiful.', 3),
+(@quiz7, 'I want to plant a garden.', 'I wanna plant a garden', 'I want to plant a garden.', 4),
+(@quiz7, 'What kind of flowers do you like?', 'What kind of flowers d''you like', 'What kind of flowers do you like?', 5);
+
+INSERT INTO pronunciation_quizzes (quiz_number, title, difficulty, category, passage, status, passing_score)
+VALUES
+  (8, 'Linking: Animals with Connected Speech', 'advanced', 'linking_connected_speech', 'Practice reductions and smooth connected speech.', 'active', 70.00);
+SET @quiz8 = LAST_INSERT_ID();
+
+INSERT INTO pronunciation_advanced_questions (quiz_id, sentence, reduced_form, full_sentence, position) VALUES
+(@quiz8, 'I have a cat and a dog.', 'I''ve got a cat ''n a dog', 'I have a cat and a dog.', 1),
+(@quiz8, 'The elephant is very big.', 'The elephant''s very big', 'The elephant is very big.', 2),
+(@quiz8, 'Did you see the butterfly?', 'Didja see the butterfly?', 'Did you see the butterfly?', 3),
+(@quiz8, 'We are going to the zoo.', 'We''re gonna the zoo', 'We are going to the zoo.', 4),
+(@quiz8, 'There are many birds here.', 'There''re many birds here', 'There are many birds here.', 5);
+
+INSERT INTO pronunciation_quizzes (quiz_number, title, difficulty, category, passage, status, passing_score)
+VALUES
+  (9, 'Linking: Coffee and Food', 'advanced', 'linking_connected_speech', 'Practice connected speech in food and daily-life sentences.', 'active', 70.00);
+SET @quiz9 = LAST_INSERT_ID();
+
+INSERT INTO pronunciation_advanced_questions (quiz_id, sentence, reduced_form, full_sentence, position) VALUES
+(@quiz9, 'I would like some coffee.', 'I''d like some coffee', 'I would like some coffee.', 1),
+(@quiz9, 'What do you want to eat?', 'What d''you wanna eat?', 'What do you want to eat?', 2),
+(@quiz9, 'We have to go to the grocery store.', 'We gotta go to the grocery store', 'We have to go to the grocery store.', 3),
+(@quiz9, 'There is no bread left.', 'There''s no bread left', 'There is no bread left.', 4),
+(@quiz9, 'Could you pass the salt?', 'Couldja pass the salt?', 'Could you pass the salt?', 5);
+
+INSERT INTO pronunciation_quizzes (quiz_number, title, difficulty, category, passage, status, passing_score)
+VALUES
+  (10, 'Linking: Family Dinner', 'advanced', 'linking_connected_speech', 'Practice reductions in family-related sentences.', 'active', 70.00);
+SET @quiz10 = LAST_INSERT_ID();
+
+INSERT INTO pronunciation_advanced_questions (quiz_id, sentence, reduced_form, full_sentence, position) VALUES
+(@quiz10, 'I am going to visit my grandmother.', 'I''m gonna visit my grandmother', 'I am going to visit my grandmother.', 1),
+(@quiz10, 'She is my older sister.', 'She''s my older sister', 'She is my older sister.', 2),
+(@quiz10, 'There are five people in my family.', 'There''re five people in my family', 'There are five people in my family.', 3),
+(@quiz10, 'My father is a teacher.', 'My father''s a teacher', 'My father is a teacher.', 4),
+(@quiz10, 'Let us have a family dinner.', 'Let''s have a family dinner', 'Let us have a family dinner.', 5);
+
+INSERT INTO pronunciation_quizzes (quiz_number, title, difficulty, category, passage, status, passing_score)
+VALUES
+  (11, 'Linking: Weather and Nature', 'advanced', 'linking_connected_speech', 'Practice connected speech with weather and nature sentences.', 'active', 70.00);
+SET @quiz11 = LAST_INSERT_ID();
+
+INSERT INTO pronunciation_advanced_questions (quiz_id, sentence, reduced_form, full_sentence, position) VALUES
+(@quiz11, 'It is going to rain tomorrow.', 'It''s gonna rain tomorrow', 'It is going to rain tomorrow.', 1),
+(@quiz11, 'The mountain is very tall.', 'The mountain''s very tall', 'The mountain is very tall.', 2),
+(@quiz11, 'We have to protect the environment.', 'We gotta protect the environment', 'We have to protect the environment.', 3),
+(@quiz11, 'There is a river in the forest.', 'There''s a river in the forest', 'There is a river in the forest.', 4),
+(@quiz11, 'I want to go to the beach.', 'I wanna go to the beach', 'I want to go to the beach.', 5);
+
+-- =========================================================
+-- End seed
+-- =========================================================
+
+/*
+-- =========================================================
 -- Pronunciation: Built-in Quizzes (Thematic Categories)
 -- Run after database.sql. No subject_id; quizzes appear for all subjects.
 --
@@ -853,3 +1463,4 @@ INSERT INTO pronunciation_advanced_questions (quiz_id, sentence, reduced_form, f
 (@quiz31, 'It is a beautiful purple flower.', 'It''s a beautiful purple flower', 'It is a beautiful purple flower.', 8),
 (@quiz31, 'I am going to buy a black shirt.', 'I''m gonna buy a black shirt', 'I am going to buy a black shirt.', 9),
 (@quiz31, 'The grass is green in spring.', 'The grass''s green in spring', 'The grass is green in spring.', 10);
+*/

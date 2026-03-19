@@ -272,8 +272,11 @@
     if (promptEl) promptEl.classList.add("hidden");
     if (questionContent) questionContent.classList.remove("hidden");
     if (prevBtn) {
-      prevBtn.disabled = pronunciationCurrentIndex === 0;
-      prevBtn.style.opacity = pronunciationCurrentIndex === 0 ? "0.5" : "1";
+      if (pronunciationCurrentIndex === 0) {
+        prevBtn.classList.add("hidden");
+      } else {
+        prevBtn.classList.remove("hidden");
+      }
       prevBtn.innerHTML = "<i data-lucide=\"chevron-left\" class=\"size-4\"></i> Previous";
     }
     if (nextBtn) nextBtn.innerHTML = "Next <i data-lucide=\"chevron-right\" class=\"size-4\"></i>";

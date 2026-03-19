@@ -88,7 +88,7 @@ function setupSidebar(user, currentPage) {
         const classLine = currentPage === "classes"
             ? (user.role === "teacher" ? "Your classrooms" : "Your classes")
             : currentPage === "settings"
-                ? "Account Settings"
+                ? "My Account"
                 : currentPage === "deleted-classes"
                     ? "Archived Classes Cache"
                 : currentPage === "teacher-dashboard" && user.role === "teacher"
@@ -137,8 +137,8 @@ function setupSidebar(user, currentPage) {
                         ${userEmail ? `<div class="sidebar-profile-popover-email">${escapeHtml(userEmail)}</div>` : ""}
                         ${user.role === "master_admin" ? `<a href="master-admin.html" class="sidebar-profile-popover-link"><i data-lucide="shield" class="size-4"></i>Master Admin</a>` : ""}
                         <a href="settings.html" class="sidebar-profile-popover-link">
-                            <i data-lucide="settings" class="size-4"></i>
-                            Settings
+                            <i data-lucide="user" class="size-4"></i>
+                            My Account
                         </a>
                     </div>
                 </div>
@@ -222,7 +222,7 @@ function setupSidebar(user, currentPage) {
             groups.push({
                 title: "Account",
                 items: [
-                    { id: 'settings', label: 'Settings', icon: 'settings', url: 'settings.html' },
+                    { id: 'settings', label: 'My Account', icon: 'user', url: 'settings.html' },
                     { id: 'deleted-classes', label: 'Archived Classes', icon: 'archive', url: 'deleted-classes.html' }
                 ]
             });
@@ -233,7 +233,7 @@ function setupSidebar(user, currentPage) {
             });
             groups.push({
                 title: "Account",
-                items: [{ id: 'settings', label: 'Settings', icon: 'settings', url: 'settings.html' }]
+                items: [{ id: 'settings', label: 'My Account', icon: 'user', url: 'settings.html' }]
             });
         }
     } else

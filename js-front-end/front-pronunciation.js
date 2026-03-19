@@ -166,7 +166,42 @@ document.addEventListener('DOMContentLoaded', async function() {
         document.getElementById('main-app').classList.remove('hidden');
 
         // Only Built-in quizzes
-        await loadPronunciationQuizzes(currentUser);
+        // Don't load any list yet; wait for category button click.
+
+        // Category buttons: load quizzes by difficulty when clicked
+        const catButtons = document.querySelectorAll(".pronunciation-category-btn");
+        const categoriesWrap = document.getElementById("pronunciation-category-buttons");
+        const lessonsGrid = document.getElementById("lessons-grid");
+        const backWrap = document.getElementById("pronunciation-category-back");
+
+        function setActiveCategory(btn) {
+            catButtons.forEach(b => b.classList.remove("pronunciation-category-btn--active"));
+            if (btn) btn.classList.add("pronunciation-category-btn--active");
+        }
+
+        catButtons.forEach(btn => {
+            btn.addEventListener("click", async () => {
+                const difficulty = btn.getAttribute("data-category");
+                setActiveCategory(btn);
+                if (categoriesWrap) categoriesWrap.classList.add("hidden");
+                if (backWrap) backWrap.classList.remove("hidden");
+                if (lessonsGrid) lessonsGrid.classList.remove("hidden");
+                await loadPronunciationQuizzes(currentUser, difficulty);
+            });
+        });
+
+        // Back to main category boxes
+        document.getElementById("pronunciation-category-back-btn")?.addEventListener("click", async () => {
+            if (backWrap) backWrap.classList.add("hidden");
+            if (lessonsGrid) {
+                lessonsGrid.classList.add("hidden");
+                lessonsGrid.innerHTML = "";
+            }
+            if (categoriesWrap) {
+                categoriesWrap.classList.remove("hidden");
+            }
+            catButtons.forEach(b => b.classList.remove("pronunciation-category-btn--active"));
+        });
 
         // Back button
         document.getElementById("back-class-btn")?.addEventListener("click", () => {
@@ -516,7 +551,10 @@ async function savePronunciationQuiz() {
             document.getElementById('lesson-title').value = '';
             document.getElementById('lesson-passage').value = '';
             document.getElementById('questions-container').innerHTML = '';
-            loadPronunciationQuizzes();
+            // Reload quizzes after schedule change, preserving currently selected category if any.
+            const selectedBtn = document.querySelector(".pronunciation-category-btn.pronunciation-category-btn--active");
+            const difficulty = selectedBtn ? selectedBtn.getAttribute("data-category") : null;
+            loadPronunciationQuizzes(getCurrentUser(), difficulty);
         } else {
             showNotification(data.message, 'error');
         }
@@ -634,7 +672,9 @@ if (saveScheduleBtn) {
 
         if (data.success) {
             closeScheduleModal();
-            loadPronunciationQuizzes(getCurrentUser());
+            const selectedBtn = document.querySelector(".pronunciation-category-btn.pronunciation-category-btn--active");
+            const difficulty = selectedBtn ? selectedBtn.getAttribute("data-category") : null;
+            loadPronunciationQuizzes(getCurrentUser(), difficulty);
         }
     } catch (err) {
         console.error(err);
@@ -673,7 +713,9 @@ async function lockPronunciationQuiz(quizId) {
         const data = await res.json();
         if (data.success) {
             showNotification("🔒 Quiz locked successfully!", "success");
-            await loadPronunciationQuizzes(getCurrentUser());
+            const selectedBtn = document.querySelector(".pronunciation-category-btn.pronunciation-category-btn--active");
+            const difficulty = selectedBtn ? selectedBtn.getAttribute("data-category") : null;
+            await loadPronunciationQuizzes(getCurrentUser(), difficulty);
         } else {
             showNotification("❌ Failed to lock quiz.", "error");
         }
@@ -695,7 +737,7 @@ function safeOpenPronunciationModal(quizId, isLocked) {
 // ============================================
 // LOAD QUIZZES
 // ============================================
-async function loadPronunciationQuizzes(user) {
+async function loadPronunciationQuizzes(user, difficultyFilter = null) {
     try {
         const role = String(user?.role || '').toLowerCase();
         const isTeacher = role === "teacher";
@@ -720,7 +762,15 @@ async function loadPronunciationQuizzes(user) {
 
         // ✅ Ensure consistent ordering before numbering
         const diffOrder = { beginner: 0, intermediate: 1, advanced: 2 };
-        quizzes.sort((a, b) => {
+
+        const filteredQuizzes = Array.isArray(quizzes)
+            ? quizzes.filter(q => {
+                if (!difficultyFilter) return true;
+                return String(q.difficulty || "").toLowerCase() === String(difficultyFilter).toLowerCase();
+            })
+            : [];
+
+        filteredQuizzes.sort((a, b) => {
             const da = diffOrder[a.difficulty] ?? 99;
             const db = diffOrder[b.difficulty] ?? 99;
             if (da !== db) return da - db;
@@ -752,10 +802,10 @@ async function loadPronunciationQuizzes(user) {
         // If your DB uses quiz_number 1..30, we display that.
         // If your DB restarts quiz_number per difficulty (1..10 each),
         // we compute a consecutive number using offsets.
-        const hasGlobalQuizNumber = quizzes.some(q => Number(q.quiz_number || 0) > 10);
+        const hasGlobalQuizNumber = filteredQuizzes.some(q => Number(q.quiz_number || 0) > 10);
         let beginnerCount = 0, intermediateCount = 0, advancedCount = 0;
         const displayNumberByQuizId = new Map();
-        quizzes.forEach(q => {
+        filteredQuizzes.forEach(q => {
             let n;
             if (hasGlobalQuizNumber && q.quiz_number != null) n = Number(q.quiz_number);
             else {
@@ -788,7 +838,7 @@ async function loadPronunciationQuizzes(user) {
             const passedNums = new Set(
                 Array.from(latestByQuizId.entries())
                     .map(([quizId, a]) => {
-                        const q = quizzes.find(x => Number(x.quiz_id) === Number(quizId));
+                        const q = filteredQuizzes.find(x => Number(x.quiz_id) === Number(quizId));
                         const passing = Number(q?.passing_score ?? 70);
                         const scoreNum = Number(a.score);
                         const totalNum = Number(a.total_points);
@@ -808,7 +858,7 @@ async function loadPronunciationQuizzes(user) {
         }
 
         // ✅ Loop through quizzes
-        quizzes.forEach(quiz => {
+        filteredQuizzes.forEach(quiz => {
             const backendLocked = (Number(quiz.is_locked) === 1) || (quiz.is_locked === true);
             const displayNum = displayNumberByQuizId.get(Number(quiz.quiz_id)) || 1;
             const effectiveLocked = isTeacher
@@ -911,7 +961,7 @@ async function loadPronunciationQuizzes(user) {
                             <i data-lucide="mic" class="created-quiz-card__icon-svg"></i>
                         </div>
                         <div class="created-quiz-card__title-wrap">
-                            <h3 class="created-quiz-card__title">${escapeHtml(quizNumber + ". " + quiz.title)}</h3>
+                            <h3 class="created-quiz-card__title">${escapeHtml(quiz.title)}</h3>
                             ${completedBadge}
                         </div>
                         <i data-lucide="chevron-down" class="created-quiz-card__chevron" aria-hidden="true"></i>
@@ -944,10 +994,10 @@ async function loadPronunciationQuizzes(user) {
             container.appendChild(quizCard);
         });
 
-        if (quizzes.length === 0) {
+        if (filteredQuizzes.length === 0) {
             const emptyEl = document.createElement("p");
             emptyEl.className = "text-center text-muted-foreground py-8";
-            emptyEl.textContent = "No pronunciation quizzes available for this subject yet.";
+            emptyEl.textContent = "No pronunciation quizzes available for this category yet.";
             container.appendChild(emptyEl);
         }
 
@@ -1032,7 +1082,7 @@ async function loadPronunciationQuizzesTeacher(user) {
                             <i data-lucide="mic" class="created-quiz-card__icon-svg"></i>
                         </div>
                         <div class="created-quiz-card__title-wrap">
-                            <h3 class="created-quiz-card__title">${escapeHtml(quizNumber + ". " + quiz.title)}</h3>
+                            <h3 class="created-quiz-card__title">${escapeHtml(quiz.title)}</h3>
                         </div>
                         <i data-lucide="chevron-down" class="created-quiz-card__chevron" aria-hidden="true"></i>
                     </div>

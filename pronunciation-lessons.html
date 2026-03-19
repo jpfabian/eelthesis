@@ -69,28 +69,40 @@
                     </header>
 
                     <div class="card quiz-page__panel">
-
-                        <div class="quiz-page__toolbar">
-                            <div class="quiz-page__builtin-label">
-                                Built-in quizzes
-                            </div>
-                            <div class="quiz-page__toolbar-right">
-                                <div class="quiz-view-toggle" role="group" aria-label="View mode">
-                                    <button type="button" id="quiz-view-grid" class="btn btn-sm" title="Grid view">
-                                        <i data-lucide="layout-grid" class="size-4"></i>
-                                        <span>Grid</span>
-                                    </button>
-                                    <button type="button" id="quiz-view-list" class="btn btn-sm" title="List view">
-                                        <i data-lucide="list" class="size-4"></i>
-                                        <span>List</span>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
                         <div class="quiz-page__lists">
-                            <div id="lessons-grid">
-                                <!-- Built-in quizzes inserted by JS -->
+                            <div id="pronunciation-category-buttons" class="grid gap-6 md:grid-cols-3">
+                                <button type="button" id="btn-category-consonant" class="card p-6 flex flex-col items-center justify-center gap-3 cursor-pointer hover:shadow-lg transition-shadow pronunciation-category-btn" data-category="beginner">
+                                    <div class="rounded-full bg-pink-100 text-pink-600 p-3" aria-hidden="true">
+                                        <i data-lucide="waveform" class="size-6"></i>
+                                    </div>
+                                    <h2 class="text-lg font-semibold">Consonant Cluster</h2>
+                                    <p class="text-sm text-muted-foreground text-center">Practice consonant clusters and tricky ending sounds.</p>
+                                </button>
+                                <button type="button" id="btn-category-stress" class="card p-6 flex flex-col items-center justify-center gap-3 cursor-pointer hover:shadow-lg transition-shadow pronunciation-category-btn" data-category="intermediate">
+                                    <div class="rounded-full bg-indigo-100 text-indigo-600 p-3" aria-hidden="true">
+                                        <i data-lucide="activity" class="size-6"></i>
+                                    </div>
+                                    <h2 class="text-lg font-semibold">Word Stress</h2>
+                                    <p class="text-sm text-muted-foreground text-center">Focus on primary stress and rhythm in words.</p>
+                                </button>
+                                <button type="button" id="btn-category-linking" class="card p-6 flex flex-col items-center justify-center gap-3 cursor-pointer hover:shadow-lg transition-shadow pronunciation-category-btn" data-category="advanced">
+                                    <div class="rounded-full bg-emerald-100 text-emerald-600 p-3" aria-hidden="true">
+                                        <i data-lucide="link-2" class="size-6"></i>
+                                    </div>
+                                    <h2 class="text-lg font-semibold">Linking &amp; Connected Speech</h2>
+                                    <p class="text-sm text-muted-foreground text-center">Work on reduced forms, linking, and natural flow.</p>
+                                </button>
+                            </div>
+
+                            <div id="pronunciation-category-back" class="hidden mt-2 mb-2">
+                                <button type="button" id="pronunciation-category-back-btn" class="btn btn-outline">
+                                    <i data-lucide="arrow-left" class="size-4 mr-2"></i>
+                                    Back
+                                </button>
+                            </div>
+
+                            <div id="lessons-grid" class="hidden mt-6">
+                                <!-- Built-in quizzes inserted by JS for the selected category -->
                             </div>
                             <div id="created-lessons-grid" class="hidden mt-6">
                                 <!-- Teacher/AI-generated quizzes (shown when open_quiz_id in URL or when loaded) -->
@@ -639,7 +651,6 @@
                     <i data-lucide="refresh-cw" class="size-4"></i>
                     Refresh
                 </button>
-                <button type="button" onclick="closeLeaderboardModal()" class="leaderboard-action-btn">Close</button>
             </div>
         </div>
     </div>

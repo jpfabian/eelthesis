@@ -13669,6 +13669,11 @@ body.take-quiz-page .take-quiz-nav {
   flex-shrink: 0;
   margin-top: 1.25rem;
   padding-top: 1.25rem !important;
+  display: flex;
+  align-items: center;
+}
+body.take-quiz-page .take-quiz-nav > div {
+  margin-left: auto;
 }
 body.take-quiz-page .take-quiz-nav .btn {
   padding: 0.65rem 1.25rem;
