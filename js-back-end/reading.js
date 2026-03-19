@@ -1380,15 +1380,16 @@ router.patch("/api/reading-quiz-attempts/:id/submit", async (req, res) => {
       // 🟥 Essay grading — GROQ AI INTEGRATION
       else if (ans.question_type === "essay" && ans.student_answer) {
         const [q] = await pool.query(`
-          SELECT points FROM reading_questions WHERE question_id = ?
+          SELECT points, question_text FROM reading_questions WHERE question_id = ?
         `, [ans.question_id]);
         const questionPoints = Number(q[0]?.points || 10);
+        const questionText = q[0]?.question_text || "";
         totalPoints += questionPoints;
 
-        // 🔹 Send essay to Groq
-        const aiResult = await gradeEssayWithGroq(ans.student_answer);
+        // 🔹 Send essay to Groq with question context
+        const aiResult = await gradeEssayWithGroq(ans.student_answer, questionText);
 
-        // 🔹 Convert AI’s 0–100 score to your question’s point value
+        // 🔹 Convert AI's 0–100 score to your question's point value
         const essayScore = aiResult.score
           ? (aiResult.score / 100) * questionPoints
           : 0;
@@ -1482,8 +1483,13 @@ router.patch("/api/reading-quiz-attempts/:id/submit", async (req, res) => {
 });
 
 // 🧠 Essay Grader Function using Groq API
-async function gradeEssayWithGroq(studentAnswer) {
+async function gradeEssayWithGroq(studentAnswer, questionText = "") {
   try {
+    // Validate input
+    if (!studentAnswer || typeof studentAnswer !== "string" || studentAnswer.trim().length < 10) {
+      return { score: 0, feedback: "Essay too short or empty. Please provide a more complete answer." };
+    }
+
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -1495,8 +1501,13 @@ async function gradeEssayWithGroq(studentAnswer) {
         messages: [
           {
             role: "system",
-            content: `You are a strict but fair essay grader.
-              Grade the student's essay from 0 to 100 based on relevance, grammar, and completeness.
+            content: `You are a strict but fair essay grader for reading comprehension.
+              Grade the student's essay from 0 to 100 based on:
+              1. Relevance to the question/theme
+              2. Understanding of the main idea
+              3. Grammar and clarity
+              4. Completeness and thoughtfulness
+              ${questionText ? `\nQuestion: "${questionText}"` : ""}
               Respond ONLY in JSON like: {"score": 85, "feedback": "Good structure but weak conclusion."}`
           },
           { role: "user", content: `Student's essay: """${studentAnswer}"""` }
@@ -1506,33 +1517,33 @@ async function gradeEssayWithGroq(studentAnswer) {
       })
     });
 
-    // ⚡ Show the HTTP status and headers
-    console.log("📡 Groq status:", response.status);
-    console.log("📬 Groq headers:", Object.fromEntries(response.headers.entries()));
+    if (!response.ok) {
+      console.error("Groq API error:", response.status, response.statusText);
+      return { score: 50, feedback: "AI service temporarily unavailable. Essay will be manually reviewed." };
+    }
 
-    // ⚡ Read and log the entire JSON response
     const data = await response.json();
-    console.log("📩 Full Groq response:", JSON.stringify(data, null, 2));
-
-    // Extract AI output
     const text = data?.choices?.[0]?.message?.content?.trim() || "";
-    console.log("🧠 Raw AI output:", text);
 
     // Parse JSON-like output from AI
     const match = text.match(/\{[\s\S]*\}/);
     if (match) {
       try {
-        return JSON.parse(match[0]);
-      } catch {
+        const result = JSON.parse(match[0]);
+        // Validate score range
+        const score = Math.max(0, Math.min(100, Number(result.score) || 0));
+        const feedback = result.feedback || "Essay graded automatically.";
+        return { score, feedback };
+      } catch (parseErr) {
         console.error("❌ Failed to parse JSON:", match[0]);
-        return { score: 0, feedback: "Invalid JSON from AI" };
+        return { score: 50, feedback: "AI response format error. Essay will be manually reviewed." };
       }
     }
 
-    return { score: 0, feedback: "AI did not return JSON" };
+    return { score: 50, feedback: "AI did not return valid format. Essay will be manually reviewed." };
   } catch (err) {
     console.error("Groq essay grading failed:", err);
-    return { score: 0, feedback: "Error connecting to AI" };
+    return { score: 50, feedback: "AI service error. Essay will be manually reviewed." };
   }
 }
 

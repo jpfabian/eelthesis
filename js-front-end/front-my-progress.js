@@ -117,7 +117,52 @@
                 const name = (q.quiz_name || "Quiz").toString();
                 return name.length > 18 ? name.slice(0, 15) + "…" : name;
             });
-            const values = recent.map(function (q) { return Number.isFinite(q.score) ? q.score : 0; });
+            const values = recent.map(function (q) { 
+                // Use the same logic as reading-lessons review modal
+                const scoreValue = Number(q.score || 0);
+                const totalValue = Number(q.total_points || 0);
+                let rawScore = 0;
+                let totalPoints = 1;
+                
+                if (Number.isFinite(scoreValue) && Number.isFinite(totalValue) && totalValue > 0) {
+                    rawScore = scoreValue;
+                    totalPoints = totalValue;
+                    
+                    // Check if score is a percentage (greater than total_points and <= 100)
+                    if (rawScore > totalPoints && rawScore <= 100) {
+                        // Score is likely a percentage, convert to raw score
+                        rawScore = Math.round((rawScore / 100) * totalPoints);
+                    }
+                } else {
+                    // Fallback to display fields if main fields are not available
+                    const displayScore = Number(q.display_score);
+                    const displayTotal = Number(q.display_total);
+                    if (Number.isFinite(displayScore) && Number.isFinite(displayTotal) && displayTotal > 0) {
+                        rawScore = displayScore;
+                        totalPoints = displayTotal;
+                        
+                        // Also check if display score is a percentage
+                        if (rawScore > totalPoints && rawScore <= 100) {
+                            rawScore = Math.round((rawScore / 100) * totalPoints);
+                        }
+                    } else {
+                        // Final fallback to raw_score
+                        const fallbackScore = Number(q.raw_score);
+                        const fallbackTotal = Number(q.total_points);
+                        if (Number.isFinite(fallbackScore) && Number.isFinite(fallbackTotal) && fallbackTotal > 0) {
+                            rawScore = fallbackScore;
+                            totalPoints = fallbackTotal;
+                            
+                            // Also check if raw score is a percentage
+                            if (rawScore > totalPoints && rawScore <= 100) {
+                                rawScore = Math.round((rawScore / 100) * totalPoints);
+                            }
+                        }
+                    }
+                }
+                
+                return totalPoints > 0 ? Math.round((rawScore / totalPoints) * 100) : 0;
+            });
             return new Chart(canvas.getContext("2d"), {
                 type: "bar",
                 data: {
@@ -200,11 +245,31 @@
 
     function toScoreFraction(quiz) {
         if (!quiz) return "—";
+        // Use the same logic as reading-lessons review modal
+        const scoreValue = Number(quiz.score || 0);
+        const totalValue = Number(quiz.total_points || 0);
+        
+        let finalScore = scoreValue;
+        let finalTotal = totalValue;
+        
+        // Check if score is a percentage (greater than total_points and <= 100)
+        if (Number.isFinite(scoreValue) && Number.isFinite(totalValue) && totalValue > 0) {
+            if (scoreValue > totalValue && scoreValue <= 100) {
+                // Score is likely a percentage, convert to raw score
+                finalScore = Math.round((scoreValue / 100) * totalValue);
+            }
+        }
+        
+        if (Number.isFinite(finalScore) && Number.isFinite(finalTotal) && finalTotal > 0) {
+            return formatPoints(finalScore) + "/" + formatPoints(finalTotal);
+        }
+        // Fallback to display fields if main fields are not available
         const displayScore = Number(quiz.display_score);
         const displayTotal = Number(quiz.display_total);
         if (Number.isFinite(displayScore) && Number.isFinite(displayTotal) && displayTotal > 0) {
             return formatPoints(displayScore) + "/" + formatPoints(displayTotal);
         }
+        // Final fallback to raw_score
         const raw = Number(quiz.raw_score);
         const total = Number(quiz.total_points);
         if (Number.isFinite(raw) && Number.isFinite(total) && total > 0) {
@@ -257,12 +322,48 @@
                 var q = (quizzes || []).find(function (quiz) {
                     return String(quiz.type || "").toLowerCase() === typeKey && quiz.quiz_name === qName;
                 });
-                var shownScore = Number(q && q.display_score);
-                var shownTotal = Number(q && q.display_total);
-                var fallbackScore = Number(q && q.raw_score);
-                var fallbackTotal = Number(q && q.total_points);
-                var usedScore = Number.isFinite(shownScore) ? shownScore : fallbackScore;
-                var usedTotal = Number.isFinite(shownTotal) ? shownTotal : fallbackTotal;
+                // Use the same logic as reading-lessons review modal
+                var scoreValue = Number(q && (q.score || 0));
+                var totalValue = Number(q && (q.total_points || 0));
+                var usedScore = Number.isFinite(scoreValue) ? scoreValue : null;
+                var usedTotal = Number.isFinite(totalValue) ? totalValue : null;
+                
+                // Check if score is a percentage (greater than total_points and <= 100)
+                if (Number.isFinite(usedScore) && Number.isFinite(usedTotal) && usedTotal > 0) {
+                    if (usedScore > usedTotal && usedScore <= 100) {
+                        // Score is likely a percentage, convert to raw score
+                        usedScore = Math.round((usedScore / 100) * usedTotal);
+                    }
+                }
+                
+                // Fallback to display fields if main fields are not available
+                if (usedScore === null || usedTotal === null || usedTotal <= 0) {
+                    var displayScore = Number(q && q.display_score);
+                    var displayTotal = Number(q && q.display_total);
+                    if (Number.isFinite(displayScore) && Number.isFinite(displayTotal) && displayTotal > 0) {
+                        // Also check if display score is a percentage
+                        if (displayScore > displayTotal && displayScore <= 100) {
+                            displayScore = Math.round((displayScore / 100) * displayTotal);
+                        }
+                        usedScore = displayScore;
+                        usedTotal = displayTotal;
+                    }
+                }
+                
+                // Final fallback to raw_score
+                if (usedScore === null || usedTotal === null || usedTotal <= 0) {
+                    var fallbackScore = Number(q && q.raw_score);
+                    var fallbackTotal = Number(q && q.total_points);
+                    if (Number.isFinite(fallbackScore) && Number.isFinite(fallbackTotal) && fallbackTotal > 0) {
+                        // Also check if raw score is a percentage
+                        if (fallbackScore > fallbackTotal && fallbackScore <= 100) {
+                            fallbackScore = Math.round((fallbackScore / 100) * fallbackTotal);
+                        }
+                        usedScore = fallbackScore;
+                        usedTotal = fallbackTotal;
+                    }
+                }
+                
                 if (Number.isFinite(usedScore) && Number.isFinite(usedTotal) && usedTotal > 0) {
                     totalScore += usedScore;
                     totalPossible += usedTotal;

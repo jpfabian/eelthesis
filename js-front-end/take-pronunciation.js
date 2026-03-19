@@ -52,15 +52,16 @@
 
   let quizStartTime = 0;
   function handleCheatingViolation() {
-    if ((new URLSearchParams(window.location.search)).get("retake") === "1") return;
+    console.log("Cheating violation detected!", { violations: cheatingViolations, voided: cheatingVoided });
     if (cheatingVoided) return;
-    const graceMs = 15000;
-    if (quizStartTime && Date.now() - quizStartTime < graceMs) return;
     cheatingViolations++;
     if (cheatingViolations === 1) {
       const modal = document.getElementById("quiz-cheating-warning-modal");
       const okBtn = document.getElementById("quiz-cheating-warning-ok");
-      if (modal) modal.classList.remove("hidden");
+      if (modal) {
+        modal.classList.remove("hidden");
+        console.log("Showing cheating warning modal");
+      }
       if (okBtn && !okBtn.__cheatingBound) {
         okBtn.__cheatingBound = true;
         okBtn.addEventListener("click", function () {
@@ -69,6 +70,7 @@
         });
       }
     } else {
+      console.log("Voiding quiz due to multiple violations");
       cheatingVoided = true;
       if (cheatingListenersCleanup) cheatingListenersCleanup();
       voidPronunciationQuiz();
@@ -76,20 +78,24 @@
   }
 
   function setupCheatingListeners() {
+    console.log("Setting up cheating listeners...");
     if (cheatingListenersCleanup) cheatingListenersCleanup();
     const onVisibilityChange = function () {
+      console.log("Visibility change detected, document.hidden:", document.hidden);
       if (document.hidden) handleCheatingViolation();
     };
     const onFullscreenChange = function () {
-      if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) {
-        handleCheatingViolation();
-      }
+      const isFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement);
+      console.log("Fullscreen change detected, isFullscreen:", isFullscreen);
+      if (!isFullscreen) handleCheatingViolation();
     };
     document.addEventListener("visibilitychange", onVisibilityChange);
     document.addEventListener("fullscreenchange", onFullscreenChange);
     document.addEventListener("webkitfullscreenchange", onFullscreenChange);
     document.addEventListener("MSFullscreenChange", onFullscreenChange);
+    console.log("Cheating listeners added successfully");
     cheatingListenersCleanup = function () {
+      console.log("Cleaning up cheating listeners");
       document.removeEventListener("visibilitychange", onVisibilityChange);
       document.removeEventListener("fullscreenchange", onFullscreenChange);
       document.removeEventListener("webkitfullscreenchange", onFullscreenChange);
@@ -97,6 +103,12 @@
       cheatingListenersCleanup = null;
     };
   }
+
+  // Add test function for debugging cheating detection
+  window.testCheatingDetection = function() {
+    console.log("Manual test: triggering cheating violation");
+    handleCheatingViolation();
+  };
 
   async function voidPronunciationQuiz() {
     try { clearInterval(pronunciationTimer); } catch (e) {}
@@ -511,7 +523,9 @@
           if (el && el.requestFullscreen) el.requestFullscreen().catch(function () {});
         }
         function startQuizInFullscreen() {
+          console.log("Starting quiz in fullscreen mode...");
           quizStartTime = Date.now();
+          console.log("Quiz start time set:", quizStartTime);
           requestFullscreen();
           if (gateEl) gateEl.classList.add("hidden");
           if (quizPageEl) quizPageEl.classList.remove("hidden");

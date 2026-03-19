@@ -5571,6 +5571,39 @@ body.eel-modal-open #password-modal {
   font-size: 1rem;
   font-weight: 700;
 }
+
+.mobile-nav-vocab-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.mobile-nav-vocab-speak-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid color-mix(in srgb, var(--primary) 45%, var(--border));
+  border-radius: 0.5rem;
+  background: color-mix(in srgb, var(--primary) 14%, transparent);
+  color: var(--primary);
+  cursor: pointer;
+  transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+}
+
+.mobile-nav-vocab-speak-btn:hover {
+  transform: translateY(-1px);
+  background: color-mix(in srgb, var(--primary) 22%, transparent);
+  border-color: color-mix(in srgb, var(--primary) 65%, var(--border));
+}
+
+.mobile-nav-vocab-speak-btn:active {
+  transform: translateY(0);
+}
+
 .mobile-nav-vocab-phonetic {
   margin-top: 0.15rem;
   font-size: 0.8rem;
@@ -11344,8 +11377,12 @@ body.reading-lessons-page .quiz-page__panel.card:hover {
   flex-wrap: wrap;
   padding: 0.75rem 0 1.25rem;
   margin-bottom: 1.25rem;
-  border-bottom: 1px solid color-mix(in srgb, var(--border) 1.2, transparent);
-  background: color-mix(in srgb, var(--muted) 6%, transparent);
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--primary) 8%, transparent),
+    color-mix(in srgb, var(--secondary) 6%, transparent)
+  );
   margin-left: -1.5rem;
   margin-right: -1.5rem;
   margin-top: -1.5rem;
@@ -11353,7 +11390,22 @@ body.reading-lessons-page .quiz-page__panel.card:hover {
   padding-right: 1.5rem;
   padding-top: 1.25rem;
   flex: 0 0 auto;
-  border-radius: 0 0 1rem 1rem;
+}
+
+.quiz-page__toolbar-left {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.875rem;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.quiz-page__toolbar-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
 }
 
 .quiz-page__toolbar-right {
@@ -11362,13 +11414,38 @@ body.reading-lessons-page .quiz-page__panel.card:hover {
   justify-content: flex-end;
   gap: 0.875rem;
   flex-wrap: wrap;
+  flex: 1;
 }
 
 .quiz-page__builtin-label {
-  font-weight: 600;
-  font-size: 1.0625rem;
-  color: var(--foreground);
-  letter-spacing: 0.01em;
+  font-weight: 700;
+  font-size: 1.25rem;
+  background: linear-gradient(135deg, var(--foreground), color-mix(in srgb, var(--primary) 60%, transparent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+  position: relative;
+  padding: 0.5rem 0;
+  margin-bottom: 1rem;
+}
+
+.quiz-page__builtin-label::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60px;
+  height: 3px;
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.quiz-page__builtin-label:hover::after {
+  width: 100px;
 }
 
 .quiz-page__lists {
@@ -11468,6 +11545,182 @@ body.pronunciation-lessons-page .quiz-page__panel.card {
     0 18px 40px -22px rgba(0, 0, 0, 0.2),
     0 28px 70px -56px color-mix(in srgb, var(--primary) 28%, transparent),
     0 28px 70px -60px color-mix(in srgb, var(--secondary) 24%, transparent);
+}
+
+/* Enhanced Pronunciation Category Cards */
+body.pronunciation-lessons-page #pronunciation-category-buttons {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  padding: 1rem 0;
+}
+
+body.pronunciation-lessons-page #pronunciation-category-buttons .pronunciation-category-btn {
+  position: relative;
+  background: linear-gradient(135deg, 
+    color-mix(in srgb, var(--card) 92%, transparent),
+    color-mix(in srgb, var(--card) 88%, transparent)
+  );
+  border: 2px solid transparent;
+  border-radius: 1rem;
+  padding: 2rem 1.5rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+  box-shadow: 
+    0 4px 12px -2px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  backdrop-filter: blur(10px);
+}
+
+body.pronunciation-lessons-page #pronunciation-category-buttons .pronunciation-category-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg,
+    color-mix(in srgb, var(--primary) 15%, transparent),
+    color-mix(in srgb, var(--secondary) 10%, transparent)
+  );
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  border-radius: 1rem;
+  z-index: -1;
+}
+
+body.pronunciation-lessons-page #pronunciation-category-buttons .pronunciation-category-btn:hover::before {
+  opacity: 1;
+}
+
+body.pronunciation-lessons-page #pronunciation-category-buttons .pronunciation-category-btn:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 
+    0 20px 40px -12px rgba(0, 0, 0, 0.25),
+    0 8px 16px -4px color-mix(in srgb, var(--primary) 20%, transparent),
+    0 4px 8px -2px color-mix(in srgb, var(--secondary) 15%, transparent);
+  border-color: color-mix(in srgb, var(--primary) 30%, transparent);
+}
+
+body.pronunciation-lessons-page #pronunciation-category-buttons .pronunciation-category-btn:active {
+  transform: translateY(-4px) scale(1.01);
+  transition: all 0.15s ease;
+}
+
+/* Enhanced Icon Styling */
+body.pronunciation-lessons-page #pronunciation-category-buttons .pronunciation-category-btn > div:first-child {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 1.5rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 
+    0 8px 24px -8px color-mix(in srgb, var(--primary) 30%, transparent),
+    0 4px 12px -4px rgba(0, 0, 0, 0.1);
+}
+
+body.pronunciation-lessons-page #btn-category-consonant > div:first-child {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: white;
+}
+
+body.pronunciation-lessons-page #btn-category-stress > div:first-child {
+  background: linear-gradient(135deg, #3b82f6, #06b6d4);
+  color: white;
+}
+
+body.pronunciation-lessons-page #btn-category-linking > div:first-child {
+  background: linear-gradient(135deg, #10b981, #22d3ee);
+  color: white;
+}
+
+body.pronunciation-lessons-page #pronunciation-category-buttons .pronunciation-category-btn:hover > div:first-child {
+  transform: scale(1.1) rotate(5deg);
+  box-shadow: 
+    0 12px 32px -8px color-mix(in srgb, var(--primary) 40%, transparent),
+    0 6px 16px -4px rgba(0, 0, 0, 0.15);
+}
+
+body.pronunciation-lessons-page #pronunciation-category-buttons .pronunciation-category-btn i {
+  width: 32px;
+  height: 32px;
+  transition: all 0.3s ease;
+}
+
+body.pronunciation-lessons-page #pronunciation-category-buttons .pronunciation-category-btn:hover i {
+  transform: scale(1.2);
+}
+
+/* Enhanced Typography */
+body.pronunciation-lessons-page #pronunciation-category-buttons .pronunciation-category-btn h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0 0 0.75rem 0;
+  background: linear-gradient(135deg, var(--foreground), color-mix(in srgb, var(--foreground) 80%, transparent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  transition: all 0.3s ease;
+}
+
+body.pronunciation-lessons-page #pronunciation-category-buttons .pronunciation-category-btn:hover h2 {
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+body.pronunciation-lessons-page #pronunciation-category-buttons .pronunciation-category-btn p {
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--muted-foreground);
+  margin: 0;
+  transition: all 0.3s ease;
+}
+
+body.pronunciation-lessons-page #pronunciation-category-buttons .pronunciation-category-btn:hover p {
+  color: color-mix(in srgb, var(--foreground) 80%, transparent);
+}
+
+/* Add subtle pulse animation on hover */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+body.pronunciation-lessons-page #pronunciation-category-buttons .pronunciation-category-btn:hover > div:first-child {
+  animation: pulse 2s infinite;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  body.pronunciation-lessons-page #pronunciation-category-buttons {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  body.pronunciation-lessons-page #pronunciation-category-buttons .pronunciation-category-btn {
+    padding: 1.5rem 1rem;
+  }
+  
+  body.pronunciation-lessons-page #pronunciation-category-buttons .pronunciation-category-btn > div:first-child {
+    width: 60px;
+    height: 60px;
+  }
+  
+  body.pronunciation-lessons-page #pronunciation-category-buttons .pronunciation-category-btn h2 {
+    font-size: 1.125rem;
+  }
 }
 
 body.pronunciation-lessons-page .quiz-page__panel.card:hover {
@@ -13421,6 +13674,92 @@ body.pronunciation-lessons-page .quiz-page[data-view="list"] #lessons-grid {
 .quiz-review-item__num {
   font-weight: 600;
   font-size: 0.92rem;
+  color: var(--foreground);
+}
+.quiz-review-points {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #8A2BE2;
+  background: color-mix(in srgb, #8A2BE2 15%, transparent);
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.375rem;
+  border: 1px solid color-mix(in srgb, #8A2BE2 30%, var(--border));
+}
+.quiz-review-score {
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.375rem;
+}
+.quiz-review-item--correct .quiz-review-score {
+  color: #16a34a;
+  background: color-mix(in srgb, #22c55e 15%, transparent);
+  border: 1px solid color-mix(in srgb, #22c55e 30%, var(--border));
+}
+.quiz-review-item--incorrect .quiz-review-score {
+  color: #dc2626;
+  background: color-mix(in srgb, #dc2626 15%, transparent);
+  border: 1px solid color-mix(in srgb, #dc2626 30%, var(--border));
+}
+.quiz-review-grading-criteria {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: color-mix(in srgb, var(--muted) 30%, transparent);
+  border-radius: 0.5rem;
+  border: 1px solid var(--border);
+}
+.quiz-review-grading-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+.quiz-review-grading-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--foreground);
+}
+.quiz-review-ai-score {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  border: 1px solid color-mix(in srgb, var(--primary) 20%, var(--border));
+}
+.quiz-review-grading-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.quiz-review-criteria-item {
+  font-size: 0.875rem;
+}
+.quiz-review-criteria-item strong {
+  color: var(--foreground);
+  display: block;
+  margin-bottom: 0.25rem;
+}
+.quiz-review-criteria-list {
+  margin: 0;
+  padding-left: 1.25rem;
+  color: var(--muted-foreground);
+  line-height: 1.5;
+}
+.quiz-review-criteria-list li {
+  margin-bottom: 0.25rem;
+}
+.quiz-review-feedback-text {
+  margin: 0.25rem 0 0 0;
+  padding: 0.5rem;
+  background: var(--card);
+  border-left: 3px solid var(--primary);
+  border-radius: 0.25rem;
+  font-size: 0.85rem;
+  line-height: 1.4;
   color: var(--foreground);
 }
 .quiz-review-badge {

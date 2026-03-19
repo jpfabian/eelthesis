@@ -79,6 +79,7 @@ router.get("/api/my-progress", async (req, res) => {
         `SELECT a.attempt_id, a.quiz_id, q.title AS quiz_name, q.subject_id, q.quiz_number,
          ROUND((a.score / NULLIF(a.total_points, 0)) * 100, 1) AS score,
          ROUND(a.score, 2) AS raw_score, ROUND(a.total_points, 2) AS total_points,
+         ROUND(a.score, 2) AS display_score, ROUND(a.total_points, 2) AS display_total,
          a.end_time
          FROM reading_quiz_attempts a JOIN reading_quizzes q ON q.quiz_id = a.quiz_id
          WHERE a.student_id = ? AND a.status = 'completed'
@@ -263,8 +264,8 @@ router.get("/api/my-progress", async (req, res) => {
         score: Number(a.score),
         raw_score: Number(a.raw_score),
         total_points: Number(a.total_points),
-        display_score: counts && counts.total > 0 ? counts.correct : Number(a.raw_score),
-        display_total: counts && counts.total > 0 ? counts.total : Number(a.total_points),
+        display_score: Number(a.raw_score),
+        display_total: Number(a.total_points) || 100,
         end_time: a.end_time,
       };
     });
@@ -278,7 +279,7 @@ router.get("/api/my-progress", async (req, res) => {
     const allScores = [...rScores, ...pScores, ...aiScores];
     const reading_avg = avg(rScores) == null ? null : Math.round(avg(rScores) * 10) / 10;
     const pronunciation_avg = avg(pScores) == null ? null : Math.round(avg(pScores) * 10) / 10;
-    const ai_avg = avg(aiScores) == null ? null : Math.round(avg(aiScores) * 10) / 10;
+    const ai_avg = avg(aiScores) == null ? null : Math.round(avg(aiScores));
     const overall_avg = avg(allScores) == null ? null : Math.round(avg(allScores) * 10) / 10;
 
     // Total available quizzes (for completion rate) in this subject
@@ -383,7 +384,8 @@ router.get("/api/class/:classId/average-scores", async (req, res) => {
                q.quiz_number AS source_quiz_number,
                ROUND(a.score, 2) AS raw_score,
                ROUND(a.total_points, 2) AS total_points,
-               ROUND((a.score / NULLIF(a.total_points, 0)) * 100, 1) AS score
+               ROUND((a.score / NULLIF(a.total_points, 0)) * 100, 1) AS score,
+               ROUND(a.score, 2) AS display_score, ROUND(a.total_points, 2) AS display_total
         FROM reading_quiz_attempts a
         JOIN reading_quizzes q ON q.quiz_id = a.quiz_id
         WHERE a.status = 'completed' AND a.student_id IN (?) AND a.class_id = ?
@@ -396,10 +398,14 @@ router.get("/api/class/:classId/average-scores", async (req, res) => {
         [reading] = await pool.query(
           `SELECT a.attempt_id, a.student_id, q.title AS quiz_name, q.quiz_id AS source_quiz_id, q.quiz_number AS source_quiz_number,
            ROUND(a.score, 2) AS raw_score, ROUND(a.total_points, 2) AS total_points,
-           ROUND((a.score / NULLIF(a.total_points, 0)) * 100, 1) AS score
-           FROM reading_quiz_attempts a JOIN reading_quizzes q ON q.quiz_id = a.quiz_id
-           WHERE a.status = 'completed' AND a.student_id IN (?) ORDER BY a.end_time DESC`,
-          [studentIds]
+           ROUND((a.score / NULLIF(a.total_points, 0)) * 100, 1) AS score,
+           ROUND(a.score, 2) AS display_score, ROUND(a.total_points, 2) AS display_total
+           FROM reading_quiz_attempts a
+           JOIN reading_quizzes q ON q.quiz_id = a.quiz_id
+           WHERE a.status = 'completed' AND a.student_id IN (?) AND a.class_id = ?
+           ORDER BY a.end_time DESC
+           `,
+          [studentIds, classId]
         );
       } else throw e;
     }

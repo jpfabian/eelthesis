@@ -434,12 +434,56 @@ async function openStudentReadingReviewModal(quizId, quizTitle = '') {
             if (a.question_type === 'fill_blank' && Array.isArray(a.blanks) && a.blanks.length) {
                 correctText = a.blanks.map((b, idx) => `Blank ${idx + 1}: ${escapeHtml(b.correct_answer || '—')}`).join('; ');
             }
+            
+            // Handle essay questions differently
+            if (a.question_type === 'essay') {
+                const itemClass = a.is_correct ? 'quiz-review-item--correct' : 'quiz-review-item--incorrect';
+                const pointsText = a.points_earned != null ? `Points: ${Math.round(a.points_earned)}/${Math.round(a.points_possible || 5)}` : '';
+                const aiScore = a.ai_score != null ? Math.round(a.ai_score) : null;
+                const aiFeedback = a.ai_feedback || '';
+                
+                let gradingInfo = '';
+                if (aiScore !== null) {
+                    gradingInfo = `
+                        <div class="quiz-review-grading-criteria">
+                            <div class="quiz-review-grading-header">
+                                <span class="quiz-review-grading-title">📝 Essay Grading Basis</span>
+                            </div>
+                            <div class="quiz-review-grading-details">
+                                <div class="quiz-review-criteria-item">
+                                    <strong>Criteria:</strong>
+                                    <ul class="quiz-review-criteria-list">
+                                        <li>Relevance to the question/theme</li>
+                                        <li>Understanding of the main idea</li>
+                                        <li>Grammar and clarity</li>
+                                        <li>Completeness and thoughtfulness</li>
+                                    </ul>
+                                </div>
+                                ${aiFeedback ? `
+                                <div class="quiz-review-criteria-item">
+                                    <strong>AI Feedback:</strong>
+                                    <p class="quiz-review-feedback-text">${escapeHtml(aiFeedback)}</p>
+                                </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                return `<div class="quiz-review-item ${itemClass}"><div class="quiz-review-item__header"><span class="quiz-review-item__num">Question ${i + 1}</span>${pointsText ? `<span class="quiz-review-points">${pointsText}</span>` : ''}</div><p class="quiz-review-item__q">${escapeHtml((q && q.question_text) || '')}</p><div class="quiz-review-item__row"><span class="quiz-review-item__row-label">Your answer</span><span class="quiz-review-item__row-value">${yourAnswerText}</span></div>${gradingInfo}</div>`;
+            }
+            
+            // For MCQ and other question types, show score
+            const pointsEarned = Math.round(a.points_earned != null ? a.points_earned : (a.is_correct ? 1 : 0));
+            const totalPoints = Math.round(a.total_points != null ? a.total_points : 1);
+            const scoreText = `${pointsEarned}/${totalPoints} ${a.is_correct ? 'correct' : 'incorrect'}`;
+            
             const badgeClass = a.is_correct ? 'quiz-review-badge--correct' : 'quiz-review-badge--incorrect';
             const badgeText = a.is_correct ? 'Correct' : 'Incorrect';
             const correctAnswerValue = hideCorrectAnswers
                 ? 'Hidden until you get a perfect score.'
                 : correctText;
-            return `<div class="quiz-review-item ${a.is_correct ? 'quiz-review-item--correct' : 'quiz-review-item--incorrect'}"><div class="quiz-review-item__header"><span class="quiz-review-item__num">Question ${i + 1}</span><span class="quiz-review-badge ${badgeClass}">${badgeText}</span></div><p class="quiz-review-item__q">${escapeHtml((q && q.question_text) || '')}</p><div class="quiz-review-item__row"><span class="quiz-review-item__row-label">Your answer</span><span class="quiz-review-item__row-value">${yourAnswerText}</span></div><div class="quiz-review-item__row"><span class="quiz-review-item__row-label">Correct answer</span><span class="quiz-review-item__row-value">${correctAnswerValue}</span></div></div>`;
+            return `<div class="quiz-review-item ${a.is_correct ? 'quiz-review-item--correct' : 'quiz-review-item--incorrect'}"><div class="quiz-review-item__header"><span class="quiz-review-item__num">Question ${i + 1}</span><span class="quiz-review-score">${scoreText}</span></div><p class="quiz-review-item__q">${escapeHtml((q && q.question_text) || '')}</p><div class="quiz-review-item__row"><span class="quiz-review-item__row-label">Your answer</span><span class="quiz-review-item__row-value">${yourAnswerText}</span></div><div class="quiz-review-item__row"><span class="quiz-review-item__row-label">Correct answer</span><span class="quiz-review-item__row-value">${correctAnswerValue}</span></div></div>`;
         }).join('');
 
         loadingEl.classList.add('hidden');
@@ -3195,3 +3239,131 @@ async function saveTeacherReadingOverrides() {
         showNotification?.("Failed to save adjustments.", "error");
     }
 }
+
+// Vocabulary search functionality
+function escapeHtml(str) {
+    return String(str)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
+}
+
+function renderLessonsVocabularyState(html) {
+    const resultEl = document.getElementById("mobileNavVocabResult");
+    if (resultEl) {
+        resultEl.innerHTML = html;
+    }
+}
+
+async function searchLessonsVocabulary(word) {
+    const q = String(word || "").trim().toLowerCase();
+    if (!q) {
+        renderLessonsVocabularyState("<p class=\"mobile-nav-vocab-empty\">Type a word to search its meaning.</p>");
+        return;
+    }
+    renderLessonsVocabularyState("<p class=\"mobile-nav-vocab-empty\">Searching...</p>");
+    try {
+        const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(q)}`);
+        if (!res.ok) throw new Error("Word not found");
+        const data = await res.json();
+        const entry = Array.isArray(data) ? data[0] : null;
+        if (!entry) throw new Error("Word not found");
+        const phonetic = entry.phonetic || (Array.isArray(entry.phonetics) ? (entry.phonetics.find((p) => p && p.text)?.text || "") : "");
+        const meanings = Array.isArray(entry.meanings) ? entry.meanings.slice(0, 4) : [];
+        if (meanings.length === 0) throw new Error("No meaning available");
+
+        const meaningsHtml = meanings.map((m) => {
+            const defs = Array.isArray(m.definitions) ? m.definitions.slice(0, 2) : [];
+            const topDef = defs[0] || {};
+            return (
+                `<div class="mobile-nav-vocab-entry">` +
+                    `<div class="mobile-nav-vocab-pos">${escapeHtml(m.partOfSpeech || "meaning")}</div>` +
+                    `<p class="mobile-nav-vocab-def">${escapeHtml(topDef.definition || "No definition available.")}</p>` +
+                    (topDef.example ? `<p class="mobile-nav-vocab-example">"${escapeHtml(topDef.example)}"</p>` : "") +
+                `</div>`
+            );
+        }).join("");
+
+        renderLessonsVocabularyState(
+            `<div class="mobile-nav-vocab-header">` +
+                `<div class="mobile-nav-vocab-word">${escapeHtml(entry.word || q)}</div>` +
+                `<button type="button" class="mobile-nav-vocab-speak-btn" onclick="speakVocabularyWord('${escapeHtml(entry.word || q)}')" aria-label="Pronounce word">` +
+                    `<i data-lucide="volume-2" class="size-4"></i>` +
+                `</button>` +
+            `</div>` +
+            (phonetic ? `<div class="mobile-nav-vocab-phonetic">${escapeHtml(phonetic)}</div>` : "") +
+            meaningsHtml
+        );
+        
+        // Initialize Lucide icons for the speaker button
+        if (typeof lucide !== "undefined" && lucide.createIcons) {
+            setTimeout(() => lucide.createIcons(), 0);
+        }
+    } catch (_) {
+        renderLessonsVocabularyState("<p class=\"mobile-nav-vocab-empty\">No result found. Try another word or check Oxford/Cambridge reference links above.</p>");
+    }
+}
+
+function speakVocabularyWord(word) {
+    if (!word) return;
+    
+    // Check if browser supports speech synthesis
+    if (!('speechSynthesis' in window)) {
+        console.warn('Speech synthesis not supported in this browser');
+        return;
+    }
+
+    // Cancel any ongoing speech
+    window.speechSynthesis.cancel();
+
+    // Create new speech utterance
+    const utterance = new SpeechSynthesisUtterance(word);
+    utterance.lang = 'en-US';
+    utterance.rate = 0.8;
+    utterance.pitch = 1;
+    utterance.volume = 1;
+
+    // Speak the word
+    window.speechSynthesis.speak(utterance);
+}
+
+function initLessonsVocabularySearch() {
+    const vocabBtn = document.getElementById("mobileNavVocabBtn");
+    const vocabPanel = document.getElementById("mobileNavVocabPanel");
+    const form = document.getElementById("mobileNavVocabForm");
+    const input = document.getElementById("mobileNavVocabInput");
+    if (!vocabBtn || !vocabPanel || !form || !input) return;
+
+    vocabBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const willOpen = vocabPanel.classList.contains("hidden");
+        vocabPanel.classList.toggle("hidden", !willOpen);
+        vocabBtn.setAttribute("aria-expanded", willOpen ? "true" : "false");
+        if (willOpen) {
+            input.focus();
+        }
+    });
+
+    form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        await searchLessonsVocabulary(input.value);
+    });
+
+    document.addEventListener("click", (e) => {
+        if (!vocabPanel.classList.contains("hidden") && !vocabPanel.contains(e.target) && !vocabBtn.contains(e.target)) {
+            vocabPanel.classList.add("hidden");
+            vocabBtn.setAttribute("aria-expanded", "false");
+        }
+    });
+}
+
+// Initialize vocabulary search when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.location.pathname.includes('reading-lessons.html')) {
+        setTimeout(() => {
+            initLessonsVocabularySearch();
+        }, 100);
+    }
+});

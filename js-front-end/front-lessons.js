@@ -924,13 +924,46 @@ async function searchLessonsVocabulary(word) {
     }).join("");
 
     renderLessonsVocabularyState(
-      `<div class="mobile-nav-vocab-word">${escapeHtml(entry.word || q)}</div>` +
+      `<div class="mobile-nav-vocab-header">` +
+        `<div class="mobile-nav-vocab-word">${escapeHtml(entry.word || q)}</div>` +
+        `<button type="button" class="mobile-nav-vocab-speak-btn" onclick="speakVocabularyWord('${escapeHtml(entry.word || q)}')" aria-label="Pronounce word">` +
+          `<i data-lucide="volume-2" class="size-4"></i>` +
+        `</button>` +
+      `</div>` +
       (phonetic ? `<div class="mobile-nav-vocab-phonetic">${escapeHtml(phonetic)}</div>` : "") +
       meaningsHtml
     );
+    
+    // Initialize Lucide icons for the speaker button
+    if (typeof lucide !== "undefined" && lucide.createIcons) {
+      setTimeout(() => lucide.createIcons(), 0);
+    }
   } catch (_) {
     renderLessonsVocabularyState("<p class=\"mobile-nav-vocab-empty\">No result found. Try another word or check Oxford/Cambridge reference links above.</p>");
   }
+}
+
+function speakVocabularyWord(word) {
+  if (!word) return;
+  
+  // Check if browser supports speech synthesis
+  if (!('speechSynthesis' in window)) {
+    console.warn('Speech synthesis not supported in this browser');
+    return;
+  }
+
+  // Cancel any ongoing speech
+  window.speechSynthesis.cancel();
+
+  // Create new speech utterance
+  const utterance = new SpeechSynthesisUtterance(word);
+  utterance.lang = 'en-US';
+  utterance.rate = 0.8;
+  utterance.pitch = 1;
+  utterance.volume = 1;
+
+  // Speak the word
+  window.speechSynthesis.speak(utterance);
 }
 
 function initLessonsVocabularySearch() {
@@ -3028,17 +3061,59 @@ async function openLessonReviewModal(quizId) {
           yourAnswerText = selectedOpt ? escapeHtml(selectedOpt.option_text) : yourAnswerText;
         }
         var correctText = a.correct_answer_text != null ? escapeHtml(String(a.correct_answer_text)) : "—";
-        var badgeClass = a.is_correct ? "quiz-review-badge--correct" : "quiz-review-badge--incorrect";
-        var badgeText = a.is_correct ? "Correct" : "Incorrect";
+        
+        // Handle essay questions differently
+        if (a.question_type === 'essay') {
+          var itemClass = a.is_correct ? 'quiz-review-item--correct' : 'quiz-review-item--incorrect';
+          var pointsText = a.points_earned != null ? `Points: ${Math.round(a.points_earned)}/${Math.round(a.points_possible || 5)}` : '';
+          var aiScore = a.ai_score != null ? Math.round(a.ai_score) : null;
+          var aiFeedback = a.ai_feedback || '';
+          
+          var gradingInfo = '';
+          if (aiScore !== null) {
+            gradingInfo = `
+              <div class="quiz-review-grading-criteria">
+                <div class="quiz-review-grading-header">
+                  <span class="quiz-review-grading-title">📝 Essay Grading Basis</span>
+                </div>
+                <div class="quiz-review-grading-details">
+                  <div class="quiz-review-criteria-item">
+                    <strong>Criteria:</strong>
+                    <ul class="quiz-review-criteria-list">
+                      <li>Relevance to the question/theme</li>
+                      <li>Understanding of the main idea</li>
+                      <li>Grammar and clarity</li>
+                      <li>Completeness and thoughtfulness</li>
+                    </ul>
+                  </div>
+                  ${aiFeedback ? `
+                  <div class="quiz-review-criteria-item">
+                    <strong>AI Feedback:</strong>
+                    <p class="quiz-review-feedback-text">${escapeHtml(aiFeedback)}</p>
+                  </div>
+                  ` : ''}
+                </div>
+              </div>
+            `;
+          }
+          
+          return `<div class="quiz-review-item ${itemClass}"><div class="quiz-review-item__header"><span class="quiz-review-item__num">Question ${i + 1}</span>${pointsText ? `<span class="quiz-review-points">${pointsText}</span>` : ''}</div><p class="quiz-review-item__q">${escapeHtml(a.question_text || '')}</p><div class="quiz-review-item__row"><span class="quiz-review-item__row-label">Your answer</span><span class="quiz-review-item__row-value">${yourAnswerText}</span></div>${gradingInfo}</div>`;
+        }
+        
+        // For MCQ and other question types, show score
+        var pointsEarned = Math.round(a.points_earned != null ? a.points_earned : (a.is_correct ? 1 : 0));
+        var totalPoints = Math.round(a.total_points != null ? a.total_points : 1);
+        var scoreText = pointsEarned + "/" + totalPoints + " " + (a.is_correct ? "correct" : "incorrect");
+        
         return (
-          "<div class=\"quiz-review-item\">" +
+          "<div class=\"quiz-review-item " + (a.is_correct ? 'quiz-review-item--correct' : 'quiz-review-item--incorrect') + "\">" +
             "<div class=\"quiz-review-item__header\">" +
               "<span class=\"quiz-review-item__num\">Question " + (i + 1) + "</span>" +
-              "<span class=\"quiz-review-badge " + badgeClass + "\">" + badgeText + "</span>" +
+              "<span class=\"quiz-review-score\">" + scoreText + "</span>" +
             "</div>" +
             "<p class=\"quiz-review-item__q\">" + escapeHtml(a.question_text || "") + "</p>" +
-            "<div class=\"quiz-review-item__row\"><strong>Your answer:</strong> " + yourAnswerText + "</div>" +
-            "<div class=\"quiz-review-item__row\"><strong>Correct answer:</strong> " + correctText + "</div>" +
+            "<div class=\"quiz-review-item__row\"><span class=\"quiz-review-item__row-label\">Your answer</span><span class=\"quiz-review-item__row-value\">" + yourAnswerText + "</span></div>" +
+            "<div class=\"quiz-review-item__row\"><span class=\"quiz-review-item__row-label\">Correct answer</span><span class=\"quiz-review-item__row-value\">" + correctText + "</span></div>" +
           "</div>"
         );
       }).join("");

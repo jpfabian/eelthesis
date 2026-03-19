@@ -879,6 +879,29 @@ async function backfillNavQuizOpenActors(classId, quizList, role, user) {
     if (changed) setNavNotifItems(classId, items);
 }
 
+function speakVocabularyWord(word) {
+    if (!word) return;
+    
+    // Check if browser supports speech synthesis
+    if (!('speechSynthesis' in window)) {
+        console.warn('Speech synthesis not supported in this browser');
+        return;
+    }
+
+    // Cancel any ongoing speech
+    window.speechSynthesis.cancel();
+
+    // Create new speech utterance
+    const utterance = new SpeechSynthesisUtterance(word);
+    utterance.lang = 'en-US';
+    utterance.rate = 0.8;
+    utterance.pitch = 1;
+    utterance.volume = 1;
+
+    // Speak the word
+    window.speechSynthesis.speak(utterance);
+}
+
 function renderNavVocabState(html) {
     const resultEl = document.getElementById("mobileNavVocabResult");
     if (!resultEl) return;
@@ -911,10 +934,20 @@ async function searchSharedVocabulary(term) {
             </div>`;
         }).join("");
         renderNavVocabState(
-            `<div class="mobile-nav-vocab-word">${escapeHtml(entry.word || q)}</div>` +
+            `<div class="mobile-nav-vocab-header">` +
+                `<div class="mobile-nav-vocab-word">${escapeHtml(entry.word || q)}</div>` +
+                `<button type="button" class="mobile-nav-vocab-speak-btn" onclick="speakVocabularyWord('${escapeHtml(entry.word || q)}')" aria-label="Pronounce word">` +
+                    `<i data-lucide="volume-2" class="size-4"></i>` +
+                `</button>` +
+            `</div>` +
             (phonetic ? `<div class="mobile-nav-vocab-phonetic">${escapeHtml(phonetic)}</div>` : "") +
             meaningsHtml
         );
+        
+        // Initialize Lucide icons for the speaker button
+        if (typeof lucide !== "undefined" && lucide.createIcons) {
+            setTimeout(() => lucide.createIcons(), 0);
+        }
     } catch {
         renderNavVocabState("<p class=\"mobile-nav-vocab-empty\">No result found. Try another word or use Oxford/Cambridge links.</p>");
     }

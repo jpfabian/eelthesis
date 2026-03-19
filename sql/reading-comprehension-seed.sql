@@ -30,7 +30,8 @@ INSERT INTO reading_questions (quiz_id, question_type, question_text, points, po
 (@quiz1, 'mcq', 'What did the papal decree of 1493 accomplish?', 1.00, 2),
 (@quiz1, 'mcq', 'Where is the Strait of Magellan located?', 1.00, 3),
 (@quiz1, 'mcq', 'What happened to Magellan?', 1.00, 4),
-(@quiz1, 'mcq', 'Who completed the voyage to Spain after Magellan died?', 1.00, 5);
+(@quiz1, 'mcq', 'Who completed the voyage to Spain after Magellan died?', 1.00, 5),
+(@quiz1, 'essay', 'Summarize the main idea or theme of the story in your own words.', 5.00, 6);
 
 SET @q1_1 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz1 AND position = 1);
 SET @q1_2 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz1 AND position = 2);
@@ -78,7 +79,8 @@ INSERT INTO reading_questions (quiz_id, question_type, question_text, points, po
 (@quiz2, 'mcq', 'Why did Marie leave Poland?', 1.00, 2),
 (@quiz2, 'mcq', 'Where did Marie earn her doctorate in physics?', 1.00, 3),
 (@quiz2, 'mcq', 'What happened to Pierre Curie?', 1.00, 4),
-(@quiz2, 'mcq', 'What did Marie receive in 1911?', 1.00, 5);
+(@quiz2, 'mcq', 'What did Marie receive in 1911?', 1.00, 5),
+(@quiz2, 'essay', 'Summarize the main idea or theme of the story in your own words.', 5.00, 6);
 
 SET @q2_1 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz2 AND position = 1);
 SET @q2_2 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz2 AND position = 2);
@@ -126,7 +128,8 @@ INSERT INTO reading_questions (quiz_id, question_type, question_text, points, po
 (@quiz3, 'mcq', 'What did the volcano pour down upon Herculaneum?', 1.00, 2),
 (@quiz3, 'mcq', 'Besides fire, what caused destruction in Pompeii?', 1.00, 3),
 (@quiz3, 'mcq', 'How have archaeologists studied the skeletons of victims?', 1.00, 4),
-(@quiz3, 'mcq', 'What did scientists conclude about the eruption?', 1.00, 5);
+(@quiz3, 'mcq', 'What did scientists conclude about the eruption?', 1.00, 5),
+(@quiz3, 'essay', 'Summarize the main idea or theme of the story in your own words.', 5.00, 6);
 
 SET @q3_1 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz3 AND position = 1);
 SET @q3_2 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz3 AND position = 2);
@@ -175,16 +178,13 @@ INSERT INTO reading_questions (quiz_id, question_type, question_text, points, po
 (@quiz4, 'mcq', 'What religious difference caused conflict between Spain and England?', 1.00, 3),
 (@quiz4, 'mcq', 'When did King Philip begin building the Spanish Armada?', 1.00, 4),
 (@quiz4, 'mcq', 'Where did the Spanish Armada set sail from?', 1.00, 5),
-(@quiz4, 'mcq', 'What happened on August 7 when the Armada was at anchor?', 1.00, 6),
-(@quiz4, 'mcq', 'What ultimately allowed the Spanish ships to drift out into the North Sea?', 1.00, 7);
+(@quiz4, 'essay', 'Summarize the main idea or theme of the story in your own words.', 5.00, 6);
 
 SET @q4_1 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz4 AND position = 1);
 SET @q4_2 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz4 AND position = 2);
 SET @q4_3 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz4 AND position = 3);
 SET @q4_4 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz4 AND position = 4);
 SET @q4_5 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz4 AND position = 5);
-SET @q4_6 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz4 AND position = 6);
-SET @q4_7 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz4 AND position = 7);
 
 INSERT INTO reading_mcq_options (question_id, option_text, is_correct, position) VALUES
 (@q4_1, 'England wanted a share of the wealth Spain took from the Americas', 1, 1),
@@ -206,15 +206,7 @@ INSERT INTO reading_mcq_options (question_id, option_text, is_correct, position)
 (@q4_5, 'Lisbon, Portugal', 1, 1),
 (@q4_5, 'Plymouth, England', 0, 2),
 (@q4_5, 'The Strait of Dover', 0, 3),
-(@q4_5, 'The North Sea', 0, 4),
-(@q4_6, 'England sent eight burning ships into the Spanish fleet', 1, 1),
-(@q4_6, 'The Spanish attacked England', 0, 2),
-(@q4_6, 'Bad weather forced them back', 0, 3),
-(@q4_6, 'The Armada regrouped', 0, 4),
-(@q4_7, 'The wind shifted', 1, 1),
-(@q4_7, 'The English attacked', 0, 2),
-(@q4_7, 'They ran out of ammunition', 0, 3),
-(@q4_7, 'Philip ordered them to retreat', 0, 4);
+(@q4_5, 'The North Sea', 0, 4);
 
 -- =========================================================
 -- Story 5: The Battle of Marathon
@@ -235,16 +227,13 @@ INSERT INTO reading_questions (quiz_id, question_type, question_text, points, po
 (@quiz5, 'mcq', 'What did the citizens of Delos do when the Persians claimed to have come in peace?', 1.00, 3),
 (@quiz5, 'mcq', 'What city did the Persians conquer after Delos?', 1.00, 4),
 (@quiz5, 'mcq', 'Where did the Athenian army meet the Persians?', 1.00, 5),
-(@quiz5, 'mcq', 'Who reinforced the Athenian troops at the last moment?', 1.00, 6),
-(@quiz5, 'mcq', 'According to Herodotus, how many Persians died compared to Athenians?', 1.00, 7);
+(@quiz5, 'essay', 'Summarize the main idea or theme of the story in your own words.', 5.00, 6);
 
 SET @q5_1 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz5 AND position = 1);
 SET @q5_2 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz5 AND position = 2);
 SET @q5_3 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz5 AND position = 3);
 SET @q5_4 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz5 AND position = 4);
 SET @q5_5 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz5 AND position = 5);
-SET @q5_6 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz5 AND position = 6);
-SET @q5_7 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz5 AND position = 7);
 
 INSERT INTO reading_mcq_options (question_id, option_text, is_correct, position) VALUES
 (@q5_1, 'Athens had interceded for other Greek city-states in revolt against Persian domination', 1, 1),
@@ -266,15 +255,7 @@ INSERT INTO reading_mcq_options (question_id, option_text, is_correct, position)
 (@q5_5, 'The plain of Marathon', 1, 1),
 (@q5_5, 'Delos', 0, 2),
 (@q5_5, 'Athens', 0, 3),
-(@q5_5, 'Plataea', 0, 4),
-(@q5_6, 'Soldiers from Plataea', 1, 1),
-(@q5_6, 'Soldiers from Delos', 0, 2),
-(@q5_6, 'Soldiers from Eritrea', 0, 3),
-(@q5_6, 'The gods', 0, 4),
-(@q5_7, '6,400 Persians died, compared to only 192 Athenians', 1, 1),
-(@q5_7, '192 Persians died, compared to 6,400 Athenians', 0, 2),
-(@q5_7, 'Equal numbers died', 0, 3),
-(@q5_7, 'The passage does not say', 0, 4);
+(@q5_5, 'Plataea', 0, 4);
 
 -- =========================================================
 -- Story 6: What Started the Trojan War?
@@ -295,16 +276,13 @@ INSERT INTO reading_questions (quiz_id, question_type, question_text, points, po
 (@quiz6, 'mcq', 'What did Eris throw into the banquet hall?', 1.00, 3),
 (@quiz6, 'mcq', 'Who was chosen to settle the controversy by picking a winner?', 1.00, 4),
 (@quiz6, 'mcq', 'What did Aphrodite offer Paris to win the golden apple?', 1.00, 5),
-(@quiz6, 'mcq', 'Who was Helen''s husband when Paris took her?', 1.00, 6),
-(@quiz6, 'mcq', 'Why did Menelaus set sail for Troy?', 1.00, 7);
+(@quiz6, 'essay', 'Summarize the main idea or theme of the story in your own words.', 5.00, 6);
 
 SET @q6_1 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz6 AND position = 1);
 SET @q6_2 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz6 AND position = 2);
 SET @q6_3 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz6 AND position = 3);
 SET @q6_4 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz6 AND position = 4);
 SET @q6_5 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz6 AND position = 5);
-SET @q6_6 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz6 AND position = 6);
-SET @q6_7 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz6 AND position = 7);
 
 INSERT INTO reading_mcq_options (question_id, option_text, is_correct, position) VALUES
 (@q6_1, 'At the wedding of Peleus and Thetis', 1, 1),
@@ -326,15 +304,7 @@ INSERT INTO reading_mcq_options (question_id, option_text, is_correct, position)
 (@q6_5, 'Helen, daughter of Zeus', 1, 1),
 (@q6_5, 'Vast kingdoms', 0, 2),
 (@q6_5, 'Victory and fame in war', 0, 3),
-(@q6_5, 'The golden apple itself', 0, 4),
-(@q6_6, 'King Menelaus of Sparta', 1, 1),
-(@q6_6, 'King Priam of Troy', 0, 2),
-(@q6_6, 'Paris', 0, 3),
-(@q6_6, 'Zeus', 0, 4),
-(@q6_7, 'To reclaim Helen', 1, 1),
-(@q6_7, 'To conquer Troy', 0, 2),
-(@q6_7, 'To avenge Eris', 0, 3),
-(@q6_7, 'To retrieve the golden apple', 0, 4);
+(@q6_5, 'The golden apple itself', 0, 4);
 
 -- =========================================================
 -- Story 7: The Identity of Anastasia
@@ -355,16 +325,13 @@ INSERT INTO reading_questions (quiz_id, question_type, question_text, points, po
 (@quiz7, 'mcq', 'Who did the woman claim rescued her after the czar''s family was killed?', 1.00, 3),
 (@quiz7, 'mcq', 'What name did she take when she immigrated to the United States?', 1.00, 4),
 (@quiz7, 'mcq', 'What did her grandmother and other relatives say about her claim?', 1.00, 5),
-(@quiz7, 'mcq', 'What did the court decide in 1957?', 1.00, 6),
-(@quiz7, 'mcq', 'Why did some workers and peasants want change during the czar''s reign?', 1.00, 7);
+(@quiz7, 'essay', 'Summarize the main idea or theme of the story in your own words.', 5.00, 6);
 
 SET @q7_1 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz7 AND position = 1);
 SET @q7_2 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz7 AND position = 2);
 SET @q7_3 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz7 AND position = 3);
 SET @q7_4 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz7 AND position = 4);
 SET @q7_5 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz7 AND position = 5);
-SET @q7_6 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz7 AND position = 6);
-SET @q7_7 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz7 AND position = 7);
 
 INSERT INTO reading_mcq_options (question_id, option_text, is_correct, position) VALUES
 (@q7_1, 'The youngest daughter of Czar Nicholas II', 1, 1),
@@ -386,15 +353,7 @@ INSERT INTO reading_mcq_options (question_id, option_text, is_correct, position)
 (@q7_5, 'They denied that she was the real Anastasia', 1, 1),
 (@q7_5, 'They confirmed her identity', 0, 2),
 (@q7_5, 'They helped her claim her inheritance', 0, 3),
-(@q7_5, 'They had no opinion', 0, 4),
-(@q7_6, 'It could neither confirm nor deny Anastasia''s identity', 1, 1),
-(@q7_6, 'It confirmed she was Anastasia', 0, 2),
-(@q7_6, 'It ruled she was a fraud', 0, 3),
-(@q7_6, 'It awarded her the inheritance', 0, 4),
-(@q7_7, 'They clamored for more rapid social reform', 1, 1),
-(@q7_7, 'They supported the czar', 0, 2),
-(@q7_7, 'They wanted to restore the monarchy', 0, 3),
-(@q7_7, 'They were satisfied with the existing laws', 0, 4);
+(@q7_5, 'They had no opinion', 0, 4);
 
 -- =========================================================
 -- Story 8: The Fall of French Royalty
@@ -415,16 +374,13 @@ INSERT INTO reading_questions (quiz_id, question_type, question_text, points, po
 (@quiz8, 'mcq', 'What did Marie Antoinette do while citizens begged for lower taxes?', 1.00, 3),
 (@quiz8, 'mcq', 'What happened when the minister of finance tried to stop the royal spending?', 1.00, 4),
 (@quiz8, 'mcq', 'What did the intense hatred of the people lead to?', 1.00, 5),
-(@quiz8, 'mcq', 'What happened to Louis XVI and Marie Antoinette?', 1.00, 6),
-(@quiz8, 'mcq', 'According to the passage, what might have prevented the revolution?', 1.00, 7);
+(@quiz8, 'essay', 'Summarize the main idea or theme of the story in your own words.', 5.00, 6);
 
 SET @q8_1 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz8 AND position = 1);
 SET @q8_2 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz8 AND position = 2);
 SET @q8_3 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz8 AND position = 3);
 SET @q8_4 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz8 AND position = 4);
 SET @q8_5 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz8 AND position = 5);
-SET @q8_6 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz8 AND position = 6);
-SET @q8_7 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz8 AND position = 7);
 
 INSERT INTO reading_mcq_options (question_id, option_text, is_correct, position) VALUES
 (@q8_1, '1774 to 1789', 1, 1),
@@ -446,15 +402,7 @@ INSERT INTO reading_mcq_options (question_id, option_text, is_correct, position)
 (@q8_5, 'The French Revolution', 1, 1),
 (@q8_5, 'A new tax system', 0, 2),
 (@q8_5, 'The queen''s exile', 0, 3),
-(@q8_5, 'Economic reform', 0, 4),
-(@q8_6, 'They lost their lives at the guillotine', 1, 1),
-(@q8_6, 'They fled to another country', 0, 2),
-(@q8_6, 'They were imprisoned for life', 0, 3),
-(@q8_6, 'They abdicated and retired', 0, 4),
-(@q8_7, 'If they had reined in their extravagant spending', 1, 1),
-(@q8_7, 'If they had raised taxes', 0, 2),
-(@q8_7, 'If they had exiled the minister of finance', 0, 3),
-(@q8_7, 'If they had built more palaces', 0, 4);
+(@q8_5, 'Economic reform', 0, 4);
 
 -- =========================================================
 -- Story 9: The Invention of the Airplane
@@ -475,16 +423,13 @@ INSERT INTO reading_questions (quiz_id, question_type, question_text, points, po
 (@quiz9, 'mcq', 'What did Otto Lilienthal contribute to aviation?', 1.00, 3),
 (@quiz9, 'mcq', 'What did the Wright brothers do to fix the air pressure tables?', 1.00, 4),
 (@quiz9, 'mcq', 'How long did the first flight stay aloft, and how far did it fly?', 1.00, 5),
-(@quiz9, 'mcq', 'What did the Wright brothers build for propulsion?', 1.00, 6),
-(@quiz9, 'mcq', 'Why are the Wright brothers called the fathers of aviation?', 1.00, 7);
+(@quiz9, 'essay', 'Summarize the main idea or theme of the story in your own words.', 5.00, 6);
 
 SET @q9_1 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz9 AND position = 1);
 SET @q9_2 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz9 AND position = 2);
 SET @q9_3 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz9 AND position = 3);
 SET @q9_4 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz9 AND position = 4);
 SET @q9_5 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz9 AND position = 5);
-SET @q9_6 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz9 AND position = 6);
-SET @q9_7 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz9 AND position = 7);
 
 INSERT INTO reading_mcq_options (question_id, option_text, is_correct, position) VALUES
 (@q9_1, 'December 17, 1903', 1, 1),
@@ -506,15 +451,7 @@ INSERT INTO reading_mcq_options (question_id, option_text, is_correct, position)
 (@q9_5, '12 seconds and 120 feet', 1, 1),
 (@q9_5, 'Half an hour and several miles', 0, 2),
 (@q9_5, '5 minutes and 500 feet', 0, 3),
-(@q9_5, '1 minute and 60 feet', 0, 4),
-(@q9_6, 'A lightweight gasoline engine', 1, 1),
-(@q9_6, 'A steam engine', 0, 2),
-(@q9_6, 'An electric motor', 0, 3),
-(@q9_6, 'A wind-powered mechanism', 0, 4),
-(@q9_7, 'They were the first to build a full-size machine that could fly under its own power', 1, 1),
-(@q9_7, 'They invented hang gliding', 0, 2),
-(@q9_7, 'They flew the longest distance', 0, 3),
-(@q9_7, 'They designed the first wind tunnel', 0, 4);
+(@q9_5, '1 minute and 60 feet', 0, 4);
 
 -- =========================================================
 -- Story 10: John Muir
@@ -535,16 +472,13 @@ INSERT INTO reading_questions (quiz_id, question_type, question_text, points, po
 (@quiz10, 'mcq', 'What did John invent as a young person?', 1.00, 3),
 (@quiz10, 'mcq', 'What was Muir''s theory about the Yosemite Valley?', 1.00, 4),
 (@quiz10, 'mcq', 'When was Muir''s theory proven correct?', 1.00, 5),
-(@quiz10, 'mcq', 'When was Yosemite National Park created?', 1.00, 6),
-(@quiz10, 'mcq', 'What conservation battle did Muir lose?', 1.00, 7);
+(@quiz10, 'essay', 'Summarize the main idea or theme of the story in your own words.', 5.00, 6);
 
 SET @q10_1 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz10 AND position = 1);
 SET @q10_2 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz10 AND position = 2);
 SET @q10_3 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz10 AND position = 3);
 SET @q10_4 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz10 AND position = 4);
 SET @q10_5 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz10 AND position = 5);
-SET @q10_6 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz10 AND position = 6);
-SET @q10_7 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz10 AND position = 7);
 
 INSERT INTO reading_mcq_options (question_id, option_text, is_correct, position) VALUES
 (@q10_1, '1892', 1, 1),
@@ -566,15 +500,7 @@ INSERT INTO reading_mcq_options (question_id, option_text, is_correct, position)
 (@q10_5, '1930', 1, 1),
 (@q10_5, '1868', 0, 2),
 (@q10_5, '1906', 0, 3),
-(@q10_5, '1914', 0, 4),
-(@q10_6, '1906', 1, 1),
-(@q10_6, '1892', 0, 2),
-(@q10_6, '1901', 0, 3),
-(@q10_6, '1908', 0, 4),
-(@q10_7, 'Saving the Hetch Hetchy Valley from being dammed', 1, 1),
-(@q10_7, 'Creating Yosemite National Park', 0, 2),
-(@q10_7, 'Establishing Muir Woods', 0, 3),
-(@q10_7, 'Forming the Sierra Club', 0, 4);
+(@q10_5, '1914', 0, 4);
 
 -- =========================================================
 -- Story 11: Using a Metal File
@@ -595,16 +521,13 @@ INSERT INTO reading_questions (quiz_id, question_type, question_text, points, po
 (@quiz11, 'mcq', 'When is it advisable to drag the file''s teeth on the return stroke?', 1.00, 3),
 (@quiz11, 'mcq', 'What happens with too much pressure?', 1.00, 4),
 (@quiz11, 'mcq', 'How should you move the file across the surface?', 1.00, 5),
-(@quiz11, 'mcq', 'Why should you use a vise?', 1.00, 6),
-(@quiz11, 'mcq', 'How do you install the handle on a file?', 1.00, 7);
+(@quiz11, 'essay', 'Summarize the main idea or theme of the story in your own words.', 5.00, 6);
 
 SET @q11_1 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz11 AND position = 1);
 SET @q11_2 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz11 AND position = 2);
 SET @q11_3 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz11 AND position = 3);
 SET @q11_4 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz11 AND position = 4);
 SET @q11_5 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz11 AND position = 5);
-SET @q11_6 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz11 AND position = 6);
-SET @q11_7 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz11 AND position = 7);
 
 INSERT INTO reading_mcq_options (question_id, option_text, is_correct, position) VALUES
 (@q11_1, 'On the forward stroke only', 1, 1),
@@ -626,15 +549,7 @@ INSERT INTO reading_mcq_options (question_id, option_text, is_correct, position)
 (@q11_5, 'In straight lines across the surface', 1, 1),
 (@q11_5, 'In circular motions', 0, 2),
 (@q11_5, 'At an angle only', 0, 3),
-(@q11_5, 'Back and forth quickly', 0, 4),
-(@q11_6, 'To grip the work so your hands are free to hold the file', 1, 1),
-(@q11_6, 'To protect your hands', 0, 2),
-(@q11_6, 'To sharpen the file', 0, 3),
-(@q11_6, 'To clear out metal pieces', 0, 4),
-(@q11_7, 'By inserting the pointed end of the file into the handle hole', 1, 1),
-(@q11_7, 'By gluing it on', 0, 2),
-(@q11_7, 'By screwing it in', 0, 3),
-(@q11_7, 'By wrapping it with tape', 0, 4);
+(@q11_5, 'Back and forth quickly', 0, 4);
 
 -- =========================================================
 -- Story 12: The Life of Sojourner Truth
@@ -655,16 +570,13 @@ INSERT INTO reading_questions (quiz_id, question_type, question_text, points, po
 (@quiz12, 'mcq', 'What happened when her youngest son was illegally seized and sold?', 1.00, 3),
 (@quiz12, 'mcq', 'What does the name Sojourner mean?', 1.00, 4),
 (@quiz12, 'mcq', 'Who invited Sojourner Truth to the White House?', 1.00, 5),
-(@quiz12, 'mcq', 'What did she force Washington DC to do in her old age?', 1.00, 6),
-(@quiz12, 'mcq', 'What did she say kept her going shortly before her death?', 1.00, 7);
+(@quiz12, 'essay', 'Summarize the main idea or theme of the story in your own words.', 5.00, 6);
 
 SET @q12_1 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz12 AND position = 1);
 SET @q12_2 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz12 AND position = 2);
 SET @q12_3 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz12 AND position = 3);
 SET @q12_4 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz12 AND position = 4);
 SET @q12_5 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz12 AND position = 5);
-SET @q12_6 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz12 AND position = 6);
-SET @q12_7 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz12 AND position = 7);
 
 INSERT INTO reading_mcq_options (question_id, option_text, is_correct, position) VALUES
 (@q12_1, 'Isabella Baumfree', 1, 1),
@@ -686,15 +598,7 @@ INSERT INTO reading_mcq_options (question_id, option_text, is_correct, position)
 (@q12_5, 'President Lincoln', 1, 1),
 (@q12_5, 'Congress', 0, 2),
 (@q12_5, 'The governor of New York', 0, 3),
-(@q12_5, 'A group of abolitionists', 0, 4),
-(@q12_6, 'Integrate its trolley cars so black and white passengers could ride together', 1, 1),
-(@q12_6, 'Build more housing for ex-slaves', 0, 2),
-(@q12_6, 'End slavery', 0, 3),
-(@q12_6, 'Give land to former slaves', 0, 4),
-(@q12_7, '"I think of the great things"', 1, 1),
-(@q12_7, '"I keep fighting"', 0, 2),
-(@q12_7, '"My faith sustains me"', 0, 3),
-(@q12_7, '"I have no choice"', 0, 4);
+(@q12_5, 'A group of abolitionists', 0, 4);
 
 -- =========================================================
 -- Story 13: The Galapagos Islands
@@ -715,16 +619,13 @@ INSERT INTO reading_questions (quiz_id, question_type, question_text, points, po
 (@quiz13, 'mcq', 'Why did sailors capture tortoises?', 1.00, 3),
 (@quiz13, 'mcq', 'What did sailors do to make tortoises helpless aboard the ship?', 1.00, 4),
 (@quiz13, 'mcq', 'What animals did settlers bring that harmed the tortoises?', 1.00, 5),
-(@quiz13, 'mcq', 'When did scientists begin to take action to save the tortoises?', 1.00, 6),
-(@quiz13, 'mcq', 'What was the first part of the scientists'' plan?', 1.00, 7);
+(@quiz13, 'essay', 'Summarize the main idea or theme of the story in your own words.', 5.00, 6);
 
 SET @q13_1 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz13 AND position = 1);
 SET @q13_2 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz13 AND position = 2);
 SET @q13_3 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz13 AND position = 3);
 SET @q13_4 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz13 AND position = 4);
 SET @q13_5 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz13 AND position = 5);
-SET @q13_6 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz13 AND position = 6);
-SET @q13_7 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz13 AND position = 7);
 
 INSERT INTO reading_mcq_options (question_id, option_text, is_correct, position) VALUES
 (@q13_1, 'In the Pacific Ocean, off the western coast of South America', 1, 1),
@@ -746,15 +647,7 @@ INSERT INTO reading_mcq_options (question_id, option_text, is_correct, position)
 (@q13_5, 'Pigs, goats, donkeys, dogs and cats', 1, 1),
 (@q13_5, 'Rats and mice only', 0, 2),
 (@q13_5, 'Birds', 0, 3),
-(@q13_5, 'Other tortoises', 0, 4),
-(@q13_6, 'In the 1950s', 1, 1),
-(@q13_6, 'In the early 1900s', 0, 2),
-(@q13_6, 'In 1535', 0, 3),
-(@q13_6, 'In the 1960s', 0, 4),
-(@q13_7, 'Remove as many cats, dogs and other animals as they could from the islands', 1, 1),
-(@q13_7, 'Gather tortoise eggs', 0, 2),
-(@q13_7, 'Build special pens', 0, 3),
-(@q13_7, 'Return tortoises to their islands', 0, 4);
+(@q13_5, 'Other tortoises', 0, 4);
 
 -- =========================================================
 -- Story 14: Game Instructions
@@ -775,16 +668,13 @@ INSERT INTO reading_questions (quiz_id, question_type, question_text, points, po
 (@quiz14, 'mcq', 'How much time does a player have to think of an answer?', 1.00, 3),
 (@quiz14, 'mcq', 'What happens if a player fails to think of a correct answer within the time limit?', 1.00, 4),
 (@quiz14, 'mcq', 'Who wins the game?', 1.00, 5),
-(@quiz14, 'mcq', 'In the example, why does the second person say \"Norway\" after \"Boston\"?', 1.00, 6),
-(@quiz14, 'mcq', 'After \"Norway,\" what letter must the next word start with?', 1.00, 7);
+(@quiz14, 'essay', 'Summarize the main idea or theme of the story in your own words.', 5.00, 6);
 
 SET @q14_1 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz14 AND position = 1);
 SET @q14_2 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz14 AND position = 2);
 SET @q14_3 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz14 AND position = 3);
 SET @q14_4 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz14 AND position = 4);
 SET @q14_5 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz14 AND position = 5);
-SET @q14_6 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz14 AND position = 6);
-SET @q14_7 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz14 AND position = 7);
 
 INSERT INTO reading_mcq_options (question_id, option_text, is_correct, position) VALUES
 (@q14_1, 'Geographical terms such as cities, states, countries, rivers, or lakes', 1, 1),
@@ -806,15 +696,7 @@ INSERT INTO reading_mcq_options (question_id, option_text, is_correct, position)
 (@q14_5, 'The last person to survive', 1, 1),
 (@q14_5, 'The first person to answer correctly', 0, 2),
 (@q14_5, 'The person who names the most places', 0, 3),
-(@q14_5, 'The person who goes last', 0, 4),
-(@q14_6, 'Because Boston ends with N, and the next word must start with N', 1, 1),
-(@q14_6, 'Because Norway is a country', 0, 2),
-(@q14_6, 'Because N is the first letter of Boston', 0, 3),
-(@q14_6, 'Because it was the second person''s turn', 0, 4),
-(@q14_7, 'Y', 1, 1),
-(@q14_7, 'N', 0, 2),
-(@q14_7, 'W', 0, 3),
-(@q14_7, 'A', 0, 4);
+(@q14_5, 'The person who goes last', 0, 4);
 
 -- =========================================================
 -- Story 15: Charles Lindbergh
@@ -835,16 +717,13 @@ INSERT INTO reading_questions (quiz_id, question_type, question_text, points, po
 (@quiz15, 'mcq', 'How much was the prize for the first pilot to fly nonstop from New York to Paris?', 1.00, 3),
 (@quiz15, 'mcq', 'What awards did Lindbergh receive for his flight?', 1.00, 4),
 (@quiz15, 'mcq', 'Where did Lindbergh meet his future wife Anne Morrow?', 1.00, 5),
-(@quiz15, 'mcq', 'Where did the Lindberghs chart a new route to in 1931?', 1.00, 6),
-(@quiz15, 'mcq', 'What patent did Lindbergh receive in 1935?', 1.00, 7);
+(@quiz15, 'essay', 'Summarize the main idea or theme of the story in your own words.', 5.00, 6);
 
 SET @q15_1 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz15 AND position = 1);
 SET @q15_2 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz15 AND position = 2);
 SET @q15_3 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz15 AND position = 3);
 SET @q15_4 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz15 AND position = 4);
 SET @q15_5 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz15 AND position = 5);
-SET @q15_6 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz15 AND position = 6);
-SET @q15_7 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz15 AND position = 7);
 
 INSERT INTO reading_mcq_options (question_id, option_text, is_correct, position) VALUES
 (@q15_1, 'Being the first person to make a nonstop solo flight across the Atlantic in 1927', 1, 1),
@@ -866,15 +745,7 @@ INSERT INTO reading_mcq_options (question_id, option_text, is_correct, position)
 (@q15_5, 'In Mexico, where her father was the United States ambassador', 1, 1),
 (@q15_5, 'In Paris after his flight', 0, 2),
 (@q15_5, 'In St. Louis', 0, 3),
-(@q15_5, 'In New York', 0, 4),
-(@q15_6, 'To the Orient (China and Japan)', 1, 1),
-(@q15_6, 'To Europe', 0, 2),
-(@q15_6, 'To South America', 0, 3),
-(@q15_6, 'To Africa', 0, 4),
-(@q15_7, 'For an artificial heart', 1, 1),
-(@q15_7, 'For the 747 jet airliner', 0, 2),
-(@q15_7, 'For a seaplane', 0, 3),
-(@q15_7, 'For a mail delivery system', 0, 4);
+(@q15_5, 'In New York', 0, 4);
 
 -- =========================================================
 -- Story 16: Instructions (Reading Meter Dials)
@@ -895,16 +766,13 @@ INSERT INTO reading_questions (quiz_id, question_type, question_text, points, po
 (@quiz16, 'mcq', 'If a meter has two dials and one is smaller, which dial is not imperative to read?', 1.00, 3),
 (@quiz16, 'mcq', 'Which dial should you read first?', 1.00, 4),
 (@quiz16, 'mcq', 'As the dial turns clockwise, what figure should you record?', 1.00, 5),
-(@quiz16, 'mcq', 'When finished reading the dials, what should you do?', 1.00, 6),
-(@quiz16, 'mcq', 'What do dials on water and gas meters usually indicate?', 1.00, 7);
+(@quiz16, 'essay', 'Summarize the main idea or theme of the story in your own words.', 5.00, 6);
 
 SET @q16_1 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz16 AND position = 1);
 SET @q16_2 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz16 AND position = 2);
 SET @q16_3 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz16 AND position = 3);
 SET @q16_4 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz16 AND position = 4);
 SET @q16_5 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz16 AND position = 5);
-SET @q16_6 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz16 AND position = 6);
-SET @q16_7 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz16 AND position = 7);
 
 INSERT INTO reading_mcq_options (question_id, option_text, is_correct, position) VALUES
 (@q16_1, 'From right to left', 1, 1),
@@ -926,15 +794,7 @@ INSERT INTO reading_mcq_options (question_id, option_text, is_correct, position)
 (@q16_5, 'The figure the pointer has just passed', 1, 1),
 (@q16_5, 'The figure the pointer is approaching', 0, 2),
 (@q16_5, 'The figure closest to zero', 0, 3),
-(@q16_5, 'The highest number on the dial', 0, 4),
-(@q16_6, 'Mark off the number of units recorded', 1, 1),
-(@q16_6, 'Reset the dials to zero', 0, 2),
-(@q16_6, 'Read the dials again', 0, 3),
-(@q16_6, 'Replace the meter', 0, 4),
-(@q16_7, 'The amount each dial records', 1, 1),
-(@q16_7, 'The time of day', 0, 2),
-(@q16_7, 'The rate of flow', 0, 3),
-(@q16_7, 'The temperature', 0, 4);
+(@q16_5, 'The highest number on the dial', 0, 4);
 
 -- =========================================================
 -- Story 17: Vestmannaeyjar
@@ -955,16 +815,13 @@ INSERT INTO reading_questions (quiz_id, question_type, question_text, points, po
 (@quiz17, 'mcq', 'What is the name of the volcano?', 1.00, 3),
 (@quiz17, 'mcq', 'How long had the volcano been silent before erupting?', 1.00, 4),
 (@quiz17, 'mcq', 'How did most people escape the island?', 1.00, 5),
-(@quiz17, 'mcq', 'How long did the eruption continue?', 1.00, 6),
-(@quiz17, 'mcq', 'How are the new homes of Heimaey warmed?', 1.00, 7);
+(@quiz17, 'essay', 'Summarize the main idea or theme of the story in your own words.', 5.00, 6);
 
 SET @q17_1 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz17 AND position = 1);
 SET @q17_2 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz17 AND position = 2);
 SET @q17_3 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz17 AND position = 3);
 SET @q17_4 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz17 AND position = 4);
 SET @q17_5 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz17 AND position = 5);
-SET @q17_6 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz17 AND position = 6);
-SET @q17_7 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz17 AND position = 7);
 
 INSERT INTO reading_mcq_options (question_id, option_text, is_correct, position) VALUES
 (@q17_1, 'On the island of Heimaey, just off the mainland of Iceland', 1, 1),
@@ -986,15 +843,7 @@ INSERT INTO reading_mcq_options (question_id, option_text, is_correct, position)
 (@q17_5, 'The fishing fleet ferried them to the mainland within 24 hours', 1, 1),
 (@q17_5, 'They flew away by helicopter', 0, 2),
 (@q17_5, 'They built boats to escape', 0, 3),
-(@q17_5, 'They waited for rescue ships', 0, 4),
-(@q17_6, 'Six months', 1, 1),
-(@q17_6, '24 hours', 0, 2),
-(@q17_6, 'One week', 0, 3),
-(@q17_6, 'One year', 0, 4),
-(@q17_7, 'From water pipes heated by molten lava', 1, 1),
-(@q17_7, 'From oil storage tanks', 0, 2),
-(@q17_7, 'From electric heaters', 0, 3),
-(@q17_7, 'From solar panels', 0, 4);
+(@q17_5, 'They waited for rescue ships', 0, 4);
 
 -- =========================================================
 -- Story 18: The Life of Frederick Douglass
@@ -1015,16 +864,13 @@ INSERT INTO reading_questions (quiz_id, question_type, question_text, points, po
 (@quiz18, 'mcq', 'Who taught Frederick how to read and write?', 1.00, 3),
 (@quiz18, 'mcq', 'What happened when Frederick resisted Covey''s beating?', 1.00, 4),
 (@quiz18, 'mcq', 'When did Frederick successfully escape to freedom?', 1.00, 5),
-(@quiz18, 'mcq', 'Where did the name Douglass come from?', 1.00, 6),
-(@quiz18, 'mcq', 'What did Douglass do after Lincoln issued the Emancipation Proclamation?', 1.00, 7);
+(@quiz18, 'essay', 'Summarize the main idea or theme of the story in your own words.', 5.00, 6);
 
 SET @q18_1 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz18 AND position = 1);
 SET @q18_2 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz18 AND position = 2);
 SET @q18_3 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz18 AND position = 3);
 SET @q18_4 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz18 AND position = 4);
 SET @q18_5 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz18 AND position = 5);
-SET @q18_6 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz18 AND position = 6);
-SET @q18_7 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz18 AND position = 7);
 
 INSERT INTO reading_mcq_options (question_id, option_text, is_correct, position) VALUES
 (@q18_1, '1818 in Maryland', 1, 1),
@@ -1046,15 +892,7 @@ INSERT INTO reading_mcq_options (question_id, option_text, is_correct, position)
 (@q18_5, '1838', 1, 1),
 (@q18_5, '1836', 0, 2),
 (@q18_5, '1841', 0, 3),
-(@q18_5, '1863', 0, 4),
-(@q18_6, 'From a character in a book a friend was reading', 1, 1),
-(@q18_6, 'From his mother''s family', 0, 2),
-(@q18_6, 'From Anna Murray', 0, 3),
-(@q18_6, 'From the Auld family', 0, 4),
-(@q18_7, 'Helped recruit black soldiers to fight for the Union in the Civil War', 1, 1),
-(@q18_7, 'Became president', 0, 2),
-(@q18_7, 'Wrote the Emancipation Proclamation', 0, 3),
-(@q18_7, 'Moved to Massachusetts', 0, 4);
+(@q18_5, '1863', 0, 4);
 
 -- =========================================================
 -- Story 19: What to Do When a Bone Breaks
@@ -1075,16 +913,13 @@ INSERT INTO reading_questions (quiz_id, question_type, question_text, points, po
 (@quiz19, 'mcq', 'What should you NOT do with a protruding bone?', 1.00, 3),
 (@quiz19, 'mcq', 'When will a protruding bone slip back into place?', 1.00, 4),
 (@quiz19, 'mcq', 'What should be used with all fractures, sprains, and dislocations?', 1.00, 5),
-(@quiz19, 'mcq', 'What is a simple method of preventing motion of the bone fragments?', 1.00, 6),
-(@quiz19, 'mcq', 'Which breaks need no splints?', 1.00, 7);
+(@quiz19, 'essay', 'Summarize the main idea or theme of the story in your own words.', 5.00, 6);
 
 SET @q19_1 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz19 AND position = 1);
 SET @q19_2 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz19 AND position = 2);
 SET @q19_3 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz19 AND position = 3);
 SET @q19_4 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz19 AND position = 4);
 SET @q19_5 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz19 AND position = 5);
-SET @q19_6 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz19 AND position = 6);
-SET @q19_7 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz19 AND position = 7);
 
 INSERT INTO reading_mcq_options (question_id, option_text, is_correct, position) VALUES
 (@q19_1, 'Because if the joints bend, the muscles will act against the fractured bone and cause motion', 1, 1),
@@ -1106,15 +941,7 @@ INSERT INTO reading_mcq_options (question_id, option_text, is_correct, position)
 (@q19_5, 'An ice bag', 1, 1),
 (@q19_5, 'A sterile dressing', 0, 2),
 (@q19_5, 'Pillows only', 0, 3),
-(@q19_5, 'Heat', 0, 4),
-(@q19_6, 'Place the limb on pillows', 1, 1),
-(@q19_6, 'Apply an ice bag only', 0, 2),
-(@q19_6, 'Push the bone back', 0, 3),
-(@q19_6, 'Bend the adjacent joints', 0, 4),
-(@q19_7, 'Breaks of the ribs or skull bone', 1, 1),
-(@q19_7, 'Compound fractures', 0, 2),
-(@q19_7, 'All fractures', 0, 3),
-(@q19_7, 'Fractures with protruding bones', 0, 4);
+(@q19_5, 'Heat', 0, 4);
 
 -- =========================================================
 -- Story 20: Wendy's Children
@@ -1135,16 +962,13 @@ INSERT INTO reading_questions (quiz_id, question_type, question_text, points, po
 (@quiz20, 'mcq', 'What organization did Wendy found?', 1.00, 3),
 (@quiz20, 'mcq', 'How many orphanages did Friends for All Children set up in Vietnam?', 1.00, 4),
 (@quiz20, 'mcq', 'What was wrong with Tia when Wendy brought her home?', 1.00, 5),
-(@quiz20, 'mcq', 'What was the capital city the enemy was closing in on during Wendy''s final trip?', 1.00, 6),
-(@quiz20, 'mcq', 'What do Vietnamese last names like Morris, Johnson, or Riley suggest?', 1.00, 7);
+(@quiz20, 'essay', 'Summarize the main idea or theme of the story in your own words.', 5.00, 6);
 
 SET @q20_1 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz20 AND position = 1);
 SET @q20_2 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz20 AND position = 2);
 SET @q20_3 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz20 AND position = 3);
 SET @q20_4 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz20 AND position = 4);
 SET @q20_5 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz20 AND position = 5);
-SET @q20_6 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz20 AND position = 6);
-SET @q20_7 = (SELECT question_id FROM reading_questions WHERE quiz_id = @quiz20 AND position = 7);
 
 INSERT INTO reading_mcq_options (question_id, option_text, is_correct, position) VALUES
 (@q20_1, '1964', 1, 1),
@@ -1166,12 +990,4 @@ INSERT INTO reading_mcq_options (question_id, option_text, is_correct, position)
 (@q20_5, 'She was crippled by polio and could not stand', 1, 1),
 (@q20_5, 'She was malnourished', 0, 2),
 (@q20_5, 'She was scarred by land mines', 0, 3),
-(@q20_5, 'She was an infant', 0, 4),
-(@q20_6, 'Saigon', 1, 1),
-(@q20_6, 'Denver', 0, 2),
-(@q20_6, 'Hanoi', 0, 3),
-(@q20_6, 'Canberra', 0, 4),
-(@q20_7, 'The person may have been adopted by an American family through Wendy''s work', 1, 1),
-(@q20_7, 'The person is from Denver', 0, 2),
-(@q20_7, 'The person knew Wendy Grant', 0, 3),
-(@q20_7, 'The person was in the orphanage', 0, 4);
+(@q20_5, 'She was an infant', 0, 4);

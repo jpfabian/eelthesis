@@ -173,6 +173,8 @@ document.addEventListener('DOMContentLoaded', async function() {
         const categoriesWrap = document.getElementById("pronunciation-category-buttons");
         const lessonsGrid = document.getElementById("lessons-grid");
         const backWrap = document.getElementById("pronunciation-category-back");
+        const quizViewToggle = document.querySelector(".quiz-view-toggle");
+        const builtinLabel = document.querySelector(".quiz-page__builtin-label");
 
         function setActiveCategory(btn) {
             catButtons.forEach(b => b.classList.remove("pronunciation-category-btn--active"));
@@ -186,6 +188,10 @@ document.addEventListener('DOMContentLoaded', async function() {
                 if (categoriesWrap) categoriesWrap.classList.add("hidden");
                 if (backWrap) backWrap.classList.remove("hidden");
                 if (lessonsGrid) lessonsGrid.classList.remove("hidden");
+                // Show grid/list view buttons when category is selected
+                if (quizViewToggle) quizViewToggle.classList.remove("hidden");
+                // Change label to "Built-in quizzes"
+                if (builtinLabel) builtinLabel.textContent = "Built-in quizzes";
                 await loadPronunciationQuizzes(currentUser, difficulty);
             });
         });
@@ -200,6 +206,10 @@ document.addEventListener('DOMContentLoaded', async function() {
             if (categoriesWrap) {
                 categoriesWrap.classList.remove("hidden");
             }
+            // Hide grid/list view buttons when going back to categories
+            if (quizViewToggle) quizViewToggle.classList.add("hidden");
+            // Change label back to "Pronunciation categories"
+            if (builtinLabel) builtinLabel.textContent = "Pronunciation categories";
             catButtons.forEach(b => b.classList.remove("pronunciation-category-btn--active"));
         });
 
@@ -1853,9 +1863,11 @@ async function openStudentPronunciationReviewModal(quizId, quizTitle = '') {
       const expected = escapeHtml(a.correct_pronunciation || "-");
       const audioSrc = a.student_audio ? (a.student_audio.startsWith('/') ? (window.API_BASE || '') + a.student_audio : a.student_audio) : '';
       const score = Math.round(Number(a.pronunciation_score || 0));
-      const badgeClass = score >= 80 ? "quiz-review-badge--correct" : (score >= 60 ? "quiz-review-badge--mid" : "quiz-review-badge--incorrect");
+      const isCorrect = score >= 80;
+      const badgeClass = isCorrect ? "quiz-review-badge--correct" : (score >= 60 ? "quiz-review-badge--mid" : "quiz-review-badge--incorrect");
+      const scoreText = `${score}/100 ${isCorrect ? 'correct' : 'incorrect'}`;
       const targetValue = hideRightAnswer ? "Hidden until you get a perfect score." : expected;
-      return `<div class="quiz-review-item ${score >= 80 ? 'quiz-review-item--correct' : (score < 60 ? 'quiz-review-item--incorrect' : '')}"><div class="quiz-review-item__header"><span class="quiz-review-item__num">Question ${i + 1}</span><span class="quiz-review-badge ${badgeClass}">${score}/100</span></div><div class="quiz-review-item__row"><span class="quiz-review-item__row-label">Word / letter</span><span class="quiz-review-item__row-value">${promptText}</span></div><div class="quiz-review-item__row"><span class="quiz-review-item__row-label">Target pronunciation</span><span class="quiz-review-item__row-value">${targetValue}</span></div><div class="quiz-review-item__row"><span class="quiz-review-item__row-label">Your recording</span><div class="quiz-review-audio-wrap"><audio controls src="${escapeHtml(audioSrc)}" class="quiz-review-audio"></audio></div></div></div>`;
+      return `<div class="quiz-review-item ${isCorrect ? 'quiz-review-item--correct' : (score < 60 ? 'quiz-review-item--incorrect' : '')}"><div class="quiz-review-item__header"><span class="quiz-review-item__num">Question ${i + 1}</span><span class="quiz-review-score">${scoreText}</span></div><div class="quiz-review-item__row"><span class="quiz-review-item__row-label">Word / letter</span><span class="quiz-review-item__row-value">${promptText}</span></div><div class="quiz-review-item__row"><span class="quiz-review-item__row-label">Target pronunciation</span><span class="quiz-review-item__row-value">${targetValue}</span></div><div class="quiz-review-item__row"><span class="quiz-review-item__row-label">Your recording</span><div class="quiz-review-audio-wrap"><audio controls src="${escapeHtml(audioSrc)}" class="quiz-review-audio"></audio></div></div></div>`;
     }).join("");
 
     loadingEl.classList.add("hidden");
@@ -2599,5 +2611,133 @@ async function saveTeacherPronunciationOverrides() {
         showNotification?.("Failed to save adjustments.", "error");
     }
 }
+
+// Vocabulary search functionality
+function escapeHtml(str) {
+    return String(str)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
+}
+
+function renderLessonsVocabularyState(html) {
+    const resultEl = document.getElementById("mobileNavVocabResult");
+    if (resultEl) {
+        resultEl.innerHTML = html;
+    }
+}
+
+async function searchLessonsVocabulary(word) {
+    const q = String(word || "").trim().toLowerCase();
+    if (!q) {
+        renderLessonsVocabularyState("<p class=\"mobile-nav-vocab-empty\">Type a word to search its meaning.</p>");
+        return;
+    }
+    renderLessonsVocabularyState("<p class=\"mobile-nav-vocab-empty\">Searching...</p>");
+    try {
+        const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(q)}`);
+        if (!res.ok) throw new Error("Word not found");
+        const data = await res.json();
+        const entry = Array.isArray(data) ? data[0] : null;
+        if (!entry) throw new Error("Word not found");
+        const phonetic = entry.phonetic || (Array.isArray(entry.phonetics) ? (entry.phonetics.find((p) => p && p.text)?.text || "") : "");
+        const meanings = Array.isArray(entry.meanings) ? entry.meanings.slice(0, 4) : [];
+        if (meanings.length === 0) throw new Error("No meaning available");
+
+        const meaningsHtml = meanings.map((m) => {
+            const defs = Array.isArray(m.definitions) ? m.definitions.slice(0, 2) : [];
+            const topDef = defs[0] || {};
+            return (
+                `<div class="mobile-nav-vocab-entry">` +
+                    `<div class="mobile-nav-vocab-pos">${escapeHtml(m.partOfSpeech || "meaning")}</div>` +
+                    `<p class="mobile-nav-vocab-def">${escapeHtml(topDef.definition || "No definition available.")}</p>` +
+                    (topDef.example ? `<p class="mobile-nav-vocab-example">"${escapeHtml(topDef.example)}"</p>` : "") +
+                `</div>`
+            );
+        }).join("");
+
+        renderLessonsVocabularyState(
+            `<div class="mobile-nav-vocab-header">` +
+                `<div class="mobile-nav-vocab-word">${escapeHtml(entry.word || q)}</div>` +
+                `<button type="button" class="mobile-nav-vocab-speak-btn" onclick="speakVocabularyWord('${escapeHtml(entry.word || q)}')" aria-label="Pronounce word">` +
+                    `<i data-lucide="volume-2" class="size-4"></i>` +
+                `</button>` +
+            `</div>` +
+            (phonetic ? `<div class="mobile-nav-vocab-phonetic">${escapeHtml(phonetic)}</div>` : "") +
+            meaningsHtml
+        );
+        
+        // Initialize Lucide icons for the speaker button
+        if (typeof lucide !== "undefined" && lucide.createIcons) {
+            setTimeout(() => lucide.createIcons(), 0);
+        }
+    } catch (_) {
+        renderLessonsVocabularyState("<p class=\"mobile-nav-vocab-empty\">No result found. Try another word or check Oxford/Cambridge reference links above.</p>");
+    }
+}
+
+function speakVocabularyWord(word) {
+    if (!word) return;
+    
+    // Check if browser supports speech synthesis
+    if (!('speechSynthesis' in window)) {
+        console.warn('Speech synthesis not supported in this browser');
+        return;
+    }
+
+    // Cancel any ongoing speech
+    window.speechSynthesis.cancel();
+
+    // Create new speech utterance
+    const utterance = new SpeechSynthesisUtterance(word);
+    utterance.lang = 'en-US';
+    utterance.rate = 0.8;
+    utterance.pitch = 1;
+    utterance.volume = 1;
+
+    // Speak the word
+    window.speechSynthesis.speak(utterance);
+}
+
+function initLessonsVocabularySearch() {
+    const vocabBtn = document.getElementById("mobileNavVocabBtn");
+    const vocabPanel = document.getElementById("mobileNavVocabPanel");
+    const form = document.getElementById("mobileNavVocabForm");
+    const input = document.getElementById("mobileNavVocabInput");
+    if (!vocabBtn || !vocabPanel || !form || !input) return;
+
+    vocabBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const willOpen = vocabPanel.classList.contains("hidden");
+        vocabPanel.classList.toggle("hidden", !willOpen);
+        vocabBtn.setAttribute("aria-expanded", willOpen ? "true" : "false");
+        if (willOpen) {
+            input.focus();
+        }
+    });
+
+    form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        await searchLessonsVocabulary(input.value);
+    });
+
+    document.addEventListener("click", (e) => {
+        if (!vocabPanel.classList.contains("hidden") && !vocabPanel.contains(e.target) && !vocabBtn.contains(e.target)) {
+            vocabPanel.classList.add("hidden");
+            vocabBtn.setAttribute("aria-expanded", "false");
+        }
+    });
+}
+
+// Initialize vocabulary search when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.location.pathname.includes('pronunciation-lessons.html')) {
+        setTimeout(() => {
+            initLessonsVocabularySearch();
+        }, 100);
+    }
+});
 
     

@@ -13,7 +13,27 @@
 <body class="reading-lessons-page">
     <div class="mobile-nav-header" id="mobileNavHeader" role="banner">
         <button type="button" class="mobile-nav-btn mobile-nav-btn--menu" id="mobileNavMenuBtn" aria-label="Open menu"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+        <div class="mobile-nav-actions-right">
+            <button type="button" class="mobile-nav-btn mobile-nav-vocab-btn" id="mobileNavVocabBtn" aria-label="Open vocabulary search" aria-expanded="false">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+            </button>
+        </div>
         <button type="button" id="eel-theme-header-toggle" class="theme-header-toggle" aria-label="Toggle dark/light mode"><span class="theme-icon" aria-hidden="true">☀</span><span class="theme-label">light</span></button>
+    </div>
+    <div id="mobileNavVocabPanel" class="mobile-nav-vocab-panel hidden" role="region" aria-label="Vocabulary search">
+        <div class="mobile-nav-vocab-panel__header">
+            <strong>Vocabulary</strong>
+        </div>
+        <form id="mobileNavVocabForm" class="mobile-nav-vocab-form">
+            <div class="mobile-nav-vocab-input-wrap">
+                <input id="mobileNavVocabInput" type="search" class="mobile-nav-vocab-input" placeholder="Search a word..." autocomplete="off" />
+                <button type="submit" class="mobile-nav-vocab-submit">Search</button>
+            </div>
+            <p class="mobile-nav-vocab-ref">Reference links: <a href="https://www.oxfordlearnersdictionaries.com/" target="_blank" rel="noopener noreferrer">Oxford</a> · <a href="https://dictionary.cambridge.org/" target="_blank" rel="noopener noreferrer">Cambridge</a></p>
+        </form>
+        <div id="mobileNavVocabResult" class="mobile-nav-vocab-result">
+            <p class="mobile-nav-vocab-empty">Type a word to search its meaning.</p>
+        </div>
     </div>
     <!-- Loading Screen -->
     <div id="loading-screen" class="loading-screen">
@@ -63,7 +83,7 @@
                             <i data-lucide="book-open" class="size-8"></i>
                         </div>
                         <div>
-                            <h1 class="page-header-title">Reading Practice</h1>
+                            <h1 class="page-header-title">Reading and Writing Practice</h1>
                             <p class="page-header-subtitle">Engaging texts with comprehension questions, feedback, and progress.</p>
                         </div>
                     </header>
@@ -71,8 +91,13 @@
                     <div class="card quiz-page__panel">
 
                         <div class="quiz-page__toolbar">
-                            <div class="quiz-page__builtin-label">
-                                Built-in quizzes
+                            <div class="quiz-page__toolbar-left">
+                                <!-- Empty for balance -->
+                            </div>
+                            <div class="quiz-page__toolbar-center">
+                                <div class="quiz-page__builtin-label">
+                                    Built-in quizzes
+                                </div>
                             </div>
                             <div class="quiz-page__toolbar-right">
                                 <div class="quiz-view-toggle" role="group" aria-label="View mode">
