@@ -9893,7 +9893,9 @@ body.auth-page .login-screen .btn.btn-primary:hover {
 }
 
 .scores-subtable-group + .scores-subtable-group {
-  margin-top: 1rem;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
 }
 
 .scores-subtable-head {
