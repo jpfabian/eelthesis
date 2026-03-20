@@ -951,8 +951,8 @@ function speakVocabularyWord(word) {
         // Create new speech utterance
         const utterance = new SpeechSynthesisUtterance(word);
         utterance.lang = 'en-US';
-        utterance.rate = 0.85; // Slightly faster than before but still clear
-        utterance.pitch = 1.1; // Slightly higher pitch for clarity
+        utterance.rate = 1.05; // Matches pronunciation-lessons voice
+        utterance.pitch = 1.75; // Matches pronunciation-lessons voice
         utterance.volume = 1;
 
         const voice = getSharedPronunciationVoice();
@@ -969,6 +969,13 @@ function renderNavVocabState(html) {
     const resultEl = document.getElementById("mobileNavVocabResult");
     if (!resultEl) return;
     resultEl.innerHTML = html;
+}
+
+function clearNavVocabSearch() {
+    const input = document.getElementById("mobileNavVocabInput");
+    const result = document.getElementById("mobileNavVocabResult");
+    if (input) input.value = "";
+    if (result) result.innerHTML = `<p class="mobile-nav-vocab-empty">Type a word to search its meaning.</p>`;
 }
 
 async function searchSharedVocabulary(term) {
@@ -1442,6 +1449,7 @@ function setupSharedClassNotifications(user, currentPageId) {
             if (show) {
                 vocabPanel.classList.add("hidden");
                 vocabBtn.setAttribute("aria-expanded", "false");
+                clearNavVocabSearch();
             }
             if (show && classCtx.classId) {
                 markNavNotificationsRead(classCtx.classId);
@@ -1535,6 +1543,8 @@ function setupSharedClassNotifications(user, currentPageId) {
                 panel.classList.add("hidden");
                 btn.setAttribute("aria-expanded", "false");
                 vocabInput.focus();
+            } else {
+                clearNavVocabSearch();
             }
         });
     }
@@ -1561,6 +1571,7 @@ function setupSharedClassNotifications(user, currentPageId) {
             if (vp && vb && !vp.classList.contains("hidden") && !vp.contains(e.target) && !vb.contains(e.target)) {
                 vp.classList.add("hidden");
                 vb.setAttribute("aria-expanded", "false");
+                clearNavVocabSearch();
             }
         });
     }

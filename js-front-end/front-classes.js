@@ -200,8 +200,8 @@ async function deleteClassById(cls) {
     if (typeof Swal !== "undefined" && Swal && typeof Swal.fire === "function") {
         const result = await Swal.fire({
             icon: "warning",
-            title: "Delete class?",
-            text: `${classLabel} will be permanently deleted.`,
+            title: "Archive class?",
+            text: `${classLabel} will be archived.`,
             showCancelButton: true,
             confirmButtonText: "Archive",
             cancelButtonText: "Cancel",

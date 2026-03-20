@@ -2576,7 +2576,7 @@ async function loadTeacherPronAttempt(attemptId) {
                       <span>Score</span>
                     </div>
                     <div class="teacher-pron-score-wrap">
-                      <input class="teacher-pron-score teacher-pron-score-input" type="number" step="0.1" min="0" max="100" value="${current ?? 0}" />
+                      <input class="teacher-pron-score teacher-pron-score-input" type="number" step="1" min="0" max="100" value="${Math.round(current ?? 0)}" />
                       <span class="teacher-pron-score-suffix">/ 100</span>
                     </div>
                   </div>
