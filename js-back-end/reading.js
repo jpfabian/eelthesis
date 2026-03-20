@@ -563,7 +563,7 @@ router.patch("/api/teacher/reading-quiz-attempts/:attemptId/override", async (re
     for (const a of answers) {
       if (!a || a.answer_id == null) continue;
       const isCorrect = a.is_correct == null ? null : (a.is_correct ? 1 : 0);
-      const pointsEarned = isCorrect != null ? (isCorrect ? 1 : 0) : null;
+      const pointsEarned = a.points_earned != null ? Number(a.points_earned) : (isCorrect != null ? (isCorrect ? 1 : 0) : null);
       await pool.query(
         `UPDATE teacher_reading_quiz_answers
          SET is_correct = COALESCE(?, is_correct), points_earned = COALESCE(?, points_earned)
@@ -1718,11 +1718,11 @@ router.patch("/api/teacher/reading-attempts/:attemptId/override", async (req, re
     // Update question-level answers (MCQ/essay)
     for (const a of answers) {
       if (!a || !a.answer_id) continue;
-      const isCorrect = a.is_correct == null ? null : (a.is_correct ? 1 : 0);
-      // Points are auto-calculated. Teacher only flips correct/wrong.
-      // If is_correct is provided and the question is MCQ, award full question points when correct, else 0.
-      let pointsEarned = null;
-      if (isCorrect != null) {
+      let isCorrect = a.is_correct == null ? null : (a.is_correct ? 1 : 0);
+      let pointsEarned = a.points_earned != null ? Number(a.points_earned) : null;
+
+      // If is_correct is provided but pointsEarned isn't, handle MCQ automatic points
+      if (isCorrect !== null && pointsEarned === null) {
         const [[meta]] = await conn.query(
           `
           SELECT a.question_type, q.points

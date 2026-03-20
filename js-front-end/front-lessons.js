@@ -60,7 +60,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (initialView === "quizzes") switchLessonsView("quizzes");
 
     await initLessonsClassNotifications(user);
-    initLessonsVocabularySearch();
     hideLoading();
   } catch (err) {
     console.error("Error initializing lessons page:", err);
@@ -886,118 +885,6 @@ function writeLessonsNotifStore(key, value) {
   try {
     localStorage.setItem(key, JSON.stringify(value || {}));
   } catch {}
-}
-
-function renderLessonsVocabularyState(html) {
-  const resultEl = document.getElementById("mobileNavVocabResult");
-  if (!resultEl) return;
-  resultEl.innerHTML = html;
-}
-
-async function searchLessonsVocabulary(word) {
-  const q = String(word || "").trim().toLowerCase();
-  if (!q) {
-    renderLessonsVocabularyState("<p class=\"mobile-nav-vocab-empty\">Type a word to search its meaning.</p>");
-    return;
-  }
-  renderLessonsVocabularyState("<p class=\"mobile-nav-vocab-empty\">Searching...</p>");
-  try {
-    const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(q)}`);
-    if (!res.ok) throw new Error("Word not found");
-    const data = await res.json();
-    const entry = Array.isArray(data) ? data[0] : null;
-    if (!entry) throw new Error("Word not found");
-    const phonetic = entry.phonetic || (Array.isArray(entry.phonetics) ? (entry.phonetics.find((p) => p && p.text)?.text || "") : "");
-    const meanings = Array.isArray(entry.meanings) ? entry.meanings.slice(0, 4) : [];
-    if (meanings.length === 0) throw new Error("No meaning available");
-
-    const meaningsHtml = meanings.map((m) => {
-      const defs = Array.isArray(m.definitions) ? m.definitions.slice(0, 2) : [];
-      const topDef = defs[0] || {};
-      return (
-        `<div class="mobile-nav-vocab-entry">` +
-          `<div class="mobile-nav-vocab-pos">${escapeHtml(m.partOfSpeech || "meaning")}</div>` +
-          `<p class="mobile-nav-vocab-def">${escapeHtml(topDef.definition || "No definition available.")}</p>` +
-          (topDef.example ? `<p class="mobile-nav-vocab-example">"${escapeHtml(topDef.example)}"</p>` : "") +
-        `</div>`
-      );
-    }).join("");
-
-    renderLessonsVocabularyState(
-      `<div class="mobile-nav-vocab-header">` +
-        `<div class="mobile-nav-vocab-word">${escapeHtml(entry.word || q)}</div>` +
-        `<button type="button" class="mobile-nav-vocab-speak-btn" onclick="speakVocabularyWord('${escapeHtml(entry.word || q)}')" aria-label="Pronounce word">` +
-          `<i data-lucide="volume-2" class="size-4"></i>` +
-        `</button>` +
-      `</div>` +
-      (phonetic ? `<div class="mobile-nav-vocab-phonetic">${escapeHtml(phonetic)}</div>` : "") +
-      meaningsHtml
-    );
-    
-    // Initialize Lucide icons for the speaker button
-    if (typeof lucide !== "undefined" && lucide.createIcons) {
-      setTimeout(() => lucide.createIcons(), 0);
-    }
-  } catch (_) {
-    renderLessonsVocabularyState("<p class=\"mobile-nav-vocab-empty\">No result found. Try another word or check Oxford/Cambridge reference links above.</p>");
-  }
-}
-
-function speakVocabularyWord(word) {
-  if (!word) return;
-  
-  // Check if browser supports speech synthesis
-  if (!('speechSynthesis' in window)) {
-    console.warn('Speech synthesis not supported in this browser');
-    return;
-  }
-
-  // Cancel any ongoing speech
-  window.speechSynthesis.cancel();
-
-  // Create new speech utterance
-  const utterance = new SpeechSynthesisUtterance(word);
-  utterance.lang = 'en-US';
-  utterance.rate = 0.8;
-  utterance.pitch = 1;
-  utterance.volume = 1;
-
-  // Speak the word
-  window.speechSynthesis.speak(utterance);
-}
-
-function initLessonsVocabularySearch() {
-  const vocabBtn = document.getElementById("mobileNavVocabBtn");
-  const vocabPanel = document.getElementById("mobileNavVocabPanel");
-  const notifPanel = document.getElementById("mobileNavNotificationPanel");
-  const notifBtn = document.getElementById("mobileNavNotificationBtn");
-  const form = document.getElementById("mobileNavVocabForm");
-  const input = document.getElementById("mobileNavVocabInput");
-  if (!vocabBtn || !vocabPanel || !form || !input) return;
-
-  vocabBtn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    const willOpen = vocabPanel.classList.contains("hidden");
-    vocabPanel.classList.toggle("hidden", !willOpen);
-    vocabBtn.setAttribute("aria-expanded", willOpen ? "true" : "false");
-    if (willOpen) {
-      if (notifPanel) notifPanel.classList.add("hidden");
-      if (notifBtn) notifBtn.setAttribute("aria-expanded", "false");
-      input.focus();
-    }
-  });
-
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    await searchLessonsVocabulary(input.value);
-  });
-
-  document.addEventListener("click", (e) => {
-    if (!vocabPanel.classList.contains("hidden") && !vocabPanel.contains(e.target) && !vocabBtn.contains(e.target)) {
-      vocabPanel.classList.add("hidden");
-      vocabBtn.setAttribute("aria-expanded", "false");
-    }
-  });
 }
 
 function buildLessonsNotificationUrl(type, classId) {
@@ -2152,11 +2039,24 @@ function renderLessonTeacherReviewDetail(data, targetEl) {
     const statusLabel = status === "correct" ? "Correct" : (status === "wrong" ? "Wrong" : "Not graded");
     const statusIcon = status === "correct" ? "check-circle" : (status === "wrong" ? "x-circle" : "help-circle");
     const answerId = a.answer_id != null ? a.answer_id : "";
-    const markCorrectRow = answerId
+
+    // Determine if we should show a points input (e.g., for essay questions)
+    // or just the mark correct checkbox.
+    const isEssay = !a.options || a.options.length === 0; // Simplified check for essay/manual
+    const pointsInputRow = isEssay && answerId
+      ? "<div class=\"teacher-reading-points-wrap\" style=\"margin-top:.75rem;\">" +
+        "<span>Points: </span>" +
+        "<input type=\"number\" class=\"teacher-reading-points-input\" value=\"" + Math.round(a.points_earned ?? 0) + "\" min=\"0\" max=\"" + Math.round(a.points ?? 1) + "\" style=\"width:60px; border-radius:4px; border:1px solid var(--border); padding:2px 6px;\" />" +
+        "<span> / " + Math.round(a.points ?? 1) + "</span>" +
+        "</div>"
+      : "";
+
+    const markCorrectRow = !isEssay && answerId
       ? "<div class=\"teacher-reading-mark-wrap\"><label class=\"teacher-reading-mark-label\">" +
         "<input type=\"checkbox\" class=\"teacher-is-correct\" " + (a.is_correct ? "checked" : "") + " />" +
         "<span class=\"teacher-reading-mark-text\">Mark correct</span></label></div>"
       : "";
+
     return (
       "<div class=\"teacher-reading-answer-row teacher-answer-row\" data-answer-id=\"" + escapeHtml(String(answerId)) + "\">" +
       "<div class=\"teacher-reading-answer-hero\">" +
@@ -2175,7 +2075,7 @@ function renderLessonTeacherReviewDetail(data, targetEl) {
       "<span class=\"teacher-answer-chip teacher-answer-chip--" + status + "\" aria-label=\"Answer status\">" +
       "<i data-lucide=\"" + statusIcon + "\" class=\"size-3\"></i>" + statusLabel + "</span></div>" +
       "<div class=\"teacher-reading-student-box teacher-answer-text\" data-status=\"" + status + "\">" + studentText + "</div>" +
-      "</div>" + markCorrectRow + "</div></div>"
+      "</div>" + markCorrectRow + pointsInputRow + "</div></div>"
     );
   }).join("");
 
@@ -2230,6 +2130,16 @@ function renderLessonTeacherReviewDetail(data, targetEl) {
         if (window.lucide && typeof window.lucide.createIcons === "function") window.lucide.createIcons();
       });
     });
+
+    // Capping essay points live
+    detail.querySelectorAll(".teacher-reading-points-input").forEach(function (input) {
+      input.addEventListener("input", function () {
+        const max = Number(input.getAttribute("max") || 100);
+        const val = Number(input.value || 0);
+        if (val > max) input.value = max;
+        if (val < 0) input.value = 0;
+      });
+    });
   }
   if (window.lucide && typeof window.lucide.createIcons === "function") window.lucide.createIcons();
 }
@@ -2242,13 +2152,33 @@ async function saveLessonTeacherReviewOverrides() {
   if (!attemptId) return;
 
   const answers = [];
-  const container = document.getElementById("lesson-teacher-review-answers-detail") || document.getElementById("lesson-teacher-review-detail");
+  const useAnswersModal = isMobileOrTablet();
+  const container = useAnswersModal ? document.getElementById("lesson-teacher-review-answers-detail") : document.getElementById("lesson-teacher-review-detail");
   if (!container) return;
   container.querySelectorAll(".teacher-answer-row").forEach(function (row) {
     const answerId = Number(row.getAttribute("data-answer-id"));
     if (!answerId) return;
     const correctBox = row.querySelector(".teacher-is-correct");
-    answers.push({ answer_id: answerId, is_correct: correctBox ? correctBox.checked : null });
+    const pointsInput = row.querySelector(".teacher-reading-points-input");
+
+    const ansObj = {
+      answer_id: answerId,
+      is_correct: correctBox ? Boolean(correctBox.checked) : null
+    };
+
+    if (pointsInput) {
+      const maxPoints = Number(pointsInput.getAttribute("max") || 100);
+      let earned = Number(pointsInput.value || 0);
+      if (earned > maxPoints) earned = maxPoints;
+      if (earned < 0) earned = 0;
+
+      ansObj.points_earned = earned;
+      if (ansObj.is_correct === null && ansObj.points_earned > 0) {
+        ansObj.is_correct = true;
+      }
+    }
+
+    answers.push(ansObj);
   });
 
   try {

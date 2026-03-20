@@ -879,6 +879,62 @@ async function backfillNavQuizOpenActors(classId, quizList, role, user) {
     if (changed) setNavNotifItems(classId, items);
 }
 
+const SHARED_VOICE_NAMES = [
+    'Google US English',
+    'Microsoft Zira',
+    'Microsoft Aria',
+    'Microsoft Jenny',
+    'Samantha',
+    'Karen',
+    'Victoria',
+    'Google UK English Female',
+    'Microsoft Susan',
+    'Moira',
+    'Tessa'
+];
+
+let _cachedSharedVoice = null;
+
+function getSharedPronunciationVoice() {
+    if (_cachedSharedVoice) return _cachedSharedVoice;
+    if (!window.speechSynthesis) return null;
+    const voices = window.speechSynthesis.getVoices();
+    for (const name of SHARED_VOICE_NAMES) {
+        const v = voices.find((x) => x.name && x.name.includes(name));
+        if (v) {
+            _cachedSharedVoice = v;
+            return v;
+        }
+    }
+    const enUs = voices.filter((v) => v.lang && (v.lang.startsWith('en-US') || v.lang === 'en-US'));
+    const female = enUs.find((v) => v.name && /female|zira|aria|samantha|karen|victoria|susan|jenny|moira|tessa/i.test(v.name));
+    if (female) {
+        _cachedSharedVoice = female;
+        return female;
+    }
+    if (enUs.length > 0) {
+        _cachedSharedVoice = enUs[0];
+        return enUs[0];
+    }
+    return null;
+}
+
+function ensureSharedVoicesLoaded(cb) {
+    if (!window.speechSynthesis) {
+        if (cb) cb();
+        return;
+    }
+    const voices = window.speechSynthesis.getVoices();
+    if (voices.length > 0) {
+        if (cb) cb();
+        return;
+    }
+    window.speechSynthesis.onvoiceschanged = function () {
+        window.speechSynthesis.onvoiceschanged = null;
+        if (cb) cb();
+    };
+}
+
 function speakVocabularyWord(word) {
     if (!word) return;
     
@@ -888,18 +944,25 @@ function speakVocabularyWord(word) {
         return;
     }
 
-    // Cancel any ongoing speech
-    window.speechSynthesis.cancel();
+    function doSpeak() {
+        // Cancel any ongoing speech
+        window.speechSynthesis.cancel();
 
-    // Create new speech utterance
-    const utterance = new SpeechSynthesisUtterance(word);
-    utterance.lang = 'en-US';
-    utterance.rate = 0.8;
-    utterance.pitch = 1;
-    utterance.volume = 1;
+        // Create new speech utterance
+        const utterance = new SpeechSynthesisUtterance(word);
+        utterance.lang = 'en-US';
+        utterance.rate = 0.85; // Slightly faster than before but still clear
+        utterance.pitch = 1.1; // Slightly higher pitch for clarity
+        utterance.volume = 1;
 
-    // Speak the word
-    window.speechSynthesis.speak(utterance);
+        const voice = getSharedPronunciationVoice();
+        if (voice) utterance.voice = voice;
+
+        // Speak the word
+        window.speechSynthesis.speak(utterance);
+    }
+
+    ensureSharedVoicesLoaded(doSpeak);
 }
 
 function renderNavVocabState(html) {
@@ -1342,12 +1405,14 @@ async function pollSharedClassNotifications(user) {
 function setupSharedClassNotifications(user, currentPageId) {
     const enabledPages = new Set([
         "dashboard",
+        "lessons",
         "reading-lessons",
         "pronunciation-lessons",
         "recitation",
         "exam-generator",
         "student-progress",
-        "my-progress"
+        "my-progress",
+        "deleted-archive"
     ]);
     if (!enabledPages.has(currentPageId)) return;
 
