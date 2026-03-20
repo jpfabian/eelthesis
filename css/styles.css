@@ -10043,6 +10043,12 @@ body.auth-page .login-screen .btn.btn-primary:hover {
   background: color-mix(in srgb, var(--secondary) 8%, var(--card));
 }
 
+.scores-table-row-blank td {
+  height: 3.25rem;
+  color: transparent;
+  pointer-events: none;
+}
+
 .scores-table td {
   padding: 0.95rem 1rem;
   font-size: 0.875rem;

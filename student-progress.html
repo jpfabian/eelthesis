@@ -389,6 +389,31 @@
                         const pageState = { ai: 1, reading: 1, pronunciation: 1, recitation: 1 };
                         const tableState = {};
 
+                        function renderTableRows(rowsData, currentPage, pageSize, quizNames) {
+                            const start = (currentPage - 1) * pageSize;
+                            const pageData = rowsData.slice(start, start + pageSize);
+                            let html = pageData.map((row) => `
+                                  <tr>
+                                    <td>${row.studentName}</td>
+                                    ${row.scoreCells}
+                                    <td>${row.totalDisplay}</td>
+                                  </tr>
+                                `).join('');
+                            
+                            if (pageData.length < pageSize) {
+                                for (let i = pageData.length; i < pageSize; i++) {
+                                    html += `
+                                      <tr class="scores-table-row-blank">
+                                        <td>&nbsp;</td>
+                                        ${quizNames.map(() => `<td>&nbsp;</td>`).join('')}
+                                        <td>&nbsp;</td>
+                                      </tr>
+                                    `;
+                                }
+                            }
+                            return html;
+                        }
+
                         function getQuizNamesByType(typeKey) {
                             const orderMap = new Map();
                             data.forEach((s) => {
@@ -584,16 +609,7 @@
                             const currentPage = Math.min(pageState[typeKey] || 1, totalPages);
                             pageState[typeKey] = currentPage;
 
-                            const pageRows = rowsData
-                                .slice((currentPage - 1) * pageSize, currentPage * pageSize)
-                                .map((row) => `
-                                  <tr>
-                                    <td>${row.studentName}</td>
-                                    ${row.scoreCells}
-                                    <td>${row.totalDisplay}</td>
-                                  </tr>
-                                `)
-                                .join('');
+                            const pageRows = renderTableRows(rowsData, currentPage, pageSize, quizNames);
 
                             return `
                               <section class="scores-subtable-group">
@@ -642,16 +658,7 @@
                             const currentPage = Math.max(1, Math.min(pageState[typeKey] || 1, totalPages));
                             pageState[typeKey] = currentPage;
 
-                            const pageRowsHtml = state.rowsData
-                                .slice((currentPage - 1) * pageSize, currentPage * pageSize)
-                                .map((row) => `
-                                  <tr>
-                                    <td>${row.studentName}</td>
-                                    ${row.scoreCells}
-                                    <td>${row.totalDisplay}</td>
-                                  </tr>
-                                `)
-                                .join('');
+                            const pageRowsHtml = renderTableRows(state.rowsData, currentPage, pageSize, state.quizNames);
 
                             tbody.innerHTML = pageRowsHtml;
                             pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
