@@ -10094,6 +10094,14 @@ body.auth-page .login-screen .btn.btn-primary:hover {
 }
 
 @media (max-width: 640px) {
+  .lesson-presentation-actions .btn-label {
+    display: none;
+  }
+  .lesson-presentation-actions .btn {
+    padding: 0.5rem !important;
+    min-width: 2.5rem;
+    justify-content: center;
+  }
   .scores-table-pager {
     justify-content: center;
     flex-wrap: nowrap;

@@ -224,6 +224,7 @@
         lesson_title: (lesson && lesson.lesson_title) ?? "",
         subject_name: (subject && subject.subject_name) ?? "",
         regenerate: !!regenerate,
+        always_5_slides: !!regenerate,
       }),
     });
     const data = await res.json().catch(() => ({}));
@@ -276,6 +277,17 @@
       }
       if (node.nodeType === Node.ELEMENT_NODE && node.tagName === "H3") {
         const headingText = String(node.textContent || "").trim().toLowerCase();
+        const isAccentH2 = /example scenario|quick examples|key takeaways/.test(headingText);
+        if (isAccentH2) {
+          const h2 = document.createElement("h2");
+          h2.innerHTML = node.innerHTML;
+          if (/example|scenario/.test(headingText)) h2.classList.add("lesson-topic-accent-heading", "lesson-topic-accent-heading--scenario");
+          if (/takeaway|summary|quick examples/.test(headingText)) h2.classList.add("lesson-topic-accent-heading", "lesson-topic-accent-heading--takeaway");
+          const created = createSlide(h2);
+          slide = created.article;
+          slideBody = created.body;
+          return;
+        }
         if (/example|scenario/.test(headingText)) node.classList.add("lesson-topic-accent-heading", "lesson-topic-accent-heading--scenario");
         if (/takeaway|summary|quick examples/.test(headingText)) node.classList.add("lesson-topic-accent-heading", "lesson-topic-accent-heading--takeaway");
       }
@@ -295,9 +307,11 @@
     const loadingEl = document.getElementById("master-admin-topic-loading");
     const contentEl = document.getElementById("master-admin-topic-content");
     const regenerateBtn = document.getElementById("master-admin-topic-regenerate-btn");
+    const downloadBtn = document.getElementById("master-admin-topic-download-ppt-btn");
     const topicTitle = topic?.topic_title ?? "Topic";
     if (titleEl) titleEl.textContent = topicTitle;
     if (regenerateBtn) regenerateBtn.classList.add("hidden");
+    if (downloadBtn) downloadBtn.classList.add("hidden");
     if (loadingEl) loadingEl.style.display = "flex";
     if (contentEl) {
       contentEl.classList.add("hidden");
@@ -327,6 +341,7 @@
         enhanceLessonTopicPresentation(contentEl);
         contentEl.classList.remove("hidden");
         if (regenerateBtn) regenerateBtn.classList.remove("hidden");
+        if (downloadBtn) downloadBtn.classList.remove("hidden");
         if (window.lucide && typeof window.lucide.createIcons === "function") window.lucide.createIcons();
       }
     } catch (err) {
@@ -350,8 +365,10 @@
     const loadingEl = document.getElementById("master-admin-topic-loading");
     const contentEl = document.getElementById("master-admin-topic-content");
     const regenerateBtn = document.getElementById("master-admin-topic-regenerate-btn");
+    const downloadBtn = document.getElementById("master-admin-topic-download-ppt-btn");
     if (!__masterAdminCurrentTopic) return;
     if (regenerateBtn) regenerateBtn.disabled = true;
+    if (downloadBtn) downloadBtn.classList.add("hidden");
     if (loadingEl) loadingEl.style.display = "flex";
     if (contentEl) contentEl.classList.add("hidden");
     try {
@@ -367,6 +384,7 @@
         delete contentEl.dataset.enhancedPresentation;
         enhanceLessonTopicPresentation(contentEl);
         contentEl.classList.remove("hidden");
+        if (downloadBtn) downloadBtn.classList.remove("hidden");
       }
     } catch (err) {
       if (loadingEl) loadingEl.style.display = "none";
@@ -376,6 +394,240 @@
       if (regenerateBtn) regenerateBtn.disabled = false;
       if (window.lucide && typeof window.lucide.createIcons === "function") window.lucide.createIcons();
     }
+  }
+
+  function downloadMasterAdminLessonAsPpt() {
+    const contentEl = document.getElementById("master-admin-topic-content");
+    const titleEl = document.getElementById("master-admin-topic-title");
+    if (!contentEl || !contentEl.innerHTML.trim()) return;
+
+    if (typeof PptxGenJS === "undefined") {
+      Swal.fire({ icon: "error", title: "Error", text: "Download library not loaded. Please refresh the page." });
+      return;
+    }
+
+    const topicTitle = (titleEl?.textContent || "Topic").trim();
+    const pres = new PptxGenJS();
+
+    pres.author = "EEL - Enhancing English Literacy";
+    pres.title = topicTitle;
+    pres.layout = "LAYOUT_16x9";
+
+    const VIOLET = "8b5cf6";
+    const VIOLET_PALE = "ede9fe";
+    const GREEN = "22c55e";
+    const GREEN_LIGHT = "4ade80";
+    const GREEN_PALE = "dcfce7";
+    const SLIDE_BG = "faf5ff";
+    const TEXT_DARK = "2d2d33";
+    const TEXT_MUTED = "6b7280";
+
+    const nodes = contentEl.querySelectorAll("h2, h3, p, ul, .lesson-topic-slide__body");
+    let slideContent = [];
+    let currentChars = 0;
+    const CHAR_LIMIT_PER_SLIDE = 600; 
+    const SLIDE_HEIGHT = 5.625; 
+
+    function addContentSlide(title, content) {
+      const slide = pres.addSlide();
+      slide.background = { color: SLIDE_BG };
+
+      if (title) {
+        slide.addShape(pres.ShapeType.rect, {
+          x: 0, y: 0, w: 0.12, h: SLIDE_HEIGHT,
+          fill: { color: VIOLET },
+        });
+        slide.addShape(pres.ShapeType.rect, {
+          x: 0.12, y: 0, w: 9.88, h: 0.8,
+          fill: { color: VIOLET_PALE, transparency: 50 },
+        });
+        slide.addText(title, {
+          x: 0.5, y: 0.15, w: 8.7, h: 0.5,
+          fontSize: 20, bold: true, color: VIOLET,
+        });
+      }
+
+      if (content && content.length > 0) {
+        slide.addText(content, {
+          x: 0.5, y: title ? 1.0 : 0.4, w: 8.7, h: title ? 4.0 : 4.6,
+          fontSize: 12, color: TEXT_DARK, valign: "top",
+          lineSpacing: 18,
+        });
+      }
+
+      slide.addShape(pres.ShapeType.rect, {
+        x: 0, y: 5.225, w: 5, h: 0.4,
+        fill: { color: VIOLET },
+      });
+      slide.addShape(pres.ShapeType.rect, {
+        x: 5, y: 5.225, w: 5, h: 0.4,
+        fill: { color: GREEN },
+      });
+      slide.addText("EEL", {
+        x: 8.8, y: 5.3, w: 0.8, h: 0.25,
+        fontSize: 10, bold: true, color: "ffffff",
+      });
+    }
+
+    function flushSlide(title) {
+      if (slideContent.length === 0 && !title) return;
+      addContentSlide(title, slideContent);
+      slideContent = [];
+      currentChars = 0;
+    }
+
+    function addToSlide(text, options, extraChars = 0) {
+      const len = text.length;
+      if (currentChars + len + extraChars > CHAR_LIMIT_PER_SLIDE && slideContent.length > 0) {
+        flushSlide(currentH2);
+      }
+      slideContent.push({ text: text, options: options });
+      currentChars += len;
+    }
+
+    let hasTitleSlide = false;
+    let currentH2 = "";
+
+    nodes.forEach((el, idx) => {
+      const tag = el.tagName?.toUpperCase();
+      const text = el.textContent?.trim() || "";
+
+      if (["H3", "P", "UL"].includes(tag) && el.parentElement?.classList.contains("lesson-topic-slide__body")) {
+        return;
+      }
+
+      if (tag === "H2") {
+        flushSlide(currentH2);
+        currentH2 = text;
+        if (!hasTitleSlide) {
+          const titleSlide = pres.addSlide();
+          titleSlide.background = { color: VIOLET };
+          titleSlide.addShape(pres.ShapeType.rect, {
+            x: 0, y: 4.8, w: 10, h: 0.4,
+            fill: { color: GREEN },
+          });
+          titleSlide.addShape(pres.ShapeType.rect, {
+            x: 0.6, y: 0.8, w: 8.8, h: 2.0,
+            fill: { color: "ffffff", transparency: 15 },
+          });
+          titleSlide.addText(topicTitle, {
+            x: 0.8, y: 1.0, w: 8.4, h: 1.2,
+            fontSize: 32, bold: true, align: "center", color: VIOLET,
+          });
+          titleSlide.addText("English Enhancement Learning", {
+            x: 0.8, y: 2.2, w: 8.4, h: 0.4,
+            fontSize: 16, align: "center", color: GREEN, bold: true,
+          });
+          titleSlide.addShape(pres.ShapeType.rect, {
+            x: 4.2, y: 2.8, w: 1.6, h: 0.08,
+            fill: { color: GREEN },
+          });
+          hasTitleSlide = true;
+        }
+      } else if (tag === "H3") {
+        const h3Text = text.toLowerCase();
+        const isAccentH2 = /example scenario|quick examples|key takeaways/.test(h3Text);
+
+        if (isAccentH2) {
+          flushSlide(currentH2);
+          currentH2 = text;
+          return;
+        }
+
+        if (slideContent.length > 0) {
+          flushSlide(currentH2);
+          currentH2 = "";
+        }
+        let h3Color = VIOLET;
+        if (el.classList.contains("lesson-topic-accent-heading--scenario") || el.classList.contains("lesson-topic-accent-heading--takeaway")) {
+          h3Color = GREEN;
+        }
+
+        let nextPTextLen = 0;
+        for (let i = idx + 1; i < nodes.length; i++) {
+          const next = nodes[i];
+          const nextTag = next.tagName?.toUpperCase();
+          if (nextTag === "P") {
+            nextPTextLen = (next.textContent || "").trim().length;
+            break;
+          } else if (nextTag === "H3" || nextTag === "H2") {
+            break;
+          }
+        }
+        addToSlide(text, { bullet: false, bold: true, fontSize: 14, color: h3Color, breakLine: true }, nextPTextLen);
+      } else if (tag === "P") {
+        addToSlide(text, { bullet: false, color: TEXT_DARK, breakLine: true });
+      } else if (tag === "UL") {
+        el.querySelectorAll("li").forEach((li) => {
+          const liText = li.textContent?.trim();
+          if (liText) addToSlide(liText, { bullet: { code: "2022", color: VIOLET }, color: TEXT_DARK, breakLine: true });
+        });
+      } else if (tag === "DIV" && el.classList.contains("lesson-topic-slide__body")) {
+        const children = Array.from(el.childNodes);
+        children.forEach((child, cidx) => {
+          if (child.nodeType === Node.TEXT_NODE) {
+            const t = child.textContent?.trim();
+            if (t) addToSlide(t, { bullet: false, color: TEXT_DARK, breakLine: true });
+          } else if (child.nodeType === Node.ELEMENT_NODE) {
+            const ctag = child.tagName?.toUpperCase();
+            const ctext = child.textContent?.trim() || "";
+            if (ctext) {
+              if (ctag === "H3") {
+                const h3Text = ctext.toLowerCase();
+                const isAccentH2 = /example scenario|quick examples|key takeaways/.test(h3Text);
+
+                if (isAccentH2) {
+                  flushSlide(currentH2);
+                  currentH2 = ctext;
+                  return;
+                }
+
+                let h3Color = VIOLET;
+                if (child.classList.contains("lesson-topic-accent-heading--scenario") || child.classList.contains("lesson-topic-accent-heading--takeaway")) h3Color = GREEN;
+
+                let nextCPTextLen = 0;
+                for (let j = cidx + 1; j < children.length; j++) {
+                  const nchild = children[j];
+                  if (nchild.nodeType === Node.ELEMENT_NODE) {
+                    const ntag = nchild.tagName?.toUpperCase();
+                    if (ntag === "P") {
+                      nextCPTextLen = (nchild.textContent || "").trim().length;
+                      break;
+                    } else if (ntag === "H3") break;
+                  }
+                }
+                addToSlide(ctext, { bullet: false, bold: true, fontSize: 14, color: h3Color, breakLine: true }, nextCPTextLen);
+              } else if (ctag === "P") {
+                addToSlide(ctext, { bullet: false, color: TEXT_DARK, breakLine: true });
+              } else if (ctag === "UL") {
+                child.querySelectorAll("li").forEach((li) => {
+                  const liText = li.textContent?.trim();
+                  if (liText) addToSlide(liText, { bullet: { code: "2022", color: VIOLET }, color: TEXT_DARK, breakLine: true });
+                });
+              } else {
+                addToSlide(ctext, { bullet: false, color: TEXT_DARK, breakLine: true });
+              }
+            }
+          }
+        });
+      }
+    });
+
+    flushSlide(currentH2);
+
+    if (pres.slides.length === 0) {
+      const slide = pres.addSlide();
+      slide.background = { color: SLIDE_BG };
+      slide.addText(topicTitle, {
+        x: 0.5, y: 1.5, w: 9, h: 1, fontSize: 28, bold: true, align: "center", color: VIOLET,
+      });
+      slide.addText(contentEl.textContent?.trim().slice(0, 500) || "No content", {
+        x: 0.5, y: 2.8, w: 9, h: 3.5, fontSize: 14, color: TEXT_DARK,
+      });
+    }
+
+    const safeName = topicTitle.replace(/[<>:"/\\|?*]/g, "_").slice(0, 80);
+    pres.writeFile({ fileName: `${safeName}.pptx` });
   }
 
   function getTopicPdfUrl(pdfPath) {

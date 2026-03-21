@@ -423,9 +423,13 @@
           </div>
         </div>
         <div class="lesson-presentation-actions">
-          <button type="button" id="master-admin-topic-regenerate-btn" class="btn btn-outline btn-sm lesson-download-btn hidden" aria-label="Regenerate content" title="Generate new content">
+          <button type="button" id="master-admin-topic-regenerate-btn" class="btn btn-outline btn-sm lesson-download-btn hidden" onclick="regenerateMasterAdminTopicContent()" aria-label="Regenerate content" title="Generate new content">
             <i data-lucide="refresh-cw" class="size-4"></i>
-            Regenerate
+            <span class="btn-label">Regenerate</span>
+          </button>
+          <button type="button" id="master-admin-topic-download-ppt-btn" class="btn btn-outline btn-sm lesson-download-btn hidden" onclick="downloadMasterAdminLessonAsPpt()" aria-label="Download presentation">
+            <i data-lucide="download" class="size-4"></i>
+            <span class="btn-label">Download</span>
           </button>
           <button type="button" class="close-btn lesson-presentation-close" id="master-admin-topic-close-btn" aria-label="Close">
             <i data-lucide="x" class="size-5"></i>
