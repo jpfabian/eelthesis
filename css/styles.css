@@ -10084,6 +10084,10 @@ body.auth-page .login-screen .btn.btn-primary:hover {
   padding-top: 0.1rem;
 }
 
+.scores-table-pager .pager-icon {
+  display: none;
+}
+
 @media (max-width: 640px) {
   .scores-table-pager {
     justify-content: center;
@@ -10103,33 +10107,25 @@ body.auth-page .login-screen .btn.btn-primary:hover {
     justify-content: center;
     border-radius: 999px !important;
   }
+  .scores-table-pager .pager-text {
+    display: none;
+  }
+  .scores-table-pager .pager-icon {
+    display: inline;
+    font-size: 1.1rem;
+    font-weight: 800;
+  }
   .scores-page-info {
     width: auto;
     order: 0;
     margin-bottom: 0;
     min-width: auto !important;
-    font-size: 0.4rem !important;
-    padding: 0 0.08rem !important;
+    font-size: 0.75rem !important;
+    padding: 0 1rem !important;
     height: 3rem;
     display: flex;
     align-items: center;
     justify-content: center;
-  }
-  .scores-page-prev {
-    font-size: 0 !important;
-  }
-  .scores-page-prev::before {
-    content: '<';
-    font-size: 0.9rem;
-    font-weight: 800;
-  }
-  .scores-page-next {
-    font-size: 0 !important;
-  }
-  .scores-page-next::before {
-    content: '>';
-    font-size: 0.9rem;
-    font-weight: 800;
   }
 }
 
@@ -13388,7 +13384,7 @@ body.pronunciation-lessons-page .quiz-page[data-view="list"] #lessons-grid {
   #pronunciation-category-back-btn {
     font-size: 0 !important;
     width: 3rem !important;
-    height: 1rem !important;
+    height: 3rem !important;
     min-width: 0 !important;
     padding: 0 !important;
     display: flex !important;
@@ -14262,6 +14258,44 @@ body.take-quiz-page .take-quiz-header1 {
   gap: 0.5rem;
 }
 
+/* Responsive Quiz Headers */
+@media (max-width: 768px) {
+  body.take-quiz-page .take-quiz-header,
+  body.take-quiz-page .take-quiz-header1 {
+    padding: 0.75rem 1rem;
+    grid-template-columns: 1fr auto;
+    gap: 1rem;
+  }
+  body.take-quiz-page .take-quiz-title {
+    font-size: 1.25rem;
+  }
+}
+
+@media (max-width: 480px) {
+  body.take-quiz-page .take-quiz-header,
+  body.take-quiz-page .take-quiz-header1 {
+    padding: 1rem 3.75rem 1rem 0;
+    display: flex;
+    flex-direction: column;
+    text-align: center;
+    gap: 0.75rem;
+  }
+  body.take-quiz-page .take-quiz-title {
+    font-size: 1.15rem;
+    justify-self: center;
+  }
+  body.take-quiz-page .take-quiz-timer-center {
+    flex-direction: row;
+    gap: 0.5rem;
+  }
+  body.take-quiz-page .take-quiz-timer-label {
+    font-size: 0.7rem;
+  }
+  body.take-quiz-page .take-quiz-countdown {
+    font-size: 1.1rem;
+  }
+}
+
 body.take-quiz-page .take-quiz-title {
   margin: 0;
   font-size: 1.5rem;
@@ -14444,6 +14478,11 @@ body.take-quiz-page .take-quiz-questions .mt-4.p-4 .grid > div {
   background: transparent !important;
   box-shadow: none !important;
   font-style: normal;
+  /* Prevent copy-pasting by disabling text selection */
+  user-select: none;
+  -webkit-user-select: none; /* Safari */
+  -moz-user-select: none; /* Firefox */
+  -ms-user-select: none; /* IE10+ */
 }
 
 /* Remove duplicate book icon from generic .quiz-passage::before */

@@ -142,6 +142,17 @@
                                 <span id="enrolled-count" class="students-section-count">0</span>
                             </header>
                             <div id="enrolled-students" class="sp-student-list students-section-list"></div>
+                            <div id="enrolled-pager" class="scores-table-pager" style="margin-top: 1rem; display: none;">
+                                <button type="button" class="btn btn-outline btn-sm" id="enrolled-prev-btn">
+                                    <span class="pager-text">Previous</span>
+                                    <span class="pager-icon">&lt;</span>
+                                </button>
+                                <span id="enrolled-page-info" class="scores-page-info">Page 1 of 1</span>
+                                <button type="button" class="btn btn-outline btn-sm" id="enrolled-next-btn">
+                                    <span class="pager-text">Next</span>
+                                    <span class="pager-icon">&gt;</span>
+                                </button>
+                            </div>
                             <div id="enrolled-empty" class="students-section-empty">
                                 <i data-lucide="user-plus" class="students-section-empty-icon"></i>
                                 <p class="students-section-empty-text">No students have joined yet</p>
@@ -635,9 +646,15 @@
                                   </table>
                                 </div>
                                 <div class="scores-table-pager" data-type="${typeKey}">
-                                  <button type="button" class="btn btn-outline btn-sm scores-page-prev" data-type="${typeKey}" ${currentPage <= 1 ? 'disabled' : ''}>Previous</button>
+                                  <button type="button" class="btn btn-outline btn-sm scores-page-prev" data-type="${typeKey}" ${currentPage <= 1 ? 'disabled' : ''}>
+                                    <span class="pager-text">Previous</span>
+                                    <span class="pager-icon">&lt;</span>
+                                  </button>
                                   <span class="scores-page-info">Page ${currentPage} of ${totalPages}</span>
-                                  <button type="button" class="btn btn-outline btn-sm scores-page-next" data-type="${typeKey}" ${currentPage >= totalPages ? 'disabled' : ''}>Next</button>
+                                  <button type="button" class="btn btn-outline btn-sm scores-page-next" data-type="${typeKey}" ${currentPage >= totalPages ? 'disabled' : ''}>
+                                    <span class="pager-text">Next</span>
+                                    <span class="pager-icon">&gt;</span>
+                                  </button>
                                 </div>
                               </section>
                             `;
@@ -1099,56 +1116,43 @@
     });
     __themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 
-    async function loadStudents(classId) {
-        try {
-            const res = await fetch(`${API_BASE}/class/${classId}/students`);
-            if (!res.ok) throw new Error('Failed to fetch students');
-            const data = await res.json();
+    async function loadCompletionRate(classId) {
+        // ... (implementation if needed, but I'm looking for where loadStudents is)
+    }
 
-            const enrolledContainer = document.getElementById('enrolled-students');
-            const pendingContainer = document.getElementById('pending-students');
-            const pendingSection = document.querySelector('.students-section-pending');
-            const pendingDivider = document.querySelector('.students-section-divider');
-            const pendingEmpty = document.getElementById('pending-empty');
-            enrolledContainer.innerHTML = '';
-            pendingContainer.innerHTML = '';
+    // Pagination state for enrolled students
+    let enrolledStudentsData = [];
+    let enrolledCurrentPage = 1;
+    const enrolledPageSize = 10;
 
-            const enrolled = data.filter(s => s.status === 'accepted');
-            const pending = data.filter(s => s.status === 'pending');
+    function renderEnrolledPage(page) {
+        const container = document.getElementById('enrolled-students');
+        const pager = document.getElementById('enrolled-pager');
+        const pageInfo = document.getElementById('enrolled-page-info');
+        const prevBtn = document.getElementById('enrolled-prev-btn');
+        const nextBtn = document.getElementById('enrolled-next-btn');
 
-            document.getElementById('enrolled-count').textContent = `(${enrolled.length})`;
-            document.getElementById('pending-count').textContent = `(${pending.length})`;
-            document.getElementById('student-count').textContent = enrolled.length;
+        if (!container) return;
+        container.innerHTML = '';
 
-            if (pendingSection) pendingSection.classList.toggle('hidden', pending.length === 0);
-            if (pendingDivider) pendingDivider.classList.toggle('hidden', pending.length === 0);
-            if (pendingEmpty) pendingEmpty.classList.toggle('hidden', pending.length > 0);
+        const totalPages = Math.max(1, Math.ceil(enrolledStudentsData.length / enrolledPageSize));
+        enrolledCurrentPage = Math.max(1, Math.min(page, totalPages));
 
-            function capitalizeName(name) {
-                if (!name) return "";
-                return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
-            }
+        const start = (enrolledCurrentPage - 1) * enrolledPageSize;
+        const pageData = enrolledStudentsData.slice(start, start + enrolledPageSize);
 
-            function getInitials(fname, lname) {
-                const f = String(fname || "").trim();
-                const l = String(lname || "").trim();
-                const a = (f ? f[0] : "") + (l ? l[0] : "");
-                return (a || "U").toUpperCase();
-            }
+        if (enrolledStudentsData.length > 0) {
+            if (pager) pager.style.display = 'flex';
+            if (pageInfo) pageInfo.textContent = `Page ${enrolledCurrentPage} of ${totalPages}`;
+            if (prevBtn) prevBtn.disabled = enrolledCurrentPage <= 1;
+            if (nextBtn) nextBtn.disabled = enrolledCurrentPage >= totalPages;
 
-            function avatarHtmlForStudent(s, initials) {
-                const url = String(s.avatar_url || '').trim();
-                if (!url) return `<div class="sp-student-avatar" aria-hidden="true">${escapeHtml(initials)}</div>`;
-                const cacheBusted = url + (url.includes('?') ? '&' : '?') + 'v=' + encodeURIComponent(String(s.joined_at || Date.now()));
-                return `<div class="sp-student-avatar sp-student-avatar--img" aria-hidden="true"><img src="${escapeHtml(cacheBusted)}" alt="" loading="lazy" /></div>`;
-            }
-
-            enrolled.forEach(s => {
+            pageData.forEach(s => {
                 const fname = capitalizeName(s.student_fname);
                 const lname = capitalizeName(s.student_lname);
                 const name = `${fname} ${lname}`.trim();
                 const initials = getInitials(fname, lname);
-                enrolledContainer.innerHTML += `
+                container.innerHTML += `
                     <div class="sp-student-row">
                         <div class="sp-student-left">
                             ${avatarHtmlForStudent(s, initials)}
@@ -1169,38 +1173,92 @@
                         </div>
                     </div>`;
             });
+            if (typeof lucide !== 'undefined') lucide.createIcons({ icons: lucide.icons });
+        } else {
+            if (pager) pager.style.display = 'none';
+        }
+    }
+
+    function capitalizeName(name) {
+        if (!name) return "";
+        return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+    }
+
+    function getInitials(fname, lname) {
+        const f = String(fname || "").trim();
+        const l = String(lname || "").trim();
+        const a = (f ? f[0] : "") + (l ? l[0] : "");
+        return (a || "U").toUpperCase();
+    }
+
+    function avatarHtmlForStudent(s, initials) {
+        const url = String(s.avatar_url || '').trim();
+        if (!url) return `<div class="sp-student-avatar" aria-hidden="true">${escapeHtml(initials)}</div>`;
+        const cacheBusted = url + (url.includes('?') ? '&' : '?') + 'v=' + encodeURIComponent(String(s.joined_at || Date.now()));
+        return `<div class="sp-student-avatar sp-student-avatar--img" aria-hidden="true"><img src="${escapeHtml(cacheBusted)}" alt="" loading="lazy" /></div>`;
+    }
+
+    async function loadStudents(classId) {
+        try {
+            const res = await fetch(`${API_BASE}/class/${classId}/students`);
+            if (!res.ok) throw new Error('Failed to fetch students');
+            const data = await res.json();
+
+            const pendingContainer = document.getElementById('pending-students');
+            const pendingSection = document.querySelector('.students-section-pending');
+            const pendingDivider = document.querySelector('.students-section-divider');
+            const pendingEmpty = document.getElementById('pending-empty');
+            
+            if (pendingContainer) pendingContainer.innerHTML = '';
+
+            const enrolled = data.filter(s => s.status === 'accepted');
+            const pending = data.filter(s => s.status === 'pending');
+
+            document.getElementById('enrolled-count').textContent = `(${enrolled.length})`;
+            document.getElementById('pending-count').textContent = `(${pending.length})`;
+            document.getElementById('student-count').textContent = enrolled.length;
+
+            if (pendingSection) pendingSection.classList.toggle('hidden', pending.length === 0);
+            if (pendingDivider) pendingDivider.classList.toggle('hidden', pending.length === 0);
+            if (pendingEmpty) pendingEmpty.classList.toggle('hidden', pending.length > 0);
+
+            // Set enrolled students data and render first page
+            enrolledStudentsData = enrolled;
+            renderEnrolledPage(1);
 
             pending.forEach(s => {
                 const fname = capitalizeName(s.student_fname);
                 const lname = capitalizeName(s.student_lname);
                 const name = `${fname} ${lname}`.trim();
                 const initials = getInitials(fname, lname);
-                pendingContainer.innerHTML += `
-                    <div class="sp-student-row">
-                        <div class="sp-student-left">
-                            ${avatarHtmlForStudent(s, initials)}
-                            <div class="sp-student-meta">
-                                <div class="sp-student-name">${escapeHtml(name)}</div>
-                                <div class="sp-student-email">${escapeHtml(maskEmail(s.email || ""))}</div>
+                if (pendingContainer) {
+                    pendingContainer.innerHTML += `
+                        <div class="sp-student-row">
+                            <div class="sp-student-left">
+                                ${avatarHtmlForStudent(s, initials)}
+                                <div class="sp-student-meta">
+                                    <div class="sp-student-name">${escapeHtml(name)}</div>
+                                    <div class="sp-student-email">${escapeHtml(maskEmail(s.email || ""))}</div>
+                                </div>
                             </div>
-                        </div>
-                        <div class="sp-student-right">
-                            <span class="sp-badge sp-badge--pending">
-                                <i data-lucide="clock" class="size-4"></i>
-                                Pending
-                            </span>
-                            <div class="sp-pending-actions">
-                                <button type="button" title="Accept student" aria-label="Accept student" onclick="updateStudentStatus('${s.id}', 'accepted')" class="sp-btn-accept">
-                                    <i data-lucide="check" class="sp-btn-icon" aria-hidden="true"></i>
-                                    <span class="sp-btn-label">Accept</span>
-                                </button>
-                                <button type="button" title="Decline student" aria-label="Decline student" onclick="updateStudentStatus('${s.id}', 'rejected')" class="sp-btn-reject">
-                                    <i data-lucide="x" class="sp-btn-icon" aria-hidden="true"></i>
-                                    <span class="sp-btn-label">Decline</span>
-                                </button>
+                            <div class="sp-student-right">
+                                <span class="sp-badge sp-badge--pending">
+                                    <i data-lucide="clock" class="size-4"></i>
+                                    Pending
+                                </span>
+                                <div class="sp-pending-actions">
+                                    <button type="button" title="Accept student" aria-label="Accept student" onclick="updateStudentStatus('${s.id}', 'accepted')" class="sp-btn-accept">
+                                        <i data-lucide="check" class="sp-btn-icon" aria-hidden="true"></i>
+                                        <span class="sp-btn-label">Accept</span>
+                                    </button>
+                                    <button type="button" title="Decline student" aria-label="Decline student" onclick="updateStudentStatus('${s.id}', 'rejected')" class="sp-btn-reject">
+                                        <i data-lucide="x" class="sp-btn-icon" aria-hidden="true"></i>
+                                        <span class="sp-btn-label">Decline</span>
+                                    </button>
+                                </div>
                             </div>
-                        </div>
-                    </div>`;
+                        </div>`;
+                }
             });
 
 
@@ -1209,6 +1267,24 @@
             console.error('Error loading students:', err);
         }
     }
+
+    // Add event listeners for enrolled students pager
+    document.addEventListener('DOMContentLoaded', () => {
+        const prevBtn = document.getElementById('enrolled-prev-btn');
+        const nextBtn = document.getElementById('enrolled-next-btn');
+        
+        if (prevBtn) {
+            prevBtn.addEventListener('click', () => {
+                renderEnrolledPage(enrolledCurrentPage - 1);
+            });
+        }
+        
+        if (nextBtn) {
+            nextBtn.addEventListener('click', () => {
+                renderEnrolledPage(enrolledCurrentPage + 1);
+            });
+        }
+    });
 
     async function updateStudentStatus(studentId, status) {
         try {

@@ -24,6 +24,29 @@
       "</div>";
   }
 
+  /**
+   * Prevents student from copying/pasting or right-clicking the passage
+   */
+  function securePassage(el) {
+    if (!el) return;
+    el.addEventListener('copy', function(e) {
+      e.preventDefault();
+      return false;
+    });
+    el.addEventListener('contextmenu', function(e) {
+      e.preventDefault();
+      return false;
+    });
+    el.addEventListener('dragstart', function(e) {
+      e.preventDefault();
+      return false;
+    });
+    el.style.webkitUserSelect = "none";
+    el.style.mozUserSelect = "none";
+    el.style.msUserSelect = "none";
+    el.style.userSelect = "none";
+  }
+
   let quizData = null;
   let currentQuestionIndex = -1;
   let studentAnswers = {};
@@ -714,6 +737,7 @@
               if (passageEl) {
                 passageEl.className = "quiz-passage take-quiz-passage reading-passage";
                 passageEl.innerHTML = formatPassageHTML(quiz.passage || "(No passage provided)");
+                securePassage(passageEl);
               }
               document.getElementById("take-quiz-timer-wrap").style.display = "none";
               loadQuestions(quiz.questions || []);
@@ -775,7 +799,10 @@
                 (quiz.questions || []).forEach(function (q) { qMap[q.question_id] = q; });
                 if (titleEl) titleEl.textContent = quiz.title || "Review your answers";
                 if (scoreEl) scoreEl.innerHTML = "Your score: <strong>" + (completed.score || 0) + " / " + (completed.total_points || 0) + "</strong> (" + (completed.total_points > 0 ? Math.round(((completed.score || 0) / completed.total_points) * 100) : 0) + "%)";
-                if (passageEl) passageEl.textContent = quiz.passage || "(No passage)";
+                if (passageEl) {
+                  passageEl.textContent = quiz.passage || "(No passage)";
+                  securePassage(passageEl);
+                }
                 if (container) {
                   container.innerHTML = answers.map(function (a, i) {
                     var q = qMap[a.question_id];
@@ -878,7 +905,10 @@
           if (titleEl) titleEl.textContent = quiz.title || "Review your answers";
           var pct = attempt.total_points > 0 ? Math.round((attempt.score / attempt.total_points) * 100) : 0;
           if (scoreEl) scoreEl.innerHTML = "Your score: <strong>" + attempt.score + " / " + attempt.total_points + "</strong> (" + pct + "%)";
-          if (passageEl) passageEl.textContent = quiz.passage || "(No passage)";
+          if (passageEl) {
+            passageEl.textContent = quiz.passage || "(No passage)";
+            securePassage(passageEl);
+          }
           if (container) {
             container.innerHTML = answers.map(function (a, i) {
               var yourAnswerText = a.student_answer != null && a.student_answer !== "" ? escapeHtml(String(a.student_answer)) : "—";
@@ -957,6 +987,7 @@
               if (passageEl) {
                 passageEl.className = "quiz-passage take-quiz-passage reading-passage";
                 passageEl.innerHTML = formatPassageHTML(quiz.passage || "(No passage provided)");
+                securePassage(passageEl);
               }
 
               var countdownEl = document.getElementById("take-quiz-countdown");
