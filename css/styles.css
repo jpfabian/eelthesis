@@ -2748,6 +2748,11 @@ body.lessons-page #main-content {
   body.lessons-page .lessons-shell__top {
     padding: 1rem 1rem 0.5rem;
   }
+  body.lessons-page .lessons-shell__subject {
+    width: 100%;
+    margin-bottom: 0.75rem;
+    text-align: center;
+  }
   body.lessons-page .lessons-ai-quiz-card__header {
     padding: 1rem 1rem 0.75rem;
   }
