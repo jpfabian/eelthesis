@@ -736,53 +736,31 @@ router.post("/api/pronunciation-submit", upload.any(), async (req, res) => {
     const { student_id, quiz_id, class_id, cheating_violations, cheating_voided, retake } = req.body;
     const files = req.files;
     const classIdParam = class_id != null && class_id !== "" ? Number(class_id) : null;
-    const violations = Number(cheating_violations) || 0;
     let isRetake = retake === "1" || retake === true;
 
     if (!files || files.length === 0) {
       return res.status(400).json({ success: false, message: "No audio files uploaded" });
     }
 
-    // Infer retake: if we find existing attempt with answers, treat as retake (fallback when retake=1 not sent)
-    if (!isRetake) {
-      const [[existing]] = await pool.query(
-        `SELECT attempt_id FROM pronunciation_quiz_attempts
-         WHERE student_id = ? AND quiz_id = ?
-         ORDER BY attempt_id DESC LIMIT 1`,
-        [student_id, quiz_id]
-      );
-      if (existing) {
-        const [[ac]] = await pool.query(
-          `SELECT COUNT(*) AS cnt FROM pronunciation_quiz_answers WHERE attempt_id = ?`,
-          [existing.attempt_id]
-        );
-        if (Number(ac?.cnt || 0) > 0) isRetake = true;
-      }
-    }
-    const voided = isRetake ? false : (cheating_voided === "1" || cheating_voided === true);
+    // 1️⃣ Infer retake more robustly: if any attempt exists, it's a retake/re-submission
+    let [existingAttempts] = await pool.query(
+      `SELECT attempt_id, cheating_voided FROM pronunciation_quiz_attempts
+       WHERE student_id = ? AND quiz_id = ?
+       ORDER BY attempt_id DESC LIMIT 1`,
+      [student_id, quiz_id]
+    );
 
-    // 0️⃣ Idempotency: reject duplicate submit within 60s (prevents double-click / double-save)
-    // Skip for retake - we are updating existing attempt
-    if (!isRetake) {
-      const [recentRows] = await pool.query(
-        `SELECT attempt_id, score, pronunciation_score FROM pronunciation_quiz_attempts
-         WHERE student_id = ? AND quiz_id = ? AND status = 'completed'
-           AND end_time >= DATE_SUB(NOW(), INTERVAL 60 SECOND)
-         ORDER BY attempt_id DESC LIMIT 1`,
-        [student_id, quiz_id]
-      );
-      if (recentRows.length) {
-        const r = recentRows[0];
-        return res.json({
-          success: true,
-          accuracy: Number(r.pronunciation_score ?? r.score ?? 0),
-          attempt_id: r.attempt_id,
-          message: "Already submitted"
-        });
-      }
+    if (existingAttempts.length && !isRetake) {
+      isRetake = true;
+      console.log("[Pronunciation Submit] Inferred retake for student=" + student_id + " quiz=" + quiz_id);
     }
 
-    // 1️⃣ Fetch quiz difficulty (built-in or teacher)
+    // A retake or re-submission ALWAYS starts with a clean slate for the current results
+    // Unless cheating is explicitly reported in the current request's body
+    const voided = (String(cheating_voided) === "1" || cheating_voided === true);
+    const violations = Number(cheating_violations || 0);
+
+    // 1.5️⃣ Fetch quiz difficulty (built-in or teacher) and question count
     let quizDifficulty = "beginner";
     let isTeacherQuiz = false;
     const [builtInRows] = await pool.query(
@@ -803,62 +781,36 @@ router.post("/api/pronunciation-submit", upload.any(), async (req, res) => {
         return res.status(404).json({ success: false, message: "Quiz not found" });
       }
     }
-
-    // Total questions for scoring: unanswered = 0 points.
     const totalQuestions = await getPronunciationQuizQuestionCount(pool, quiz_id, quizDifficulty, isTeacherQuiz);
 
     // 2️⃣ Create or reuse quiz attempt (on retake: update existing instead of new row)
     const attemptNow = nowPhilippineDatetime();
     let attempt_id;
 
-    if (isRetake) {
-      // Find most recent attempt (any status) - always update, never create duplicate
-      let [existingRows] = await pool.query(
-        `SELECT attempt_id FROM pronunciation_quiz_attempts
-         WHERE student_id = ? AND quiz_id = ? AND (class_id <=> ?)
-         ORDER BY attempt_id DESC LIMIT 1`,
-        [student_id, quiz_id, classIdParam]
+    if (isRetake && existingAttempts.length) {
+      attempt_id = existingAttempts[0].attempt_id;
+      
+      // Clean up old answers
+      await pool.query(
+        `DELETE FROM pronunciation_quiz_answers WHERE attempt_id = ?`,
+        [attempt_id]
       );
-      // Fallback: try without class_id (e.g. retake from different context, or class_id mismatch)
-      if (!existingRows.length) {
-        [existingRows] = await pool.query(
-          `SELECT attempt_id FROM pronunciation_quiz_attempts
-           WHERE student_id = ? AND quiz_id = ?
-           ORDER BY attempt_id DESC LIMIT 1`,
-          [student_id, quiz_id]
-        );
-      }
-      if (existingRows.length) {
-        const candidateId = existingRows[0].attempt_id;
-        const [[answerCheck]] = await pool.query(
-          `SELECT COUNT(*) AS cnt FROM pronunciation_quiz_answers WHERE attempt_id = ?`,
-          [candidateId]
-        );
-        const hasAnswers = Number(answerCheck?.cnt || 0) > 0;
-        if (hasAnswers) {
-          attempt_id = candidateId;
-          await pool.query(
-            `DELETE FROM pronunciation_quiz_answers WHERE attempt_id = ?`,
-            [attempt_id]
-          );
-          await pool.query(
-            `UPDATE pronunciation_quiz_attempts
-             SET start_time = ?, end_time = ?, status = 'completed', score = NULL, pronunciation_score = NULL, total_points = NULL
-             WHERE attempt_id = ?`,
-            [attemptNow, attemptNow, attempt_id]
-          );
-          console.log("[Pronunciation retake] Reusing attempt_id=" + attempt_id + " for student=" + student_id + " quiz=" + quiz_id);
-        }
-        // If no answers (e.g. void attempt), create new - student hasn't submitted yet
-      }
-    }
 
-    if (!attempt_id) {
+      // Reset attempt record - IMPORTANT: Clear previous cheating flags for the new results
+      await pool.query(
+        `UPDATE pronunciation_quiz_attempts
+         SET start_time = ?, end_time = ?, status = 'completed', score = NULL, pronunciation_score = NULL, total_points = NULL, cheating_voided = 0, cheating_violations = 0
+         WHERE attempt_id = ?`,
+        [attemptNow, attemptNow, attempt_id]
+      );
+      console.log("[Pronunciation retake] Resetting attempt_id=" + attempt_id + " for student=" + student_id + " quiz=" + quiz_id);
+    } else {
+      // Create new attempt
       const [attemptResult] = await pool.query(
         `INSERT INTO pronunciation_quiz_attempts 
-           (student_id, quiz_id, class_id, start_time, end_time, status)
-         VALUES (?, ?, ?, ?, ?, 'completed')`,
-        [student_id, quiz_id, classIdParam, attemptNow, attemptNow]
+           (student_id, quiz_id, class_id, start_time, end_time, status, cheating_violations, cheating_voided)
+         VALUES (?, ?, ?, ?, ?, 'completed', ?, ?)`,
+        [student_id, quiz_id, classIdParam, attemptNow, attemptNow, violations, voided ? 1 : 0]
       );
       attempt_id = attemptResult.insertId;
     }
@@ -973,7 +925,10 @@ router.post("/api/pronunciation-submit", upload.any(), async (req, res) => {
 
     const passing = meta ? Number(meta.passing_score ?? 70) : 70;
     const canRetake = !meta || String(meta.retake_option || "all").toLowerCase() !== "none";
-    const showRetake = avgAccuracy < passing && canRetake;
+    
+    // ✅ Fix: Also show retake if the attempt was voided due to cheating (avgAccuracy is 0)
+    const isVoided = voided === true || (cheating_voided === "1" || cheating_voided === true);
+    const showRetake = (avgAccuracy < passing || isVoided) && canRetake;
 
     res.json({
       success: true,

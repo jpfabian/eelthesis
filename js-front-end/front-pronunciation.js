@@ -907,7 +907,10 @@ async function loadPronunciationQuizzes(user, difficultyFilter = null) {
                 const scoreNum = studentAttempt?.score != null ? Number(studentAttempt.score) : null;
                 const totalNum = studentAttempt?.total_points != null ? Number(studentAttempt.total_points) : 100;
                 const scorePercent = (scoreNum != null && totalNum > 0) ? (scoreNum / totalNum) * 100 : scoreNum;
-                const showRetake = isReview && canRetake && scorePercent != null && scorePercent < 100;
+                
+                // ✅ Fix: Allow retake if score is 0 (cheating voided)
+                const isVoided = Number(studentAttempt?.cheating_voided) === 1;
+                const showRetake = isReview && canRetake && (scorePercent < 100 || isVoided);
 
                 if (studentAttempt) {
                     if (studentAttempt.status === "completed") {
