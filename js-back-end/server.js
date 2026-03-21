@@ -195,7 +195,7 @@ app.use("/", lessonRoutes);
 app.use("/", classgradeRoutes);
 app.use("/", examGenerated);
 app.use("/", adminRoutes);
-app.use("/", masterAdminRoutes);
+app.use("/api/master-admin", masterAdminRoutes);
 app.use("/", passwordResetRoutes);
 app.use("/", profileRoutes);
 app.use("/", teachersDashboardRoutes);

@@ -1,7 +1,31 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
 const router = express.Router();
+require("dotenv").config();
 const { nowPhilippineDatetime } = require("./utils/datetime");
+
+let Groq = null;
+try {
+  Groq = require("groq-sdk");
+} catch (_) {}
+
+const groq = (() => {
+  const key = String(process.env.GROQ_API_KEY || "").trim();
+  if (key && Groq) return new Groq({ apiKey: key });
+  return null;
+})();
+
+function requireGroq(res) {
+  if (groq) return groq;
+  const keyExists = !!process.env.GROQ_API_KEY;
+  const sdkExists = !!Groq;
+  res.status(500).json({
+    success: false,
+    message: "AI service is not configured correctly.",
+    details: { keyExists, sdkExists }
+  });
+  return null;
+}
 
 const MASTER_ADMIN_TOKEN = "eel_master_admin_token_v1";
 
@@ -32,7 +56,7 @@ function validateAdminPassword(pwd) {
 }
 
 // Sign up another admin (master_admin only)
-router.post("/api/master-admin/admins", requireMasterAdmin, async (req, res) => {
+router.post("/admins", requireMasterAdmin, async (req, res) => {
   const { fname, lname, email, password } = req.body || {};
   if (!fname || !lname || !email || !password) {
     return res.status(400).json({ success: false, error: "fname, lname, email, and password are required." });
@@ -63,7 +87,7 @@ router.post("/api/master-admin/admins", requireMasterAdmin, async (req, res) => 
 });
 
 // List tracks (for dropdowns, signup)
-router.get("/api/master-admin/tracks", requireMasterAdmin, async (req, res) => {
+router.get("/tracks", requireMasterAdmin, async (req, res) => {
   const pool = req.pool;
   try {
     const [rows] = await pool.query("SELECT track_id, track_name FROM tracks ORDER BY track_name");
@@ -75,7 +99,7 @@ router.get("/api/master-admin/tracks", requireMasterAdmin, async (req, res) => {
 });
 
 // Add a new track
-router.post("/api/master-admin/tracks", requireMasterAdmin, async (req, res) => {
+router.post("/tracks", requireMasterAdmin, async (req, res) => {
   const { track_name } = req.body || {};
   const name = String(track_name || "").trim();
   if (!name) {
@@ -95,7 +119,7 @@ router.post("/api/master-admin/tracks", requireMasterAdmin, async (req, res) => 
 });
 
 // Delete track
-router.delete("/api/master-admin/tracks/:id", requireMasterAdmin, async (req, res) => {
+router.delete("/tracks/:id", requireMasterAdmin, async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) return res.status(400).json({ success: false, error: "Invalid track id" });
   const pool = req.pool;
@@ -110,7 +134,7 @@ router.delete("/api/master-admin/tracks/:id", requireMasterAdmin, async (req, re
 });
 
 // List subjects (for dropdowns)
-router.get("/api/master-admin/subjects", requireMasterAdmin, async (req, res) => {
+router.get("/subjects", requireMasterAdmin, async (req, res) => {
   const pool = req.pool;
   try {
     const [rows] = await pool.query("SELECT subject_id, subject_name FROM subjects ORDER BY subject_name");
@@ -122,7 +146,7 @@ router.get("/api/master-admin/subjects", requireMasterAdmin, async (req, res) =>
 });
 
 // Add a new subject
-router.post("/api/master-admin/subjects", requireMasterAdmin, async (req, res) => {
+router.post("/subjects", requireMasterAdmin, async (req, res) => {
   const { subject_name } = req.body || {};
   const name = String(subject_name || "").trim();
   if (!name) {
@@ -142,7 +166,7 @@ router.post("/api/master-admin/subjects", requireMasterAdmin, async (req, res) =
 });
 
 // Add a lesson (module) to a subject
-router.post("/api/master-admin/lessons", requireMasterAdmin, async (req, res) => {
+router.post("/lessons", requireMasterAdmin, async (req, res) => {
   const { subject_id, lesson_title, quarter_number, quarter_title } = req.body || {};
   const subjectId = subject_id != null ? Number(subject_id) : null;
   const title = String(lesson_title || "").trim();
@@ -165,7 +189,7 @@ router.post("/api/master-admin/lessons", requireMasterAdmin, async (req, res) =>
 });
 
 // Add a topic to a lesson (PPT/PDF: store path in pdf_path)
-router.post("/api/master-admin/topics", requireMasterAdmin, async (req, res) => {
+router.post("/topics", requireMasterAdmin, async (req, res) => {
   const { lesson_id, topic_title, pdf_path } = req.body || {};
   const lessonId = lesson_id != null ? Number(lesson_id) : null;
   const title = String(topic_title || "").trim();
@@ -187,7 +211,7 @@ router.post("/api/master-admin/topics", requireMasterAdmin, async (req, res) => 
 });
 
 // List lessons for a subject (for dropdown when adding topics)
-router.get("/api/master-admin/lessons", requireMasterAdmin, async (req, res) => {
+router.get("/lessons", requireMasterAdmin, async (req, res) => {
   const subjectId = req.query.subject_id != null ? Number(req.query.subject_id) : null;
   if (!Number.isFinite(subjectId)) {
     return res.status(400).json({ success: false, error: "subject_id query is required." });
@@ -205,8 +229,128 @@ router.get("/api/master-admin/lessons", requireMasterAdmin, async (req, res) => 
   }
 });
 
+// Add Built-in Reading Quiz
+router.post("/reading-quizzes", requireMasterAdmin, async (req, res) => {
+  const pool = req.pool;
+  const { title, difficulty, passage, passing_score, questions } = req.body || {};
+  if (!title || !passage || !questions || !questions.length) {
+    return res.status(400).json({ success: false, error: "title, passage, and questions are required." });
+  }
+
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    await conn.beginTransaction();
+
+    // Get next quiz_number
+    const [[numRow]] = await conn.query("SELECT MAX(quiz_number) as lastNum FROM reading_quizzes");
+    const nextNum = (numRow?.lastNum || 0) + 1;
+
+    // Insert Quiz
+    const [qResult] = await conn.query(
+      "INSERT INTO reading_quizzes (quiz_number, title, difficulty, passage, passing_score, status, is_locked) VALUES (?, ?, ?, ?, ?, 'active', 0)",
+      [nextNum, title, difficulty || 'beginner', passage, passing_score || 70]
+    );
+    const quizId = qResult.insertId;
+
+    // Insert Questions
+    for (const q of questions) {
+      const [questionRes] = await conn.query(
+        "INSERT INTO reading_questions (quiz_id, question_type, question_text, points, position) VALUES (?, ?, ?, ?, ?)",
+        [quizId, q.question_type, q.question_text, q.points || 1, q.position]
+      );
+      const questionId = questionRes.insertId;
+
+      if (q.question_type === 'mcq' && q.options) {
+        for (const opt of q.options) {
+          await conn.query(
+            "INSERT INTO reading_mcq_options (question_id, option_text, is_correct, position) VALUES (?, ?, ?, ?)",
+            [questionId, opt.option_text, opt.is_correct, opt.position]
+          );
+        }
+      }
+    }
+
+    await conn.commit();
+    res.json({ success: true, message: "Reading quiz added successfully.", quiz_id: quizId });
+  } catch (err) {
+    if (conn) await conn.rollback();
+    console.error("Master admin add reading quiz:", err);
+    res.status(500).json({ success: false, error: "Server error" });
+  } finally {
+    if (conn) conn.release();
+  }
+});
+
+// Add Built-in Pronunciation Quiz
+router.post("/pronunciation-quizzes", requireMasterAdmin, async (req, res) => {
+  const pool = req.pool;
+  const { title, difficulty, questions } = req.body || {};
+  if (!title || !questions || !questions.length) {
+    return res.status(400).json({ success: false, error: "title and questions are required." });
+  }
+
+  let conn;
+  try {
+    conn = await pool.getConnection();
+    await conn.beginTransaction();
+
+    // Get next quiz_number
+    const [[numRow]] = await conn.query("SELECT MAX(quiz_number) as lastNum FROM pronunciation_quizzes");
+    const nextNum = (numRow?.lastNum || 0) + 1;
+
+    // Insert Quiz
+    const [qResult] = await conn.query(
+      "INSERT INTO pronunciation_quizzes (quiz_number, title, difficulty, status, is_locked) VALUES (?, ?, ?, 'active', 0)",
+      [nextNum, title, difficulty || 'beginner']
+    );
+    const quizId = qResult.insertId;
+
+    // Insert Questions based on difficulty
+    const diff = String(difficulty).toLowerCase();
+    let table = "";
+    let columns = "";
+    let placeholders = "";
+
+    if (diff === 'beginner') {
+      table = "pronunciation_beginner_questions";
+      columns = "(quiz_id, word, correct_pronunciation, position)";
+      placeholders = "(?, ?, ?, ?)";
+    } else if (diff === 'intermediate') {
+      table = "pronunciation_intermediate_questions";
+      columns = "(quiz_id, word, stressed_syllable, position)";
+      placeholders = "(?, ?, ?, ?)";
+    } else {
+      table = "pronunciation_advanced_questions";
+      columns = "(quiz_id, sentence, reduced_form, full_sentence, position)";
+      placeholders = "(?, ?, ?, ?, ?)";
+    }
+
+    for (const q of questions) {
+      const vals = [quizId];
+      if (diff === 'beginner') {
+        vals.push(q.word, q.correct_pronunciation, q.position);
+      } else if (diff === 'intermediate') {
+        vals.push(q.word, q.stressed_syllable, q.position);
+      } else {
+        vals.push(q.sentence, q.reduced_form, q.full_sentence, q.position);
+      }
+      await conn.query(`INSERT INTO ${table} ${columns} VALUES ${placeholders}`, vals);
+    }
+
+    await conn.commit();
+    res.json({ success: true, message: "Pronunciation quiz added successfully.", quiz_id: quizId });
+  } catch (err) {
+    if (conn) await conn.rollback();
+    console.error("Master admin add pronunciation quiz:", err);
+    res.status(500).json({ success: false, error: "Server error" });
+  } finally {
+    if (conn) conn.release();
+  }
+});
+
 // List all lessons with subject name (for table)
-router.get("/api/master-admin/lessons/all", requireMasterAdmin, async (req, res) => {
+router.get("/lessons/all", requireMasterAdmin, async (req, res) => {
   const pool = req.pool;
   try {
     const [rows] = await pool.query(
@@ -223,7 +367,7 @@ router.get("/api/master-admin/lessons/all", requireMasterAdmin, async (req, res)
 });
 
 // Get curriculum for a subject: lessons with their topics (for browse view)
-router.get("/api/master-admin/curriculum/:subjectId", requireMasterAdmin, async (req, res) => {
+router.get("/curriculum/:subjectId", requireMasterAdmin, async (req, res) => {
   const subjectId = Number(req.params.subjectId);
   if (!Number.isFinite(subjectId)) {
     return res.status(400).json({ success: false, error: "Invalid subject id" });
@@ -271,7 +415,7 @@ router.get("/api/master-admin/curriculum/:subjectId", requireMasterAdmin, async 
 });
 
 // List all topics with lesson and subject (for table)
-router.get("/api/master-admin/topics/all", requireMasterAdmin, async (req, res) => {
+router.get("/topics/all", requireMasterAdmin, async (req, res) => {
   const pool = req.pool;
   try {
     const [rows] = await pool.query(
@@ -289,7 +433,7 @@ router.get("/api/master-admin/topics/all", requireMasterAdmin, async (req, res) 
 });
 
 // Delete subject (cascades to lessons and topics in DB)
-router.delete("/api/master-admin/subjects/:id", requireMasterAdmin, async (req, res) => {
+router.delete("/subjects/:id", requireMasterAdmin, async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) return res.status(400).json({ success: false, error: "Invalid subject id" });
   const pool = req.pool;
@@ -304,7 +448,7 @@ router.delete("/api/master-admin/subjects/:id", requireMasterAdmin, async (req, 
 });
 
 // Delete lesson (cascades to topics in DB)
-router.delete("/api/master-admin/lessons/:id", requireMasterAdmin, async (req, res) => {
+router.delete("/lessons/:id", requireMasterAdmin, async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) return res.status(400).json({ success: false, error: "Invalid lesson id" });
   const pool = req.pool;
@@ -319,7 +463,7 @@ router.delete("/api/master-admin/lessons/:id", requireMasterAdmin, async (req, r
 });
 
 // Delete topic
-router.delete("/api/master-admin/topics/:id", requireMasterAdmin, async (req, res) => {
+router.delete("/topics/:id", requireMasterAdmin, async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isFinite(id)) return res.status(400).json({ success: false, error: "Invalid topic id" });
   const pool = req.pool;
@@ -334,7 +478,7 @@ router.delete("/api/master-admin/topics/:id", requireMasterAdmin, async (req, re
 });
 
 // Dashboard stats for master admin overview
-router.get("/api/master-admin/dashboard-stats", requireMasterAdmin, async (req, res) => {
+router.get("/dashboard-stats", requireMasterAdmin, async (req, res) => {
   const pool = req.pool;
   try {
     const [
@@ -385,7 +529,7 @@ router.get("/api/master-admin/dashboard-stats", requireMasterAdmin, async (req, 
 });
 
 // List admin accounts (role = 'admin' only; excludes master_admin)
-router.get("/api/master-admin/admins", requireMasterAdmin, async (req, res) => {
+router.get("/admins", requireMasterAdmin, async (req, res) => {
   const pool = req.pool;
   try {
     const [rows] = await pool.query(
@@ -410,7 +554,7 @@ router.get("/api/master-admin/admins", requireMasterAdmin, async (req, res) => {
 });
 
 // Deactivate an admin account (only role = 'admin')
-router.patch("/api/master-admin/admins/:id/deactivate", requireMasterAdmin, async (req, res) => {
+router.patch("/admins/:id/deactivate", requireMasterAdmin, async (req, res) => {
   const userId = Number(req.params.id);
   const reason = String(req.body?.reason || "").trim().slice(0, 255);
   if (!userId) return res.status(400).json({ success: false, error: "Invalid user id" });
@@ -431,7 +575,7 @@ router.patch("/api/master-admin/admins/:id/deactivate", requireMasterAdmin, asyn
 });
 
 // Activate (reactivate) an admin account
-router.patch("/api/master-admin/admins/:id/activate", requireMasterAdmin, async (req, res) => {
+router.patch("/admins/:id/activate", requireMasterAdmin, async (req, res) => {
   const userId = Number(req.params.id);
   if (!userId) return res.status(400).json({ success: false, error: "Invalid user id" });
   const pool = req.pool;
@@ -447,6 +591,172 @@ router.patch("/api/master-admin/admins/:id/activate", requireMasterAdmin, async 
   } catch (err) {
     console.error("Master admin activate admin:", err);
     res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
+// AI: Check Status
+router.get("/ai-status", requireMasterAdmin, (req, res) => {
+  const key = String(process.env.GROQ_API_KEY || "").trim();
+  res.json({
+    success: true,
+    sdkLoaded: !!Groq,
+    keyConfigured: !!key,
+    keyLength: key.length,
+    nodeEnv: process.env.NODE_ENV || "not set"
+  });
+});
+
+// AI: Generate Reading Quiz
+router.post("/generate-reading-quiz", requireMasterAdmin, async (req, res) => {
+  console.log("AI: Reading Quiz Generation requested...");
+  const g = requireGroq(res);
+  if (!g) {
+    console.error("AI: Groq service not initialized.");
+    return;
+  }
+
+  const { topic } = req.body || {};
+  if (!topic) {
+    console.warn("AI: Topic missing in request.");
+    return res.status(400).json({ success: false, error: "topic is required." });
+  }
+
+  try {
+    console.log(`AI: Generating reading quiz for topic: ${topic}`);
+    const completion = await g.chat.completions.create({
+      model: "llama-3.1-8b-instant",
+      messages: [
+        {
+          role: "system",
+          content: `You are an expert English teacher. Generate a reading comprehension quiz based on the given topic.
+            The response MUST be a valid JSON object with the following structure:
+            {
+              "title": "Short catchy title",
+              "passage": "A 200-300 word interesting story or educational passage",
+              "questions": [
+                {
+                  "question_text": "...",
+                  "question_type": "mcq",
+                  "points": 1,
+                  "options": [
+                    {"option_text": "...", "is_correct": 1},
+                    {"option_text": "...", "is_correct": 0},
+                    {"option_text": "...", "is_correct": 0},
+                    {"option_text": "...", "is_correct": 0}
+                  ]
+                },
+                ... (total 5 mcq questions)
+                {
+                  "question_text": "Summarize the main idea or theme of the passage in your own words.",
+                  "question_type": "essay",
+                  "points": 5
+                }
+              ]
+            }
+            Ensure the JSON is strictly valid. No markdown, no preamble, just the JSON.`
+        },
+        { role: "user", content: `Topic: ${topic}` }
+      ],
+      temperature: 0.7,
+      response_format: { type: "json_object" }
+    });
+
+    const content = completion.choices[0]?.message?.content;
+    if (!content) {
+      console.error("AI: Empty response from Groq.");
+      throw new Error("Empty response from AI service.");
+    }
+
+    const data = JSON.parse(content);
+    console.log("AI: Reading quiz generated successfully.");
+    res.json({ success: true, quiz: data });
+  } catch (err) {
+    console.error("AI: Generate Reading Quiz error:", err);
+    res.status(500).json({ 
+      success: false, 
+      error: err.message || "AI generation failed. Please try again later." 
+    });
+  }
+});
+
+// AI: Generate Pronunciation Quiz
+router.post("/generate-pronunciation-quiz", requireMasterAdmin, async (req, res) => {
+  console.log("AI: Pronunciation Quiz Generation requested...");
+  const g = requireGroq(res);
+  if (!g) {
+    console.error("AI: Groq service not initialized.");
+    return;
+  }
+
+  const { topic, difficulty } = req.body || {};
+  if (!topic || !difficulty) {
+    console.warn("AI: Topic or difficulty missing in request.");
+    return res.status(400).json({ success: false, error: "topic and difficulty are required." });
+  }
+
+  try {
+    console.log(`AI: Generating pronunciation quiz for topic: ${topic}, difficulty: ${difficulty}`);
+    let systemPrompt = "";
+    if (difficulty === 'beginner') {
+      systemPrompt = `Generate a Consonant Cluster (Beginner) pronunciation quiz.
+        Provide 5 words focusing on consonant clusters related to the topic.
+        JSON structure:
+        {
+          "title": "...",
+          "questions": [
+            {"word": "...", "correct_pronunciation": "Phonetic script or notes"}
+          ]
+        }`;
+    } else if (difficulty === 'intermediate') {
+      systemPrompt = `Generate a Word Stress (Intermediate) pronunciation quiz.
+        Provide 5 words focusing on word stress related to the topic.
+        JSON structure:
+        {
+          "title": "...",
+          "questions": [
+            {"word": "...", "stressed_syllable": "e.g., 2nd syllable"}
+          ]
+        }`;
+    } else {
+      systemPrompt = `Generate a Linking & Connected Speech (Advanced) pronunciation quiz.
+        Provide 5 sentences focusing on linking sounds related to the topic.
+        JSON structure:
+        {
+          "title": "...",
+          "questions": [
+            {"sentence": "...", "reduced_form": "..."}
+          ]
+        }`;
+    }
+
+    const completion = await g.chat.completions.create({
+      model: "llama-3.1-8b-instant",
+      messages: [
+        {
+          role: "system",
+          content: `${systemPrompt}\nReturn ONLY JSON. No markdown.`
+        },
+        { role: "user", content: `Topic: ${topic}` }
+      ],
+      temperature: 0.7,
+      response_format: { type: "json_object" }
+    });
+
+    const content = completion.choices[0]?.message?.content;
+    if (!content) {
+      console.error("AI: Empty response from Groq.");
+      throw new Error("Empty response from AI service.");
+    }
+
+    const data = JSON.parse(content);
+    console.log("AI: Pronunciation quiz generated successfully.");
+    res.json({ success: true, quiz: data });
+  } catch (err) {
+    console.error("AI: Generate Pronunciation Quiz error:", err);
+    res.status(500).json({ 
+      success: false, 
+      error: err.message || "AI generation failed. Please try again later." 
+    });
   }
 });
 

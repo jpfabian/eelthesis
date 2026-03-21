@@ -3,12 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Tracks - Master Admin - EEL</title>
+  <title>Add Quizzes - Master Admin - EEL</title>
   <link rel="icon" href="image/eel-character.png" type="image/png">
   <script src="js/theme.js"></script>
   <link rel="stylesheet" href="css/styles.css" />
   <link href="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.1/lucide.min.css" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body class="auth-page master-admin-page">
   <div class="mobile-nav-header" id="mobileNavHeader" role="banner">
@@ -75,11 +74,11 @@
             <i data-lucide="book-open" class="size-5"></i>
             <span>Curriculum</span>
           </a>
-          <a href="master-admin-add-quizzes.html" class="master-admin-task-btn nav-button btn btn-side-bar w-full justify-start gap-3 p-3 rounded-md text-left transition-all flex items-center" data-task="add-quizzes">
+          <a href="master-admin-add-quizzes.html" class="master-admin-task-btn nav-button btn btn-side-bar w-full justify-start gap-3 p-3 rounded-md text-left transition-all flex items-center active" data-task="add-quizzes" aria-current="page">
             <i data-lucide="plus-circle" class="size-5"></i>
             <span>Add Quizzes</span>
           </a>
-          <a href="master-admin-tracks.html" class="master-admin-task-btn nav-button btn btn-side-bar w-full justify-start gap-3 p-3 rounded-md text-left transition-all flex items-center active" data-task="tracks" aria-current="page">
+          <a href="master-admin-tracks.html" class="master-admin-task-btn nav-button btn btn-side-bar w-full justify-start gap-3 p-3 rounded-md text-left transition-all flex items-center" data-task="tracks">
             <i data-lucide="graduation-cap" class="size-5"></i>
             <span>Tracks</span>
           </a>
@@ -93,97 +92,99 @@
       </div>
     </aside>
 
-    <main class="flex-1 overflow-auto p-6" role="main">
+    <main class="flex-1 overflow-auto p-6">
       <header class="page-header mb-6">
-        <div class="page-header-icon" aria-hidden="true">
-          <i data-lucide="shield" class="size-8"></i>
+        <div class="page-header-icon">
+          <i data-lucide="plus-circle" class="size-8"></i>
         </div>
         <div>
-          <h1 class="page-header-title">Master Admin</h1>
-          <p class="page-header-subtitle" id="master-admin-subtitle">Add and manage Senior High School tracks (ABM, STEM, HUMSS, GAS, TVL, etc.).</p>
+          <h1 class="page-header-title">Add Built-in Quizzes</h1>
+          <p class="page-header-subtitle">Create content available to all students.</p>
         </div>
       </header>
 
-      <div id="master-admin-panels" class="max-w-4xl">
-        <section id="panel-tracks" class="curriculum-panel" aria-labelledby="master-admin-tracks-heading" role="region">
-          <div class="curriculum-panel-header">
-            <div class="curriculum-panel-header-icon">
-              <i data-lucide="graduation-cap" class="size-5"></i>
-            </div>
-            <div>
-              <h2 id="master-admin-tracks-heading" class="curriculum-panel-title">Tracks</h2>
-              <p class="curriculum-panel-subtitle">Manage Senior High School tracks for student signup.</p>
-            </div>
-          </div>
-
-          <div id="curriculum-box-tracks" class="curriculum-box">
-            <div class="curriculum-box-header">
-              <h3 class="curriculum-box-title">Tracks</h3>
-            </div>
-            <div class="curriculum-table-wrap">
-              <table class="curriculum-table" role="grid" aria-label="Tracks">
-                <thead>
-                  <tr>
-                    <th scope="col">Name</th>
-                    <th scope="col" class="curriculum-th-actions">Actions</th>
-                  </tr>
-                </thead>
-                <tbody id="curriculum-tracks-tbody">
-                  <tr><td colspan="2" class="curriculum-loading">Loading…</td></tr>
-                </tbody>
-              </table>
-            </div>
-            <div id="curriculum-tracks-empty" class="curriculum-empty hidden">
-              <div class="curriculum-empty-icon"><i data-lucide="graduation-cap" class="size-10"></i></div>
-              <p class="curriculum-empty-title">No tracks yet</p>
-              <p class="curriculum-empty-text">Add your first track using the button below.</p>
-            </div>
-          </div>
-        </section>
-
-        <div class="curriculum-actions">
-          <button type="button" id="curriculum-open-track-modal-btn" class="btn btn-primary curriculum-action-btn">
-            <i data-lucide="plus" class="size-4"></i>
-            Add track
+      <div class="tabs-container">
+        <div class="tabs">
+          <button type="button" class="tab-btn active" id="tab-reading" onclick="switchTab('reading')">
+            <i data-lucide="book-open" class="size-5"></i>
+            <span>Reading Quiz</span>
+          </button>
+          <button type="button" class="tab-btn" id="tab-pronunciation" onclick="switchTab('pronunciation')">
+            <i data-lucide="mic" class="size-5"></i>
+            <span>Pronunciation Quiz</span>
           </button>
         </div>
+      </div>
+
+      <!-- Reading Quiz Form -->
+      <div id="reading-quiz-section" class="quiz-form-container">
+        <form id="reading-quiz-form">
+          <div class="form-group">
+            <label for="r-title">Quiz Title</label>
+            <input type="text" id="r-title" class="form-control" required placeholder="e.g., Magellan's Voyage">
+          </div>
+          <div class="form-group">
+            <label for="r-passage">Passage/Story</label>
+            <textarea id="r-passage" class="form-control" rows="10" required placeholder="Paste the story text here..."></textarea>
+          </div>
+          <div class="form-group">
+            <label for="r-passing">Passing Score (%)</label>
+            <input type="number" id="r-passing" class="form-control" value="70" min="0" max="100">
+          </div>
+
+          <div id="reading-questions-container">
+            <h3 class="mb-4">Questions</h3>
+          </div>
+          <button type="button" class="btn btn-outline btn-add" onclick="addReadingQuestion()">
+            <i data-lucide="plus" class="size-4"></i> Add Question
+          </button>
+
+          <div style="margin-top: 3rem;">
+            <button type="submit" class="btn btn-primary" style="width: 100%; padding: 1rem; border-radius: 1rem; font-size: 1.125rem; font-weight: 700; box-shadow: 0 10px 25px -5px rgba(109, 40, 217, 0.4);">
+              <i data-lucide="save" class="size-5"></i>
+              Save Reading Quiz
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Pronunciation Quiz Form -->
+      <div id="pronunciation-quiz-section" class="quiz-form-container hidden">
+        <form id="pronunciation-quiz-form">
+          <div class="form-group">
+            <label for="p-title">Quiz Title</label>
+            <input type="text" id="p-title" class="form-control" required placeholder="e.g., Vowel Sounds">
+          </div>
+          <div class="form-group">
+            <label for="p-difficulty">Difficulty</label>
+            <select id="p-difficulty" class="form-control" onchange="updatePronunciationQuestionType()">
+              <option value="beginner">Consonant Cluster (Beginner)</option>
+              <option value="intermediate">Word Stress (Intermediate)</option>
+              <option value="advanced">Linking & Connected Speech (Advanced)</option>
+            </select>
+          </div>
+
+          <div id="pronunciation-questions-container">
+            <h3 class="mb-4">Words/Sentences</h3>
+          </div>
+          <button type="button" class="btn btn-outline btn-add" onclick="addPronunciationQuestion()">
+            <i data-lucide="plus" class="size-4"></i> Add Item
+          </button>
+
+          <div style="margin-top: 3rem;">
+            <button type="submit" class="btn btn-primary" style="width: 100%; padding: 1rem; border-radius: 1rem; font-size: 1.125rem; font-weight: 700; box-shadow: 0 10px 25px -5px rgba(109, 40, 217, 0.4);">
+              <i data-lucide="save" class="size-5"></i>
+              Save Pronunciation Quiz
+            </button>
+          </div>
+        </form>
       </div>
     </main>
   </div>
 
-  <!-- Add track modal -->
-  <div id="add-track-modal" class="modal-overlay master-admin-modal-overlay hidden" aria-modal="true" role="dialog" aria-labelledby="add-track-modal-title">
-    <div class="modal-card curriculum-modal-card master-admin-modal-card">
-      <div class="master-admin-modal-header">
-        <div class="master-admin-modal-header-icon master-admin-modal-header-icon--secondary">
-          <i data-lucide="graduation-cap" class="size-6"></i>
-        </div>
-        <div class="master-admin-modal-header-text">
-          <h3 id="add-track-modal-title" class="master-admin-modal-title">Add track</h3>
-          <p class="master-admin-modal-subtitle">Add a new Senior High School track (e.g. ABM, STEM, HUMSS).</p>
-        </div>
-        <button type="button" class="curriculum-modal-close master-admin-modal-close" data-modal="add-track-modal" aria-label="Close"><i data-lucide="x" class="size-5"></i></button>
-      </div>
-      <div class="modal-content master-admin-modal-content">
-        <form id="master-admin-track-form" class="master-admin-modal-form space-y-4">
-          <div class="space-y-2">
-            <label class="form-label" for="track-name">Track name</label>
-            <input type="text" id="track-name" class="form-input" required placeholder="e.g. ABM, STEM, HUMSS, GAS, TVL">
-          </div>
-        </form>
-      </div>
-      <div class="modal-footer master-admin-modal-footer">
-        <button type="submit" form="master-admin-track-form" class="btn btn-primary master-admin-modal-submit">
-          <i data-lucide="plus" class="size-4"></i>
-          Add track
-        </button>
-      </div>
-    </div>
-  </div>
-
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
-  <script src="js/auth.js"></script>
   <script src="js-front-end/api-config.js"></script>
-  <script src="js-front-end/front-master-admin.js"></script>
+  <script src="js-front-end/front-master-admin-quizzes.js"></script>
 </body>
 </html>
