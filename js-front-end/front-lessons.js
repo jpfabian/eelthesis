@@ -379,7 +379,7 @@ function renderTopicRow(topic, lesson) {
 let __currentLessonTopic = null;
 let __currentLessonLesson = null;
 
-async function fetchTopicContent(regenerate = false) {
+async function fetchTopicContent() {
   const topic = __currentLessonTopic;
   const lesson = __currentLessonLesson;
   if (!topic) return;
@@ -396,8 +396,7 @@ async function fetchTopicContent(regenerate = false) {
       topic_title: topicTitle,
       lesson_title: lessonTitle,
       subject_name: subjectName,
-      regenerate: !!regenerate,
-      always_5_slides: !!regenerate, // Tell backend to aim for 5 slides when regenerating
+      regenerate: false,
     }),
   });
   const data = await res.json().catch(() => ({}));
@@ -503,10 +502,8 @@ async function viewTopicWithGeneratedContent(topic, lesson) {
 
   if (titleEl) titleEl.textContent = topicTitle;
   const downloadBtn = document.getElementById("lesson-download-ppt-btn");
-  const regenerateBtn = document.getElementById("lesson-regenerate-btn");
   
   if (downloadBtn) downloadBtn.classList.add("hidden");
-  if (regenerateBtn) regenerateBtn.classList.add("hidden");
   
   if (loadingEl) loadingEl.style.display = "flex";
   if (contentEl) {
@@ -519,7 +516,7 @@ async function viewTopicWithGeneratedContent(topic, lesson) {
   }, 50);
 
   try {
-    const data = await fetchTopicContent(false);
+    const data = await fetchTopicContent();
 
     if (loadingEl) loadingEl.style.display = "none";
 
@@ -539,11 +536,6 @@ async function viewTopicWithGeneratedContent(topic, lesson) {
       contentEl.classList.remove("hidden");
       if (downloadBtn) downloadBtn.classList.remove("hidden");
       
-      // Only show regenerate button for teachers/admins
-      const user = JSON.parse(localStorage.getItem("eel_user") || "{}");
-      const isTeacherOrAdmin = user.role === "teacher" || user.role === "master_admin";
-      if (regenerateBtn && isTeacherOrAdmin) regenerateBtn.classList.remove("hidden");
-      
       if (typeof lucide !== "undefined" && lucide.createIcons) lucide.createIcons();
     }
   } catch (err) {
@@ -552,56 +544,6 @@ async function viewTopicWithGeneratedContent(topic, lesson) {
       contentEl.innerHTML = `<p class="text-destructive">${escapeHtml(err?.message || "Something went wrong.")}</p>`;
       contentEl.classList.remove("hidden");
     }
-  }
-}
-
-async function regenerateLessonTopicContent() {
-  const regenerateBtn = document.getElementById("lesson-regenerate-btn");
-  const downloadBtn = document.getElementById("lesson-download-ppt-btn");
-  const loadingEl = document.getElementById("lesson-viewer-loading");
-  const contentEl = document.getElementById("lesson-topic-content");
-
-  if (!__currentLessonTopic) return;
-
-  if (regenerateBtn) regenerateBtn.disabled = true;
-  if (downloadBtn) downloadBtn.classList.add("hidden");
-  if (loadingEl) loadingEl.style.display = "flex";
-  if (contentEl) {
-    contentEl.classList.add("hidden");
-    contentEl.innerHTML = "";
-  }
-
-  try {
-    const data = await fetchTopicContent(true);
-
-    if (loadingEl) loadingEl.style.display = "none";
-
-    if (!data.success) {
-      const errMsg = data.error || "Failed to regenerate topic content.";
-      if (contentEl) {
-        contentEl.innerHTML = `<p class="text-destructive">${escapeHtml(errMsg)}</p>`;
-        contentEl.classList.remove("hidden");
-      }
-      if (regenerateBtn) regenerateBtn.disabled = false;
-      return;
-    }
-
-    if (contentEl && data.content) {
-      contentEl.innerHTML = data.content;
-      delete contentEl.dataset.enhancedPresentation;
-      enhanceLessonTopicPresentation(contentEl);
-      contentEl.classList.remove("hidden");
-      if (downloadBtn) downloadBtn.classList.remove("hidden");
-      if (typeof lucide !== "undefined" && lucide.createIcons) lucide.createIcons();
-    }
-  } catch (err) {
-    if (loadingEl) loadingEl.style.display = "none";
-    if (contentEl) {
-      contentEl.innerHTML = `<p class="text-destructive">${escapeHtml(err?.message || "Something went wrong.")}</p>`;
-      contentEl.classList.remove("hidden");
-    }
-  } finally {
-    if (regenerateBtn) regenerateBtn.disabled = false;
   }
 }
 
@@ -610,7 +552,6 @@ function closeLesson() {
   const contentEl = document.getElementById("lesson-topic-content");
   const loadingEl = document.getElementById("lesson-viewer-loading");
   const downloadBtn = document.getElementById("lesson-download-ppt-btn");
-  const regenerateBtn = document.getElementById("lesson-regenerate-btn");
   
   if (modal) modal.classList.add("hidden");
   if (contentEl) {
@@ -620,7 +561,6 @@ function closeLesson() {
   }
   if (loadingEl) loadingEl.style.display = "none";
   if (downloadBtn) downloadBtn.classList.add("hidden");
-  if (regenerateBtn) regenerateBtn.classList.add("hidden");
   __currentLessonTopic = null;
   __currentLessonLesson = null;
 }
