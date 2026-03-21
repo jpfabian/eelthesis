@@ -37,6 +37,37 @@ function requireMasterAdmin(req, res, next) {
   next();
 }
 
+// New debug route
+router.get("/debug", (req, res) => res.json({ success: true, message: "Master admin router is loaded" }));
+
+// List all Reading Quizzes
+router.get("/reading-quizzes/all", requireMasterAdmin, async (req, res) => {
+  const pool = req.pool;
+  try {
+    const [rows] = await pool.query(
+      "SELECT quiz_id, quiz_number, title, difficulty, passing_score, status, created_at FROM reading_quizzes ORDER BY created_at DESC"
+    );
+    res.json({ success: true, quizzes: rows });
+  } catch (err) {
+    console.error("Master admin list all reading quizzes:", err);
+    res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
+// List all Pronunciation Quizzes
+router.get("/pronunciation-quizzes/all", requireMasterAdmin, async (req, res) => {
+  const pool = req.pool;
+  try {
+    const [rows] = await pool.query(
+      "SELECT quiz_id, quiz_number, title, difficulty, status, created_at FROM pronunciation_quizzes ORDER BY created_at DESC"
+    );
+    res.json({ success: true, quizzes: rows });
+  } catch (err) {
+    console.error("Master admin list all pronunciation quizzes:", err);
+    res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
 function toNameCase(input) {
   if (input == null || typeof input !== "string") return input;
   return String(input)
@@ -279,34 +310,6 @@ router.post("/reading-quizzes", requireMasterAdmin, async (req, res) => {
     res.status(500).json({ success: false, error: "Server error" });
   } finally {
     if (conn) conn.release();
-  }
-});
-
-// List all Reading Quizzes
-router.get("/reading-quizzes/all", requireMasterAdmin, async (req, res) => {
-  const pool = req.pool;
-  try {
-    const [rows] = await pool.query(
-      "SELECT quiz_id, quiz_number, title, difficulty, passing_score, status, created_at FROM reading_quizzes ORDER BY created_at DESC"
-    );
-    res.json({ success: true, quizzes: rows });
-  } catch (err) {
-    console.error("Master admin list all reading quizzes:", err);
-    res.status(500).json({ success: false, error: "Server error" });
-  }
-});
-
-// List all Pronunciation Quizzes
-router.get("/pronunciation-quizzes/all", requireMasterAdmin, async (req, res) => {
-  const pool = req.pool;
-  try {
-    const [rows] = await pool.query(
-      "SELECT quiz_id, quiz_number, title, difficulty, status, created_at FROM pronunciation_quizzes ORDER BY created_at DESC"
-    );
-    res.json({ success: true, quizzes: rows });
-  } catch (err) {
-    console.error("Master admin list all pronunciation quizzes:", err);
-    res.status(500).json({ success: false, error: "Server error" });
   }
 });
 
