@@ -465,3 +465,71 @@ document.getElementById('pronunciation-quiz-form').addEventListener('submit', as
 // Initialize with one question/item each
 addReadingQuestion();
 addPronunciationQuestion();
+
+// Fetch and display existing quizzes
+async function fetchReadingQuizzes() {
+    const tbody = document.getElementById('reading-quizzes-tbody');
+    try {
+        const res = await fetch((window.API_BASE || "") + "/api/master-admin/reading-quizzes/all", {
+            headers: { "x-master-admin-token": MASTER_ADMIN_TOKEN }
+        });
+        const data = await res.json();
+        if (data.success && data.quizzes) {
+            if (data.quizzes.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-muted-foreground">No reading quizzes found.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = data.quizzes.map(q => `
+                <tr class="border-b border-border hover:bg-muted/30 transition-colors">
+                    <td class="p-4 text-sm font-medium">#${q.quiz_number}</td>
+                    <td class="p-4 text-sm">${q.title}</td>
+                    <td class="p-4 text-sm"><span class="px-2 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold capitalize">${q.difficulty}</span></td>
+                    <td class="p-4 text-sm">${q.passing_score}%</td>
+                    <td class="p-4 text-sm"><span class="px-2 py-1 rounded-full bg-green-500/10 text-green-600 text-xs font-semibold capitalize">${q.status}</span></td>
+                    <td class="p-4 text-sm text-right">
+                        <button class="text-muted-foreground hover:text-primary transition-colors"><i data-lucide="eye" class="size-4"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+            if (window.lucide) window.lucide.createIcons();
+        }
+    } catch (err) {
+        console.error("Failed to fetch reading quizzes:", err);
+        tbody.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-red-500">Failed to load reading quizzes.</td></tr>';
+    }
+}
+
+async function fetchPronunciationQuizzes() {
+    const tbody = document.getElementById('pronunciation-quizzes-tbody');
+    try {
+        const res = await fetch((window.API_BASE || "") + "/api/master-admin/pronunciation-quizzes/all", {
+            headers: { "x-master-admin-token": MASTER_ADMIN_TOKEN }
+        });
+        const data = await res.json();
+        if (data.success && data.quizzes) {
+            if (data.quizzes.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="p-8 text-center text-muted-foreground">No pronunciation quizzes found.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = data.quizzes.map(q => `
+                <tr class="border-b border-border hover:bg-muted/30 transition-colors">
+                    <td class="p-4 text-sm font-medium">#${q.quiz_number}</td>
+                    <td class="p-4 text-sm">${q.title}</td>
+                    <td class="p-4 text-sm"><span class="px-2 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold capitalize">${q.difficulty}</span></td>
+                    <td class="p-4 text-sm"><span class="px-2 py-1 rounded-full bg-green-500/10 text-green-600 text-xs font-semibold capitalize">${q.status}</span></td>
+                    <td class="p-4 text-sm text-right">
+                        <button class="text-muted-foreground hover:text-primary transition-colors"><i data-lucide="eye" class="size-4"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+            if (window.lucide) window.lucide.createIcons();
+        }
+    } catch (err) {
+        console.error("Failed to fetch pronunciation quizzes:", err);
+        tbody.innerHTML = '<tr><td colspan="5" class="p-8 text-center text-red-500">Failed to load pronunciation quizzes.</td></tr>';
+    }
+}
+
+// Initial fetch
+fetchReadingQuizzes();
+fetchPronunciationQuizzes();

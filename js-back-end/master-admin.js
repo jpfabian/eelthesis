@@ -282,6 +282,34 @@ router.post("/reading-quizzes", requireMasterAdmin, async (req, res) => {
   }
 });
 
+// List all Reading Quizzes
+router.get("/reading-quizzes/all", requireMasterAdmin, async (req, res) => {
+  const pool = req.pool;
+  try {
+    const [rows] = await pool.query(
+      "SELECT quiz_id, quiz_number, title, difficulty, passing_score, status, created_at FROM reading_quizzes ORDER BY created_at DESC"
+    );
+    res.json({ success: true, quizzes: rows });
+  } catch (err) {
+    console.error("Master admin list all reading quizzes:", err);
+    res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
+// List all Pronunciation Quizzes
+router.get("/pronunciation-quizzes/all", requireMasterAdmin, async (req, res) => {
+  const pool = req.pool;
+  try {
+    const [rows] = await pool.query(
+      "SELECT quiz_id, quiz_number, title, difficulty, status, created_at FROM pronunciation_quizzes ORDER BY created_at DESC"
+    );
+    res.json({ success: true, quizzes: rows });
+  } catch (err) {
+    console.error("Master admin list all pronunciation quizzes:", err);
+    res.status(500).json({ success: false, error: "Server error" });
+  }
+});
+
 // Add Built-in Pronunciation Quiz
 router.post("/pronunciation-quizzes", requireMasterAdmin, async (req, res) => {
   const pool = req.pool;

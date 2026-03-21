@@ -179,6 +179,74 @@
           </div>
         </form>
       </div>
+
+      <!-- Quizzes Tables -->
+      <div class="mt-12 space-y-8">
+        <section id="reading-quizzes-table-section">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xl font-bold flex items-center gap-2">
+              <i data-lucide="book-open" class="size-6 text-primary"></i>
+              Reading Quizzes
+            </h2>
+            <button onclick="fetchReadingQuizzes()" class="btn btn-outline btn-sm">
+              <i data-lucide="refresh-cw" class="size-4"></i>
+            </button>
+          </div>
+          <div class="bg-card rounded-xl border border-border overflow-hidden">
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse">
+                <thead>
+                  <tr class="bg-muted/50 border-b border-border">
+                    <th class="p-4 font-semibold text-sm">Number</th>
+                    <th class="p-4 font-semibold text-sm">Title</th>
+                    <th class="p-4 font-semibold text-sm">Difficulty</th>
+                    <th class="p-4 font-semibold text-sm">Passing Score</th>
+                    <th class="p-4 font-semibold text-sm">Status</th>
+                    <th class="p-4 font-semibold text-sm text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="reading-quizzes-tbody">
+                  <tr>
+                    <td colspan="6" class="p-8 text-center text-muted-foreground">Loading quizzes...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section id="pronunciation-quizzes-table-section">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xl font-bold flex items-center gap-2">
+              <i data-lucide="mic" class="size-6 text-primary"></i>
+              Pronunciation Quizzes
+            </h2>
+            <button onclick="fetchPronunciationQuizzes()" class="btn btn-outline btn-sm">
+              <i data-lucide="refresh-cw" class="size-4"></i>
+            </button>
+          </div>
+          <div class="bg-card rounded-xl border border-border overflow-hidden">
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse">
+                <thead>
+                  <tr class="bg-muted/50 border-b border-border">
+                    <th class="p-4 font-semibold text-sm">Number</th>
+                    <th class="p-4 font-semibold text-sm">Title</th>
+                    <th class="p-4 font-semibold text-sm">Difficulty</th>
+                    <th class="p-4 font-semibold text-sm">Status</th>
+                    <th class="p-4 font-semibold text-sm text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="pronunciation-quizzes-tbody">
+                  <tr>
+                    <td colspan="5" class="p-8 text-center text-muted-foreground">Loading quizzes...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      </div>
     </main>
   </div>
 
