@@ -21847,6 +21847,106 @@ body.deleted-archive-page #main-content .scores-table-scroll {
   box-shadow: 0 4px 12px rgba(109, 40, 217, 0.35);
 }
 
+/* Add Quiz Responsiveness */
+.quiz-form-container {
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.question-item {
+  position: relative;
+  background: var(--card);
+  padding: 1.5rem;
+  border-radius: 1rem;
+  border: 1px solid var(--border);
+  margin-bottom: 2rem;
+}
+
+@media (max-width: 640px) {
+  .question-item {
+    padding: 1.25rem;
+  }
+  .question-item-header {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 1rem;
+  }
+  .question-item .remove-btn {
+    position: static !important;
+    width: 100%;
+    justify-content: center;
+  }
+  .option-item {
+    gap: 0.5rem;
+  }
+}
+
+/* Master Admin Responsive Sidebar */
+@media (max-width: 1024px) {
+  .master-admin-app {
+    flex-direction: column;
+  }
+  aside#sidebar {
+    position: fixed;
+    top: 60px; /* height of mobile header */
+    left: -100%;
+    z-index: 1000;
+    width: 280px;
+    height: calc(100vh - 60px);
+    transition: left 0.3s ease;
+  }
+  aside#sidebar.open {
+    left: 0;
+  }
+  .mobile-sidebar-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    z-index: 999;
+  }
+}
+
+.mobile-nav-header {
+  height: 60px;
+  display: flex;
+  align-items: center;
+  padding: 0 1rem;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+}
+
+@media (min-width: 1025px) {
+  .master-admin-app {
+    height: calc(100vh - 60px);
+  }
+  aside#sidebar {
+    transition: width 0.3s ease, margin-left 0.3s ease;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  aside#sidebar:not(.open) {
+    width: 0;
+    margin-left: -1rem; /* adjustment to completely hide border if any */
+    border-right: none;
+  }
+}
+
+/* Table responsiveness */
+.overflow-x-auto {
+  -webkit-overflow-scrolling: touch;
+  overflow-x: auto;
+  width: 100%;
+}
+
+/* Ensure tables have a minimum width on mobile to trigger scrolling */
+@media (max-width: 768px) {
+  .overflow-x-auto table {
+    min-width: 600px; /* Minimum width to ensure columns are readable */
+  }
+}
+
 /* ============================================
    RESPONSIVE – Mobile S, M, L & Tablet
    Breakpoints: 480px (S), 640px (M), 768px (L), 1024px (tablet)

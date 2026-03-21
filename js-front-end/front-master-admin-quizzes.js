@@ -184,17 +184,23 @@ const MASTER_ADMIN_TOKEN = localStorage.getItem("eel_master_admin_token") || "ee
 function switchTab(tab) {
     const readingSection = document.getElementById('reading-quiz-section');
     const pronunciationSection = document.getElementById('pronunciation-quiz-section');
+    const readingTable = document.getElementById('reading-quizzes-table-section');
+    const pronunciationTable = document.getElementById('pronunciation-quizzes-table-section');
     const tabR = document.getElementById('tab-reading');
     const tabP = document.getElementById('tab-pronunciation');
 
     if (tab === 'reading') {
         readingSection.classList.remove('hidden');
         pronunciationSection.classList.add('hidden');
+        readingTable.classList.remove('hidden');
+        pronunciationTable.classList.add('hidden');
         tabR.classList.add('active');
         tabP.classList.remove('active');
     } else {
         readingSection.classList.add('hidden');
         pronunciationSection.classList.remove('hidden');
+        readingTable.classList.add('hidden');
+        pronunciationTable.classList.remove('hidden');
         tabR.classList.remove('active');
         tabP.classList.add('active');
     }
@@ -222,7 +228,7 @@ function addReadingQuestion() {
             <textarea class="form-control q-text" required rows="2" placeholder="Enter your question here..."></textarea>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+        <div class="question-item-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
             <div class="form-group" style="margin-bottom: 0;">
                 <label>Question Type</label>
                 <select class="form-control q-type" onchange="toggleReadingQuestionType(${readingQuestionCount}, this.value)">
