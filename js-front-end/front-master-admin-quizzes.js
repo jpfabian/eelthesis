@@ -213,56 +213,45 @@ function addReadingQuestion() {
     questionDiv.className = 'question-item';
     questionDiv.id = `r-q-${readingQuestionCount}`;
     questionDiv.innerHTML = `
-        <div class="question-item-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem;">
-            <div>
-                <span class="question-number" style="background: var(--primary); color: white; padding: 0.25rem 0.75rem; border-radius: 99px; font-weight: 700; font-size: 0.875rem;">Question ${readingQuestionCount}</span>
-            </div>
-            <button type="button" class="remove-btn" style="position: absolute; top: 1rem; right: 1rem; color: #ef4444; border: 1px solid #ef4444; padding: 0.25rem 0.5rem; border-radius: 0.5rem; background: transparent; display: flex; align-items: center; gap: 0.25rem; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#ef4444'; this.style.color='white'" onmouseout="this.style.background='transparent'; this.style.color='#ef4444'" onclick="removeElement('r-q-${readingQuestionCount}')">
-                <i data-lucide="trash-2" class="size-3.5"></i>
-                Remove
+        <div class="question-item-header flex items-center justify-between p-4 bg-muted/20 rounded-t-xl border-b border-border">
+            <span class="text-xs font-black uppercase tracking-widest text-muted-foreground">Question #${readingQuestionCount}</span>
+            <button type="button" class="remove-btn text-red-500 hover:text-red-700 transition-colors flex items-center gap-1.5" onclick="removeElement('r-q-${readingQuestionCount}')">
+                <i data-lucide="trash-2" class="size-4"></i>
+                <span class="remove-label">Remove</span>
             </button>
         </div>
-
-        <div class="form-group">
-            <label>Question Text</label>
-            <textarea class="form-control q-text" required rows="2" placeholder="Enter your question here..."></textarea>
-        </div>
-
-        <div class="question-item-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
-            <div class="form-group" style="margin-bottom: 0;">
-                <label>Question Type</label>
-                <select class="form-control q-type" onchange="toggleReadingQuestionType(${readingQuestionCount}, this.value)">
-                    <option value="mcq">Multiple Choice</option>
-                    <option value="essay">Essay / Open Ended</option>
-                </select>
-            </div>
-            <div class="form-group" style="margin-bottom: 0;">
-                <label>Points</label>
-                <input type="number" class="form-control q-points" value="1" min="1">
-            </div>
-        </div>
-
-        <div class="mcq-options-wrap" id="mcq-options-${readingQuestionCount}">
-            <label style="display: block; margin-bottom: 1rem; font-weight: 600; color: var(--foreground); font-size: 0.875rem;">Options (Mark the correct one)</label>
-            <div class="space-y-3">
-                <div class="option-item">
-                    <input type="radio" name="correct-${readingQuestionCount}" value="0" checked style="accent-color: var(--primary); width: 1.25rem; height: 1.25rem;">
-                    <input type="text" class="form-control opt-text" placeholder="Option 1">
+        <div class="p-4 space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="form-group">
+                    <label class="text-[10px] font-bold uppercase text-muted-foreground mb-1.5 block">Question Type</label>
+                    <select class="form-control q-type" onchange="toggleReadingQuestionType(${readingQuestionCount}, this.value)">
+                        <option value="mcq">Multiple Choice</option>
+                        <option value="essay">Essay / Open Ended</option>
+                    </select>
                 </div>
-                <div class="option-item">
-                    <input type="radio" name="correct-${readingQuestionCount}" value="1" style="accent-color: var(--primary); width: 1.25rem; height: 1.25rem;">
-                    <input type="text" class="form-control opt-text" placeholder="Option 2">
-                </div>
-                <div class="option-item">
-                    <input type="radio" name="correct-${readingQuestionCount}" value="2" style="accent-color: var(--primary); width: 1.25rem; height: 1.25rem;">
-                    <input type="text" class="form-control opt-text" placeholder="Option 3">
-                </div>
-                <div class="option-item">
-                    <input type="radio" name="correct-${readingQuestionCount}" value="3" style="accent-color: var(--primary); width: 1.25rem; height: 1.25rem;">
-                    <input type="text" class="form-control opt-text" placeholder="Option 4">
+                <div class="form-group">
+                    <label class="text-[10px] font-bold uppercase text-muted-foreground mb-1.5 block">Points</label>
+                    <input type="number" class="form-control q-points" value="1" min="1">
                 </div>
             </div>
-        </div>
+            <div class="form-group">
+                <label class="text-[10px] font-bold uppercase text-muted-foreground mb-1.5 block">Question Text</label>
+                <textarea class="form-control q-text" required rows="2" placeholder="Enter the question..."></textarea>
+            </div>
+            <div class="mcq-options-wrap mt-2" id="mcq-options-${readingQuestionCount}">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-[10px] font-bold uppercase text-muted-foreground">Options</span>
+                    <span class="text-[9px] text-muted-foreground italic">Select the correct answer</span>
+                </div>
+                <div class="space-y-2">
+                    ${[0, 1, 2, 3].map(i => `
+                        <div class="option-item flex items-center gap-2 p-2 bg-muted/10 rounded-lg border border-border/50 hover:border-primary/30 transition-all">
+                            <input type="radio" name="correct-${readingQuestionCount}" value="${i}" class="size-3.5 accent-primary" ${i === 0 ? 'checked' : ''}>
+                            <input type="text" class="form-control opt-text !p-1.5 !text-xs" placeholder="Option ${i + 1}">
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
 
         <div class="essay-placeholder hidden" id="essay-info-${readingQuestionCount}" style="padding: 1.25rem; background: color-mix(in srgb, var(--primary) 5%, transparent); border: 1px dashed var(--primary); border-radius: 0.75rem; text-align: center;">
             <i data-lucide="info" class="size-5" style="color: var(--primary); margin-bottom: 0.5rem; display: block; margin-left: auto; margin-right: auto;"></i>
@@ -345,11 +334,18 @@ function addPronunciationQuestion() {
     }
 
     questionDiv.innerHTML = `
-        <button type="button" class="remove-btn" style="position: absolute; top: 1rem; right: 1rem; color: #ef4444; border: 1px solid #ef4444; padding: 0.25rem 0.5rem; border-radius: 0.5rem; background: transparent; display: flex; align-items: center; gap: 0.25rem; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#ef4444'; this.style.color='white'" onmouseout="this.style.background='transparent'; this.style.color='#ef4444'" onclick="removeElement('p-q-${pronunciationQuestionCount}')">
-            <i data-lucide="trash-2" class="size-3.5"></i>
-            Remove
-        </button>
-        ${fields}
+        <div class="question-item-header flex items-center justify-between p-4 bg-muted/20 rounded-t-xl border-b border-border">
+            <span class="text-xs font-black uppercase tracking-widest text-muted-foreground">Practice Item #${pronunciationQuestionCount}</span>
+            <button type="button" class="remove-btn text-red-500 hover:text-red-700 transition-colors flex items-center gap-1.5" onclick="removeElement('p-q-${pronunciationQuestionCount}')">
+                <i data-lucide="trash-2" class="size-4"></i>
+                <span class="remove-label">Remove</span>
+            </button>
+        </div>
+        <div class="p-4 space-y-4">
+             <div id="p-item-fields-${pronunciationQuestionCount}">
+                 ${fields}
+             </div>
+         </div>
     `;
     container.appendChild(questionDiv);
     if (window.lucide) window.lucide.createIcons();
@@ -486,14 +482,28 @@ async function fetchReadingQuizzes() {
                 return;
             }
             tbody.innerHTML = data.quizzes.map(q => `
-                <tr class="border-b border-border hover:bg-muted/30 transition-colors">
-                    <td class="p-4 text-sm font-medium">#${q.quiz_number}</td>
-                    <td class="p-4 text-sm">${q.title}</td>
-                    <td class="p-4 text-sm"><span class="px-2 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold capitalize">${q.difficulty}</span></td>
-                    <td class="p-4 text-sm">${q.passing_score}%</td>
-                    <td class="p-4 text-sm"><span class="px-2 py-1 rounded-full bg-green-500/10 text-green-600 text-xs font-semibold capitalize">${q.status}</span></td>
-                    <td class="p-4 text-sm text-right">
-                        <button class="text-muted-foreground hover:text-primary transition-colors"><i data-lucide="eye" class="size-4"></i></button>
+                <tr class="quiz-row">
+                    <td class="quiz-number-cell">#${q.quiz_number}</td>
+                    <td class="font-bold">${q.title}</td>
+                    <td><span class="level-badge ${q.difficulty}">${q.difficulty}</span></td>
+                    <td>
+                        <div class="flex items-center gap-1.5 font-medium">
+                            <i data-lucide="target" class="size-3.5 text-muted-foreground"></i>
+                            ${q.passing_score}%
+                        </div>
+                    </td>
+                    <td>
+                        <div class="status-indicator ${q.status}">
+                            <div class="status-dot"></div>
+                            ${q.status}
+                        </div>
+                    </td>
+                    <td>
+                        <div class="action-btns">
+                            <button class="action-icon-btn view" title="View Details"><i data-lucide="eye" class="size-4"></i></button>
+                            <button class="action-icon-btn edit" title="Edit Quiz"><i data-lucide="edit-3" class="size-4"></i></button>
+                            <button class="action-icon-btn delete" title="Delete Quiz"><i data-lucide="trash-2" class="size-4"></i></button>
+                        </div>
                     </td>
                 </tr>
             `).join('');
@@ -518,13 +528,22 @@ async function fetchPronunciationQuizzes() {
                 return;
             }
             tbody.innerHTML = data.quizzes.map(q => `
-                <tr class="border-b border-border hover:bg-muted/30 transition-colors">
-                    <td class="p-4 text-sm font-medium">#${q.quiz_number}</td>
-                    <td class="p-4 text-sm">${q.title}</td>
-                    <td class="p-4 text-sm"><span class="px-2 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold capitalize">${q.difficulty}</span></td>
-                    <td class="p-4 text-sm"><span class="px-2 py-1 rounded-full bg-green-500/10 text-green-600 text-xs font-semibold capitalize">${q.status}</span></td>
-                    <td class="p-4 text-sm text-right">
-                        <button class="text-muted-foreground hover:text-primary transition-colors"><i data-lucide="eye" class="size-4"></i></button>
+                <tr class="quiz-row">
+                    <td class="quiz-number-cell">#${q.quiz_number}</td>
+                    <td class="font-bold">${q.title}</td>
+                    <td><span class="level-badge ${q.difficulty}">${q.difficulty}</span></td>
+                    <td>
+                        <div class="status-indicator ${q.status}">
+                            <div class="status-dot"></div>
+                            ${q.status}
+                        </div>
+                    </td>
+                    <td>
+                        <div class="action-btns">
+                            <button class="action-icon-btn view" title="View Details"><i data-lucide="eye" class="size-4"></i></button>
+                            <button class="action-icon-btn edit" title="Edit Quiz"><i data-lucide="edit-3" class="size-4"></i></button>
+                            <button class="action-icon-btn delete" title="Delete Quiz"><i data-lucide="trash-2" class="size-4"></i></button>
+                        </div>
                     </td>
                 </tr>
             `).join('');

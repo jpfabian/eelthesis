@@ -92,7 +92,7 @@
       </div>
     </aside>
 
-    <main class="flex-1 overflow-auto p-4 md:p-6">
+    <main class="flex-1 overflow-auto p-6">
       <header class="page-header mb-6 flex flex-col sm:flex-row items-start sm:items-center gap-4">
         <div class="page-header-icon shrink-0">
           <i data-lucide="plus-circle" class="size-8"></i>
@@ -117,97 +117,171 @@
       </div>
 
       <!-- Reading Quiz Form -->
-      <div id="reading-quiz-section" class="quiz-form-container">
-        <form id="reading-quiz-form">
-          <div class="form-group">
-            <label for="r-title">Quiz Title</label>
-            <input type="text" id="r-title" class="form-control" required placeholder="e.g., Magellan's Voyage">
+      <div id="reading-quiz-section" class="quiz-creation-container animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div class="quiz-creation-card">
+          <div class="quiz-creation-header">
+            <div class="quiz-type-badge reading">
+              <i data-lucide="book-open" class="size-4"></i>
+              Reading Assessment
+            </div>
+            <h2 class="quiz-creation-title">Create Reading Quiz</h2>
+            <p class="quiz-creation-subtitle">Craft a new story-based assessment for students.</p>
           </div>
-          <div class="form-group">
-            <label for="r-passage">Passage/Story</label>
-            <textarea id="r-passage" class="form-control" rows="10" required placeholder="Paste the story text here..."></textarea>
-          </div>
-          <div class="form-group">
-            <label for="r-passing">Passing Score (%)</label>
-            <input type="number" id="r-passing" class="form-control" value="70" min="0" max="100">
-          </div>
+          
+          <form id="reading-quiz-form" class="quiz-creation-form">
+            <div class="form-section">
+              <h3 class="form-section-title"><i data-lucide="info" class="size-4"></i> Basic Information</h3>
+              <div class="form-grid">
+                <div class="form-group col-span-full">
+                  <label for="r-title">Quiz Title</label>
+                  <div class="input-with-icon">
+                    <i data-lucide="type" class="input-icon"></i>
+                    <input type="text" id="r-title" class="form-control" required placeholder="e.g., The Brave Little Eel">
+                  </div>
+                </div>
+                <div class="form-group col-span-full">
+                  <label for="r-passage">Passage / Story Content</label>
+                  <textarea id="r-passage" class="form-control" rows="8" required placeholder="Write or paste your story here..."></textarea>
+                  <p class="form-help-text">This content will be shown to students before they answer the questions.</p>
+                </div>
+                <div class="form-group">
+                  <label for="r-passing">Passing Score (%)</label>
+                  <div class="input-with-icon">
+                    <i data-lucide="target" class="input-icon"></i>
+                    <input type="number" id="r-passing" class="form-control" value="70" min="0" max="100">
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="r-difficulty">Difficulty Level</label>
+                  <select id="r-difficulty" class="form-control">
+                    <option value="beginner">Beginner</option>
+                    <option value="intermediate">Intermediate</option>
+                    <option value="advanced">Advanced</option>
+                  </select>
+                </div>
+              </div>
+            </div>
 
-          <div id="reading-questions-container">
-            <h3 class="mb-4">Questions</h3>
-          </div>
-          <button type="button" class="btn btn-outline btn-add" onclick="addReadingQuestion()">
-            <i data-lucide="plus" class="size-4"></i> Add Question
-          </button>
+            <div class="form-section">
+              <div class="flex items-center justify-between mb-6">
+                <h3 class="form-section-title mb-0"><i data-lucide="list-checks" class="size-4"></i> Quiz Questions</h3>
+              </div>
+              <div id="reading-questions-container" class="items-list-container">
+                <!-- Questions injected here -->
+              </div>
+              <div class="mt-6">
+                <button type="button" class="btn-add-item" onclick="addReadingQuestion()">
+                  <i data-lucide="plus" class="size-4"></i>
+                  Add Question
+                </button>
+              </div>
+            </div>
 
-          <div style="margin-top: 3rem;">
-            <button type="submit" class="btn btn-primary" style="width: 100%; padding: 1rem; border-radius: 1rem; font-size: 1.125rem; font-weight: 700; box-shadow: 0 10px 25px -5px rgba(109, 40, 217, 0.4);">
-              <i data-lucide="save" class="size-5"></i>
-              Save Reading Quiz
-            </button>
-          </div>
-        </form>
+            <div class="form-actions mt-12">
+              <button type="submit" class="btn-submit-quiz reading">
+                <i data-lucide="save" class="size-5"></i>
+                <span>Publish Reading Quiz</span>
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
 
       <!-- Pronunciation Quiz Form -->
-      <div id="pronunciation-quiz-section" class="quiz-form-container hidden">
-        <form id="pronunciation-quiz-form">
-          <div class="form-group">
-            <label for="p-title">Quiz Title</label>
-            <input type="text" id="p-title" class="form-control" required placeholder="e.g., Vowel Sounds">
-          </div>
-          <div class="form-group">
-            <label for="p-difficulty">Difficulty</label>
-            <select id="p-difficulty" class="form-control" onchange="updatePronunciationQuestionType()">
-              <option value="beginner">Consonant Cluster (Beginner)</option>
-              <option value="intermediate">Word Stress (Intermediate)</option>
-              <option value="advanced">Linking & Connected Speech (Advanced)</option>
-            </select>
+      <div id="pronunciation-quiz-section" class="quiz-creation-container hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div class="quiz-creation-card">
+          <div class="quiz-creation-header">
+            <div class="quiz-type-badge pronunciation">
+              <i data-lucide="mic" class="size-4"></i>
+              Spoken Assessment
+            </div>
+            <h2 class="quiz-creation-title">Create Pronunciation Quiz</h2>
+            <p class="quiz-creation-subtitle">Design exercises to improve student speaking skills.</p>
           </div>
 
-          <div id="pronunciation-questions-container">
-            <h3 class="mb-4">Words/Sentences</h3>
-          </div>
-          <button type="button" class="btn btn-outline btn-add" onclick="addPronunciationQuestion()">
-            <i data-lucide="plus" class="size-4"></i> Add Item
-          </button>
+          <form id="pronunciation-quiz-form" class="quiz-creation-form">
+            <div class="form-section">
+              <h3 class="form-section-title"><i data-lucide="info" class="size-4"></i> Basic Information</h3>
+              <div class="form-grid">
+                <div class="form-group col-span-full">
+                  <label for="p-title">Quiz Title</label>
+                  <div class="input-with-icon">
+                    <i data-lucide="type" class="input-icon"></i>
+                    <input type="text" id="p-title" class="form-control" required placeholder="e.g., Master the Vowels">
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="p-difficulty">Difficulty Level</label>
+                  <select id="p-difficulty" class="form-control" onchange="updatePronunciationQuestionType()">
+                    <option value="beginner">Consonant Cluster (Beginner)</option>
+                    <option value="intermediate">Word Stress (Intermediate)</option>
+                    <option value="advanced">Linking & Connected Speech (Advanced)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
 
-          <div style="margin-top: 3rem;">
-            <button type="submit" class="btn btn-primary" style="width: 100%; padding: 1rem; border-radius: 1rem; font-size: 1.125rem; font-weight: 700; box-shadow: 0 10px 25px -5px rgba(109, 40, 217, 0.4);">
-              <i data-lucide="save" class="size-5"></i>
-              Save Pronunciation Quiz
-            </button>
-          </div>
-        </form>
+            <div class="form-section">
+              <div class="flex items-center justify-between mb-6">
+                <h3 class="form-section-title mb-0"><i data-lucide="mic-2" class="size-4"></i> Practice Items</h3>
+              </div>
+              <div id="pronunciation-questions-container" class="items-list-container">
+                <!-- Items injected here -->
+              </div>
+              <div class="mt-6">
+                <button type="button" class="btn-add-item" onclick="addPronunciationQuestion()">
+                  <i data-lucide="plus" class="size-4"></i>
+                  Add Item
+                </button>
+              </div>
+            </div>
+
+            <div class="form-actions mt-12">
+              <button type="submit" class="btn-submit-quiz pronunciation">
+                <i data-lucide="save" class="size-5"></i>
+                <span>Publish Pronunciation Quiz</span>
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
 
       <!-- Quizzes Tables -->
-      <div class="mt-12 space-y-12">
+      <div class="mt-8 space-y-8">
         <section id="reading-quizzes-table-section" class="quiz-form-container">
-          <div class="bg-card rounded-xl border border-border overflow-hidden">
-            <div class="flex items-center justify-between p-4 border-b border-border bg-muted/30">
-              <h2 class="text-xl font-bold flex items-center gap-2">
-                <i data-lucide="book-open" class="size-6 text-primary"></i>
-                Reading Quizzes
-              </h2>
-              <button onclick="fetchReadingQuizzes()" class="btn btn-outline btn-sm">
-                <i data-lucide="refresh-cw" class="size-4"></i>
+          <div class="quiz-management-card">
+            <div class="quiz-management-header">
+              <div class="flex items-center gap-4">
+                <div class="quiz-type-icon reading">
+                  <i data-lucide="book-open"></i>
+                </div>
+                <div>
+                  <h2 class="quiz-management-title">Reading Quizzes</h2>
+                  <p class="quiz-management-subtitle">Manage and review all published reading content.</p>
+                </div>
+              </div>
+              <button onclick="fetchReadingQuizzes()" class="refresh-btn" title="Refresh list">
+                <i data-lucide="refresh-cw"></i>
               </button>
             </div>
             <div class="overflow-x-auto">
-              <table class="w-full text-left border-collapse">
+              <table class="quiz-management-table">
                 <thead>
-                  <tr class="bg-muted/50 border-b border-border">
-                    <th class="p-4 font-semibold text-sm">Number</th>
-                    <th class="p-4 font-semibold text-sm">Title</th>
-                    <th class="p-4 font-semibold text-sm">Difficulty</th>
-                    <th class="p-4 font-semibold text-sm">Passing Score</th>
-                    <th class="p-4 font-semibold text-sm">Status</th>
-                    <th class="p-4 font-semibold text-sm text-right">Actions</th>
+                  <tr>
+                    <th>Number</th>
+                    <th>Quiz Title</th>
+                    <th>Level</th>
+                    <th>Target Score</th>
+                    <th>Status</th>
+                    <th class="text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody id="reading-quizzes-tbody">
                   <tr>
-                    <td colspan="6" class="p-8 text-center text-muted-foreground">Loading quizzes...</td>
+                    <td colspan="6" class="p-12 text-center">
+                      <div class="loading-spinner-small mx-auto mb-4"></div>
+                      <p class="text-muted-foreground animate-pulse">Fetching quizzes...</p>
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -216,30 +290,38 @@
         </section>
 
         <section id="pronunciation-quizzes-table-section" class="quiz-form-container hidden">
-          <div class="bg-card rounded-xl border border-border overflow-hidden">
-            <div class="flex items-center justify-between p-4 border-b border-border bg-muted/30">
-              <h2 class="text-xl font-bold flex items-center gap-2">
-                <i data-lucide="mic" class="size-6 text-primary"></i>
-                Pronunciation Quizzes
-              </h2>
-              <button onclick="fetchPronunciationQuizzes()" class="btn btn-outline btn-sm">
-                <i data-lucide="refresh-cw" class="size-4"></i>
+          <div class="quiz-management-card">
+            <div class="quiz-management-header">
+              <div class="flex items-center gap-4">
+                <div class="quiz-type-icon pronunciation">
+                  <i data-lucide="mic"></i>
+                </div>
+                <div>
+                  <h2 class="quiz-management-title">Pronunciation Quizzes</h2>
+                  <p class="quiz-management-subtitle">Manage spoken language assessments and items.</p>
+                </div>
+              </div>
+              <button onclick="fetchPronunciationQuizzes()" class="refresh-btn" title="Refresh list">
+                <i data-lucide="refresh-cw"></i>
               </button>
             </div>
             <div class="overflow-x-auto">
-              <table class="w-full text-left border-collapse">
+              <table class="quiz-management-table">
                 <thead>
-                  <tr class="bg-muted/50 border-b border-border">
-                    <th class="p-4 font-semibold text-sm">Number</th>
-                    <th class="p-4 font-semibold text-sm">Title</th>
-                    <th class="p-4 font-semibold text-sm">Difficulty</th>
-                    <th class="p-4 font-semibold text-sm">Status</th>
-                    <th class="p-4 font-semibold text-sm text-right">Actions</th>
+                  <tr>
+                    <th>Number</th>
+                    <th>Quiz Title</th>
+                    <th>Level</th>
+                    <th>Status</th>
+                    <th class="text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody id="pronunciation-quizzes-tbody">
                   <tr>
-                    <td colspan="5" class="p-8 text-center text-muted-foreground">Loading quizzes...</td>
+                    <td colspan="5" class="p-12 text-center">
+                      <div class="loading-spinner-small mx-auto mb-4"></div>
+                      <p class="text-muted-foreground animate-pulse">Fetching quizzes...</p>
+                    </td>
                   </tr>
                 </tbody>
               </table>
