@@ -21734,7 +21734,7 @@ body.deleted-archive-page #main-content .scores-table-scroll {
   flex-shrink: 0;
 }
 .curriculum-browse-lesson-topics {
-  padding: 0.5rem 1.25rem 1rem 4.5rem;
+  padding: 1rem;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
@@ -21765,6 +21765,33 @@ body.deleted-archive-page #main-content .scores-table-scroll {
 .curriculum-browse-view-topic {
   flex-shrink: 0;
   text-decoration: none;
+}
+
+@media (max-width: 768px) {
+  .curriculum-browse-topic-tile {
+    display: grid !important;
+    grid-template-areas: 
+      "icon title"
+      "button button";
+    grid-template-columns: auto 1fr;
+    gap: 0.5rem 0.75rem;
+    align-items: center;
+    padding: 1rem !important;
+  }
+  .curriculum-browse-topic-icon {
+    grid-area: icon;
+  }
+  .curriculum-browse-topic-title {
+    grid-area: title;
+    font-size: 0.9rem !important;
+  }
+  .curriculum-browse-view-topic {
+    grid-area: button;
+    width: 100%;
+    margin-top: 0.25rem;
+    justify-content: center;
+    padding: 0.625rem !important;
+  }
 }
 .curriculum-browse-view-topic:disabled {
   opacity: 0.6;
