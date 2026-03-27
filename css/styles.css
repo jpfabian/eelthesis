@@ -11994,6 +11994,14 @@ body.pronunciation-lessons-page .quiz-page[data-view="grid"] #lessons-grid {
   }
 }
 
+/* Mobile grid adjustments for Reading & Pronunciation pages */
+@media (max-width: 768px) {
+  body.reading-lessons-page .quiz-page[data-view="grid"] #lessons-grid,
+  body.pronunciation-lessons-page .quiz-page[data-view="grid"] #lessons-grid {
+    grid-template-columns: repeat(auto-fit, minmax(266px, 1fr));
+  }
+}
+
 /* Ensure card header doesn't wrap awkwardly in grid view */
 .quiz-page[data-view="grid"] .created-quiz-card__header {
   align-items: flex-start; /* Better for multiline titles */
@@ -18705,7 +18713,7 @@ body.take-quiz-page .take-quiz-questions .mt-4.p-4 .grid > div {
 
     #generatedExamContent .exam-doc-header {
       text-align: center;
-      margin-bottom: 1.5rem;
+      margin-bottom: 1rem;
       color: var(--foreground);
     }
 
@@ -18716,55 +18724,90 @@ body.take-quiz-page .take-quiz-questions .mt-4.p-4 .grid > div {
     }
 
     #generatedExamContent .exam-doc-logo-img {
-      width: clamp(70px, 11vw, 88px);
-      height: clamp(70px, 11vw, 88px);
+      width: clamp(75px, 12vw, 80px);
+      height: auto;
       object-fit: contain;
       display: block;
     }
 
-    #generatedExamContent .exam-doc-agency {
-      font-size: clamp(0.7rem, 1.6vw, 0.8125rem);
-      line-height: 1.45;
-      margin: 0 0 0.2rem 0;
+    #generatedExamContent .exam-doc-agency-wrap {
+      margin-bottom: 0.25rem;
+      line-height: 1.1;
+    }
+
+    #generatedExamContent .exam-doc-agency-republic {
+      font-family: 'Old English Text MT', 'Cloister Black', serif;
+      font-size: 10pt;
+      margin: 0;
+    }
+
+    #generatedExamContent .exam-doc-agency-deped {
+      font-family: 'Old English Text MT', 'Cloister Black', serif;
+      font-size: 10pt;
+      font-weight: 700;
+      margin: 0;
+    }
+
+    #generatedExamContent .exam-doc-agency-region,
+    #generatedExamContent .exam-doc-agency-division {
+      font-size: 10pt;
+      text-transform: uppercase;
+      margin: 0;
+      letter-spacing: 0.05em;
       font-weight: 500;
-      letter-spacing: 0.01em;
     }
 
     #generatedExamContent .exam-doc-school {
-      font-size: clamp(0.8125rem, 1.9vw, 0.9375rem);
-      font-weight: 700;
-      margin: 0.35rem 0;
+      font-size: 10pt;
+      font-weight: 800;
+      margin: 0.25rem 0 0 0;
       letter-spacing: 0.02em;
+      text-transform: uppercase;
     }
 
     #generatedExamContent .exam-doc-address {
-      font-size: clamp(0.6875rem, 1.5vw, 0.75rem);
-      margin: 0 0 0.75rem 0;
+      font-size: 10pt;
+      margin: 0 0 0.5rem 0;
       color: var(--muted-foreground);
     }
 
     #generatedExamContent .exam-doc-rule {
       width: 100%;
-      margin: 0.75rem 0;
+      margin: 0.5rem 0;
       border: none;
       border-top: 1.5px solid var(--border);
     }
 
     #generatedExamContent .exam-doc-rule-footer {
-      margin-top: 1.5rem;
+      margin-top: 1rem;
       margin-bottom: 0.5rem;
     }
 
+    #generatedExamContent .exam-doc-title-wrap {
+      margin: 1rem 0 1.5rem 0;
+      text-align: center;
+      line-height: 1.2;
+    }
+
+    #generatedExamContent .exam-doc-subject {
+      font-size: 10pt;
+      font-weight: 800;
+      margin: 0;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
     #generatedExamContent .exam-doc-title {
-      font-size: clamp(1rem, 2vw, 1.125rem);
+      font-size: 10pt;
       font-weight: 700;
-      margin: 0.5rem 0 1rem 0;
-      letter-spacing: 0.01em;
+      margin: 0.25rem 0 0 0;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
     }
 
     /* Meta block – form-style rows */
     #generatedExamContent .exam-doc-meta {
-      font-size: clamp(0.6875rem, 1.5vw, 0.8125rem);
+      font-size: 10pt;
       margin-bottom: 1.25rem;
       text-align: left;
     }
@@ -18803,21 +18846,52 @@ body.take-quiz-page .take-quiz-questions .mt-4.p-4 .grid > div {
     #generatedExamContent .exam-doc-body {
       color: var(--foreground);
       white-space: pre-wrap;
-      text-align: justify;
-      font-size: clamp(0.875rem, 1.8vw, 1rem);
-      line-height: 1.65;
-      padding: 0 0.25rem;
+      text-align: left;
+      font-size: 10pt;
+      line-height: 1.5;
+      padding: 0;
+      word-spacing: 0.05em;
     }
 
     #generatedExamContent .exam-doc-footer {
-      margin-top: 1.5rem;
+      margin-top: 3rem;
       color: var(--muted-foreground);
     }
 
-    #generatedExamContent .exam-doc-footer-text {
-      text-align: center;
-      font-size: clamp(0.75rem, 1.6vw, 0.8125rem);
-      font-style: italic;
+    #generatedExamContent .exam-doc-rule-double {
+      width: 100%;
+      height: 4px;
+      border-top: 1.25px solid var(--border);
+      border-bottom: 1.25px solid var(--border);
+      margin-bottom: 1rem;
+    }
+
+    #generatedExamContent .exam-doc-footer-content {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1.5rem;
+    }
+
+    #generatedExamContent .exam-doc-footer-logos {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    #generatedExamContent .exam-doc-footer-logo {
+      width: 48px;
+      height: 48px;
+      object-fit: contain;
+    }
+
+    #generatedExamContent .exam-doc-footer-info {
+      text-align: right;
+      font-size: 10pt;
+      line-height: 1.4;
+    }
+
+    #generatedExamContent .exam-doc-footer-info-line {
       margin: 0;
     }
 
@@ -18827,8 +18901,11 @@ body.take-quiz-page .take-quiz-questions .mt-4.p-4 .grid > div {
         padding: 1rem;
       }
       #generatedExamContent .exam-doc-body {
-        font-size: 0.875rem;
+        font-size: 10pt;
         padding: 0;
+      }
+      #generatedExamContent .exam-doc-meta {
+        font-size: 10pt;
       }
       #generatedExamContent .exam-doc-meta-row {
         flex-direction: column;
@@ -18851,8 +18928,8 @@ body.take-quiz-page .take-quiz-questions .mt-4.p-4 .grid > div {
         padding: 2.5rem 3rem;
       }
       #generatedExamContent .exam-doc-body {
-      font-size: 1rem;
-        line-height: 1.7;
+        font-size: 10pt;
+        line-height: 1.5;
       }
       #generatedExamContent .exam-doc-logo-img {
         width: 88px;
@@ -22646,7 +22723,7 @@ body.deleted-archive-page #main-content .scores-table-scroll {
   #main-content,
   #main-app #main-content > div,
   #main-app #main-content > div.p-6 {
-    padding: 1rem !important;
+    padding: 0.3rem !important;
   }
   .card-content.p-6,
   .card-content.p-5,

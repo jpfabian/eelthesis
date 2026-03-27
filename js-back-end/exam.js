@@ -73,7 +73,7 @@ TOS requirement (Bloom's cognitive levels):
       sections.push(`
 I. MULTIPLE CHOICE
       Choose the letter of the correct answer. Write the chosen letter on the space provided before each number.
-${Array.from({ length: getCount("multiple-choice") }, (_, i) => `      ${i + 1}. ...`).join("\n")}
+${Array.from({ length: getCount("multiple-choice") }, (_, i) => `      ____ ${i + 1}. ...`).join("\n")}
       `);
     }
 
@@ -81,7 +81,7 @@ ${Array.from({ length: getCount("multiple-choice") }, (_, i) => `      ${i + 1}.
       sections.push(`
 II. TRUE OR FALSE
       Write TRUE if the statement is correct and FALSE if it is not.
-${Array.from({ length: getCount("true-false") }, (_, i) => `      ${i + 1}. ...`).join("\n")}
+${Array.from({ length: getCount("true-false") }, (_, i) => `      ____ ${i + 1}. ...`).join("\n")}
       `);
     }
 
@@ -89,7 +89,7 @@ ${Array.from({ length: getCount("true-false") }, (_, i) => `      ${i + 1}. ...`
       sections.push(`
 III. IDENTIFICATION
       Identify what is being described in each item.
-${Array.from({ length: getCount("identification") }, (_, i) => `      ${i + 1}. ...`).join("\n")}
+${Array.from({ length: getCount("identification") }, (_, i) => `      ____ ${i + 1}. ...`).join("\n")}
       `);
     }
 
@@ -116,6 +116,23 @@ You are a professional teacher creating a formal printed exam for Senior High Sc
 🧠 Your task: Generate a complete exam that exactly follows the layout and formatting below. 
 The layout, indentation, and spacing must be EXACTLY as shown — do not add or remove any lines.
 
+CRITICAL SPACING RULE: 
+There must be NO BLANK LINES between questions. Each question must immediately follow the previous one.
+Example of correct spacing:
+A) Option A
+B) Option B
+C) Option C
+D) Option D
+____ 2. Next question text here...
+
+Example of WRONG spacing (DO NOT DO THIS):
+A) Option A
+B) Option B
+C) Option C
+D) Option D
+
+____ 2. Next question text here...
+
 CRITICAL: Include ONLY the sections that appear in the layout below. Do NOT add any section that is not in the layout. For example: if the layout does NOT contain "IV. ESSAY", you must NOT include an Essay section. If it does NOT contain "III. IDENTIFICATION", do NOT include Identification. Only generate the sections that are explicitly listed in the layout.
 
 CRITICAL: Generate EVERY question in the layout. If the layout shows 50 numbered items in a section, you must output all 50 full questions (and 50 answers in the answer key). Do not stop early, do not write "..." or "items 25–50 similar", and do not abbreviate. Each number must have a complete question.
@@ -135,7 +152,9 @@ ${tosInstruction}
 Each question must:
 - Strictly match the given topic(s)
 - Be grammatically correct and clearly written
-- Follow the numbering and indentation pattern
+- Follow the numbering and indentation pattern (Place "____" before the question number)
+- Do NOT include any lines (e.g. _________________) at the bottom of the question or options.
+- Do NOT add blank lines or extra spacing between items.
 - For Essay-type items only: contain at least 2–3 sub-questions
 
 For IDENTIFICATION: Do NOT use letter options (a, b, c, d). Each item is short-answer only.
@@ -162,13 +181,17 @@ Follow this format strictly. Do not add any explanations or instructions outside
       messages: [
         {
           role: "system",
-          content: "You are an expert senior high school teacher formatting exams in clean, centered academic layout with clear sections and an answer key. Always generate the FULL number of questions requested in each section; do not stop early or summarize."
+          content: "You are an expert senior high school teacher formatting exams in clean academic layout. Always place a short underline '____' before each question number (e.g., '____ 1.'). Never add lines at the bottom of questions or options. IMPORTANT: Do NOT add blank lines between questions; each new question should immediately follow the last option of the previous question."
         },
         { role: "user", content: prompt }
       ]
     });
 
     let examText = response.choices[0]?.message?.content || "No exam generated.";
+
+    // ✅ Post-processing: Remove extra blank lines between items (e.g. between option D and next question)
+    // This regex looks for a line ending, then one or more blank lines, then the "____ number." pattern
+    examText = examText.replace(/(\n)\s*\n+(\s*____\s*\d+\.)/g, "$1$2");
 
     // Strip any section that was NOT in the selected Question Types (checkboxes)
     // Remove from bottom to top (IV → III → II → I) so positions stay correct
@@ -307,14 +330,25 @@ router.get("/api/get-exams", async (req, res) => {
 });
 
 
-// ✅ Get exam content by ID (includes title for PDF export)
+// ✅ Get exam content by ID (includes title and subject for PDF export)
 router.get("/api/get-exam-content/:id", async (req, res) => {
   const { id } = req.params;
   const pool = req.pool;
   try {
-    const [rows] = await pool.query("SELECT content, title FROM exams WHERE id = ?", [id]);
+    const query = `
+      SELECT e.content, e.title, c.subject AS subject_name
+      FROM exams e
+      JOIN classes c ON e.class_id = c.id
+      WHERE e.id = ?
+    `;
+    const [rows] = await pool.query(query, [id]);
     if (rows.length === 0) return res.status(404).json({ success: false, message: "Exam not found" });
-    res.json({ success: true, content: rows[0].content, title: rows[0].title || "Examination" });
+    res.json({ 
+      success: true, 
+      content: rows[0].content, 
+      title: rows[0].title || "Examination",
+      subject: rows[0].subject_name || "" 
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, message: "Failed to fetch exam content" });

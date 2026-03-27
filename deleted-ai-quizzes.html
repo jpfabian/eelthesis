@@ -87,8 +87,8 @@
                         <p class="page-header-subtitle">Archived exams from the database and cached AI-generated quizzes from this browser.</p>
                     </div>
                 </header>
-
-                <div class="archive-section-header mt-2">
+                <div class="card">
+                    <div class="archive-section-header">
                     <div class="page-header-icon" aria-hidden="true">
                         <i data-lucide="layers" class="size-7"></i>
                     </div>
@@ -99,8 +99,6 @@
                         </p>
                     </div>
                 </div>
-
-                    <div class="card">
                     <div class="card-content p-4 archive-controls">
                         <input id="deleted-ai-quiz-search" class="form-input archive-controls__search" type="search" placeholder="Search title, class, subject...">
                         <select id="deleted-ai-quiz-sort" class="form-input archive-controls__sort">
@@ -114,9 +112,6 @@
                             Clear Cache
                         </button>
                     </div>
-                </div>
-
-                <div class="card">
                     <div class="card-content p-0">
                         <div class="scores-table-scroll table-scroll">
                             <table class="scores-table" id="deleted-ai-quizzes-table">
@@ -136,8 +131,8 @@
                     </div>
                 </div>
 
-                <section class="space-y-2">
-                    <div class="archive-section-header mt-4">
+                    <div class="card">
+                        <div class="archive-section-header">
                         <div class="page-header-icon" aria-hidden="true">
                             <i data-lucide="file-archive" class="size-7"></i>
                         </div>
@@ -148,9 +143,7 @@
                             </p>
                         </div>
                     </div>
-
-                    <div class="card mt-2">
-                        <div class="card-content p-4 archive-controls">
+                    <div class="card-content p-4 archive-controls">
                             <input id="exam-archive-search" class="form-input archive-controls__search" type="search" placeholder="Search title, class, subject...">
                             <select id="exam-archive-sort" class="form-input archive-controls__sort">
                                 <option value="archived_desc">Sort: Latest archived</option>
@@ -163,9 +156,6 @@
                                 Clear Cache
                             </button>
                         </div>
-                    </div>
-
-                    <div class="card">
                         <div class="card-content p-0">
                             <div class="scores-table-scroll table-scroll">
                                 <table class="scores-table" id="exam-archive-table">

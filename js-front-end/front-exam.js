@@ -305,9 +305,12 @@ function setupExamGenerator() {
       const data = await res.json();
 
       if (data.exam) {
+        // ✅ Clean up extra blank lines before question numbers if they persist
+        const cleanedExam = data.exam.replace(/(\n)\s*\n+(\s*____\s*\d+\.)/g, "$1$2");
+        
         // ❌ Removed auto-save here
         // ✅ Show preview first (edit/save manually)
-        showExamPreview(data.exam, subject, selectedTopics, questionTypes, examTitle);
+        showExamPreview(cleanedExam, subject, selectedTopics, questionTypes, examTitle);
         showNotification("✅ Exam successfully generated! You can edit and save it now.");
       } else {
         showNotification("⚠️ Failed to generate exam.");
@@ -324,6 +327,86 @@ function setupExamGenerator() {
   });
 }
 
+// ✅ Helper to generate unified professional exam HTML (used for both preview and export)
+function generateProfessionalExamHTML(examText, subject, displayTitle, options = {}) {
+  const isPDF = options.isPDF || false;
+  const esc = (s) => String(s ?? "").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  
+  // For PDF, we use the two-column formatter. For preview, we use it too to match design.
+  const bodyContent = formatExamContentForPDF(examText);
+
+  const headerHTML = `
+    <header class="exam-doc-header" style="text-align:center;margin-bottom:12px;">
+      <div class="exam-doc-logo" style="display:flex;justify-content:center;margin-bottom:8px;">
+        <img src="image/exam-logo.png" alt="School Logo" style="width:80px;height:80px;object-fit:contain;">
+      </div>
+      <div class="exam-doc-agency-wrap" style="margin-bottom:4px;line-height:1.1;">
+        <p class="exam-doc-agency-republic" style="font-family:'Old English Text MT', 'Cloister Black', serif; font-size:10pt !important; margin:0;">Republic of the Philippines</p>
+        <p class="exam-doc-agency-deped" style="font-family:'Old English Text MT', 'Cloister Black', serif; font-size:10pt !important; font-weight:700; margin:0;">Department of Education</p>
+        <p class="exam-doc-agency-region" style="font-size:10pt !important; text-transform:uppercase; margin:0; letter-spacing:0.05em; font-weight:500; color:#333;">Region III – Central Luzon</p>
+        <p class="exam-doc-agency-division" style="font-size:10pt !important; text-transform:uppercase; margin:0; letter-spacing:0.05em; font-weight:500; color:#333;">Schools Division of Bulacan</p>
+      </div>
+      <p class="exam-doc-school" style="font-size:10pt !important;font-weight:800;margin:4px 0 0 0;color:#111;text-transform:uppercase;">NORZAGARAY NATIONAL HIGH SCHOOL</p>
+      <p class="exam-doc-address" style="font-size:10pt !important;margin:0 0 8px 0;color:#555;">A. Villarama St., Poblacion, Norzagaray, Bulacan</p>
+      <hr class="exam-doc-rule" style="width:100%;margin:8px 0;border:none;border-top:1.5px solid #333;">
+      <div class="exam-doc-title-wrap" style="margin:8px 0 16px 0;line-height:1.2;">
+        <h2 class="exam-doc-subject" style="font-size:10pt !important; font-weight:800; margin:0; letter-spacing:0.05em; text-transform:uppercase;">${subject.toUpperCase()}</h2>
+        <h1 class="exam-doc-title" style="font-size:10pt !important; font-weight:700; margin:4px 0 0 0; letter-spacing:0.02em; text-transform:uppercase;">${displayTitle.toUpperCase()}</h1>
+      </div>
+      <div class="exam-doc-meta" style="font-size:10pt !important;margin-bottom:20px;text-align:left;color:#333;">
+        <div class="exam-doc-meta-row" style="display:flex;align-items:baseline;flex-wrap:wrap;gap:6px;margin-bottom:6px;">
+          <span class="exam-doc-meta-label" style="font-weight:600;font-size:10pt !important;">Name:</span><span class="exam-doc-meta-line" style="flex:1;min-width:80px;border-bottom:1px solid #333;"></span>
+          <span class="exam-doc-meta-label" style="font-weight:600;font-size:10pt !important;">Date:</span><span class="exam-doc-meta-line exam-doc-meta-short" style="min-width:60px;max-width:80px;border-bottom:1px solid #333;"></span>
+          <span class="exam-doc-meta-label" style="font-weight:600;font-size:10pt !important;">Score:</span><span class="exam-doc-meta-line exam-doc-meta-score" style="min-width:40px;border-bottom:1px solid #333;"></span>
+        </div>
+        <div class="exam-doc-meta-row" style="display:flex;align-items:baseline;flex-wrap:wrap;gap:6px;margin-bottom:6px;">
+          <span class="exam-doc-meta-label" style="font-weight:600;font-size:10pt !important;">Grade Level / Section:</span><span class="exam-doc-meta-line" style="flex:1;min-width:80px;border-bottom:1px solid #333;"></span>
+          <span class="exam-doc-meta-label" style="font-weight:600;font-size:10pt !important;">Teacher:</span><span class="exam-doc-meta-line exam-doc-meta-short" style="min-width:80px;border-bottom:1px solid #333;"></span>
+        </div>
+      </div>
+    </header>
+  `;
+
+  const footerHTML = `
+    <footer class="exam-doc-footer" style="margin-top:40px;padding-top:16px;">
+      <div class="exam-doc-rule-double" style="width:100%;height:3px;border-top:1px solid #333;border-bottom:1px solid #333;margin-bottom:16px;"></div>
+      <div class="exam-doc-footer-content" style="display:flex;align-items:center;justify-content:space-between;gap:20px;">
+        <div class="exam-doc-footer-logos" style="display:flex;align-items:center;gap:12px;">
+          <img src="image/deped-logo.png" alt="DepEd Logo" class="exam-doc-footer-logo" style="width:45px;height:45px;object-fit:contain;">
+          <img src="image/school-logo.png" alt="School Logo" class="exam-doc-footer-logo" style="width:45px;height:45px;object-fit:contain;">
+        </div>
+        <div class="exam-doc-footer-info" style="text-align:right;font-size:10pt !important;color:#555;line-height:1.4;">
+          <p class="exam-doc-footer-info-line" style="margin:0;font-size:10pt !important;"><strong>Address:</strong> A. Villarama St., Poblacion, Norzagaray, Bulacan</p>
+          <p class="exam-doc-footer-info-line" style="margin:2px 0 0 0;font-size:10pt !important;"><strong>Contact No.:</strong> (044) 913-1110 | <strong>E-mail:</strong> 300760@deped.gov.ph / nnhs.bulacan@gmail.com</p>
+        </div>
+      </div>
+    </footer>
+  `;
+
+  const bodyHTML = `
+    <div class="exam-pdf-body" style="font-size:10pt !important;line-height:1.5;color:#1a1a1a;">
+      <style>
+        .exam-pdf-section-title{font-weight:700;margin:16px 0 8px 0;font-size:10pt !important;}
+        .exam-pdf-direction{text-align:center;margin:0 0 16px 0;font-size:10pt !important;}
+        .exam-pdf-item{margin-bottom:14px;page-break-inside:avoid;}
+        .exam-pdf-question{margin-bottom:6px;text-align:left;font-size:10pt !important;}
+        .exam-pdf-options-row{display:flex;justify-content:space-between;gap:24px;margin-bottom:4px;padding-left:20px;font-size:10pt !important;}
+        .exam-pdf-opt{flex:1;min-width:0;font-size:10pt !important;}
+        .exam-pdf-block{white-space:pre-wrap;margin-bottom:12px;font-size:10pt !important;}
+      </style>
+      ${bodyContent}
+    </div>
+  `;
+
+  return `
+    <article class="exam-document" style="background:#fff;color:#1a1a1a;${isPDF ? '' : 'padding:20px 40px;'}">
+      ${headerHTML}
+      ${bodyHTML}
+      ${footerHTML}
+    </article>
+  `;
+}
+
 // ✅ Show generated exam with Edit/Save logic
 function showExamPreview(examText, subject, selectedTopics, questionTypes, examTitle) {
   const container = document.getElementById("generatedExamContainer");
@@ -338,50 +421,8 @@ function showExamPreview(examText, subject, selectedTopics, questionTypes, examT
 
   const displayTitle = (examTitle && examTitle.trim()) ? examTitle.trim() : `${subject} – Examination`;
 
-  // ✅ Professional exam document – paper-style, export-ready layout
-  const headerHTML = `
-    <header class="exam-doc-header">
-      <div class="exam-doc-logo">
-        <img src="../image/school-logo.png" alt="School Logo" class="exam-doc-logo-img">
-      </div>
-      <p class="exam-doc-agency">Republic of the Philippines<br>Department of Education<br>Region III – Central Luzon<br>Schools Division of Bulacan</p>
-      <p class="exam-doc-school">NORZAGARAY NATIONAL HIGH SCHOOL</p>
-      <p class="exam-doc-address">A. Villarama St., Poblacion, Norzagaray, Bulacan</p>
-      <hr class="exam-doc-rule">
-      <h1 class="exam-doc-title">${displayTitle.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</h1>
-      <div class="exam-doc-meta">
-        <div class="exam-doc-meta-row">
-          <span class="exam-doc-meta-label">Name:</span>
-          <span class="exam-doc-meta-line"></span>
-          <span class="exam-doc-meta-label">Date:</span>
-          <span class="exam-doc-meta-line exam-doc-meta-short"></span>
-          <span class="exam-doc-meta-label">Score:</span>
-          <span class="exam-doc-meta-line exam-doc-meta-score"></span>
-        </div>
-        <div class="exam-doc-meta-row">
-          <span class="exam-doc-meta-label">Grade Level / Section:</span>
-          <span class="exam-doc-meta-line"></span>
-          <span class="exam-doc-meta-label">Teacher:</span>
-          <span class="exam-doc-meta-line exam-doc-meta-short"></span>
-        </div>
-      </div>
-    </header>
-  `;
-
-  const footerHTML = `
-    <footer class="exam-doc-footer">
-      <hr class="exam-doc-rule exam-doc-rule-footer">
-      <p class="exam-doc-footer-text">— End of Examination —</p>
-    </footer>
-  `;
-
-  const finalHTML = `
-    <article class="exam-document">
-      ${headerHTML}
-      <div id="exam-body" class="exam-doc-body">${examText}</div>
-      ${footerHTML}
-    </article>
-  `;
+  // ✅ Use unified helper for identical preview/export design
+  const finalHTML = generateProfessionalExamHTML(examText, subject, displayTitle, { isPDF: false });
 
   // ✅ Use innerHTML (not textContent) to preserve formatting
   container.classList.remove("hidden");
@@ -745,53 +786,20 @@ async function exportExamPDF(id) {
     return;
   }
 
-  const displayTitle = (data.title && data.title.trim()) ? data.title.trim() : "Examination";
+  const displayTitle = (data.title && data.title.trim()) ? data.title.trim().toUpperCase() : "EXAMINATION";
+  const displaySubject = (data.subject && data.subject.trim()) ? data.subject.trim().toUpperCase() : "";
   let rawContent = data.content || "";
   rawContent = stripDuplicateHeaderFromExamContent(rawContent);
-  const examBodyHtml = formatExamContentForPDF(rawContent);
+
   const base = window.location.href.replace(/\/[^/]*$/, "/");
-  const logoUrl = base + "image/school-logo.png";
+  
+  // ✅ Use unified helper for identical design
+  const finalHTML = generateProfessionalExamHTML(rawContent, displaySubject, displayTitle, { isPDF: true });
 
   const wrapper = document.createElement("div");
   wrapper.id = "exam-pdf-temp";
-  wrapper.style.cssText = "position:fixed;top:0;left:0;width:612px;min-height:792px;z-index:999999;background:#fff;color:#1a1a1a;padding:40px;font-family:'Segoe UI',system-ui,sans-serif;font-size:14px;line-height:1.5;box-sizing:border-box;overflow:visible;";
-  wrapper.innerHTML = `
-    <div style="text-align:center;margin-bottom:24px;">
-      <img src="${logoUrl}" alt="School Logo" style="width:80px;height:80px;object-fit:contain;" onerror="this.style.display='none'">
-      <p style="font-size:12px;line-height:1.45;margin:0 0 4px 0;font-weight:500;color:#333;">Republic of the Philippines<br>Department of Education<br>Region III – Central Luzon<br>Schools Division of Bulacan</p>
-      <p style="font-size:15px;font-weight:700;margin:8px 0;color:#111;">NORZAGARAY NATIONAL HIGH SCHOOL</p>
-      <p style="font-size:12px;margin:0 0 16px 0;color:#555;">A. Villarama St., Poblacion, Norzagaray, Bulacan</p>
-      <hr style="width:100%;margin:16px 0;border:none;border-top:1.5px solid #333;">
-      <h1 style="font-size:18px;font-weight:700;margin:8px 0 16px 0;color:#111;">${displayTitle}</h1>
-      <div style="font-size:13px;margin-bottom:20px;text-align:left;color:#333;">
-        <div style="display:flex;align-items:baseline;flex-wrap:wrap;gap:6px;margin-bottom:6px;">
-          <span style="font-weight:600;">Name:</span><span style="flex:1;min-width:80px;border-bottom:1px solid #333;"></span>
-          <span style="font-weight:600;">Date:</span><span style="min-width:60px;max-width:80px;border-bottom:1px solid #333;"></span>
-          <span style="font-weight:600;">Score:</span><span style="min-width:40px;border-bottom:1px solid #333;"></span>
-        </div>
-        <div style="display:flex;align-items:baseline;flex-wrap:wrap;gap:6px;margin-bottom:6px;">
-          <span style="font-weight:600;">Grade Level / Section:</span><span style="flex:1;min-width:80px;border-bottom:1px solid #333;"></span>
-          <span style="font-weight:600;">Teacher:</span><span style="min-width:80px;border-bottom:1px solid #333;"></span>
-        </div>
-      </div>
-    </div>
-    <div class="exam-pdf-body" style="font-size:14px;line-height:1.65;color:#1a1a1a;">
-      <style>
-        .exam-pdf-section-title{font-weight:700;margin:16px 0 8px 0;font-size:15px;}
-        .exam-pdf-direction{text-align:center;margin:0 0 16px 0;font-size:13px;}
-        .exam-pdf-item{margin-bottom:14px;page-break-inside:avoid;}
-        .exam-pdf-question{margin-bottom:6px;text-align:justify;}
-        .exam-pdf-options-row{display:flex;justify-content:space-between;gap:24px;margin-bottom:4px;padding-left:20px;}
-        .exam-pdf-opt{flex:1;min-width:0;}
-        .exam-pdf-block{white-space:pre-wrap;margin-bottom:12px;}
-      </style>
-      ${examBodyHtml}
-    </div>
-    <div style="margin-top:24px;color:#555;">
-      <hr style="width:100%;margin:16px 0;border:none;border-top:1.5px solid #333;">
-      <p style="text-align:center;font-size:13px;font-style:italic;margin:0;">— End of Examination —</p>
-    </div>
-  `;
+  wrapper.style.cssText = "position:fixed;top:0;left:0;width:612px;min-height:792px;z-index:999999;background:#fff;color:#1a1a1a;padding:20px 40px 40px 40px;font-family:'Segoe UI',system-ui,sans-serif;font-size:10pt;line-height:1.5;box-sizing:border-box;overflow:visible;";
+  wrapper.innerHTML = finalHTML;
 
   document.body.appendChild(wrapper);
 
