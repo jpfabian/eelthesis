@@ -636,14 +636,22 @@ function getInitials(name) {
 
 function renderStudentSlider() {
     const slider = document.getElementById('student-slider');
-    let availableStudents = state.students.filter(s => !s.answered);
+    const wrap = slider ? slider.closest('.recitation-slider-wrap') : null;
     if (!slider) return;
 
+    // Show all students in manual mode, only unanswered in auto mode
+    let displayStudents = (state.pickMode === 'manual') 
+        ? state.students 
+        : state.students.filter(s => !s.answered);
+
     // Manual mode: filter by search query (by name)
+    const query = (document.getElementById('recitation-student-search')?.value || '').trim().toLowerCase();
     if (state.pickMode === 'manual') {
-        const query = (document.getElementById('recitation-student-search')?.value || '').trim().toLowerCase();
         if (query) {
-            availableStudents = availableStudents.filter(s => (s.name || '').toLowerCase().includes(query));
+            displayStudents = displayStudents.filter(s => (s.name || '').toLowerCase().includes(query));
+            if (wrap) wrap.classList.add('recitation-slider-wrap--searching');
+        } else {
+            if (wrap) wrap.classList.remove('recitation-slider-wrap--searching');
         }
     }
 
@@ -652,7 +660,7 @@ function renderStudentSlider() {
     // Manual mode with search and no matches: show message
     const searchInputEl = document.getElementById('recitation-student-search');
     const hasSearchQuery = state.pickMode === 'manual' && searchInputEl && (searchInputEl.value || '').trim().length > 0;
-    if (state.pickMode === 'manual' && hasSearchQuery && availableStudents.length === 0) {
+    if (state.pickMode === 'manual' && hasSearchQuery && displayStudents.length === 0) {
         const msg = document.createElement('div');
         msg.className = 'recitation-no-search-results';
         msg.setAttribute('role', 'status');
@@ -663,14 +671,16 @@ function renderStudentSlider() {
 
     // Manual mode: show each student once in a horizontal scroll row. Auto mode: triple copy for sliding effect.
     const studentsToRender = state.pickMode === 'manual'
-        ? availableStudents
-        : [...availableStudents, ...availableStudents, ...availableStudents];
+        ? displayStudents
+        : [...displayStudents, ...displayStudents, ...displayStudents];
 
     studentsToRender.forEach((student) => {
         const box = document.createElement('div');
         box.className = 'student-box';
         box.setAttribute('data-student-id', String(student.id));
         if (state.pickMode === 'manual') box.classList.add('student-box--clickable');
+        if (student.answered) box.classList.add('answered');
+
         const initials = getInitials(student.name);
         const avatarSrc = student.avatarUrl
             ? (student.avatarUrl.startsWith('/') ? (window.API_BASE || '') + student.avatarUrl : student.avatarUrl)
@@ -678,15 +688,18 @@ function renderStudentSlider() {
         const avatarHtml = avatarSrc
             ? `<img class="recitation-student-avatar-img" src="${escapeHtmlRecitation(avatarSrc)}" alt="">`
             : `<span class="recitation-student-avatar-initials" aria-hidden="true">${escapeHtmlRecitation(initials)}</span>`;
+        
+        const badgeHtml = student.answered ? `<div class="student-box-badge" title="Already answered this session"><i data-lucide="check" class="size-3"></i></div>` : '';
+
         box.innerHTML = `
+            ${badgeHtml}
             <div class="recitation-student-avatar">${avatarHtml}</div>
             <span class="student-name">${escapeHtmlRecitation(student.name)}</span>
         `;
         if (state.pickMode === 'manual') {
             box.addEventListener('click', function () {
                 const id = this.getAttribute('data-student-id');
-                const available = state.students.filter(s => !s.answered);
-                const chosen = available.find(s => String(s.id) === id);
+                const chosen = state.students.find(s => String(s.id) === id);
                 if (chosen) {
                     state.selectedStudent = chosen;
                     highlightSelectedStudentById(chosen.id);
