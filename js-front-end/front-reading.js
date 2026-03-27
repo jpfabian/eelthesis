@@ -3263,7 +3263,7 @@ async function saveTeacherReadingOverrides() {
 
         if (pointsInput) {
             const maxPoints = Number(pointsInput.getAttribute('max') || 100);
-            let earned = Number(pointsInput.value || 0);
+            let earned = Math.round(Number(pointsInput.value || 0));
             if (earned > maxPoints) earned = maxPoints;
             if (earned < 0) earned = 0;
             

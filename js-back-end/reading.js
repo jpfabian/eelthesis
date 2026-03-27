@@ -1389,9 +1389,9 @@ router.patch("/api/reading-quiz-attempts/:id/submit", async (req, res) => {
         // 🔹 Send essay to Groq with question context
         const aiResult = await gradeEssayWithGroq(ans.student_answer, questionText);
 
-        // 🔹 Convert AI's 0–100 score to your question's point value
+        // 🔹 Convert AI's 0–100 score to your question's point value (Rounded to whole number)
         const essayScore = aiResult.score
-          ? (aiResult.score / 100) * questionPoints
+          ? Math.round((aiResult.score / 100) * questionPoints)
           : 0;
 
         // 🔹 Update DB

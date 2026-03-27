@@ -248,8 +248,9 @@ router.get("/api/class/:classId/pending-students", async (req, res) => {
   const { classId } = req.params;
   try {
     const [rows] = await pool.query(
-      `SELECT sc.id, sc.student_id, sc.student_fname, sc.student_lname, sc.status
+      `SELECT sc.id, sc.student_id, u.fname AS student_fname, u.lname AS student_lname, sc.status
        FROM student_classes sc
+       JOIN users u ON u.user_id = sc.student_id
        WHERE sc.class_id = ? AND sc.status = 'pending'`,
       [classId]
     );

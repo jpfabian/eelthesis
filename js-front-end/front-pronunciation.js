@@ -1485,7 +1485,6 @@ async function toggleRecording() {
 
                 recognition.onresult = (event) => {
                     recognitionTranscript = event.results[0][0].transcript.trim();
-                    showNotification(`✅ You said: "${recognitionTranscript}"`, "success");
                 };
 
                 recognition.onerror = (err) => {
@@ -1550,7 +1549,6 @@ async function toggleRecording() {
 
             recognition.onresult = (event) => {
                 recognitionTranscript = event.results[0][0].transcript.trim();
-                showNotification(`✅ You said: "${recognitionTranscript}"`, "success");
             };
 
             recognition.onerror = (err) => {

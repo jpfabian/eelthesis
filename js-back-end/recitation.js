@@ -146,27 +146,27 @@ router.get('/api/recitation/class/:classId/students', async (req, res) => {
       Number.isFinite(topicId)
         ? `SELECT
             sc.student_id,
-            sc.student_fname,
-            sc.student_lname,
+            u.fname AS student_fname,
+            u.lname AS student_lname,
             u.avatar_url,
             CASE
               WHEN SUM(rs.points_possible) > 0 THEN ROUND((SUM(rs.points_earned) / SUM(rs.points_possible)) * 100, 2)
               ELSE NULL
             END AS topic_percent
            FROM student_classes sc
-           LEFT JOIN users u ON u.user_id = sc.student_id
+           JOIN users u ON u.user_id = sc.student_id
            LEFT JOIN recitation_scores rs
              ON rs.class_id = sc.class_id
             AND rs.student_id = sc.student_id
             AND rs.topic_id = ?
            WHERE sc.class_id = ? AND sc.status = 'accepted'
-           GROUP BY sc.student_id, sc.student_fname, sc.student_lname, u.avatar_url
-           ORDER BY sc.student_fname, sc.student_lname`
-        : `SELECT sc.student_id, sc.student_fname, sc.student_lname, u.avatar_url
+           GROUP BY sc.student_id, u.fname, u.lname, u.avatar_url
+           ORDER BY u.fname, u.lname`
+        : `SELECT sc.student_id, u.fname AS student_fname, u.lname AS student_lname, u.avatar_url
            FROM student_classes sc
-           LEFT JOIN users u ON u.user_id = sc.student_id
+           JOIN users u ON u.user_id = sc.student_id
            WHERE sc.class_id = ? AND sc.status = 'accepted'
-           ORDER BY sc.student_fname, sc.student_lname`,
+           ORDER BY u.fname, u.lname`,
       Number.isFinite(topicId) ? [topicId, classId] : [classId]
     );
     const students = rows.map(s => ({
