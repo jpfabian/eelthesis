@@ -733,8 +733,8 @@ async function loadExams() {
             <span>Created: <strong>${new Date(exam.created_at).toLocaleDateString()}</strong></span>
           </p>
         </div>
-        <div class="exam-list-card-actions" style="display:flex; gap:0.75rem; margin-top:1.25rem; padding-top:1rem; border-top:1px solid rgba(0,0,0,0.05);">
-          <button type="button" class="exam-list-export-word-btn" title="Export to Word" style="flex:1; display:flex; align-items:center; justify-content:center; gap:0.5rem; padding:0.625rem; border-radius:0.5rem; background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; font-size:0.875rem; font-weight:600; cursor:pointer; transition:all 0.2s;">
+        <div class="exam-list-card-actions">
+          <button type="button" class="exam-list-export-btn" title="Export to Word">
             <i data-lucide="file-digit" class="size-4"></i>
             Export
           </button>
@@ -775,7 +775,7 @@ async function loadExams() {
           return;
         }
 
-        if (e.target.closest(".exam-list-export-word-btn")) {
+        if (e.target.closest(".exam-list-export-btn")) {
           exportExamWord(examId);
         }
       });

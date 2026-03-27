@@ -20911,7 +20911,6 @@ body.exam-generator-page #generateExamBtn {
     padding-top: 0.9rem;
     padding-bottom: 0.9rem;
     background: linear-gradient(135deg, var(--primary), var(--secondary));
-    box-shadow: 0 18px 40px rgba(79, 70, 229, 0.45);
 }
 
 body.exam-generator-page #generateExamBtn:hover {
@@ -20938,9 +20937,9 @@ body.exam-generator-page .generate-exam-card .space-y-4 > .form-label {
 }
 
 body.exam-generator-page #topicDropdownContainer {
-    padding: 1rem 1.25rem !important;
+    padding: 0rem 0rem !important;
     border-radius: 1rem;
-    border: 1px solid color-mix(in srgb, var(--primary) 22%, var(--border));
+    border: 0px solid color-mix(in srgb, var(--primary) 22%, var(--border));
     box-shadow: 0 14px 30px rgba(15, 23, 42, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
