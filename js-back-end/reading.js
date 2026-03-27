@@ -915,11 +915,25 @@ router.patch("/api/teacher/reading-quiz-attempts/:id/submit", async (req, res) =
           isCorrect = selected && selected.is_correct ? 1 : 0;
         }
         pointsEarned = isCorrect ? pointsPerQuestion : 0;
+        totalPoints += pointsPerQuestion;
+      } else if (quiz.difficulty === "advanced") {
+        // 🟥 Essay grading for advanced teacher quizzes
+        const [q] = await pool.query(`
+          SELECT points, question_text FROM teacher_reading_advanced_questions WHERE question_id = ?
+        `, [questionId]);
+        const questionPoints = Number(q[0]?.points || 5);
+        const questionText = q[0]?.question_text || "";
+        totalPoints += questionPoints;
+
+        // 🔹 Always "check" with AI logic (returns 0 if empty or too short)
+        const aiResult = await gradeEssayWithGroq(studentAnswerText, questionText);
+        pointsEarned = aiResult.score ? Math.round((aiResult.score / 100) * questionPoints) : 0;
+        isCorrect = pointsEarned > 0 ? 1 : 0;
       } else {
         pointsEarned = 0;
+        totalPoints += pointsPerQuestion;
       }
 
-      totalPoints += pointsPerQuestion;
       totalScore += pointsEarned;
 
       await pool.query(
@@ -1320,74 +1334,24 @@ router.patch("/api/reading-quiz-attempts/:id/submit", async (req, res) => {
     let totalPoints = 0;
 
     for (const ans of answers) {
-      // 🟩 MCQ grading
-      if (ans.question_type === "mcq") {
-        const [correctOption] = await pool.query(`
-          SELECT option_id, q.points AS question_points
-          FROM reading_mcq_options o
-          JOIN reading_questions q ON o.question_id = q.question_id
-          WHERE o.question_id = ? AND o.is_correct = 1
-        `, [ans.question_id]);
-
-        const questionPoints = Number(correctOption[0]?.question_points || 1);
-        const isCorrect = Number(ans.student_answer) === Number(correctOption[0]?.option_id) ? 1 : 0;
-        const pointsEarned = isCorrect ? questionPoints : 0;
-
-        await pool.query(`
-          UPDATE reading_quiz_answers
-          SET is_correct = ?, points_earned = ?
-          WHERE answer_id = ?
-        `, [isCorrect, pointsEarned, ans.answer_id]);
-
-        totalScore += pointsEarned;
-        totalPoints += questionPoints;
+      const questionId = ans.question_id;
+      let studentAnswer = ans.student_answer;
+      if (studentAnswer !== undefined && studentAnswer !== null && typeof studentAnswer === "object" && !Array.isArray(studentAnswer)) {
+        studentAnswer = JSON.stringify(studentAnswer);
       }
-
-      // 🟦 Fill-in-the-blank grading
-      else if (ans.question_type === "fill_blank") {
-        const [blanks] = await pool.query(`
-          SELECT student_blank_id, blank_id, student_text 
-          FROM reading_quiz_blanks 
-          WHERE answer_id = ?
-        `, [ans.answer_id]);
-
-        let questionScore = 0;
-        let questionTotalPoints = 0;
-
-        for (const b of blanks) {
-          const [correctBlank] = await pool.query(`
-            SELECT answer_text, points FROM reading_fill_blanks WHERE blank_id = ?
-          `, [b.blank_id]);
-
-          const blankPoints = Number(correctBlank[0]?.points || 1);
-          questionTotalPoints += blankPoints;
-
-          const isCorrect = (b.student_text?.trim().toLowerCase() === correctBlank[0]?.answer_text.trim().toLowerCase()) ? 1 : 0;
-          const pointsEarned = isCorrect ? blankPoints : 0;
-          questionScore += pointsEarned;
-
-          await pool.query(`
-            UPDATE reading_quiz_blanks
-            SET is_correct = ?, points_earned = ?
-            WHERE student_blank_id = ?
-          `, [isCorrect, pointsEarned, b.student_blank_id]);
-        }
-
-        totalScore += questionScore;
-        totalPoints += questionTotalPoints;
-      }
+      const studentAnswerText = studentAnswer != null ? String(studentAnswer).trim() : "";
 
       // 🟥 Essay grading — GROQ AI INTEGRATION
-      else if (ans.question_type === "essay" && ans.student_answer) {
+      if (ans.question_type === "essay") {
         const [q] = await pool.query(`
           SELECT points, question_text FROM reading_questions WHERE question_id = ?
-        `, [ans.question_id]);
-        const questionPoints = Number(q[0]?.points || 10);
+        `, [questionId]);
+        const questionPoints = Number(q[0]?.points || 5); // Default to 5 points essay
         const questionText = q[0]?.question_text || "";
         totalPoints += questionPoints;
 
-        // 🔹 Send essay to Groq with question context
-        const aiResult = await gradeEssayWithGroq(ans.student_answer, questionText);
+        // 🔹 Always "check" with AI logic (returns 0 if empty or too short)
+        const aiResult = await gradeEssayWithGroq(studentAnswerText, questionText);
 
         // 🔹 Convert AI's 0–100 score to your question's point value (Rounded to whole number)
         const essayScore = aiResult.score
@@ -1399,13 +1363,68 @@ router.patch("/api/reading-quiz-attempts/:id/submit", async (req, res) => {
           UPDATE reading_quiz_answers
           SET ai_score = ?, ai_feedback = ?, points_earned = ?
           WHERE answer_id = ?
-        `, [aiResult.score ?? null, aiResult.feedback ?? null, essayScore, ans.answer_id]);
+        `, [aiResult.score ?? 0, aiResult.feedback ?? "No answer provided.", essayScore, ans.answer_id]);
 
         totalScore += essayScore;
       }
-    }
 
-    // 3️⃣ Update attempt summary (apply cheating void: score = 0 when voided)
+      // 🟩 MCQ grading
+       else if (ans.question_type === "mcq") {
+         const [correctOption] = await pool.query(`
+           SELECT option_id, q.points AS question_points
+           FROM reading_mcq_options o
+           JOIN reading_questions q ON o.question_id = q.question_id
+           WHERE o.question_id = ? AND o.is_correct = 1
+         `, [ans.question_id]);
+
+         const questionPoints = Number(correctOption[0]?.question_points || 1);
+         const isCorrect = Number(ans.student_answer) === Number(correctOption[0]?.option_id) ? 1 : 0;
+         const pointsEarned = isCorrect ? questionPoints : 0;
+
+         await pool.query(`
+           UPDATE reading_quiz_answers
+           SET is_correct = ?, points_earned = ?
+           WHERE answer_id = ?
+         `, [isCorrect, pointsEarned, ans.answer_id]);
+
+         totalScore += pointsEarned;
+         totalPoints += questionPoints;
+       }
+
+       // 🟦 Fill-in-the-blank grading
+       else if (ans.question_type === "fill_blank") {
+         const [blanks] = await pool.query(`
+           SELECT student_blank_id, blank_id, student_text 
+           FROM reading_quiz_blanks 
+           WHERE answer_id = ?
+         `, [ans.answer_id]);
+
+         let questionScore = 0;
+         let questionTotalPoints = 0;
+
+         for (const b of blanks) {
+           const [correctBlank] = await pool.query(`
+             SELECT answer_text, points FROM reading_fill_blanks WHERE blank_id = ?
+           `, [b.blank_id]);
+
+           const blankPoints = Number(correctBlank[0]?.points || 1);
+           questionTotalPoints += blankPoints;
+
+           const isCorrect = (b.student_text?.trim().toLowerCase() === correctBlank[0]?.answer_text.trim().toLowerCase()) ? 1 : 0;
+           const pointsEarned = isCorrect ? blankPoints : 0;
+           questionScore += pointsEarned;
+
+           await pool.query(`
+             UPDATE reading_quiz_blanks
+             SET is_correct = ?, points_earned = ?
+             WHERE student_blank_id = ?
+           `, [isCorrect, pointsEarned, b.student_blank_id]);
+         }
+
+         totalScore += questionScore;
+         totalPoints += questionTotalPoints;
+       }
+     }
     const finalScore = cheating_voided ? 0 : totalScore;
     await pool.query(`
       UPDATE reading_quiz_attempts

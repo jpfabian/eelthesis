@@ -417,6 +417,7 @@ async function openStudentReadingReviewModal(quizId, quizTitle = '') {
         const percent = totalValue > 0 ? Math.round((scoreValue / totalValue) * 100) : 0;
         const isPerfect = totalValue > 0 && scoreValue >= totalValue;
         const hideCorrectAnswers = !isPerfect;
+        // 🎯 Always show score as whole numbers (rounded)
         scoreEl.innerHTML = `Your score: <strong>${Math.round(scoreValue)} / ${Math.round(totalValue)}</strong> (${percent}%)`;
         passageEl.textContent = quiz.passage || '(No passage)';
 
@@ -1134,8 +1135,9 @@ async function submitQuiz() {
         if (submitData.success) {
             closeQuizModal();
 
-            const totalScore = submitData.totalScore ?? submitData.result?.totalScore ?? 0;
-            const totalPoints = submitData.totalPoints ?? submitData.result?.totalPoints ?? 0;
+            // 🎯 Use whole numbers for display
+            const totalScore = Math.round(submitData.totalScore ?? submitData.result?.totalScore ?? 0);
+            const totalPoints = Math.round(submitData.totalPoints ?? submitData.result?.totalPoints ?? 0);
             const correct = submitData.correct ?? submitData.result?.correct ?? 0;
             const wrong = submitData.wrong ?? submitData.result?.wrong ?? 0;
             const timeTaken = timeTakenSeconds; // use frontend-measured time
