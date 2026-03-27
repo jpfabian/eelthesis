@@ -19578,10 +19578,10 @@ body.take-quiz-page .take-quiz-questions .mt-4.p-4 .grid > div {
 
     #student-picker .recitation-picker-card {
         width: 100%;
-        max-width: min(96vw, 64rem);
+        max-width: 95%;
         margin: auto;
-        max-height: 95vh;
-        min-height: min(90vh, 32rem);
+        max-height: 100%;
+        min-height: 95%;
         display: flex;
         flex-direction: column;
         background: var(--card);
@@ -19672,7 +19672,7 @@ body.take-quiz-page .take-quiz-questions .mt-4.p-4 .grid > div {
         justify-content: center;
         position: relative;
         width: 100%;
-        min-height: 12rem;
+        min-height: 95%;
         overflow: hidden;
         border-radius: 1rem;
         border: 1px solid var(--border);
@@ -20005,7 +20005,7 @@ body.take-quiz-page .take-quiz-questions .mt-4.p-4 .grid > div {
             padding: 1rem;
         }
         #student-picker .recitation-picker-card {
-            max-width: min(92vw, 56rem);
+            max-width: 95%;
         }
         #student-picker .recitation-picker-header,
         #student-picker .recitation-picker-body,
@@ -20013,13 +20013,13 @@ body.take-quiz-page .take-quiz-questions .mt-4.p-4 .grid > div {
             padding: 1.25rem 1.5rem !important;
         }
         #student-picker .recitation-slider-wrap {
-            min-height: 18rem;
+            min-height: 95%;
         }
     }
 
     @media (min-width: 1024px) {
         #student-picker .recitation-picker-card {
-            max-width: 60rem;
+            max-width: 95%;
         }
         #student-picker .recitation-slider-wrap {
             min-height: 22rem !important;
@@ -20032,7 +20032,7 @@ body.take-quiz-page .take-quiz-questions .mt-4.p-4 .grid > div {
             padding: 0.75rem;
         }
         #student-picker .recitation-picker-card {
-            max-width: min(88vw, 72rem);
+            max-width: 95%;
             width: 100%;
         }
         #student-picker .recitation-picker-header,
@@ -20053,8 +20053,8 @@ body.take-quiz-page .take-quiz-questions .mt-4.p-4 .grid > div {
             max-height: 42vh;
         }
         #student-picker .student-box {
-            width: 11rem;
-            height: 14rem;
+            width: 15rem;
+            height: 20rem;
         }
         #student-picker .student-box i {
             font-size: 2.25rem;
@@ -20072,8 +20072,8 @@ body.take-quiz-page .take-quiz-questions .mt-4.p-4 .grid > div {
             overflow-y: auto;
         }
         #student-picker .recitation-picker-card {
-            max-height: min(95vh, 720px);
-            min-height: 0;
+            max-height: 95%;
+            min-height: 95%;
         }
         #student-picker .recitation-picker-header {
             padding: 0.6rem 1rem;
@@ -20097,8 +20097,8 @@ body.take-quiz-page .take-quiz-questions .mt-4.p-4 .grid > div {
             font-size: 0.8rem;
         }
         #student-picker .recitation-slider-wrap {
-            min-height: 12rem !important;
-            max-height: min(38vh, 280px);
+            min-height: 95%;
+            max-height: 95%;
         }
         #student-picker .student-box {
             width: 9rem;
@@ -20122,16 +20122,16 @@ body.take-quiz-page .take-quiz-questions .mt-4.p-4 .grid > div {
     /* 1366×768: tuned for this laptop */
     @media (min-width: 1200px) and (max-width: 1440px) and (max-height: 800px) {
         #student-picker .recitation-picker-card {
-            max-width: min(90vw, 68rem);
-            max-height: 92vh;
+            max-width: 95%;
+            max-height: 95%;
         }
         #student-picker .recitation-slider-wrap {
-            min-height: 14rem !important;
-            max-height: 42vh;
+            min-height: 95% !important;
+            max-height: 95%;
         }
         #student-picker .student-box {
-            width: 10rem;
-            height: 13rem;
+            width: 14rem;
+            height: 18rem;
         }
     }
 
