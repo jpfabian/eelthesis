@@ -352,10 +352,10 @@ function generateProfessionalExamHTML(examText, subject, displayTitle, options =
   const bodyContent = formatExamContentForPDF(cleanedText, { isWord });
 
   // Base URL for images in Word/PDF
-  const base = window.location.href.replace(/\/[^/]*$/, "/");
-  const logoUrl = base + "image/exam-logo.png";
-  const depedLogoUrl = base + "image/deped-logo.png";
-  const schoolLogoUrl = base + "image/school-logo.png";
+  const base = new URL("./", window.location.href).href;
+  const logoUrl = new URL("image/exam-logo.png", base).href;
+  const depedLogoUrl = new URL("image/deped-logo.png", base).href;
+  const schoolLogoUrl = new URL("image/school-logo.png", base).href;
 
   // Separate School Header (for Word Header) from Exam Title/Meta
   const schoolHeaderHTML = isWord ? `
@@ -399,20 +399,20 @@ function generateProfessionalExamHTML(examText, subject, displayTitle, options =
       <h2 style="font-size:10pt !important; font-weight:800; margin:0; letter-spacing:0.05em; text-transform:uppercase;">${subject.toUpperCase()}</h2>
       <h1 style="font-size:10pt !important; font-weight:700; margin:4px 0 0 0; letter-spacing:0.02em; text-transform:uppercase;">${displayTitle.toUpperCase()}</h1>
     </div>
-    <table border="0" cellspacing="0" cellpadding="0" width="100%" style="width:100%; font-size:10pt !important; text-align:left; margin-bottom:20px; border-collapse:collapse;">
-      <tr style="height:25pt;">
-        <td width="8%" style="font-weight:700; vertical-align:bottom;">Name:</td>
-        <td width="42%" style="border-bottom:1pt solid #000; vertical-align:bottom;">&nbsp;</td>
-        <td width="8%" style="font-weight:700; vertical-align:bottom; padding-left:15pt;">Date:</td>
-        <td width="22%" style="border-bottom:1pt solid #000; vertical-align:bottom;">&nbsp;</td>
-        <td width="8%" style="font-weight:700; vertical-align:bottom; padding-left:15pt;">Score:</td>
-        <td width="12%" style="border-bottom:1pt solid #000; vertical-align:bottom;">&nbsp;</td>
+    <table border="0" cellspacing="0" cellpadding="0" width="100%" style="width:100%; border-collapse:collapse; mso-table-lspace:0pt; mso-table-rspace:0pt;">
+      <tr style="height:25pt; mso-height-rule:exactly;">
+        <td width="10%" valign="bottom" style="font-weight:700; font-size:10pt !important; padding:0; line-height:1;">Name:</td>
+        <td width="35%" valign="bottom" style="border-bottom:1.0pt solid black; padding:0; line-height:1;">&nbsp;</td>
+        <td width="10%" valign="bottom" style="font-weight:700; font-size:10pt !important; padding:0 0 0 15pt; line-height:1;">Date:</td>
+        <td width="20%" valign="bottom" style="border-bottom:1.0pt solid black; padding:0; line-height:1;">&nbsp;</td>
+        <td width="10%" valign="bottom" style="font-weight:700; font-size:10pt !important; padding:0 0 0 15pt; line-height:1;">Score:</td>
+        <td width="15%" valign="bottom" style="border-bottom:1.0pt solid black; padding:0; line-height:1;">&nbsp;</td>
       </tr>
-      <tr style="height:25pt;">
-        <td style="font-weight:700; vertical-align:bottom;">Grade & Sec:</td>
-        <td style="border-bottom:1pt solid #000; vertical-align:bottom;">&nbsp;</td>
-        <td style="font-weight:700; vertical-align:bottom; padding-left:15pt;">Teacher:</td>
-        <td colspan="3" style="border-bottom:1pt solid #000; vertical-align:bottom;">&nbsp;</td>
+      <tr style="height:25pt; mso-height-rule:exactly;">
+        <td width="15%" valign="bottom" style="font-weight:700; font-size:10pt !important; padding:0; line-height:1;">Grade & Sec:</td>
+        <td width="30%" valign="bottom" style="border-bottom:1.0pt solid black; padding:0; line-height:1;">&nbsp;</td>
+        <td width="12%" valign="bottom" style="font-weight:700; font-size:10pt !important; padding:0 0 0 15pt; line-height:1;">Teacher:</td>
+        <td colspan="3" valign="bottom" style="border-bottom:1.0pt solid black; padding:0; line-height:1;">&nbsp;</td>
       </tr>
     </table>
   ` : `
@@ -472,17 +472,18 @@ function generateProfessionalExamHTML(examText, subject, displayTitle, options =
 
   const bodyHTML = `
     <div id="exam-body" class="exam-pdf-body" style="font-size:10pt !important;line-height:1.5;color:#1a1a1a;">
-      <style>
-        .exam-pdf-section-title{font-weight:700;margin:16px 0 8px 0;font-size:10pt !important;}
-        .exam-pdf-direction{text-align:center;margin:0 0 16px 0;font-size:10pt !important;}
-        .exam-pdf-item{margin-bottom:14px;page-break-inside:avoid;}
-        .exam-pdf-question{margin-bottom:6px;text-align:left;font-size:10pt !important;}
-        .exam-pdf-options-row{display:flex;justify-content:space-between;gap:24px;margin-bottom:4px;padding-left:20px;font-size:10pt !important;}
-        .exam-pdf-opt{flex:1;min-width:0;font-size:10pt !important;}
-        .exam-pdf-block{white-space:pre-wrap;margin-bottom:12px;font-size:10pt !important;}
-      </style>
       ${bodyContent}
     </div>
+  `;
+
+  const bodyStyles = `
+    .exam-pdf-section-title{font-weight:700;margin:12px 0 4px 0;font-size:10pt !important;}
+    .exam-pdf-direction{text-align:center;margin:0 0 12px 0;font-size:10pt !important;}
+    .exam-pdf-item{margin-bottom:10px;page-break-inside:avoid;}
+    .exam-pdf-question{margin-bottom:4px;text-align:left;font-size:10pt !important;}
+    .exam-pdf-options-row{display:flex;justify-content:space-between;gap:24px;margin-bottom:2px;padding-left:20px;font-size:10pt !important;}
+    .exam-pdf-opt{flex:1;min-width:0;font-size:10pt !important;}
+    .exam-pdf-block{white-space:pre-wrap;margin-bottom:8px;font-size:10pt !important;}
   `;
 
   if (returnParts) {
@@ -490,12 +491,14 @@ function generateProfessionalExamHTML(examText, subject, displayTitle, options =
       header: schoolHeaderHTML,
       meta: examMetaHTML,
       body: bodyHTML,
-      footer: footerHTML
+      footer: footerHTML,
+      styles: bodyStyles
     };
   }
 
   return `
     <article class="exam-document" style="background:#fff;color:#1a1a1a;font-size:10pt !important;${isPDF ? '' : 'padding:20px 40px;'}">
+      <style>${bodyStyles}</style>
       ${schoolHeaderHTML}
       ${examMetaHTML}
       ${bodyHTML}
@@ -510,7 +513,6 @@ function showExamPreview(examText, subject, selectedTopics, questionTypes, examT
   const content = document.getElementById("generatedExamContent");
   const editBtn = document.getElementById("editExamBtn");
   const saveBtn = document.getElementById("saveExamBtn");
-  const exportWordBtn = document.getElementById("exportWordBtn");
 
   if (!container || !content) {
     console.error("❌ Exam preview container not found!");
@@ -539,100 +541,31 @@ function showExamPreview(examText, subject, selectedTopics, questionTypes, examT
 
     if (examBody.contentEditable === "true") {
       examBody.contentEditable = "false";
-      editBtn.innerHTML = `<i data-lucide="edit-3" class="size-4"></i> Edit`;
+      editBtn.innerHTML = `<i data-lucide="edit-3" class="size-5"></i> <span>Edit Exam</span>`;
+      editBtn.classList.remove("btn-exam-cancel");
       lucide.createIcons({ icons: lucide.icons });
       showNotification("✏️ Edit mode disabled.");
     } else {
       examBody.contentEditable = "true";
       examBody.focus();
-      editBtn.innerHTML = `<i data-lucide="x" class="size-4"></i> Cancel Edit`;
+      editBtn.innerHTML = `<i data-lucide="x" class="size-5"></i> <span>Cancel Edit</span>`;
+      editBtn.classList.add("btn-exam-cancel");
       lucide.createIcons({ icons: lucide.icons });
       showNotification("📝 Edit mode enabled — you can now modify the exam.");
     }
   };
 
-  // 📄 Word export logic
-  if (exportWordBtn) {
-    exportWordBtn.onclick = () => {
-      const examBody = document.getElementById("exam-body");
-      const currentContent = examBody ? examBody.innerHTML : examText;
-      const displayTitle = (examTitle && examTitle.trim()) ? examTitle.trim().toUpperCase() : "EXAMINATION";
-      const displaySubject = subject.toUpperCase();
-      
-      const parts = generateProfessionalExamHTML(currentContent, displaySubject, displayTitle, { isPDF: true, isWord: true, returnParts: true });
-      
-      const fullDocHtml = `
-        <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-        <head>
-          <meta charset='utf-8'>
-          <title>${displayTitle}</title>
-          <!--[if gte mso 9]>
-          <xml>
-            <w:WordDocument>
-              <w:View>Print</w:View>
-              <w:Zoom>100</w:Zoom>
-              <w:DoNotOptimizeForBrowser/>
-            </w:WordDocument>
-          </xml>
-          <![endif]-->
-          <style>
-            @page Section1 {
-              size: 8.5in 11in;
-              margin: 1.0in 0.5in 1.0in 0.5in;
-              mso-header-margin: 0.5in;
-              mso-footer-margin: 0.5in;
-              mso-header: h1;
-              mso-footer: f1;
-            }
-            div.Section1 { page: Section1; }
-            body {
-              font-family: "Segoe UI", "Arial", sans-serif;
-              font-size: 10pt;
-            }
-            table { border-collapse: collapse; }
-          </style>
-        </head>
-        <body>
-          <div class="Section1">
-            ${parts.meta}
-            ${parts.body}
-          </div>
-
-          <div style='mso-element:header' id="h1">
-            ${parts.header}
-          </div>
-
-          <div style='mso-element:footer' id="f1">
-            ${parts.footer}
-          </div>
-        </body>
-        </html>
-      `;
-      
-      const blob = new Blob(['\ufeff', fullDocHtml], {
-        type: 'application/msword'
-      });
-      
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `exam-${displayTitle.replace(/[/\\?*:[\]]/g, "-").slice(0, 50)}.doc`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-      
-      showNotification("📄 Word document downloaded.");
-    };
-  }
-
   let examSaving = false;
   saveBtn.onclick = async () => {
     if (examSaving) return;
     examSaving = true;
+    
+    // ✨ Engaging loading state
     saveBtn.disabled = true;
-    saveBtn.style.pointerEvents = "none";
-    saveBtn.style.opacity = "0.6";
+    const originalContent = saveBtn.innerHTML;
+    saveBtn.innerHTML = `<i data-lucide="loader-2" class="size-5 animate-spin-custom"></i> <span>Saving...</span>`;
+    lucide.createIcons({ icons: lucide.icons });
+
     const updatedContent = content.textContent.trim();
 
     // ✅ Get current teacher ID
@@ -643,8 +576,8 @@ function showExamPreview(examText, subject, selectedTopics, questionTypes, examT
       showNotification("⚠️ User not logged in. Cannot save exam.", "error");
       examSaving = false;
       saveBtn.disabled = false;
-      saveBtn.style.pointerEvents = "";
-      saveBtn.style.opacity = "";
+      saveBtn.innerHTML = originalContent;
+      lucide.createIcons({ icons: lucide.icons });
       return;
     }
 
@@ -655,8 +588,8 @@ function showExamPreview(examText, subject, selectedTopics, questionTypes, examT
       showNotification("⚠️ Please select a class/section before saving.", "error");
       examSaving = false;
       saveBtn.disabled = false;
-      saveBtn.style.pointerEvents = "";
-      saveBtn.style.opacity = "";
+      saveBtn.innerHTML = originalContent;
+      lucide.createIcons({ icons: lucide.icons });
       return;
     }
 
@@ -701,16 +634,16 @@ function showExamPreview(examText, subject, selectedTopics, questionTypes, examT
         showNotification(result.error || "⚠️ Failed to save exam.", "error");
         examSaving = false;
         saveBtn.disabled = false;
-        saveBtn.style.pointerEvents = "";
-        saveBtn.style.opacity = "";
+        saveBtn.innerHTML = originalContent;
+        lucide.createIcons({ icons: lucide.icons });
       }
     } catch (err) {
       console.error("❌ Error saving exam:", err);
       showNotification("Error saving exam.", "error");
       examSaving = false;
       saveBtn.disabled = false;
-      saveBtn.style.pointerEvents = "";
-      saveBtn.style.opacity = "";
+      saveBtn.innerHTML = originalContent;
+      lucide.createIcons({ icons: lucide.icons });
     }
   };
 }
@@ -801,13 +734,9 @@ async function loadExams() {
           </p>
         </div>
         <div class="exam-list-card-actions" style="display:flex; gap:0.75rem; margin-top:1.25rem; padding-top:1rem; border-top:1px solid rgba(0,0,0,0.05);">
-          <button type="button" class="exam-list-export-pdf-btn" title="Export to PDF" style="flex:1; display:flex; align-items:center; justify-content:center; gap:0.5rem; padding:0.625rem; border-radius:0.5rem; background:#fef2f2; color:#dc2626; border:1px solid #fecaca; font-size:0.875rem; font-weight:600; cursor:pointer; transition:all 0.2s;">
-            <i data-lucide="file-text" class="size-4"></i>
-            PDF
-          </button>
           <button type="button" class="exam-list-export-word-btn" title="Export to Word" style="flex:1; display:flex; align-items:center; justify-content:center; gap:0.5rem; padding:0.625rem; border-radius:0.5rem; background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; font-size:0.875rem; font-weight:600; cursor:pointer; transition:all 0.2s;">
             <i data-lucide="file-digit" class="size-4"></i>
-            Word
+            Export
           </button>
         </div>
       `;
@@ -846,9 +775,7 @@ async function loadExams() {
           return;
         }
 
-        if (e.target.closest(".exam-list-export-pdf-btn")) {
-          exportExamPDF(examId);
-        } else if (e.target.closest(".exam-list-export-word-btn")) {
+        if (e.target.closest(".exam-list-export-word-btn")) {
           exportExamWord(examId);
         }
       });
@@ -914,6 +841,7 @@ function formatExamContentForPDF(content, options = {}) {
   let out = "";
   let lastWasMultipleChoice = false;
   let lastWasAnswerKey = false;
+  let insideAnswerKey = false;
 
   for (let i = 0; i < parts.length; i++) {
     const part = parts[i];
@@ -921,24 +849,72 @@ function formatExamContentForPDF(content, options = {}) {
 
     const isHeader = /^\s*(?:[IVX]+\.\s+[A-Z]|ANSWER\s+KEY)/i.test(part);
     if (isHeader) {
-      lastWasMultipleChoice = /MULTIPLE\s*CHOICE/i.test(part);
-      lastWasAnswerKey = /ANSWER\s+KEY/i.test(part);
-      out += `<div class="exam-pdf-section-title" style="font-weight:700;margin:16px 0 8px 0;font-size:10pt !important;">${esc(part.trim())}</div>`;
+      if (/ANSWER\s+KEY/i.test(part)) {
+        insideAnswerKey = true;
+        lastWasAnswerKey = true;
+        lastWasMultipleChoice = false; // 🚫 Don't treat Answer Key as a normal MC section
+      } else {
+        lastWasMultipleChoice = /MULTIPLE\s*CHOICE/i.test(part);
+        lastWasAnswerKey = false;
+      }
+      const titleMargin = (insideAnswerKey || lastWasAnswerKey) ? "4px 0 2px 0" : "12px 0 4px 0";
+      out += `<div class="exam-pdf-section-title" style="font-weight:700;margin:${titleMargin};font-size:10pt !important;">${esc(part.trim())}</div>`;
+      continue;
+    }
+
+    // 🎯 Use specialized formatting for the Answer Key section
+    if (insideAnswerKey || lastWasAnswerKey) {
+      // Find all numbered items (e.g., "1. (c) ..."). Removed \b to handle bunched text.
+      const itemRegex = /(?:[_\-\s]*)?(\d+)[\.\)]\s*([\s\S]+?)(?=\s*(?:[_\-\s]*)?\d+[\.\)]\s*|$)/g;
+      const matches = Array.from(part.matchAll(itemRegex));
+      
+      if (matches.length > 0) {
+        if (isWord) {
+          out += `<table border="0" cellspacing="0" cellpadding="0" width="100%" style="width:100%; border-collapse:collapse; font-size:10pt !important; margin:2px 0;">`;
+          for (let j = 0; j < matches.length; j += 2) {
+            const num1 = matches[j][1];
+            const ans1 = matches[j][2].trim().replace(/[\s\-\_]+$/, "");
+            out += `<tr style="mso-height-rule:exactly;">
+              <td width="50%" style="padding:0; vertical-align:top; line-height:1.2;">${num1}. ${esc(ans1)}</td>`;
+            if (matches[j + 1]) {
+              const num2 = matches[j + 1][1];
+              const ans2 = matches[j + 1][2].trim().replace(/[\s\-\_]+$/, "");
+              out += `<td width="50%" style="padding:0; vertical-align:top; line-height:1.2;">${num2}. ${esc(ans2)}</td>`;
+            } else {
+              out += `<td width="50%"></td>`;
+            }
+            out += `</tr>`;
+          }
+          out += `</table>`;
+        } else {
+          out += `<div class="exam-pdf-answer-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px 24px;">`;
+          for (const m of matches) {
+            const num = m[1];
+            const ans = m[2].trim().replace(/[\s\-\_]+$/, "");
+            out += `<div class="exam-pdf-answer-item" style="font-size: 10pt !important; line-height: 1.2; page-break-inside: avoid;">${num}. ${esc(ans)}</div>`;
+          }
+          out += `</div>`;
+        }
+      } else {
+        // Fallback for non-numbered content in Answer Key
+        out += `<div class="exam-pdf-block" style="white-space:pre-wrap;margin-bottom:8px;font-size:10pt !important;">${esc(part).replace(/\n/g, "<br>")}</div>`;
+      }
+      // Keep insideAnswerKey true until the end of the loop to ensure sub-headers don't break it
       continue;
     }
 
     if (lastWasMultipleChoice) {
-      out += `<p class="exam-pdf-direction" style="text-align:center;margin:0 0 16px 0;font-size:10pt !important;">Direction: Choose the letter of the best answer. Shade the letter of the correct answer on the separate answer sheet provided.</p>`;
+      out += `<p class="exam-pdf-direction" style="text-align:left;margin:0 0 12px 0;font-size:10pt !important;"><strong>Directions:</strong> Choose the best answer to the following questions. Write the letter of your answer on the space before the number.</p>`;
       lastWasMultipleChoice = false;
       
-      // 2. Split questions more robustly. Handle questions even if they don't have a newline before them.
-      const qBlocks = part.split(/(?=\b\d+\.\s+)/);
+      // 2. Split questions more robustly. Handle questions even if they don't have a newline before them. Removed \b to handle bunched text.
+      const qBlocks = part.split(/(?=\d+[\.\)]\s+)/);
       
       for (const block of qBlocks) {
         const trimmed = block.trim();
-        if (!trimmed || !/^\d+\.\s+/.test(trimmed)) continue;
+        if (!trimmed || !/^\d+[\.\)]\s+/.test(trimmed)) continue;
 
-        const numMatch = trimmed.match(/^(\d+)\.\s+([\s\S]+)$/);
+        const numMatch = trimmed.match(/^(\d+)[\.\)]\s+([\s\S]+)$/);
         if (!numMatch) continue;
         const num = numMatch[1];
         const rest = numMatch[2];
@@ -957,13 +933,14 @@ function formatExamContentForPDF(content, options = {}) {
 
         const questionText = firstOptIndex !== -1 ? rest.slice(0, firstOptIndex).trim() : rest.trim();
         
-        out += `<div class="exam-pdf-item" style="margin-bottom:14px;">
-          <div class="exam-pdf-question" style="margin-bottom:6px;text-align:left;font-size:10pt !important;">${num}. ${esc(questionText).replace(/\n/g, " ")}</div>`;
+        // ✨ Normal exam question: add answer line prefix
+        out += `<div class="exam-pdf-item" style="margin-bottom:10px;">
+          <div class="exam-pdf-question" style="margin-bottom:4px;text-align:left;font-size:10pt !important;">____ ${num}. ${esc(questionText).replace(/\n/g, " ")}</div>`;
         
         if (opts.length > 0) {
           if (isWord) {
             // Use table for Word layout
-            out += `<table border="0" cellspacing="0" cellpadding="0" width="100%" style="width:100%; border-collapse:collapse; font-size:10pt !important; margin-bottom:4px;">`;
+            out += `<table border="0" cellspacing="0" cellpadding="0" width="100%" style="width:100%; border-collapse:collapse; font-size:10pt !important; margin-bottom:2px;">`;
             for (let j = 0; j < opts.length; j += 2) {
               out += `<tr>
                 <td width="50%" style="padding-left:20px;">(${opts[j].letter}) ${esc(opts[j].text)}</td>`;
@@ -978,7 +955,7 @@ function formatExamContentForPDF(content, options = {}) {
           } else {
             // Display options in a grid (2 columns) for PDF/Preview
             for (let j = 0; j < opts.length; j += 2) {
-              out += `<div class="exam-pdf-options-row" style="display:flex;justify-content:space-between;gap:24px;margin-bottom:4px;padding-left:20px;font-size:10pt !important;">
+              out += `<div class="exam-pdf-options-row" style="display:flex;justify-content:space-between;gap:24px;margin-bottom:2px;padding-left:20px;font-size:10pt !important;">
                 <span class="exam-pdf-opt" style="flex:1;min-width:0;font-size:10pt !important;">(${opts[j].letter}) ${esc(opts[j].text)}</span>`;
               if (opts[j + 1]) {
                 out += `<span class="exam-pdf-opt" style="flex:1;min-width:0;font-size:10pt !important;">(${opts[j + 1].letter}) ${esc(opts[j + 1].text)}</span>`;
@@ -991,131 +968,12 @@ function formatExamContentForPDF(content, options = {}) {
         }
         out += `</div>`;
       }
-    } else if (lastWasAnswerKey) {
-      // 4. Handle Answer Key
-      const itemRegex = /(?:[_\-\s]*)?\b\d+\.\s+[\s\S]+?(?=(?:[_\-\s]*)?\b\d+\.\s+|$)/g;
-      const matches = Array.from(part.matchAll(itemRegex));
-      
-      if (matches.length > 0) {
-        if (isWord) {
-          out += `<table border="0" cellspacing="0" cellpadding="0" width="100%" style="width:100%; border-collapse:collapse; font-size:10pt !important; margin-top:8px;">`;
-          for (let j = 0; j < matches.length; j += 2) {
-            const item1 = matches[j][0].trim().replace(/[\s\-\_]+$/, "");
-            out += `<tr>
-              <td width="50%" style="padding:4px 0;">${esc(item1)}</td>`;
-            if (matches[j + 1]) {
-              const item2 = matches[j + 1][0].trim().replace(/[\s\-\_]+$/, "");
-              out += `<td width="50%" style="padding:4px 0;">${esc(item2)}</td>`;
-            } else {
-              out += `<td width="50%"></td>`;
-            }
-            out += `</tr>`;
-          }
-          out += `</table>`;
-        } else {
-          out += `<div class="exam-pdf-answer-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px 24px;">`;
-          for (const m of matches) {
-            const item = m[0].trim();
-            const cleanedItem = item.replace(/[\s\-\_]+$/, "");
-            if (cleanedItem) {
-              out += `<div class="exam-pdf-answer-item" style="font-size: 10pt !important; line-height: 1.3; page-break-inside: avoid;">${esc(cleanedItem)}</div>`;
-            }
-          }
-          out += `</div>`;
-        }
-      } else {
-        out += `<div class="exam-pdf-block" style="white-space:pre-wrap;margin-bottom:12px;font-size:10pt !important;">${esc(part).replace(/\n/g, "<br>")}</div>`;
-      }
-      lastWasAnswerKey = false;
     } else {
-      out += `<div class="exam-pdf-block" style="white-space:pre-wrap;margin-bottom:12px;font-size:10pt !important;">${esc(part).replace(/\n/g, "<br>")}</div>`;
+      out += `<div class="exam-pdf-block" style="white-space:pre-wrap;margin-bottom:8px;font-size:10pt !important;">${esc(part).replace(/\n/g, "<br>")}</div>`;
     }
   }
 
   return out || `<div class="exam-pdf-block" style="white-space:pre-wrap;margin-bottom:12px;font-size:10pt !important;">${esc(s).replace(/\n/g, "<br>")}</div>`;
-}
-
-// ✅ Export PDF – direct download (no print dialog)
-async function exportExamPDF(id) {
-  if (typeof html2canvas === "undefined" || (typeof jspdf === "undefined" && typeof window.jspdf === "undefined")) {
-    if (typeof showNotification === "function") showNotification("PDF libraries loading. Please try again.", "error");
-    else alert("PDF libraries not loaded. Refresh and try again.");
-    return;
-  }
-
-  const res = await fetch(`${window.API_BASE || ""}/api/get-exam-content/${id}`);
-  const data = await res.json();
-  if (!data.success) {
-    if (typeof showNotification === "function") showNotification("Failed to fetch exam content.", "error");
-    else alert("Failed to fetch exam content.");
-    return;
-  }
-
-  const displayTitle = (data.title && data.title.trim()) ? data.title.trim().toUpperCase() : "EXAMINATION";
-  const displaySubject = (data.subject && data.subject.trim()) ? data.subject.trim().toUpperCase() : "";
-  let rawContent = data.content || "";
-
-  const base = window.location.href.replace(/\/[^/]*$/, "/");
-  
-  // ✅ Use unified helper for identical design
-  const finalHTML = generateProfessionalExamHTML(rawContent, displaySubject, displayTitle, { isPDF: true });
-
-  const wrapper = document.createElement("div");
-  wrapper.id = "exam-pdf-temp";
-  wrapper.style.cssText = "position:fixed;top:0;left:0;width:612px;min-height:792px;z-index:999999;background:#fff;color:#1a1a1a;padding:20px 40px 40px 40px;font-family:'Segoe UI',system-ui,sans-serif;font-size:10pt !important;line-height:1.5;box-sizing:border-box;overflow:visible;";
-  wrapper.innerHTML = finalHTML;
-
-  document.body.appendChild(wrapper);
-
-  try {
-    if (typeof showNotification === "function") showNotification("Generating PDF...", "info");
-    await new Promise(r => setTimeout(r, 400));
-
-    const canvas = await html2canvas(wrapper, {
-      scale: 2,
-      useCORS: true,
-      allowTaint: true,
-      backgroundColor: "#ffffff",
-      logging: false
-    });
-
-    const JsPDF = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : window.jsPDF;
-    if (!JsPDF) throw new Error("jsPDF not loaded");
-    const pdf = new JsPDF("p", "mm", "letter");
-    const pageW = 215.9;
-    const pageH = 279.4;
-    const scalePxToMm = pageW / canvas.width;
-    const pageHeightPx = Math.round(pageH / scalePxToMm);
-
-    let yPx = 0;
-    let pageNum = 0;
-    while (yPx < canvas.height) {
-      if (pageNum > 0) pdf.addPage();
-      const sliceH = Math.min(pageHeightPx, canvas.height - yPx);
-      const pageCanvas = document.createElement("canvas");
-      pageCanvas.width = canvas.width;
-      pageCanvas.height = sliceH;
-      const ctx = pageCanvas.getContext("2d");
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
-      ctx.drawImage(canvas, 0, yPx, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
-      const pageImgData = pageCanvas.toDataURL("image/jpeg", 0.95);
-      const imgW = pageW;
-      const imgH = (sliceH * pageW) / canvas.width;
-      pdf.addImage(pageImgData, "JPEG", 0, 0, imgW, imgH);
-      yPx += sliceH;
-      pageNum++;
-    }
-    pdf.save(`exam-${displayTitle.replace(/[/\\?*:[\]]/g, "-").slice(0, 50)}.pdf`);
-
-    if (typeof showNotification === "function") showNotification("PDF downloaded.", "success");
-  } catch (err) {
-    console.error("PDF export failed:", err);
-    if (typeof showNotification === "function") showNotification("Failed to export PDF.", "error");
-    else alert("Failed to export PDF.");
-  } finally {
-    if (wrapper.parentNode) document.body.removeChild(wrapper);
-  }
 }
 
 // ✅ Export exam as Word Document (.doc)
@@ -1136,7 +994,7 @@ async function exportExamWord(id) {
   const parts = generateProfessionalExamHTML(rawContent, displaySubject, displayTitle, { isPDF: true, isWord: true, returnParts: true });
 
   const fullDocHtml = `
-    <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+    <html xmlns:v='urn:schemas-microsoft-com:vml' xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns:m='http://schemas.microsoft.com/office/2004/12/omml' xmlns='http://www.w3.org/TR/REC-html40'>
     <head>
       <meta charset='utf-8'>
       <title>${displayTitle}</title>
@@ -1152,11 +1010,7 @@ async function exportExamWord(id) {
       <style>
         @page Section1 {
           size: 8.5in 11in;
-          margin: 1.0in 0.5in 1.0in 0.5in;
-          mso-header-margin: 0.5in;
-          mso-footer-margin: 0.5in;
-          mso-header: h1;
-          mso-footer: f1;
+          margin: 0.75in 0.5in 0.75in 0.5in;
         }
         div.Section1 { page: Section1; }
         body {
@@ -1164,26 +1018,21 @@ async function exportExamWord(id) {
           font-size: 10pt;
         }
         table { border-collapse: collapse; }
+        ${parts.styles}
       </style>
     </head>
     <body>
       <div class="Section1">
+        ${parts.header}
         ${parts.meta}
         ${parts.body}
-      </div>
-
-      <div style='mso-element:header' id="h1">
-        ${parts.header}
-      </div>
-
-      <div style='mso-element:footer' id="f1">
         ${parts.footer}
       </div>
     </body>
     </html>
   `;
 
-  const blob = new Blob(['\ufeff', fullDocHtml], {
+  const blob = new Blob([fullDocHtml], {
     type: 'application/msword'
   });
 

@@ -1,0 +1,85 @@
+/* Custom Exam Generator Button Styles */
+
+.btn-exam-edit {
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+    padding: 0.75rem 1.5rem !important;
+    border-radius: 1rem !important;
+    background-color: #7c3aed !important; /* violet-600 */
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    border: none !important;
+    transition: all 0.3s ease !important;
+    box-shadow: 0 10px 15px -3px rgba(124, 58, 237, 0.2) !important;
+    cursor: pointer !important;
+}
+
+.btn-exam-edit:hover {
+    background-color: #6d28d9 !important; /* violet-700 */
+    box-shadow: 0 20px 25px -5px rgba(124, 58, 237, 0.3) !important;
+    transform: translateY(-2px) !important;
+}
+
+.btn-exam-edit:active {
+    transform: scale(0.95) !important;
+}
+
+.btn-exam-cancel {
+    background-color: #4c1d95 !important; /* violet-900 for cancel/differentiation */
+    box-shadow: 0 10px 15px -3px rgba(76, 29, 149, 0.2) !important;
+}
+
+.btn-exam-cancel:hover {
+    background-color: #2e1065 !important; /* even darker violet */
+    box-shadow: 0 20px 25px -5px rgba(76, 29, 149, 0.3) !important;
+}
+
+.btn-exam-save {
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+    padding: 0.75rem 2rem !important;
+    border-radius: 1rem !important;
+    background-color: #10b981 !important; /* emerald-500 (green) */
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    border: none !important;
+    transition: all 0.3s ease !important;
+    box-shadow: 0 20px 25px -5px rgba(16, 185, 129, 0.2) !important;
+    cursor: pointer !important;
+}
+
+.btn-exam-save:hover {
+    background-color: #059669 !important; /* emerald-600 */
+    box-shadow: 0 25px 30px -5px rgba(16, 185, 129, 0.3) !important;
+    transform: translateY(-2px) !important;
+}
+
+.btn-exam-save:active {
+    transform: scale(0.95) !important;
+}
+
+.btn-exam-save:disabled {
+    opacity: 0.8 !important;
+    cursor: wait !important;
+    transform: scale(0.95) !important;
+}
+
+/* Icon Animations */
+.btn-exam-group:hover .lucide-edit-3 {
+    transform: rotate(12deg) !important;
+}
+
+.btn-exam-group:hover .lucide-save {
+    transform: scale(1.1) !important;
+}
+
+.animate-spin-custom {
+    animation: spin 1s linear infinite !important;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}

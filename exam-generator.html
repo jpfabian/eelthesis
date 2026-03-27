@@ -7,6 +7,7 @@
   <link rel="icon" href="image/eel-character.png" type="image/png">
   <script src="js/theme.js"></script>
   <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/exam-buttons.css">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.1/lucide.min.css" rel="stylesheet">
 </head>
 
@@ -201,18 +202,14 @@
           <div id="generatedExamContent" class="whitespace-pre-wrap text-sm text-foreground"></div>
 
           <!-- ✅ Buttons at bottom-right (theme-aware) -->
-          <div class="absolute bottom-4 right-4 flex gap-2">
-            <button id="editExamBtn" class="flex items-center gap-2 px-4 py-2 rounded-lg border border-violet-200 text-violet-600 hover:bg-violet-50 transition-all font-medium bg-white">
-              <i data-lucide="edit-3" class="size-4"></i>
-              Edit
+          <div class="absolute bottom-4 right-4 flex gap-4">
+            <button id="editExamBtn" class="btn-exam-edit btn-exam-group">
+              <i data-lucide="edit-3" class="size-5"></i>
+              <span>Edit Exam</span>
             </button>
-            <button id="saveExamBtn" class="flex items-center gap-2 px-4 py-2 rounded-lg bg-violet-600 text-white hover:bg-violet-700 transition-all font-medium shadow-sm">
-              <i data-lucide="save" class="size-4"></i>
-              Save Exam
-            </button>
-            <button id="exportWordBtn" class="flex items-center gap-2 px-4 py-2 rounded-lg border border-blue-200 text-blue-600 hover:bg-blue-50 transition-all font-medium bg-white">
-              <i data-lucide="file-digit" class="size-4"></i>
-              Word
+            <button id="saveExamBtn" class="btn-exam-save btn-exam-group">
+              <i data-lucide="save" class="size-5"></i>
+              <span>Save to List</span>
             </button>
           </div>
         </div>
