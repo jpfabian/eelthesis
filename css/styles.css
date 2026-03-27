@@ -11982,8 +11982,36 @@ body.pronunciation-lessons-page #created-lessons-grid .card:hover {
 body.reading-lessons-page .quiz-page[data-view="grid"] #lessons-grid,
 body.pronunciation-lessons-page .quiz-page[data-view="grid"] #lessons-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.25rem;
+}
+
+/* Tablet and Laptop grid adjustments */
+@media (min-width: 769px) and (max-width: 1280px) {
+  body.reading-lessons-page .quiz-page[data-view="grid"] #lessons-grid,
+  body.pronunciation-lessons-page .quiz-page[data-view="grid"] #lessons-grid {
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  }
+}
+
+/* Ensure card header doesn't wrap awkwardly in grid view */
+.quiz-page[data-view="grid"] .created-quiz-card__header {
+  align-items: flex-start; /* Better for multiline titles */
+  gap: 0.75rem;
+}
+
+.quiz-page[data-view="grid"] .created-quiz-card__icon {
+  margin-top: 0.25rem; /* Align icon with first line of title */
+}
+
+.quiz-page[data-view="grid"] .quiz-status-badge {
+  margin-left: auto;
+  margin-right: 0.25rem;
+  white-space: nowrap;
+}
+
+.quiz-page[data-view="grid"] .created-quiz-card__chevron {
+  margin-top: 0.5rem; /* Better alignment with multiline title start */
 }
 
 body.reading-lessons-page .quiz-page[data-view="list"] #lessons-grid,
@@ -13615,6 +13643,90 @@ body.pronunciation-lessons-page .quiz-page[data-view="list"] #lessons-grid {
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
+}
+
+/* --- Mobile specific adjustments for created quiz cards --- */
+@media (max-width: 640px) {
+  .created-quiz-card__inner {
+    padding: 1.25rem 1rem;
+  }
+  
+  .created-quiz-card__header {
+    gap: 0.75rem;
+  }
+  
+  .created-quiz-card__icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 0.75rem;
+  }
+  
+  .created-quiz-card__icon-svg {
+    width: 1.125rem;
+    height: 1.125rem;
+  }
+  
+  .created-quiz-card__title {
+    font-size: 0.95rem;
+  }
+  
+  .quiz-status-badge {
+    margin-left: auto; /* Push to right on mobile if space allows */
+    flex-shrink: 0;
+    padding: 0.15rem 0.45rem;
+    font-size: 0.65rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .created-quiz-card__header {
+    gap: 0.5rem;
+  }
+  
+  .created-quiz-card__icon {
+    width: 2.25rem;
+    height: 2.25rem;
+  }
+  
+  .created-quiz-card__title {
+    font-size: 0.9rem;
+  }
+
+  /* Handle very narrow screens where title + badge + chevron might still overflow */
+  .created-quiz-card__title-wrap {
+    flex: 1;
+    min-width: 0;
+  }
+  
+  .created-quiz-card__title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2; /* Limit to 2 lines on very small screens */
+    -webkit-box-orient: vertical;
+    word-break: normal; /* Better than break-word for readability */
+  }
+}
+
+@media (max-width: 360px) {
+  .created-quiz-card__header {
+    gap: 0.4rem;
+  }
+  
+  .created-quiz-card__icon {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 0.5rem;
+  }
+  
+  .created-quiz-card__title {
+    font-size: 0.85rem;
+  }
+  
+  .created-quiz-card__chevron {
+    width: 1rem;
+    height: 1rem;
+  }
 }
 
 .lessons-quiz-item-menu-wrap {
