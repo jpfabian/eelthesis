@@ -750,12 +750,60 @@ async function initAdminDashboardPage() {
   await refresh();
 }
 
+function initAdminSidebarProfile() {
+  const userStr = localStorage.getItem("eel_user");
+  if (!userStr) return;
+  try {
+    const user = JSON.parse(userStr);
+    const nameEl = document.getElementById("admin-sidebar-name");
+    const avatarEl = document.getElementById("admin-sidebar-avatar");
+    const roleEl = document.getElementById("admin-sidebar-role");
+
+    const popoverAvatarEl = document.getElementById("admin-popover-avatar");
+    const popoverNameEl = document.getElementById("admin-popover-name");
+    const popoverEmailEl = document.getElementById("admin-popover-email");
+
+    const fullName = `${user.fname || ""} ${user.lname || ""}`.trim() || "Admin";
+    const initials = ((user.fname?.[0] || "") + (user.lname?.[0] || "")).toUpperCase() || "A";
+
+    if (nameEl) nameEl.textContent = fullName;
+    if (avatarEl) avatarEl.textContent = initials;
+    if (roleEl) {
+      const role = String(user.role || "admin").toLowerCase();
+      roleEl.textContent = role === "master_admin" ? "Master Admin" : "Admin";
+    }
+
+    if (popoverAvatarEl) popoverAvatarEl.textContent = initials;
+    if (popoverNameEl) popoverNameEl.textContent = fullName;
+    if (popoverEmailEl) popoverEmailEl.textContent = user.email || "";
+
+    const avatarBtn = document.getElementById("admin-sidebar-avatar-btn");
+    const popover = document.getElementById("admin-sidebar-profile-popover");
+    if (avatarBtn && popover) {
+      avatarBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const isHidden = popover.classList.contains("hidden");
+        popover.classList.toggle("hidden", !isHidden);
+        avatarBtn.setAttribute("aria-expanded", isHidden);
+      });
+
+      document.addEventListener("click", (e) => {
+        if (!popover.classList.contains("hidden") && !popover.contains(e.target) && !avatarBtn.contains(e.target)) {
+          popover.classList.add("hidden");
+          avatarBtn.setAttribute("aria-expanded", "false");
+        }
+      });
+    }
+  } catch (_) {}
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   try {
     if (window.lucide && typeof window.lucide.createIcons === "function") {
       window.lucide.createIcons();
     }
   } catch (_) {}
+  initAdminSidebarProfile();
   initAdminLoginPage();
   initAdminDashboardStatsPage();
   initAdminDashboardPage();

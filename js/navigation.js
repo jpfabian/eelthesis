@@ -209,7 +209,26 @@ function setupSidebar(user, currentPage) {
     // Settings and Logout live in the sidebar HTML with Back to Classes, not in nav groups.
 
     // Special case: on Classes/Settings/Deleted Classes/Teacher Dashboard pages, show minimal sidebar.
-    if (currentPage === "classes" || currentPage === "settings" || currentPage === "deleted-classes" || (user.role === "teacher" && currentPage === "teacher-dashboard")) {
+    if (user.role === "admin") {
+        groups.push({
+            title: "Overview",
+            items: [
+                { id: 'admin-dashboard', label: 'Dashboard', icon: 'layout-dashboard', url: 'admin-dashboard.html' },
+            ]
+        });
+        groups.push({
+            title: "Management",
+            items: [
+                { id: 'account-verification', label: 'Account Verification', icon: 'check-circle', url: 'account-verification.html' },
+            ]
+        });
+        groups.push({
+            title: "Account",
+            items: [
+                { id: 'settings', label: 'My Account', icon: 'user', url: 'settings.html' },
+            ]
+        });
+    } else if (currentPage === "classes" || currentPage === "settings" || currentPage === "deleted-classes" || (user.role === "teacher" && currentPage === "teacher-dashboard")) {
         if (user.role === "teacher") {
             groups.push({
                 title: "Overview",
@@ -236,21 +255,6 @@ function setupSidebar(user, currentPage) {
                 items: [{ id: 'settings', label: 'My Account', icon: 'user', url: 'settings.html' }]
             });
         }
-    } else
-
-    if (user.role === "admin") {
-        groups.push({
-            title: "Overview",
-            items: [
-                { id: 'admin-dashboard', label: 'Dashboard', icon: 'layout-dashboard', url: 'admin-dashboard.html' },
-            ]
-        });
-        groups.push({
-            title: "Management",
-            items: [
-                { id: 'account-verification', label: 'Account Verification', icon: 'check-circle', url: 'account-verification.html' },
-            ]
-        });
     } else if (user.role === "master_admin" || user.role === "teacher") {
         const teacherOverview = user.role === "teacher" && !selectedClass
             ? [{ id: 'teacher-dashboard', label: 'Dashboard', icon: 'layout-dashboard', url: 'teacher-dashboard.html' }]
@@ -599,6 +603,7 @@ function getCurrentPageId() {
 
 // Helper function to validate user access to page
 function validatePageAccess(user, pageId) {
+    const adminPages = ['admin-dashboard', 'account-verification', 'settings'];
     const teacherPages = [
         'classes', 'teacher-dashboard',
         'lessons', 'reading-lessons', 'pronunciation-lessons', 
@@ -612,7 +617,9 @@ function validatePageAccess(user, pageId) {
         'my-progress', 'settings'
     ];
     
-    if (user.role === 'teacher') {
+    if (user.role === 'admin' || user.role === 'master_admin') {
+        return adminPages.includes(pageId);
+    } else if (user.role === 'teacher') {
         return teacherPages.includes(pageId);
     } else {
         return studentPages.includes(pageId);

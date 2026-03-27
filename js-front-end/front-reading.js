@@ -2017,6 +2017,7 @@ async function loadQuizzes(user = getCurrentUser()) {
             card.dataset.quizId = String(quiz.quiz_id);
 
             let actionButtons = '';
+            let completedBadge = '';
 
             if (isTeacher) {
                 actionButtons = `
@@ -2042,8 +2043,10 @@ async function loadQuizzes(user = getCurrentUser()) {
                     
                     if (percent >= passingScore) {
                         card.classList.add('created-quiz-card--passed');
+                        completedBadge = '<span class="quiz-status-badge quiz-status-badge--passed">Passed</span>';
                     } else {
                         card.classList.add('created-quiz-card--failed');
+                        completedBadge = '<span class="quiz-status-badge quiz-status-badge--failed">Failed</span>';
                     }
                 }
                 const retakeOption = String(quiz.retake_option || 'all').toLowerCase();
@@ -2091,7 +2094,6 @@ async function loadQuizzes(user = getCurrentUser()) {
               </div>
             ` : '';
 
-            const completedBadge = '';
 
             const scheduleStatusLabel = isTeacher
                 ? (effectiveLocked ? 'Unpublished' : 'Published')
@@ -2105,8 +2107,8 @@ async function loadQuizzes(user = getCurrentUser()) {
                         </div>
                         <div class="created-quiz-card__title-wrap">
                             <h3 class="created-quiz-card__title">${escapeHtml(quizNumber + '. ' + quiz.title)}</h3>
-                            ${completedBadge}
                         </div>
+                        ${completedBadge}
                         <i data-lucide="chevron-down" class="created-quiz-card__chevron" aria-hidden="true"></i>
                     </div>
                     <div class="created-quiz-card__details hidden">

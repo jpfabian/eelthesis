@@ -723,16 +723,17 @@ router.get("/api/class/:classId/completion-rate", async (req, res) => {
     );
     let totalAI = 0;
     try {
+      // Check if teacher_reading_quizzes exists and has class_id
       const [[aq]] = await pool.query(
         `SELECT COUNT(*) AS c
          FROM teacher_reading_quizzes
-         WHERE class_id = ? AND (? IS NULL OR subject_id = ?)`,
-        [classId, subjectId, subjectId]
+         WHERE (? IS NULL OR subject_id = ?)`,
+        [subjectId, subjectId]
       );
       totalAI = Number(aq?.c || 0);
     } catch (e) {
       if (String(e?.code || "") !== "ER_NO_SUCH_TABLE" && String(e?.code || "") !== "ER_BAD_FIELD_ERROR") {
-        throw e;
+        console.error("Error fetching teacher_reading_quizzes count:", e);
       }
       totalAI = 0;
     }
@@ -777,14 +778,13 @@ router.get("/api/class/:classId/completion-rate", async (req, res) => {
         [studentIds, subjectId, subjectId, classId]
       );
     } catch (e) {
-      if (String(e?.code || "") === "ER_BAD_FIELD_ERROR" || String(e?.message || "").includes("class_id")) {
+      if (String(e?.code || "") === "ER_BAD_FIELD_ERROR" || String(e?.message || "").includes("class_id") || String(e?.code || "") === "ER_NO_SUCH_TABLE") {
         [[pronDone]] = await pool.query(
           `SELECT COUNT(DISTINCT CONCAT(a.student_id,'-',a.quiz_id)) AS c FROM pronunciation_quiz_attempts a
            LEFT JOIN pronunciation_quizzes q ON q.quiz_id = a.quiz_id
-           LEFT JOIN teacher_pronunciation_quizzes tq ON tq.quiz_id = a.quiz_id
            WHERE a.status IN ('completed', 'submitted') AND a.student_id IN (?)
-           AND (q.quiz_id IS NOT NULL OR tq.quiz_id IS NOT NULL)
-           AND (? IS NULL OR COALESCE(q.subject_id, tq.subject_id) = ? OR COALESCE(q.subject_id, tq.subject_id) IS NULL)`,
+           AND q.quiz_id IS NOT NULL
+           AND (? IS NULL OR q.subject_id = ? OR q.subject_id IS NULL)`,
           [studentIds, subjectId, subjectId]
         );
       } else throw e;
@@ -805,10 +805,26 @@ router.get("/api/class/:classId/completion-rate", async (req, res) => {
       );
       aiDoneCount = Number(aiDone?.c || 0);
     } catch (e) {
-      if (String(e?.code || "") !== "ER_NO_SUCH_TABLE" && String(e?.code || "") !== "ER_BAD_FIELD_ERROR") {
-        throw e;
-      }
-      aiDoneCount = 0;
+      if (String(e?.code || "") === "ER_BAD_FIELD_ERROR" || String(e?.message || "").includes("class_id")) {
+        try {
+          const [[aiDone]] = await pool.query(
+            `
+            SELECT COUNT(DISTINCT CONCAT(a.student_id,'-',a.quiz_id)) AS c
+            FROM teacher_reading_quiz_attempts a
+            JOIN teacher_reading_quizzes q ON q.quiz_id = a.quiz_id
+            WHERE a.status = 'completed'
+              AND a.student_id IN (?)
+              AND (? IS NULL OR q.subject_id = ?)
+            `,
+            [studentIds, subjectId, subjectId]
+          );
+          aiDoneCount = Number(aiDone?.c || 0);
+        } catch (inner) {
+          aiDoneCount = 0;
+        }
+      } else if (String(e?.code || "") === "ER_NO_SUCH_TABLE") {
+        aiDoneCount = 0;
+      } else throw e;
     }
     const readingCompleted = Number(readingDone?.c || 0);
     const pronunciationCompleted = Number(pronDone?.c || 0);
@@ -843,14 +859,13 @@ router.get("/api/class/:classId/completion-rate", async (req, res) => {
         [studentIds, subjectId, subjectId, classId]
       );
     } catch (e) {
-      if (String(e?.code || "") === "ER_BAD_FIELD_ERROR" || String(e?.message || "").includes("class_id")) {
+      if (String(e?.code || "") === "ER_BAD_FIELD_ERROR" || String(e?.message || "").includes("class_id") || String(e?.code || "") === "ER_NO_SUCH_TABLE") {
         [pronEngRows] = await pool.query(
           `SELECT DISTINCT a.student_id FROM pronunciation_quiz_attempts a
            LEFT JOIN pronunciation_quizzes q ON q.quiz_id = a.quiz_id
-           LEFT JOIN teacher_pronunciation_quizzes tq ON tq.quiz_id = a.quiz_id
            WHERE a.status IN ('completed', 'submitted') AND a.student_id IN (?)
-           AND (q.quiz_id IS NOT NULL OR tq.quiz_id IS NOT NULL)
-           AND (? IS NULL OR COALESCE(q.subject_id, tq.subject_id) = ? OR COALESCE(q.subject_id, tq.subject_id) IS NULL)`,
+           AND q.quiz_id IS NOT NULL
+           AND (? IS NULL OR q.subject_id = ? OR q.subject_id IS NULL)`,
           [studentIds, subjectId, subjectId]
         );
       } else throw e;
@@ -871,10 +886,26 @@ router.get("/api/class/:classId/completion-rate", async (req, res) => {
       );
       aiEngRows = rows || [];
     } catch (e) {
-      if (String(e?.code || "") !== "ER_NO_SUCH_TABLE" && String(e?.code || "") !== "ER_BAD_FIELD_ERROR") {
-        throw e;
-      }
-      aiEngRows = [];
+      if (String(e?.code || "") === "ER_BAD_FIELD_ERROR" || String(e?.message || "").includes("class_id")) {
+        try {
+          const [rows] = await pool.query(
+            `
+            SELECT DISTINCT a.student_id
+            FROM teacher_reading_quiz_attempts a
+            JOIN teacher_reading_quizzes q ON q.quiz_id = a.quiz_id
+            WHERE a.status = 'completed'
+              AND a.student_id IN (?)
+              AND (? IS NULL OR q.subject_id = ?)
+            `,
+            [studentIds, subjectId, subjectId]
+          );
+          aiEngRows = rows || [];
+        } catch (inner) {
+          aiEngRows = [];
+        }
+      } else if (String(e?.code || "") === "ER_NO_SUCH_TABLE") {
+        aiEngRows = [];
+      } else throw e;
     }
     const readingEngagedSet = new Set((readingEngRows || []).map((r) => Number(r.student_id)));
     const pronEngagedSet = new Set((pronEngRows || []).map((r) => Number(r.student_id)));

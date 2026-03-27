@@ -959,7 +959,7 @@ async function loadPronunciationQuizzes(user, difficultyFilter = null) {
                 </div>
             ` : "";
 
-            const completedBadge = "";
+            let completedBadge = "";
 
             const scheduleStatusLabel = isTeacher
                 ? (effectiveLocked ? "Unpublished" : "Published")
@@ -968,6 +968,7 @@ async function loadPronunciationQuizzes(user, difficultyFilter = null) {
             // ✅ Card — same structure as reading-lessons (created-quiz-card__inner)
             const quizCard = document.createElement("div");
             quizCard.className = "card created-quiz-card group";
+
             if (!isTeacher && isCompleted) {
                 const studentAttempt = studentAttempts.find(a => a.quiz_id === quiz.quiz_id);
                 const passingScore = Number(quiz.passing_score ?? 70);
@@ -977,8 +978,10 @@ async function loadPronunciationQuizzes(user, difficultyFilter = null) {
 
                 if (percent >= passingScore) {
                     quizCard.classList.add("created-quiz-card--passed");
+                    completedBadge = '<span class="quiz-status-badge quiz-status-badge--passed">Passed</span>';
                 } else {
                     quizCard.classList.add("created-quiz-card--failed");
+                    completedBadge = '<span class="quiz-status-badge quiz-status-badge--failed">Failed</span>';
                 }
             }
             quizCard.dataset.quizId = String(quiz.quiz_id);
@@ -990,8 +993,8 @@ async function loadPronunciationQuizzes(user, difficultyFilter = null) {
                         </div>
                         <div class="created-quiz-card__title-wrap">
                             <h3 class="created-quiz-card__title">${escapeHtml(quiz.title)}</h3>
-                            ${completedBadge}
                         </div>
+                        ${completedBadge}
                         <i data-lucide="chevron-down" class="created-quiz-card__chevron" aria-hidden="true"></i>
                     </div>
                     <div class="created-quiz-card__details hidden">

@@ -41,13 +41,25 @@
       <div class="sidebar-profile">
         <div class="sidebar-profile-top">
           <div class="sidebar-avatar-wrap">
-            <div class="sidebar-avatar" aria-hidden="true">A</div>
+            <button type="button" class="sidebar-avatar-btn" id="admin-sidebar-avatar-btn" aria-label="View profile" aria-expanded="false" aria-haspopup="true">
+              <div class="sidebar-avatar" aria-hidden="true" id="admin-sidebar-avatar">A</div>
+            </button>
+            <div id="admin-sidebar-profile-popover" class="sidebar-profile-popover hidden" role="dialog" aria-label="Profile">
+              <div class="sidebar-profile-popover-avatar" id="admin-popover-avatar">A</div>
+              <div class="sidebar-profile-popover-name" id="admin-popover-name">Admin</div>
+              <div class="sidebar-profile-popover-email" id="admin-popover-email">admin@example.com</div>
+              <a href="settings.html" class="sidebar-profile-popover-link">
+                <i data-lucide="user" class="size-4"></i>
+                My Account
+              </a>
+            </div>
           </div>
           <div style="min-width:0;">
             <div class="sidebar-name-row">
-              <span class="sidebar-user-name">Admin</span>
-              <span class="sidebar-user-role">Admin</span>
+              <span class="sidebar-user-name" id="admin-sidebar-name">Admin</span>
+              <span class="sidebar-user-role" id="admin-sidebar-role">Admin</span>
             </div>
+            <div class="sidebar-user-meta">Dashboard</div>
           </div>
         </div>
       </div>
@@ -65,6 +77,14 @@
           <a href="account-verification.html" class="nav-button btn btn-side-bar w-full justify-start gap-3 p-3 rounded-md text-left transition-all flex items-center" data-task="account-verification">
             <i data-lucide="check-circle" class="size-5"></i>
             <span>Account Verification</span>
+          </a>
+        </div>
+        <div class="sidebar-divider"></div>
+        <div class="sidebar-section-title">Account</div>
+        <div class="space-y-2">
+          <a href="settings.html" class="nav-button btn btn-side-bar w-full justify-start gap-3 p-3 rounded-md text-left transition-all flex items-center" data-task="settings">
+            <i data-lucide="user" class="size-5"></i>
+            <span>My Account</span>
           </a>
         </div>
       </nav>
@@ -133,10 +153,6 @@
                 <h3 class="text-lg font-semibold mt-2">Account Verification</h3>
                 <p class="text-sm text-muted-foreground mt-1">Teacher and student accounts by approval status</p>
               </div>
-              <a href="account-verification.html" class="btn btn-primary btn-sm">
-                <i data-lucide="arrow-right" class="size-4"></i>
-                Manage
-              </a>
             </div>
             <div class="master-admin-verification-progress-wrap">
               <div class="master-admin-verification-progress-bar" id="admin-verification-progress-bar">

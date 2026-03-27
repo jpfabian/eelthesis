@@ -273,8 +273,8 @@ router.get("/api/class/:classId/students", async (req, res) => {
       `SELECT 
           sc.id,
           sc.student_id,
-          sc.student_fname,
-          sc.student_lname,
+          u.fname AS student_fname,
+          u.lname AS student_lname,
           sc.status,
           sc.joined_at,
           u.email,
