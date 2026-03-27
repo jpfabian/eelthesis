@@ -11519,7 +11519,7 @@ body.reading-lessons-page #main-content::before {
 }
 
 .quiz-page {
-  max-width: 1200px;
+  max-width: 100%;
   margin: 0 auto;
   min-height: 0;
   display: flex;
