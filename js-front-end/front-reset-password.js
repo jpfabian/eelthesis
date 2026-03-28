@@ -111,37 +111,15 @@ document.addEventListener("DOMContentLoaded", () => {
     verifyForm.addEventListener("submit", async (e) => {
       e.preventDefault();
 
-      const emailVal = (emailFromUrl || "").trim();
+      const emailVal = emailFromUrl.trim() || "";
       const tokenVal = getTokenFromDigits();
 
-      if (!emailVal) {
-        document.getElementById("loading-screen")?.classList.add("hidden");
-        return Swal.fire({
-          icon: "error",
-          title: "Email missing",
-          text: "Your email address could not be found. Please go back to the Forgot Password page and try again.",
-          confirmButtonText: "Go Back",
-        }).then(() => {
-          window.location.href = "forgot-password.html";
-        });
+      if (!emailVal || !tokenVal) {
+        if (!emailVal) return Swal.fire({ icon: "error", title: "Email required", text: "Please use the reset link from your email, which includes your email address." });
+        return;
       }
-
-      if (!tokenVal || tokenVal.length < 6) {
-        document.getElementById("loading-screen")?.classList.add("hidden");
-        return Swal.fire({
-          icon: "info",
-          title: "Incomplete code",
-          text: "Please enter the full 6-digit verification code from your email.",
-        });
-      }
-
       if (!/^\d{6}$/.test(tokenVal)) {
-        document.getElementById("loading-screen")?.classList.add("hidden");
-        return Swal.fire({
-          icon: "error",
-          title: "Invalid code",
-          text: "The verification code should only contain numbers.",
-        });
+        return Swal.fire({ icon: "error", title: "Invalid code", text: "Please enter the 6-digit code from your email." });
       }
 
       document.getElementById("loading-screen")?.classList.remove("hidden");
