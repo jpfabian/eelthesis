@@ -64,27 +64,41 @@ router.post("/api/auth/verify-reset-code", async (req, res) => {
     const pool = req.pool;
     conn = await pool.getConnection();
 
-    const [users] = await conn.execute("SELECT user_id FROM users WHERE email = ? LIMIT 1", [email]);
+    const [users] = await conn.execute("SELECT user_id FROM users WHERE LOWER(email) = LOWER(?) LIMIT 1", [email]);
     const userId = users?.[0]?.user_id ? Number(users[0].user_id) : null;
     if (!userId) {
+      console.warn(`⚠️ Reset code verify failed: User with email "${email}" not found.`);
       return res.status(400).json({ success: false, error: "Invalid or expired code" });
     }
 
     const tokenHash = sha256Hex(code);
     const now = nowPhilippineDatetime();
+    
+    // Check if token exists, is not used, and not expired
     const [rows] = await conn.execute(
-      `SELECT reset_id
+      `SELECT reset_id, expires_at, used_at
        FROM password_reset_tokens
        WHERE user_id = ?
          AND token_hash = ?
-         AND used_at IS NULL
-         AND expires_at > ?
+       ORDER BY reset_id DESC
        LIMIT 1`,
-      [userId, tokenHash, now]
+      [userId, tokenHash]
     );
 
     if (!rows.length) {
+      console.warn(`⚠️ Reset code verify failed: Token hash not found for user ${userId}. Code: ${code}`);
       return res.status(400).json({ success: false, error: "Invalid or expired code" });
+    }
+
+    const token = rows[0];
+    if (token.used_at) {
+      console.warn(`⚠️ Reset code verify failed: Token ${token.reset_id} already used at ${token.used_at}.`);
+      return res.status(400).json({ success: false, error: "This code has already been used." });
+    }
+
+    if (token.expires_at <= now) {
+      console.warn(`⚠️ Reset code verify failed: Token ${token.reset_id} expired at ${token.expires_at}. Current server time: ${now}`);
+      return res.status(400).json({ success: false, error: "This code has expired. Please request a new one." });
     }
 
     return res.json({ success: true, message: "Code verified" });
@@ -109,13 +123,16 @@ router.post("/api/auth/forgot-password", async (req, res) => {
     conn = await pool.getConnection();
 
     // Check user existence (but do not reveal it in response)
-    const [rows] = await conn.execute("SELECT user_id FROM users WHERE email = ? LIMIT 1", [email]);
+    const [rows] = await conn.execute("SELECT user_id FROM users WHERE LOWER(email) = LOWER(?) LIMIT 1", [email]);
     const userId = rows?.[0]?.user_id ? Number(rows[0].user_id) : null;
 
     if (!userId) {
-      return res.status(404).json({
-        success: false,
-        error: "No account found with this email address.",
+      // Security: Always return success message even if email doesn't exist
+      // But we can log it for admin awareness
+      console.warn(`⚠️ Forgot password requested for non-existent email: ${email}`);
+      return res.json({
+        success: true,
+        message: "A verification code was sent to your email.",
       });
     }
 
@@ -129,7 +146,7 @@ router.post("/api/auth/forgot-password", async (req, res) => {
           used_at DATETIME NULL,
           created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
           PRIMARY KEY (reset_id),
-          UNIQUE KEY uq_password_reset_token_hash (token_hash),
+          KEY idx_password_reset_token_hash (token_hash),
           KEY idx_password_reset_user (user_id),
           KEY idx_password_reset_expires (expires_at),
           CONSTRAINT fk_password_reset_user
@@ -142,7 +159,8 @@ router.post("/api/auth/forgot-password", async (req, res) => {
       await conn.execute("UPDATE password_reset_tokens SET used_at = ? WHERE user_id = ? AND used_at IS NULL", [nowPhilippineDatetime(), userId]);
 
       const tokenHash = sha256Hex(token);
-      const expiresAt = formatPhilippineDatetime(addMinutes(new Date(), 15));
+      // Increased to 60 minutes for better reliability in system deployment
+      const expiresAt = formatPhilippineDatetime(addMinutes(new Date(), 60));
       await conn.execute(
         "INSERT INTO password_reset_tokens (user_id, token_hash, expires_at, created_at) VALUES (?, ?, ?, ?)",
         [userId, tokenHash, expiresAt, nowPhilippineDatetime()]
@@ -195,27 +213,36 @@ router.post("/api/auth/reset-password", async (req, res) => {
     const pool = req.pool;
     conn = await pool.getConnection();
 
-    const [users] = await conn.execute("SELECT user_id FROM users WHERE email = ? LIMIT 1", [email]);
+    const [users] = await conn.execute("SELECT user_id FROM users WHERE LOWER(email) = LOWER(?) LIMIT 1", [email]);
     const userId = users?.[0]?.user_id ? Number(users[0].user_id) : null;
     if (!userId) {
+      console.warn(`⚠️ Password reset failed: User with email "${email}" not found.`);
       return res.status(400).json({ success: false, error: "Invalid or expired token" });
     }
 
     const tokenHash = sha256Hex(token);
     const now = nowPhilippineDatetime();
     const [rows] = await conn.execute(
-      `SELECT reset_id
+      `SELECT reset_id, expires_at, used_at
        FROM password_reset_tokens
        WHERE user_id = ?
          AND token_hash = ?
-         AND used_at IS NULL
-         AND expires_at > ?
+       ORDER BY reset_id DESC
        LIMIT 1`,
-      [userId, tokenHash, now]
+      [userId, tokenHash]
     );
 
     if (!rows.length) {
+      console.warn(`⚠️ Password reset failed: Token hash not found for user ${userId}.`);
       return res.status(400).json({ success: false, error: "Invalid or expired token" });
+    }
+
+    const resetToken = rows[0];
+    if (resetToken.used_at) {
+      return res.status(400).json({ success: false, error: "This token has already been used." });
+    }
+    if (resetToken.expires_at <= now) {
+      return res.status(400).json({ success: false, error: "This token has expired. Please request a new one." });
     }
 
     const hashed = await bcrypt.hash(newPassword, 10);
