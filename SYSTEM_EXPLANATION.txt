@@ -1,0 +1,74 @@
+================================================================================
+EEL (English Enhancement Learning) - SYSTEM EXPLANATION & USER GUIDE
+================================================================================
+Project: EEL (English Enhancement Learning)
+Purpose: Thesis Defense Presentation (March 30)
+================================================================================
+
+1. SYSTEM OVERVIEW
+--------------------------------------------------------------------------------
+EEL is an AI-powered English Learning Management System (LMS) designed to enhance 
+student proficiency in Reading and Pronunciation. It leverages Generative AI 
+(Groq/LLaMA) to create dynamic content and provide instant feedback.
+
+2. CORE FEATURES
+--------------------------------------------------------------------------------
+A. AI-GENERATED EXAMS (Teacher Side)
+   - Teachers can generate complete exams based on specific topics.
+   - Features: Multiple Choice, Identification, and Answer Keys.
+   - Export: Exams can be downloaded as professional MS Word (.doc) files with 
+     academic headers and perfectly aligned meta-sections (Name, Date, Score).
+
+B. READING LESSONS & QUIZZES
+   - 20 sequential lessons covering academic writing and grammar.
+   - AI Grading: Subjective essay questions are checked by AI for content, 
+     grammar, and relevance.
+   - Scoring: Always out of 10 points (5 for objective questions, 5 for essay).
+   - Progression: Students must pass (whole number scoring) to unlock the next 
+     lesson.
+
+C. PRONUNCIATION PRACTICE
+   - Real-time voice recognition using the Web Speech API.
+   - AI evaluates pronunciation accuracy and provides a score (0-100%).
+   - Clean UI: Focused recording interface with no distracting pop-ups.
+
+D. INTERACTIVE RECITATION
+   - A gamified "Student Picker" slider for classroom sessions.
+   - Manual Pick: Teachers can search and select specific students (centered UI).
+   - Auto Pick: Randomly selects unanswered students for fair participation.
+   - Visual Feedback: "Already answered" badges for tracked sessions.
+
+E. COMPETITIVE LEADERBOARDS
+   - Top 3 Podium: Displays student avatars, names, and whole-number scores.
+   - Ranking Table: Modern, engaging design with hover effects and rank badges.
+   - Real-time: Updates instantly when students change their profile pictures.
+
+3. HOW TO NAVIGATE (User Journey)
+--------------------------------------------------------------------------------
+- LOGIN/SIGNUP: Secure authentication with role-based access (Student/Teacher).
+- DASHBOARD: Overview of active classes and upcoming lessons.
+- CLASSROOM: Join via unique code (EEL-XXXX) to access teacher-specific quizzes.
+- LESSON TRACKS: Navigate through Reading and Pronunciation modules.
+- LEADERBOARD: View ranking per quiz to encourage friendly competition.
+
+4. TECHNICAL STACK (The "How it Works")
+--------------------------------------------------------------------------------
+- Frontend: HTML5, CSS3 (Custom variables/gradients), Vanilla JavaScript.
+- Backend: Node.js with Express.
+- Database: MySQL (Refer to DATA_DICTIONARY.txt for schema).
+- AI Integration: Groq Cloud API (LLaMA models) for essay grading and 
+  exam generation.
+- Security: Cheating prevention (fullscreen enforcement/tab-tracking) during 
+  quizzes.
+
+5. KEY PRESENTATION POINTS
+--------------------------------------------------------------------------------
+- Integration of AI: Not just for generation, but for subjective grading.
+- User Experience (UX): Engaging animations, dark mode responsiveness, and 
+  professional document exporting.
+- Data Integrity: Live synchronization of user profiles (avatars/names) 
+  across all classroom features.
+
+================================================================================
+END OF DOCUMENT - Good luck with your defense!
+================================================================================

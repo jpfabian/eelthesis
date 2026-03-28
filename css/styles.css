@@ -8218,6 +8218,64 @@ body.landing .legal-block a {
 }
 body.landing .legal-block a:hover {
   text-decoration: underline;
+  color: var(--primary);
+}
+
+body.landing .legal-contact-list {
+  list-style: none !important;
+  padding: 0 !important;
+  margin: 1.5rem 0 !important;
+  display: grid !important;
+  gap: 1rem !important;
+}
+
+body.landing .legal-contact-list li {
+  display: flex !important;
+  align-items: center !important;
+  gap: 1rem !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  font-size: 1rem !important;
+  color: var(--muted-foreground) !important;
+}
+
+body.landing .legal-contact-list li::before {
+  display: none !important;
+}
+
+body.landing .legal-contact-list i {
+  width: 38px;
+  height: 38px;
+  border-radius: 0.75rem;
+  background: color-mix(in srgb, var(--primary) 10%, var(--card));
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+body.landing .legal-contact-list li:hover i {
+  transform: scale(1.1);
+  background: color-mix(in srgb, var(--primary) 15%, var(--card));
+}
+
+body.landing .legal-contact-list strong {
+  color: var(--foreground);
+  min-width: 90px;
+  font-weight: 700;
+}
+
+body.landing .legal-contact-list a {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+body.landing .legal-contact-list a:hover {
+  text-decoration: underline;
 }
 
 @media (max-width: 768px) {
@@ -8281,15 +8339,17 @@ body.landing .footer-brand-link:hover {
 }
 
 body.landing .footer-logo {
-  width: 40px;
-  height: 40px;
-  border-radius: 0.75rem;
-  background: linear-gradient(135deg, var(--primary), var(--secondary));
-  color: var(--primary-foreground);
+  width: auto;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.1rem;
+}
+
+body.landing .footer-logo img {
+  height: 100%;
+  width: auto;
+  object-fit: contain;
 }
 
 body.landing .footer-tagline {
@@ -8419,6 +8479,48 @@ body.landing .contact-item i {
   color: var(--primary);
   width: 1rem;
   text-align: center;
+}
+
+body.landing .contact-item a {
+  color: var(--muted-foreground);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+body.landing .contact-item a:hover {
+  color: var(--primary);
+}
+
+body.landing .contact-social {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+body.landing .social-link {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  color: var(--primary-foreground);
+  transition: transform 0.2s ease, filter 0.2s ease;
+  text-decoration: none;
+}
+
+body.landing .social-link:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.1);
+}
+
+body.landing .social-link.fb {
+  background: #1877f2;
+}
+
+body.landing .social-link.yt {
+  background: #ff0000;
 }
 
 body.landing .footer-bottom {

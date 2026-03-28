@@ -10,10 +10,6 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body class="landing legal-page" data-page="">
-    <div class="mobile-nav-header" id="mobileNavHeader" role="banner">
-        <button type="button" class="mobile-nav-btn mobile-nav-btn--menu" id="mobileNavMenuBtn" aria-label="Open menu"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
-        <button type="button" class="mobile-nav-btn mobile-nav-btn--theme" id="mobileNavThemeBtn" aria-label="Toggle theme"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg></button>
-    </div>
     <header class="header">
         <div class="container">
             <div class="nav-brand">
@@ -121,7 +117,28 @@
                         <section class="legal-block">
                             <h2>12. Contact</h2>
                             <p>For questions about these Terms of Service, contact us at:</p>
-                            <p><strong>Email:</strong> support@eel-learning.com</p>
+                            <ul class="legal-contact-list">
+                                <li>
+                                    <i class="fas fa-envelope"></i>
+                                    <strong>Email:</strong>
+                                    <a href="mailto:eelthesis@gmail.com">eelthesis@gmail.com</a>
+                                </li>
+                                <li>
+                                    <i class="fas fa-phone"></i>
+                                    <strong>Phone:</strong>
+                                    <a href="tel:09127288329">0912-728-8329</a>
+                                </li>
+                                <li>
+                                    <i class="fab fa-facebook"></i>
+                                    <strong>Facebook:</strong>
+                                    <a href="https://www.facebook.com/people/Enhancing-English-Literacy-EEL-Official/61566326561366/" target="_blank" rel="noopener noreferrer">EEL Official Facebook</a>
+                                </li>
+                                <li>
+                                    <i class="fab fa-youtube"></i>
+                                    <strong>YouTube:</strong>
+                                    <a href="https://www.youtube.com/@eel-2026-q7g" target="_blank" rel="noopener noreferrer">EEL Official YouTube</a>
+                                </li>
+                            </ul>
                             <p><strong>EEL Learning Platform</strong> — Norzagaray National High School / Norzagaray College</p>
                         </section>
                     </div>
@@ -136,7 +153,7 @@
                 <div class="footer-content">
                     <div class="footer-brand">
                         <a href="index.html" class="footer-brand-link">
-                            <div class="footer-logo"><i class="fas fa-book-open"></i></div>
+                            <div class="footer-logo"><img src="image/logo.png" alt="EEL Logo" class="logo-img"></div>
                             <span class="brand-text">EEL</span>
                         </a>
                         <p class="footer-tagline">Enhancing English literacy through AI-powered learning tools for students and teachers worldwide.</p>
@@ -159,26 +176,30 @@
                     <div class="footer-links">
                         <h4 class="footer-heading">Support</h4>
                         <ul>
-                            <li><a href="#">Help Center</a></li>
-                            <li><a href="#">Getting Started</a></li>
-                            <li><a href="#">Contact Us</a></li>
+                            <li><a href="help-center.html">Help Center</a></li>
+                            <li><a href="getting-started.html">Getting Started</a></li>
+                            <li><a href="contact-us.html">Contact Us</a></li>
                         </ul>
                     </div>
                     <div class="footer-newsletter">
                         <h4 class="footer-heading">Stay Updated</h4>
                         <p>Get the latest updates on new features and educational resources.</p>
-                        <div class="newsletter-form">
-                            <input type="email" placeholder="Enter your email" aria-label="Email for newsletter">
-                            <button type="button" class="btn btn-secondary btn-subscribe">Subscribe</button>
-                        </div>
                         <div class="contact-info">
                             <div class="contact-item">
                                 <i class="fas fa-envelope" aria-hidden="true"></i>
-                                <span>support@eel-learning.com</span>
+                                <a href="mailto:eelthesis@gmail.com">eelthesis@gmail.com</a>
                             </div>
                             <div class="contact-item">
                                 <i class="fas fa-phone" aria-hidden="true"></i>
-                                <span>+1 (555) 123-4567</span>
+                                <a href="tel:09127288329">0912-728-8329</a>
+                            </div>
+                            <div class="contact-social">
+                                <a href="https://www.facebook.com/people/Enhancing-English-Literacy-EEL-Official/61566326561366/" target="_blank" rel="noopener noreferrer" class="social-link fb" title="Follow us on Facebook">
+                                    <i class="fab fa-facebook-f"></i>
+                                </a>
+                                <a href="https://www.youtube.com/@eel-2026-q7g" target="_blank" rel="noopener noreferrer" class="social-link yt" title="Subscribe to our YouTube channel">
+                                    <i class="fab fa-youtube"></i>
+                                </a>
                             </div>
                         </div>
                     </div>

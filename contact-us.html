@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>About Us - EEL</title>
+    <title>Contact Us - EEL</title>
     <link rel="icon" href="image/eel-character.png" type="image/png">
     <script src="js/theme.js"></script>
     <link rel="stylesheet" href="css/styles.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
-<body class="landing" data-page="about">
+<body class="landing" data-page="contact-us">
     <header class="header">
         <div class="container">
             <div class="nav-brand">
@@ -36,93 +36,64 @@
         </div>
     </header>
 
-    <section class="about page-section">
+    <section class="page-section">
         <div class="container">
-            <div class="about-container">
-                <div class="about-inner">
-                    <div class="section-header about-header">
-                        <h2 class="section-title">
-                            <span class="text-primary">About</span> <span class="text-secondary">EEL</span>
-                        </h2>
-                        <p class="section-description">
-                            Transforming English education through innovative AI technology and personalized learning experiences
-                        </p>
-                    </div>
-                    <div class="about-content">
-                        <div class="about-text">
-                    <h3 class="text-primary">Our Mission</h3>
-                    <p>
-                        At EEL (English Enhancement Learning), we believe that mastering English literacy should be accessible,
-                        engaging, and effective for learners of all levels. Our mission is to revolutionize English education
-                        by combining cutting-edge AI technology with proven pedagogical methods.
-                    </p>
-                    <h3 class="text-secondary">Why Choose EEL?</h3>
-                    <div class="why-choose">
-                        <div class="reason">
-                            <i class="fas fa-lightbulb text-primary"></i>
-                            <div>
-                                <h4>Innovation-Driven</h4>
-                                <p>We leverage the latest AI technology, including OpenAI's powerful language models, to create personalized learning experiences.</p>
-                            </div>
+            <div class="section-header">
+                <h2 class="section-title">
+                    <span class="text-primary">Contact</span> <span class="text-secondary">Us</span>
+                </h2>
+                <p class="section-description">
+                    Have questions or feedback? We'd love to hear from you. Get in touch with our team.
+                </p>
+            </div>
+
+            <div class="legal-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; margin-top: 2rem;">
+                <div class="legal-block">
+                    <h2 class="text-primary">Get in Touch</h2>
+                    <p>For support, inquiries, or feedback, please reach out via any of the channels below:</p>
+                    <ul class="legal-contact-list">
+                        <li>
+                            <i class="fas fa-envelope"></i>
+                            <strong>Email:</strong>
+                            <a href="mailto:eelthesis@gmail.com">eelthesis@gmail.com</a>
+                        </li>
+                        <li>
+                            <i class="fas fa-phone"></i>
+                            <strong>Phone:</strong>
+                            <a href="tel:09127288329">0912-728-8329</a>
+                        </li>
+                        <li>
+                            <i class="fab fa-facebook"></i>
+                            <strong>Facebook:</strong>
+                            <a href="https://www.facebook.com/people/Enhancing-English-Literacy-EEL-Official/61566326561366/" target="_blank" rel="noopener noreferrer">EEL Official Facebook</a>
+                        </li>
+                        <li>
+                            <i class="fab fa-youtube"></i>
+                            <strong>YouTube:</strong>
+                            <a href="https://www.youtube.com/@eel-2026-q7g" target="_blank" rel="noopener noreferrer">EEL Official YouTube</a>
+                        </li>
+                    </ul>
+                    <p style="margin-top: 2rem;"><strong>EEL Learning Platform</strong></p>
+                    <p>Norzagaray National High School / Norzagaray College</p>
+                </div>
+
+                <div class="legal-block" style="border-left-color: var(--secondary);">
+                    <h2 class="text-secondary">Send us a Message</h2>
+                    <form id="contact-form" style="display: grid; gap: 1rem; margin-top: 1rem;">
+                        <div class="form-group">
+                            <label for="contact-name" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Full Name</label>
+                            <input type="text" id="contact-name" placeholder="Enter your name" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--input-background); color: var(--foreground);" required>
                         </div>
-                        <div class="reason">
-                            <i class="fas fa-heart text-secondary"></i>
-                            <div>
-                                <h4>Student-Centered</h4>
-                                <p>Every feature is designed with the learner in mind, ensuring engaging and effective educational experiences.</p>
-                            </div>
+                        <div class="form-group">
+                            <label for="contact-email" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Email Address</label>
+                            <input type="email" id="contact-email" placeholder="Enter your email" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--input-background); color: var(--foreground);" required>
                         </div>
-                        <div class="reason">
-                            <i class="fas fa-certificate text-primary"></i>
-                            <div>
-                                <h4>Ready to Grow</h4>
-                                <p>Our platform is designed to help students achieve significant improvements in their English literacy skills as we deploy to schools.</p>
-                            </div>
+                        <div class="form-group">
+                            <label for="contact-message" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Your Message</label>
+                            <textarea id="contact-message" rows="5" placeholder="How can we help you?" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--input-background); color: var(--foreground); resize: vertical;" required></textarea>
                         </div>
-                    </div>
-                        </div>
-                    </div>
-                    <div class="team-section">
-                        <h3 class="text-primary">Our Team</h3>
-                        <p class="team-section-desc">EEL is a thesis project developed by students of Norzagaray College, designed to support English literacy education at Norzagaray National High School. It is powered by the creativity and dedication of future educators and technologists committed to advancing language learning.</p>
-                        <div class="team-grid">
-                            <div class="team-member">
-                                <div class="team-member-avatar">
-                                    <img src="image/jp.png" alt="Jp Fabian" width="96" height="96">
-                                </div>
-                                <h4>J.P Fabian</h4>
-                                <p class="role text-primary">Team</p>
-                            </div>
-                            <div class="team-member">
-                                <div class="team-member-avatar">
-                                    <img src="image/jana.png" alt="Janalyn Carpio" width="96" height="96">
-                                </div>
-                                <h4>Janalyn Carpio</h4>
-                                <p class="role text-secondary">Team</p>
-                            </div>
-                            <div class="team-member">
-                                <div class="team-member-avatar">
-                                    <img src="image/nick.png" alt="Nick Joven Cruz" width="96" height="96">
-                                </div>
-                                <h4>Nick Joven Cruz</h4>
-                                <p class="role text-secondary">Team</p>
-                            </div>
-                            <div class="team-member">
-                                <div class="team-member-avatar">
-                                    <img src="image/jenny.png" alt="Jenny Estella" width="96" height="96">
-                                </div>
-                                <h4>Jenny Estella</h4>
-                                <p class="role text-primary">Team</p>
-                            </div>
-                            <div class="team-member">
-                                <div class="team-member-avatar">
-                                    <img src="image/jerico.png" alt="Jerico Abrazado" width="96" height="96">
-                                </div>
-                                <h4>Jerico Abrazado</h4>
-                                <p class="role text-secondary">Team</p>
-                            </div>
-                        </div>
-                    </div>
+                        <button type="submit" class="btn btn-secondary" style="padding: 1rem;">Send Message</button>
+                    </form>
                 </div>
             </div>
         </div>
@@ -196,5 +167,12 @@
         </div>
     </footer>
     <script src="js/main-index.js"></script>
+    <script>
+        document.getElementById('contact-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            alert('Thank you for your message! Our team will get back to you soon.');
+            this.reset();
+        });
+    </script>
 </body>
 </html>
