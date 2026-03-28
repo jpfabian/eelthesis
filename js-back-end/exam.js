@@ -66,39 +66,39 @@ TOS requirement (Bloom's cognitive levels):
       return q ? q.count : 0;
     };
 
-    // Dynamically generate sections
+    // Dynamically generate section templates (first 3 items as example)
     const sections = [];
 
+    const generateSectionTemplate = (title, instruction, count, isEssay = false) => {
+      const items = [];
+      const displayCount = Math.min(3, count);
+      for (let i = 1; i <= displayCount; i++) {
+        items.push(`      ${isEssay ? "" : "____ "}${i}. ...`);
+      }
+      if (count > 3) {
+        items.push(`      [... continue numbering correctly up to item ${count} ...]`);
+      }
+      return `
+${title}
+      ${instruction}
+${items.join("\n")}
+      `;
+    };
+
     if (getCount("multiple-choice") > 0) {
-      sections.push(`
-I. MULTIPLE CHOICE
-      Choose the letter of the correct answer. Write the chosen letter on the space provided before each number.
-${Array.from({ length: getCount("multiple-choice") }, (_, i) => `      ____ ${i + 1}. ...`).join("\n")}
-      `);
+      sections.push(generateSectionTemplate("I. MULTIPLE CHOICE", "Choose the letter of the correct answer. Write the chosen letter on the space provided before each number.", getCount("multiple-choice")));
     }
 
     if (getCount("true-false") > 0) {
-      sections.push(`
-II. TRUE OR FALSE
-      Write TRUE if the statement is correct and FALSE if it is not.
-${Array.from({ length: getCount("true-false") }, (_, i) => `      ____ ${i + 1}. ...`).join("\n")}
-      `);
+      sections.push(generateSectionTemplate("II. TRUE OR FALSE", "Write TRUE if the statement is correct and FALSE if it is not.", getCount("true-false")));
     }
 
     if (getCount("identification") > 0) {
-      sections.push(`
-III. IDENTIFICATION
-      Identify what is being described in each item.
-${Array.from({ length: getCount("identification") }, (_, i) => `      ____ ${i + 1}. ...`).join("\n")}
-      `);
+      sections.push(generateSectionTemplate("III. IDENTIFICATION", "Identify what is being described in each item.", getCount("identification")));
     }
 
     if (getCount("essay") > 0) {
-      sections.push(`
-IV. ESSAY
-      Answer the following question/s comprehensively.
-${Array.from({ length: getCount("essay") }, (_, i) => `      ${i + 1}. ...`).join("\n")}
-      `);
+      sections.push(generateSectionTemplate("IV. ESSAY", "Answer the following question/s comprehensively.", getCount("essay"), true));
     }
 
     // Answer key: only list sections we actually requested
@@ -135,7 +135,14 @@ ____ 2. Next question text here...
 
 CRITICAL: Include ONLY the sections that appear in the layout below. Do NOT add any section that is not in the layout. For example: if the layout does NOT contain "IV. ESSAY", you must NOT include an Essay section. If it does NOT contain "III. IDENTIFICATION", do NOT include Identification. Only generate the sections that are explicitly listed in the layout.
 
-CRITICAL: Generate EVERY question in the layout. If the layout shows 50 numbered items in a section, you must output all 50 full questions (and 50 answers in the answer key). Do not stop early, do not write "..." or "items 25–50 similar", and do not abbreviate. Each number must have a complete question.
+CRITICAL: Generate EVERY question. For example, if a section count is 50, you must output all 50 full questions (numbered 1 to 50) and 50 answers in the answer key. Do not stop early, and do not abbreviate.
+
+CRITICAL NUMBERING RULE: 
+- Use full consecutive numbering (1, 2, 3, ... 9, 10, 11, ... 50). 
+- Do NOT use only the last digit (e.g., do NOT show 0 for 10, 1 for 11). 
+- Always place "____ " before the number for Multiple Choice, True/False, and Identification.
+- Example: "____ 10. Which of the following..."
+- Ensure the number is clearly visible after the underline.
 
 Do NOT include any explanations or notes outside the exam itself.
 Do NOT include any exam title, subject name, school info, or date at the top of the exam.
@@ -163,7 +170,7 @@ Generate ONLY the sections that appear in the layout below. Do not add Essay, Id
 
 ${sections.join("\n")}
 
-🗝️ ANSWER KEY
+ ANSWER KEY
       Provide the correct answers per section (${answerKeySections}) only.
 
 Follow this format strictly. Do not add any explanations or instructions outside the exam.

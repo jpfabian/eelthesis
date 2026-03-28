@@ -907,14 +907,16 @@ function formatExamContentForPDF(content, options = {}) {
       out += `<p class="exam-pdf-direction" style="text-align:left;margin:0 0 12px 0;font-size:10pt !important;"><strong>Directions:</strong> Choose the best answer to the following questions. Write the letter of your answer on the space before the number.</p>`;
       lastWasMultipleChoice = false;
       
-      // 2. Split questions more robustly. Handle questions even if they don't have a newline before them. Removed \b to handle bunched text.
-      const qBlocks = part.split(/(?=\d+[\.\)]\s+)/);
+      // 2. Split questions more robustly. Handle questions even if they don't have a newline before them.
+      // Now also matches the optional "____ " prefix so it doesn't get stuck at the end of the previous question.
+      const qBlocks = part.split(/(?=(?:____\s*)?\d+[\.\)]\s+)/);
       
       for (const block of qBlocks) {
         const trimmed = block.trim();
-        if (!trimmed || !/^\d+[\.\)]\s+/.test(trimmed)) continue;
+        // Updated regex to handle optional "____ " prefix
+        if (!trimmed || !/^(?:____\s*)?\d+[\.\)]\s+/.test(trimmed)) continue;
 
-        const numMatch = trimmed.match(/^(\d+)[\.\)]\s+([\s\S]+)$/);
+        const numMatch = trimmed.match(/^(?:____\s*)?(\d+)[\.\)]\s+([\s\S]+)$/);
         if (!numMatch) continue;
         const num = numMatch[1];
         const rest = numMatch[2];
@@ -931,7 +933,9 @@ function formatExamContentForPDF(content, options = {}) {
           opts.push({ letter: om[1].toLowerCase(), text: om[2].trim() });
         }
 
-        const questionText = firstOptIndex !== -1 ? rest.slice(0, firstOptIndex).trim() : rest.trim();
+        // Clean up question text: remove trailing "____" if it was captured from the next question's start
+        let questionText = firstOptIndex !== -1 ? rest.slice(0, firstOptIndex).trim() : rest.trim();
+        questionText = questionText.replace(/[\s\-\_]+$/, "");
         
         // ✨ Normal exam question: add answer line prefix
         out += `<div class="exam-pdf-item" style="margin-bottom:10px;">
