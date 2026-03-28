@@ -53,9 +53,11 @@ router.post("/api/auth/verify-reset-code", async (req, res) => {
   const code = String(req.body?.code || "").trim();
 
   if (!email || !code) {
+    console.warn("⚠️ Verify reset code failed: Email or code missing in request body.");
     return res.status(400).json({ success: false, error: "Email and code are required" });
   }
   if (!/^\d{6}$/.test(code)) {
+    console.warn(`⚠️ Verify reset code failed: Invalid code format received: "${code}"`);
     return res.status(400).json({ success: false, error: "Code must be 6 digits" });
   }
 
@@ -64,19 +66,21 @@ router.post("/api/auth/verify-reset-code", async (req, res) => {
     const pool = req.pool;
     conn = await pool.getConnection();
 
+    // Use case-insensitive search for user
     const [users] = await conn.execute("SELECT user_id FROM users WHERE LOWER(email) = LOWER(?) LIMIT 1", [email]);
     const userId = users?.[0]?.user_id ? Number(users[0].user_id) : null;
+    
     if (!userId) {
-      console.warn(`⚠️ Reset code verify failed: User with email "${email}" not found.`);
+      console.warn(`⚠️ Verify reset code failed: No user found with email "${email}"`);
       return res.status(400).json({ success: false, error: "Invalid or expired code" });
     }
 
     const tokenHash = sha256Hex(code);
-    const now = nowPhilippineDatetime();
     
-    // Check if token exists, is not used, and not expired
+    // Most robust verification: let MySQL handle the time comparison using NOW()
+    // We check for the LATEST token that matches user and hash, is not used, and NOT EXPIRED.
     const [rows] = await conn.execute(
-      `SELECT reset_id, expires_at, used_at
+      `SELECT reset_id, expires_at, used_at, NOW() as db_now
        FROM password_reset_tokens
        WHERE user_id = ?
          AND token_hash = ?
@@ -86,21 +90,28 @@ router.post("/api/auth/verify-reset-code", async (req, res) => {
     );
 
     if (!rows.length) {
-      console.warn(`⚠️ Reset code verify failed: Token hash not found for user ${userId}. Code: ${code}`);
+      console.warn(`⚠️ Verify reset code failed: No matching token record for user ${userId} and code ${code} (hash: ${tokenHash.substring(0, 10)}...)`);
       return res.status(400).json({ success: false, error: "Invalid or expired code" });
     }
 
     const token = rows[0];
+    const dbNowStr = token.db_now ? String(token.db_now) : "unknown";
+    
     if (token.used_at) {
-      console.warn(`⚠️ Reset code verify failed: Token ${token.reset_id} already used at ${token.used_at}.`);
+      console.warn(`⚠️ Verify reset code failed: Token ${token.reset_id} was already used at ${token.used_at}.`);
       return res.status(400).json({ success: false, error: "This code has already been used." });
     }
 
-    if (token.expires_at <= now) {
-      console.warn(`⚠️ Reset code verify failed: Token ${token.reset_id} expired at ${token.expires_at}. Current server time: ${now}`);
+    // Double check expiration using JS as well, but DB check is primary
+    const expiresAtDate = new Date(String(token.expires_at).replace(" ", "T"));
+    const dbNowDate = new Date(dbNowStr.replace(" ", "T"));
+
+    if (expiresAtDate <= dbNowDate) {
+      console.warn(`⚠️ Verify reset code failed: Token ${token.reset_id} expired. Expires: ${token.expires_at}, DB Now: ${dbNowStr}`);
       return res.status(400).json({ success: false, error: "This code has expired. Please request a new one." });
     }
 
+    console.log(`✅ Reset code verified successfully for user ${userId} (${email})`);
     return res.json({ success: true, message: "Code verified" });
   } catch (err) {
     console.error("❌ Verify reset code error:", err);
@@ -221,7 +232,7 @@ router.post("/api/auth/reset-password", async (req, res) => {
     }
 
     const tokenHash = sha256Hex(token);
-    const now = nowPhilippineDatetime();
+    
     const [rows] = await conn.execute(
       `SELECT reset_id, expires_at, used_at
        FROM password_reset_tokens
@@ -241,13 +252,19 @@ router.post("/api/auth/reset-password", async (req, res) => {
     if (resetToken.used_at) {
       return res.status(400).json({ success: false, error: "This token has already been used." });
     }
-    if (resetToken.expires_at <= now) {
+
+    // Convert strings to Date objects for reliable comparison
+    const expiresAtDate = new Date(resetToken.expires_at.replace(" ", "T") + "+08:00");
+    const nowPhilippineDate = new Date(nowPhilippineDatetime().replace(" ", "T") + "+08:00");
+
+    if (expiresAtDate <= nowPhilippineDate) {
       return res.status(400).json({ success: false, error: "This token has expired. Please request a new one." });
     }
 
     const hashed = await bcrypt.hash(newPassword, 10);
+    const now = nowPhilippineDatetime();
     await conn.execute("UPDATE users SET password = ?, updated_at = ? WHERE user_id = ?", [hashed, now, userId]);
-    await conn.execute("UPDATE password_reset_tokens SET used_at = ? WHERE reset_id = ?", [now, rows[0].reset_id]);
+    await conn.execute("UPDATE password_reset_tokens SET used_at = ? WHERE reset_id = ?", [now, resetToken.reset_id]);
 
     return res.json({ success: true, message: "Password updated" });
   } catch (err) {
