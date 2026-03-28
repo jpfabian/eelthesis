@@ -1196,7 +1196,7 @@ router.get("/api/leaderboard", async (req, res) => {
 
     const sql = `
       SELECT a.attempt_id, a.student_id, a.score, a.status, a.start_time, a.end_time,
-             u.fname, u.lname
+             u.fname, u.lname, u.avatar_url
       FROM pronunciation_quiz_attempts a
       JOIN users u ON a.student_id = u.user_id
       LEFT JOIN student_classes sc 
@@ -1225,6 +1225,8 @@ router.get("/api/leaderboard", async (req, res) => {
         rank,
         student_id: r.student_id,
         name: toNameCase(`${r.fname || ""} ${r.lname || ""}`.trim()),
+        student_name: toNameCase(`${r.fname || ""} ${r.lname || ""}`.trim()), // Adding for consistency with reading leaderboard
+        avatar_url: r.avatar_url,
         score: r.score,
         status: r.status,
         start_time: r.start_time,

@@ -2437,6 +2437,7 @@ async function loadLeaderboard(quizId = null, isTeacherQuiz = null) {
             if (!podium) return;
             podium.querySelector(".podium-avatar").textContent = "";
             podium.querySelector(".podium-name").textContent = "—";
+            podium.querySelector(".podium-rank").textContent = ""; // Clear rank
             const sp = scoreSpan(podium);
             if (sp) sp.textContent = "-";
             podium.querySelector(".podium-avatar").style.background = `linear-gradient(135deg, ${gradients[idx]})`;
@@ -2449,8 +2450,19 @@ async function loadLeaderboard(quizId = null, isTeacherQuiz = null) {
             leaderboard.slice(0, 3).forEach((entry, index) => {
                 if (!podiums[index]) return;
                 const initials = entry.student_name.split(" ").map(n => n[0]).join("").slice(0,2).toUpperCase();
-                podiums[index].querySelector(".podium-avatar").textContent = initials;
+                const avatar = podiums[index].querySelector(".podium-avatar");
+                if (avatar) {
+                    if (entry.avatar_url) {
+                        const avatarSrc = entry.avatar_url.startsWith('/') ? (window.API_BASE || '') + entry.avatar_url : entry.avatar_url;
+                        avatar.innerHTML = `<img src="${avatarSrc}" alt="${entry.student_name}" style="width:100%; height:100%; object-fit:cover; border-radius:inherit;">`;
+                        avatar.style.background = 'transparent';
+                    } else {
+                        avatar.textContent = initials;
+                        avatar.style.background = `linear-gradient(135deg, ${gradients[index]})`;
+                    }
+                }
                 podiums[index].querySelector(".podium-name").textContent = entry.student_name;
+                podiums[index].querySelector(".podium-rank").textContent = `${index + 1}`; // Removed # sign
                 const sp = scoreSpan(podiums[index]);
                 const scoreNum = Number(entry.score);
                 const totalNum = Number(entry.total_points);
@@ -2475,7 +2487,10 @@ async function loadLeaderboard(quizId = null, isTeacherQuiz = null) {
                             <td><span class="rank-badge">${rank}</span></td>
                             <td>
                                 <div class="student-info">
-                                    <div class="student-avatar" style="background: linear-gradient(135deg, ${avatarGradient});">${initials}</div>
+                                    ${entry.avatar_url 
+                                        ? `<img src="${entry.avatar_url.startsWith('/') ? (window.API_BASE || '') + entry.avatar_url : entry.avatar_url}" class="student-avatar" style="object-fit:cover;">`
+                                        : `<div class="student-avatar" style="background: linear-gradient(135deg, ${avatarGradient});">${initials}</div>`
+                                    }
                                     <span>${entry.student_name}</span>
                                 </div>
                             </td>

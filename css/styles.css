@@ -16968,16 +16968,14 @@ body.take-quiz-page .take-quiz-questions .mt-4.p-4 .grid > div {
     background: linear-gradient(135deg, #fb923c, #ea580c);
   }
 
-  /* Podium Medal Icon */
+  /* Podium Medal Icon - Hidden */
   .podium-medal {
-    position: absolute;
-    top: -1rem;
-    animation: float 3s ease-in-out infinite;
+    display: none !important;
   }
 
   @keyframes float {
-    0%, 100% { transform: translateY(0px); }
-    50% { transform: translateY(-8px); }
+    0%, 100% { transform: translateY(0px) rotate(0deg); }
+    50% { transform: translateY(-8px) rotate(3deg); }
   }
 
   /* Podium Avatar */

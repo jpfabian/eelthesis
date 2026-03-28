@@ -1237,8 +1237,14 @@ async function loadLeaderboardLesson(quizId) {
       const timeEl = podium.querySelector(".podium-time");
       const rankEl = podium.querySelector(".podium-rank");
       if (avatar) {
-        avatar.textContent = initials || "?";
-        avatar.style.background = PODIUM_GRADIENTS[index] || PODIUM_GRADIENTS[0];
+        if (entry.avatar_url) {
+          const avatarSrc = entry.avatar_url.startsWith('/') ? (window.API_BASE || '') + entry.avatar_url : entry.avatar_url;
+          avatar.innerHTML = `<img src="${avatarSrc}" alt="${entry.student_name}" style="width:100%; height:100%; object-fit:cover; border-radius:inherit;">`;
+          avatar.style.background = 'transparent';
+        } else {
+          avatar.textContent = initials || "?";
+          avatar.style.background = PODIUM_GRADIENTS[index] || PODIUM_GRADIENTS[0];
+        }
       }
       if (podiumName) podiumName.textContent = entry.student_name || "—";
       const scoreNum = Number(entry.score);
@@ -1247,7 +1253,7 @@ async function loadLeaderboardLesson(quizId) {
       const totalText = Number.isFinite(totalNum) ? Math.round(totalNum) : "?";
       if (scoreEl) scoreEl.textContent = `${scoreText}/${totalText}`;
       if (timeEl) timeEl.textContent = entry.time_taken ? "⏱ " + entry.time_taken : "—";
-      if (rankEl) rankEl.textContent = `#${index + 1}`;
+      if (rankEl) rankEl.textContent = `${index + 1}`;
     });
 
     tbody.innerHTML = "";
@@ -1265,7 +1271,10 @@ async function loadLeaderboardLesson(quizId) {
           <td><span class="rank-badge">${rank}</span></td>
           <td>
             <div class="student-info">
-              <div class="student-avatar" style="background:${gradient}">${escapeHtml(initials)}</div>
+              ${entry.avatar_url 
+                ? `<img src="${entry.avatar_url.startsWith('/') ? (window.API_BASE || '') + entry.avatar_url : entry.avatar_url}" class="student-avatar" style="object-fit:cover;">`
+                : `<div class="student-avatar" style="background:${gradient}">${escapeHtml(initials)}</div>`
+              }
               <span>${escapeHtml(entry.student_name)}</span>
             </div>
           </td>

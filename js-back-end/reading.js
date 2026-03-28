@@ -1927,6 +1927,7 @@ router.get("/api/reading-quiz-leaderboard", async (req, res) => {
           a.student_id,
           u.user_id,
           CONCAT(u.fname, ' ', u.lname) AS student_name,
+          u.avatar_url,
           a.quiz_id,
           a.score,
           a.total_points,
@@ -1954,6 +1955,7 @@ router.get("/api/reading-quiz-leaderboard", async (req, res) => {
               a.student_id,
               u.user_id,
               CONCAT(u.fname, ' ', u.lname) AS student_name,
+              u.avatar_url,
               a.quiz_id,
               a.score,
               a.total_points,
@@ -1987,6 +1989,7 @@ router.get("/api/reading-quiz-leaderboard", async (req, res) => {
         SELECT 
           u.user_id,
           CONCAT(u.fname, ' ', u.lname) AS student_name,
+          u.avatar_url,
           a.quiz_id,
           a.score,
           a.total_points,
@@ -2011,6 +2014,7 @@ router.get("/api/reading-quiz-leaderboard", async (req, res) => {
             SELECT 
               u.user_id,
               CONCAT(u.fname, ' ', u.lname) AS student_name,
+              u.avatar_url,
               a.quiz_id,
               a.score,
               a.total_points,

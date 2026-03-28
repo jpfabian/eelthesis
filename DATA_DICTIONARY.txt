@@ -1,0 +1,197 @@
+================================================================================
+EEL (English Enhancement Learning) - DATA DICTIONARY
+================================================================================
+Project: EEL (English Enhancement Learning)
+File: DATA_DICTIONARY.txt
+================================================================================
+
+--------------------------------------------------------------------------------
+1. AUTH / USERS (users)
+--------------------------------------------------------------------------------
+Stores all registered system accounts (students, teachers, admins).
+
+Column              Type            Null  Default  Description
+--------------------------------------------------------------------------------
+user_id             INT UNSIGNED    No    AutoInc  Primary Key: Unique user ID
+fname               VARCHAR(100)    No    None     User's first name
+lname               VARCHAR(100)    No    None     User's last name
+section             VARCHAR(50)     Yes   NULL     Class section (for students)
+strand              VARCHAR(80)     Yes   NULL     SHS Strand (STEM, HUMSS, etc.)
+email               VARCHAR(255)    No    None     Unique login email
+password            VARCHAR(255)    No    None     BCrypt hashed password
+role                ENUM            No    student  Role: student, teacher, admin, master_admin
+is_active           TINYINT(1)      No    1        Account status (1=active, 0=deactivated)
+deactivated_at      TIMESTAMP       Yes   NULL     Time of account deactivation
+deactivated_by      VARCHAR(100)    Yes   NULL     Admin who deactivated the account
+deactivated_reason  VARCHAR(255)    Yes   NULL     Reason for deactivation
+verification_status ENUM            No    pending  Status: pending, approved, rejected
+verified_at         TIMESTAMP       Yes   NULL     Time of admin approval
+verified_by         VARCHAR(100)    Yes   NULL     Admin who verified the user
+rejected_at         TIMESTAMP       Yes   NULL     Time of registration rejection
+rejected_reason     VARCHAR(255)    Yes   NULL     Reason for rejection
+created_at          TIMESTAMP       No    CURRENT  Account creation date
+updated_at          TIMESTAMP       Yes   NULL     Last profile update date
+avatar_url          VARCHAR(512)    Yes   NULL     URL to profile picture (S3/Local)
+
+--------------------------------------------------------------------------------
+2. CLASSES (classes)
+--------------------------------------------------------------------------------
+Stores classrooms created by teachers.
+
+Column              Type            Null  Default  Description
+--------------------------------------------------------------------------------
+id                  INT UNSIGNED    No    AutoInc  Primary Key: Unique class ID
+class_code          VARCHAR(10)     No    None     Unique join code (e.g., EEL-XXXX)
+name                VARCHAR(100)    No    None     Name of the class
+section             VARCHAR(50)     No    None     Section name
+subject             VARCHAR(100)    No    None     Subject title
+teacher_id          INT UNSIGNED    No    None     FK: users.user_id (Owner)
+created_at          TIMESTAMP       No    CURRENT  Creation timestamp
+
+--------------------------------------------------------------------------------
+3. STUDENT CLASSES (student_classes)
+--------------------------------------------------------------------------------
+Link table for students enrolled in classes.
+
+Column              Type            Null  Default  Description
+--------------------------------------------------------------------------------
+id                  INT UNSIGNED    No    AutoInc  Primary Key
+student_id          INT UNSIGNED    No    None     FK: users.user_id
+student_fname       VARCHAR(100)    No    None     Snapshot of student first name
+student_lname       VARCHAR(100)    No    None     Snapshot of student last name
+class_id            INT UNSIGNED    No    None     FK: classes.id
+status              ENUM            No    pending  Enrollment: pending, accepted, rejected
+joined_at           TIMESTAMP       No    CURRENT  Timestamp of join request
+
+--------------------------------------------------------------------------------
+4. BUILT-IN READING QUIZZES (reading_quizzes)
+--------------------------------------------------------------------------------
+Stores standard curriculum reading assessments.
+
+Column              Type            Null  Default  Description
+--------------------------------------------------------------------------------
+quiz_id             INT UNSIGNED    No    AutoInc  Primary Key
+quiz_number         INT UNSIGNED    No    1        Order in curriculum
+title               VARCHAR(255)    No    None     Quiz title
+difficulty          ENUM            No    None     Level: beginner, intermediate, advanced
+passage             LONGTEXT        Yes   NULL     Reading passage content
+is_locked           TINYINT(1)      No    1        Whether quiz is locked by default
+passing_score       DECIMAL(6,2)    No    70.00    Percent needed to unlock next
+created_at          TIMESTAMP       No    CURRENT  Creation date
+
+--------------------------------------------------------------------------------
+5. READING QUIZ ATTEMPTS (reading_quiz_attempts)
+--------------------------------------------------------------------------------
+Stores results for both Built-in and Teacher Reading quizzes.
+
+Column              Type            Null  Default  Description
+--------------------------------------------------------------------------------
+attempt_id          INT UNSIGNED    No    AutoInc  Primary Key
+student_id          INT UNSIGNED    No    None     FK: users.user_id
+quiz_id             INT UNSIGNED    No    None     FK: reading_quizzes.quiz_id
+class_id            INT UNSIGNED    Yes   NULL     FK: classes.id (Scoped)
+score               DECIMAL(10,2)   Yes   NULL     Final calculated score
+total_points        DECIMAL(10,2)   Yes   NULL     Max points possible
+status              ENUM            No    in_progress Status: in_progress, completed
+cheating_voided     TINYINT(1)      No    0        1 if voided due to cheating
+created_at          TIMESTAMP       No    CURRENT  Timestamp
+
+--------------------------------------------------------------------------------
+6. PRONUNCIATION QUIZZES (pronunciation_quizzes)
+--------------------------------------------------------------------------------
+Stores built-in pronunciation assessments.
+
+Column              Type            Null  Default  Description
+--------------------------------------------------------------------------------
+quiz_id             BIGINT          No    AutoInc  Primary Key
+subject_id          INT             No    None     FK: subjects.subject_id
+title               VARCHAR(255)    No    None     Quiz title
+difficulty          ENUM            No    None     beginner, intermediate, advanced
+passage             TEXT            Yes   NULL     Instructions or context
+status              ENUM            No    draft    draft, active, closed
+time_limit          INT             Yes   NULL     Limit in minutes
+created_at          TIMESTAMP       No    CURRENT  Timestamp
+
+--------------------------------------------------------------------------------
+7. PRONUNCIATION ATTEMPTS (pronunciation_quiz_attempts)
+--------------------------------------------------------------------------------
+Student results for pronunciation assessments.
+
+Column              Type            Null  Default  Description
+--------------------------------------------------------------------------------
+attempt_id          BIGINT          No    AutoInc  Primary Key
+student_id          INT             No    None     FK: users.user_id
+quiz_id             BIGINT          No    None     FK: pronunciation_quizzes.quiz_id
+score               DECIMAL(5,2)    No    0.00     Final score (Rounded)
+total_points        DECIMAL(5,2)    No    0.00     Max possible
+pronunciation_score DECIMAL(5,2)    Yes   NULL     AI-calculated rating (0-100)
+recording_url       TEXT            Yes   NULL     Optional path to student audio
+created_at          TIMESTAMP       No    CURRENT  Timestamp
+
+--------------------------------------------------------------------------------
+8. AI-GENERATED / TEACHER QUIZZES (teacher_reading_quizzes)
+--------------------------------------------------------------------------------
+Quizzes generated by AI based on lesson topics or created by teachers.
+
+Column              Type            Null  Default  Description
+--------------------------------------------------------------------------------
+quiz_id             INT UNSIGNED    No    AutoInc  Primary Key
+subject_id          INT UNSIGNED    No    None     FK: subjects.subject_id
+user_id             INT UNSIGNED    No    None     FK: users.user_id (Creator)
+class_id            INT UNSIGNED    Yes   NULL     FK: classes.id (Scoped)
+title               VARCHAR(255)    No    None     Quiz title
+difficulty          ENUM            No    None     beginner, intermediate, advanced
+passage             LONGTEXT        Yes   NULL     AI-generated or manual passage
+created_at          TIMESTAMP       No    CURRENT  Timestamp
+
+--------------------------------------------------------------------------------
+9. AI QUIZ ATTEMPTS (teacher_reading_quiz_attempts)
+--------------------------------------------------------------------------------
+Student results for AI-generated reading quizzes.
+
+Column              Type            Null  Default  Description
+--------------------------------------------------------------------------------
+attempt_id          INT UNSIGNED    No    AutoInc  Primary Key
+student_id          INT UNSIGNED    No    None     FK: users.user_id
+quiz_id             INT UNSIGNED    No    None     FK: teacher_reading_quizzes.quiz_id
+score               DECIMAL(10,2)   Yes   NULL     Final score
+total_points        DECIMAL(10,2)   Yes   NULL     Max points
+status              ENUM            No    in_progress completed
+created_at          TIMESTAMP       No    CURRENT  Timestamp
+
+--------------------------------------------------------------------------------
+10. EXAMS (exams)
+--------------------------------------------------------------------------------
+AI-generated exams exported to Word (.doc).
+
+Column              Type            Null  Default  Description
+--------------------------------------------------------------------------------
+id                  INT UNSIGNED    No    AutoInc  Primary Key
+class_id            INT UNSIGNED    No    None     FK: classes.id
+created_by          INT UNSIGNED    No    None     FK: users.user_id (Teacher)
+title               VARCHAR(255)    No    None     Exam title
+content             LONGTEXT        No    None     AI-generated HTML/Word content
+question_count      INT UNSIGNED    Yes   NULL     Number of items
+created_at          DATETIME        No    None     Creation timestamp
+
+--------------------------------------------------------------------------------
+11. RECITATION SCORES (recitation_scores)
+--------------------------------------------------------------------------------
+Interactive classroom student-picking results.
+
+Column              Type            Null  Default  Description
+--------------------------------------------------------------------------------
+recitation_score_id INT UNSIGNED    No    AutoInc  Primary Key
+session_key         VARCHAR(80)     No    None     Unique session identifier
+class_id            INT UNSIGNED    No    None     FK: classes.id
+student_id          INT UNSIGNED    No    None     FK: users.user_id
+question_type       ENUM            No    None     MCQ, True-False, Identification
+question_text       TEXT            Yes   NULL     AI-generated question
+student_answer      TEXT            Yes   NULL     Student response
+is_correct          TINYINT(1)      No    0        1 if answer was correct
+points_earned       TINYINT UNSIGNED No   0        Points given (0 or 1)
+created_at          TIMESTAMP       No    CURRENT  Timestamp
+
+================================================================================
+END OF DATA DICTIONARY
+================================================================================

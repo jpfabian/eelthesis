@@ -1993,11 +1993,25 @@ async function openLeaderboardModal(quizId, classId) {
         // Then fill in podiums from leaderboard
         leaderboard.slice(0,3).forEach((student, index) => {
             const podium = podiums[index];
-            const initials = student.name.trim().split(/\s+/).map(n=>n[0]).join("");
-            podium.querySelector(".podium-avatar").textContent = initials;
+            const initials = student.name.trim().split(/\s+/).map(n=>n[0]).join("").slice(0,2).toUpperCase();
+            const avatar = podium.querySelector(".podium-avatar");
+            
+            if (avatar) {
+                if (student.avatar_url) {
+                    const avatarSrc = student.avatar_url.startsWith('/') ? (window.API_BASE || '') + student.avatar_url : student.avatar_url;
+                    avatar.innerHTML = `<img src="${avatarSrc}" alt="${student.name}" style="width:100%; height:100%; object-fit:cover; border-radius:inherit;">`;
+                    avatar.style.background = 'transparent';
+                } else {
+                    avatar.textContent = initials;
+                    avatar.style.background = index === 0 ? 'linear-gradient(135deg, #fbbf24, #f59e0b)' : 
+                                            index === 1 ? 'linear-gradient(135deg, #9ca3af, #6b7280)' : 
+                                            'linear-gradient(135deg, #fb923c, #ea580c)';
+                }
+            }
+            
             podium.querySelector(".podium-name").textContent = student.name;
             podium.querySelector(".podium-score span").textContent = `${Math.round(Number(student.score) || 0)}/100`;
-            podium.querySelector(".podium-rank").textContent = `#${student.rank}`;
+            podium.querySelector(".podium-rank").textContent = `${student.rank}`; // Removed # sign
         });
 
 
@@ -2019,9 +2033,10 @@ async function openLeaderboardModal(quizId, classId) {
                     <td><span class="rank-badge">${entry.rank}</span></td>
                     <td>
                         <div class="student-info">
-                            <div class="student-avatar" style="background: linear-gradient(135deg, #6366f1, #10b981);">
-                                ${entry.name.split(" ").map(n=>n[0]).join("")}
-                            </div>
+                            ${entry.avatar_url 
+                                ? `<img src="${entry.avatar_url.startsWith('/') ? (window.API_BASE || '') + entry.avatar_url : entry.avatar_url}" class="student-avatar" style="object-fit:cover;">`
+                                : `<div class="student-avatar" style="background: linear-gradient(135deg, #6366f1, #10b981);">${entry.name.split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase()}</div>`
+                            }
                             <span>${entry.name}</span>
                         </div>
                     </td>
