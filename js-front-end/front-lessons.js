@@ -2093,7 +2093,7 @@ const __lessonTeacherQuizSubmissionsCache = new Map();
 
 async function ensureTeacherQuizSubmissionsLesson(card) {
   const user = typeof getCurrentUser === "function" ? getCurrentUser() : null;
-  if (!user || String(user.role || "").toLowerCase() !== "teacher") return;
+  const currentUserId = user ? Number(user.user_id) : null;
 
   const quizId = Number(card?.dataset?.quizId || 0);
   if (!quizId) return;
@@ -2127,15 +2127,19 @@ async function ensureTeacherQuizSubmissionsLesson(card) {
       if (String(a?.status || "").toLowerCase() !== "completed") continue;
       const sid = Number(a.student_id || 0);
       if (!sid || seen.has(sid)) continue;
+      if (currentUserId && sid === currentUserId) continue; // ✅ Exclude current user
       seen.add(sid);
       students.push({ student_id: sid, student_name: a.student_name || "Student #" + sid, avatar_url: a.student_avatar_url || null });
       if (students.length >= 6) break;
     }
 
-    const totalCompleted = attempts.filter((a) => String(a?.status || "").toLowerCase() === "completed").length;
+    const totalCompletedRaw = attempts.filter((a) => String(a?.status || "").toLowerCase() === "completed");
+    const totalCompletedCount = currentUserId 
+      ? totalCompletedRaw.filter(a => Number(a.student_id) !== currentUserId).length 
+      : totalCompletedRaw.length;
 
     let html = "";
-    if (totalCompleted) {
+    if (totalCompletedCount) {
       const getInitials = (name) => (name || "").trim().split(/\s+/).map(function (n) { return n[0]; }).join("").slice(0, 2).toUpperCase() || "?";
       const avatars = students.map((s) => {
         const avatarUrl = String(s.avatar_url || "").trim();
@@ -2144,7 +2148,7 @@ async function ensureTeacherQuizSubmissionsLesson(card) {
           : escapeHtml(getInitials(s.student_name));
         return `<span class="mini-avatar mini-avatar--sm" title="${escapeHtml(s.student_name)}" aria-label="${escapeHtml(s.student_name)}">${content}</span>`;
       }).join("");
-      const extra = Math.max(0, totalCompleted - students.length);
+      const extra = Math.max(0, totalCompletedCount - students.length);
       const extraBubble = extra ? `<span class="mini-avatar mini-avatar--sm" title="+${extra} more" aria-label="+${extra} more">+${extra}</span>` : "";
       html = avatars + extraBubble;
     }
@@ -2225,6 +2229,7 @@ async function loadLessonsAIQuizzesForStudent() {
       const scheduleNotSet = !hasSchedule;
       const effectiveLocked = scheduleNotSet || isCurrentlyLocked || notYetOpen;
       const statusLabel = scheduleNotSet ? "Not scheduled" : notYetOpen ? "Not yet open" : isCurrentlyLocked ? "Unpublished" : "Open";
+      const statusLabelDisplay = scheduleNotSet ? "Not scheduled" : notYetOpen ? "Not yet open" : isCurrentlyLocked ? "Closed" : "Open";
       const statusClass = scheduleNotSet ? "created-quiz-status--none" : notYetOpen ? "created-quiz-status--pending" : isCurrentlyLocked ? "created-quiz-status--closed" : "created-quiz-status--open";
       let scheduleLabel = hasSchedule
         ? `Opens ${formatLessonQuizDate(quiz.unlock_time)} · Due ${formatLessonQuizDate(quiz.lock_time)}`
@@ -2233,7 +2238,7 @@ async function loadLessonsAIQuizzesForStudent() {
       if (effectiveLocked) {
         if (scheduleNotSet) takeLabel = "Not scheduled";
         else if (notYetOpen) takeLabel = "Not yet open";
-        else takeLabel = "Unpublished";
+        else takeLabel = "Closed";
       }
       const hasCompleted = completedQuizIds.indexOf(quiz.quiz_id) !== -1;
       const myName = user ? (user.fname || "") + " " + (user.lname || "") : "";
@@ -2279,6 +2284,7 @@ async function loadLessonsAIQuizzesForStudent() {
       }
       const card = document.createElement("div");
       card.className = "card created-quiz-card lessons-ai-quiz-item group";
+      card.dataset.quizId = quiz.quiz_id; // Added quiz-id dataset
       card.innerHTML = `
         <div class="created-quiz-card__inner">
           <div class="created-quiz-card__header" role="button" tabindex="0" aria-expanded="false" aria-label="Expand quiz details">
@@ -2288,7 +2294,7 @@ async function loadLessonsAIQuizzesForStudent() {
             <div class="created-quiz-card__title-wrap">
               <h3 class="created-quiz-card__title">${escapeHtml(quiz.title)}</h3>
               ${completedBadge}
-              <span class="lessons-ai-quiz-status-badge ${statusClass}">${escapeHtml(statusLabel)}</span>
+              <span class="lessons-ai-quiz-status-badge ${statusClass}">${escapeHtml(statusLabelDisplay)}</span>
             </div>
             <i data-lucide="chevron-down" class="created-quiz-card__chevron" aria-hidden="true"></i>
           </div>
@@ -2297,6 +2303,9 @@ async function loadLessonsAIQuizzesForStudent() {
             <div class="created-quiz-card__schedule">
               <i data-lucide="calendar-clock" class="created-quiz-card__schedule-icon" aria-hidden="true"></i>
               <span class="created-quiz-card__schedule-text">${escapeHtml(scheduleLabel)}</span>
+            </div>
+            <div class="quiz-card-seen" data-quiz-submissions>
+              <div class="quiz-card-seen__avatars" aria-label="Students who completed this quiz"></div>
             </div>
             <div class="quiz-actions created-quiz-card__actions">
               ${primaryActionHtml}
@@ -2313,6 +2322,9 @@ async function loadLessonsAIQuizzesForStudent() {
         details.classList.toggle("hidden", isOpen);
         header.setAttribute("aria-expanded", !isOpen);
         card.classList.toggle("created-quiz-card--open", !isOpen);
+        if (!isOpen) {
+          ensureTeacherQuizSubmissionsLesson(card); // Now handles both
+        }
         if (window.lucide && typeof window.lucide.createIcons === "function") window.lucide.createIcons();
       };
       header.addEventListener("click", (e) => {

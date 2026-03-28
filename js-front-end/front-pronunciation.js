@@ -953,11 +953,11 @@ async function loadPronunciationQuizzes(user, difficultyFilter = null) {
             // ✅ Determine numbering (consecutive)
             const quizNumber = displayNum;
 
-            const teacherSubmissionsSlot = isTeacher ? `
+            const quizSubmissionsSlot = `
                 <div class="quiz-card-seen" data-quiz-submissions>
                     <div class="quiz-card-seen__avatars" aria-label="Students who completed this quiz"></div>
                 </div>
-            ` : "";
+            `;
 
             let completedBadge = "";
 
@@ -1002,7 +1002,7 @@ async function loadPronunciationQuizzes(user, difficultyFilter = null) {
                         <div class="created-quiz-card__schedule">
                             <span class="created-quiz-card__schedule-text">${scheduleStatusLabel}</span>
                         </div>
-                        ${teacherSubmissionsSlot}
+                        ${quizSubmissionsSlot}
                         <div class="quiz-actions created-quiz-card__actions">${actionButtons}</div>
                     </div>
                 </div>
@@ -1015,7 +1015,7 @@ async function loadPronunciationQuizzes(user, difficultyFilter = null) {
                 details.classList.toggle("hidden");
                 header.setAttribute("aria-expanded", wasHidden);
                 quizCard.classList.toggle("created-quiz-card--open", wasHidden);
-                if (wasHidden && isTeacher) try { ensureTeacherPronunciationSubmissions(quizCard); } catch (e) { /* ignore */ }
+                if (wasHidden) try { ensureTeacherPronunciationSubmissions(quizCard); } catch (e) { /* ignore */ }
                 if (window.lucide && typeof window.lucide.createIcons === "function") window.lucide.createIcons();
             };
             header.addEventListener("click", (e) => { e.stopPropagation(); toggle(); });
@@ -1158,8 +1158,8 @@ async function loadPronunciationQuizzesTeacher(user) {
 const __teacherPronunciationSubmissionsCache = new Map();
 
 async function ensureTeacherPronunciationSubmissions(card) {
-    const user = getCurrentUser();
-    if (!user || String(user.role || "").toLowerCase() !== "teacher") return;
+    const user = typeof getCurrentUser === "function" ? getCurrentUser() : null;
+    const currentUserId = user ? Number(user.user_id) : null;
 
     const quizId = Number(card?.dataset?.quizId || 0);
     if (!quizId) return;
@@ -1197,23 +1197,27 @@ async function ensureTeacherPronunciationSubmissions(card) {
             if (String(a?.status || "").toLowerCase() !== "completed") continue;
             const sid = Number(a.student_id || 0);
             if (!sid || seen.has(sid)) continue;
+            if (currentUserId && sid === currentUserId) continue; // ✅ Exclude current user
             seen.add(sid);
             students.push({ student_id: sid, student_name: a.student_name || `Student #${sid}`, avatar_url: a.student_avatar_url || null });
             if (students.length >= 6) break;
         }
 
-        const totalCompleted = attempts.filter((a) => String(a?.status || "").toLowerCase() === "completed").length;
+        const totalCompletedRaw = attempts.filter((a) => String(a?.status || "").toLowerCase() === "completed");
+        const totalCompletedCount = currentUserId 
+            ? totalCompletedRaw.filter(a => Number(a.student_id) !== currentUserId).length 
+            : totalCompletedRaw.length;
 
         let html = "";
-        if (totalCompleted) {
+        if (totalCompletedCount) {
             const avatars = students.map((s) => {
                 const avatarUrl = String(s.avatar_url || "").trim();
                 const content = avatarUrl
-                    ? `<img src="${escapeHtml(avatarUrl)}" alt="" loading="lazy" />`
+                    ? `<img src="${avatarUrl.startsWith('/') ? (window.API_BASE || '') + avatarUrl : avatarUrl}" alt="" loading="lazy" />`
                     : escapeHtml(getInitials(s.student_name));
                 return `<span class="mini-avatar mini-avatar--sm" title="${escapeHtml(s.student_name)}" aria-label="${escapeHtml(s.student_name)}">${content}</span>`;
             }).join("");
-            const extra = Math.max(0, totalCompleted - students.length);
+            const extra = Math.max(0, totalCompletedCount - students.length);
             const extraBubble = extra ? `<span class="mini-avatar mini-avatar--sm" title="+${extra} more" aria-label="+${extra} more">+${extra}</span>` : "";
             html = `${avatars}${extraBubble}`;
         }
