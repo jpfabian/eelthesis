@@ -854,7 +854,7 @@ router.post("/api/teacher/reading-quiz-attempts", async (req, res) => {
 router.patch("/api/teacher/reading-quiz-attempts/:id/submit", async (req, res) => {
   const pool = req.pool;
   const attemptId = Number(req.params.id);
-  const { answers, cheating_violations, cheating_voided } = req.body || {};
+  const { answers, cheating_violations, cheating_voided, time_taken } = req.body || {};
   if (!attemptId || !Array.isArray(answers)) {
     return res.status(400).json({ success: false, error: "attempt id and answers array required" });
   }
@@ -947,12 +947,24 @@ router.patch("/api/teacher/reading-quiz-attempts/:id/submit", async (req, res) =
     const voided = !!cheating_voided;
     const finalScore = voided ? 0 : totalScore;
 
-    await pool.query(
-      `UPDATE teacher_reading_quiz_attempts
-       SET end_time = ?, status = 'completed', score = ?, total_points = ?, cheating_violations = ?, cheating_voided = ?
-       WHERE attempt_id = ?`,
-      [endTime, finalScore, totalPoints, violations, voided ? 1 : 0, attemptId]
-    );
+    // Use time_taken if provided, else let DB handle it (though DB logic isn't explicit here)
+    // Attempt to update time_taken if column exists
+    try {
+      await pool.query(
+        `UPDATE teacher_reading_quiz_attempts
+         SET end_time = ?, status = 'completed', score = ?, total_points = ?, cheating_violations = ?, cheating_voided = ?, time_taken = ?
+         WHERE attempt_id = ?`,
+        [endTime, finalScore, totalPoints, violations, voided ? 1 : 0, time_taken || null, attemptId]
+      );
+    } catch (err) {
+      // Fallback if time_taken column doesn't exist
+      await pool.query(
+        `UPDATE teacher_reading_quiz_attempts
+         SET end_time = ?, status = 'completed', score = ?, total_points = ?, cheating_violations = ?, cheating_voided = ?
+         WHERE attempt_id = ?`,
+        [endTime, finalScore, totalPoints, violations, voided ? 1 : 0, attemptId]
+      );
+    }
 
     const percentScore = totalPoints > 0 ? (finalScore / totalPoints) * 100 : 0;
     let passing = 70, canRetake = true;

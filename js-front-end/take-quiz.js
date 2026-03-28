@@ -493,7 +493,13 @@
 
     if (teacherQuizAttemptId != null) {
       var answers = buildAnswersPayload();
-      var payload = { answers: answers, cheating_violations: cheatingViolations, cheating_voided: !!cheatingVoided };
+      var timeTakenSeconds = quizStartTime ? Math.floor((new Date() - quizStartTime) / 1000) : 0;
+      var payload = { 
+        answers: answers, 
+        cheating_violations: cheatingViolations, 
+        cheating_voided: !!cheatingVoided,
+        time_taken: timeTakenSeconds 
+      };
       fetch((window.API_BASE || "") + "/api/teacher/reading-quiz-attempts/" + teacherQuizAttemptId + "/submit", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
