@@ -426,7 +426,7 @@
   }
 
   var takeQuizSubmitting = false;
-  function submitQuiz() {
+  function submitQuiz(isAuto) {
     if (takeQuizSubmitting) return;
     takeQuizSubmitting = true;
     var mainSubmitBtn = document.getElementById("take-quiz-submit-btn");
@@ -458,12 +458,19 @@
     var scoreTotal = doneEl ? document.getElementById("quiz-done-score-total") : null;
     var percentEl = doneEl ? document.getElementById("quiz-done-percent") : null;
 
+    if (doneEl) doneEl.classList.remove("hidden"); // Show done screen immediately (with loading state)
+    if (doneMsg) doneMsg.textContent = isAuto ? "Time's up! Submitting your answers..." : "Submitting your answers...";
+
     function renderDone(score, totalPoints, success) {
       if (card) {
         card.classList.remove("quiz-done--high", "quiz-done--low");
       }
       if (scoreWrap) scoreWrap.classList.add("hidden");
-      if (doneMsg) doneMsg.textContent = "Quiz completed. Your attempt has been saved.";
+      if (doneMsg) {
+        doneMsg.textContent = isAuto 
+          ? "Time's up! Your attempt has been saved." 
+          : "Quiz completed. Your attempt has been saved.";
+      }
       if (charImg) charImg.src = "image/eel-character-celebrate.png";
       if (charImg) charImg.alt = "EEL character celebrating";
 
@@ -482,12 +489,15 @@
           if (percentEl) percentEl.textContent = pct + "%";
         }
         if (doneMsg) {
+          var prefix = isAuto ? "Time's up! " : "";
           doneMsg.textContent = isHigh
-            ? "Great job! Your attempt has been saved."
-            : "Keep practicing! Your attempt has been saved.";
+            ? prefix + "Great job! Your attempt has been saved."
+            : prefix + "Keep practicing! Your attempt has been saved.";
         }
       } else if (doneMsg && !success) {
-        doneMsg.textContent = "Quiz completed. There was a problem saving your attempt.";
+        doneMsg.textContent = isAuto
+          ? "Time's up! There was a problem saving your attempt."
+          : "Quiz completed. There was a problem saving your attempt.";
       }
     }
 
@@ -675,7 +685,26 @@
                 var paras = (quiz.passage || "(No passage provided)").split(/\n\n+/).map(function (p) { return p.trim(); }).filter(Boolean);
                 passageEl.innerHTML = paras.length ? paras.map(function (p) { return "<p>" + escapeHtml(p) + "</p>"; }).join("") : "<p>" + escapeHtml(quiz.passage || "(No passage provided)") + "</p>";
               }
-              document.getElementById("take-quiz-timer-wrap").style.display = "none";
+              var countdownEl = document.getElementById("take-quiz-countdown");
+              var timerWrap = document.getElementById("take-quiz-timer-wrap");
+              if (quiz.time_limit) {
+                var timeRemaining = quiz.time_limit * 60;
+                if (timerWrap) timerWrap.style.display = "";
+                countdownInterval = setInterval(function () {
+                  var minutes = Math.floor(timeRemaining / 60);
+                  var seconds = timeRemaining % 60;
+                  if (countdownEl) countdownEl.textContent = (minutes < 10 ? "0" : "") + minutes + ":" + (seconds < 10 ? "0" : "") + seconds;
+                  if (timeRemaining <= 0) {
+                    clearInterval(countdownInterval);
+                    if (countdownEl) countdownEl.textContent = "00:00";
+                    submitQuiz(true); // ✅ Added true for isAuto
+                  }
+                  timeRemaining--;
+                }, 1000);
+              } else {
+                if (timerWrap) timerWrap.style.display = "none";
+                if (countdownEl) countdownEl.textContent = "";
+              }
               loadQuestions(quiz.questions || []);
               document.getElementById("take-quiz-prev-btn").addEventListener("click", prevQuestion);
               document.getElementById("take-quiz-next-btn").addEventListener("click", nextQuestion);
@@ -932,7 +961,7 @@
                   if (timeRemaining <= 0) {
                     clearInterval(countdownInterval);
                     if (countdownEl) countdownEl.textContent = "00:00";
-                    submitQuiz();
+                    submitQuiz(true); // ✅ Added true for isAuto
                   }
                   timeRemaining--;
                 }, 1000);
