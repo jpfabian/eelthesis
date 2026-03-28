@@ -1275,12 +1275,12 @@ async function loadLeaderboardLesson(quizId) {
                 ? `<img src="${entry.avatar_url.startsWith('/') ? (window.API_BASE || '') + entry.avatar_url : entry.avatar_url}" class="student-avatar" style="object-fit:cover;">`
                 : `<div class="student-avatar" style="background:${gradient}">${escapeHtml(initials)}</div>`
               }
-              <span>${escapeHtml(entry.student_name)}</span>
+              <span class="student-name-text">${escapeHtml(entry.student_name)}</span>
             </div>
           </td>
           <td><span class="score-badge">${scoreText}/${totalText}</span></td>
-          <td><span class="time-badge">${entry.time_taken || "-"}</span></td>
-          <td><span class="status-badge completed">✓ ${entry.status || "Completed"}</span></td>
+          <td><span class="time-badge"><i data-lucide="clock" class="size-3"></i> ${entry.time_taken || "-"}</span></td>
+          <td><span class="status-badge completed"><i data-lucide="check-circle" class="size-3"></i> ${entry.status || "Completed"}</span></td>
         </tr>`;
         tbody.insertAdjacentHTML("beforeend", row);
       });

@@ -2037,13 +2037,14 @@ async function openLeaderboardModal(quizId, classId) {
                                 ? `<img src="${entry.avatar_url.startsWith('/') ? (window.API_BASE || '') + entry.avatar_url : entry.avatar_url}" class="student-avatar" style="object-fit:cover;">`
                                 : `<div class="student-avatar" style="background: linear-gradient(135deg, #6366f1, #10b981);">${entry.name.split(" ").map(n=>n[0]).join("").slice(0,2).toUpperCase()}</div>`
                             }
-                            <span>${entry.name}</span>
+                            <span class="student-name-text">${entry.name}</span>
                         </div>
                     </td>
                     <td><span class="score-badge">${scoreRounded}/100</span></td>
-                    <td><span class="time-badge">${duration}</span></td>
+                    <td><span class="time-badge"><i data-lucide="clock" class="size-3"></i> ${duration}</span></td>
                     <td><span class="status-badge ${entry.status === "completed" ? "completed" : "in-progress"}">
-                        ${entry.status === "completed" ? "✓ Completed" : "In Progress"}
+                        <i data-lucide="${entry.status === "completed" ? "check-circle" : "loader"}" class="size-3"></i>
+                        ${entry.status === "completed" ? "Completed" : "In Progress"}
                     </span></td>
                 `;
                 body.appendChild(row);
