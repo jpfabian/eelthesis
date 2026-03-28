@@ -8222,25 +8222,25 @@ body.landing .legal-block a:hover {
 }
 
 body.landing .legal-contact-list {
-  list-style: none !important;
-  padding: 0 !important;
-  margin: 1.5rem 0 !important;
-  display: grid !important;
-  gap: 1rem !important;
+  list-style: none;
+  padding: 0;
+  margin: 1.5rem 0;
+  display: grid;
+  gap: 1.25rem;
 }
 
 body.landing .legal-contact-list li {
-  display: flex !important;
-  align-items: center !important;
-  gap: 1rem !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  font-size: 1rem !important;
-  color: var(--muted-foreground) !important;
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 0;
+  margin: 0;
+  font-size: 1rem;
+  color: var(--muted-foreground);
 }
 
 body.landing .legal-contact-list li::before {
-  display: none !important;
+  display: none;
 }
 
 body.landing .legal-contact-list i {
@@ -8255,6 +8255,7 @@ body.landing .legal-contact-list i {
   font-size: 1.1rem;
   flex-shrink: 0;
   transition: transform 0.2s ease;
+  margin-top: 2px;
 }
 
 body.landing .legal-contact-list li:hover i {
@@ -8262,20 +8263,98 @@ body.landing .legal-contact-list li:hover i {
   background: color-mix(in srgb, var(--primary) 15%, var(--card));
 }
 
+body.landing .legal-contact-list .contact-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  word-break: break-word;
+}
+
 body.landing .legal-contact-list strong {
   color: var(--foreground);
-  min-width: 90px;
   font-weight: 700;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 body.landing .legal-contact-list a {
   color: var(--primary);
   text-decoration: none;
   font-weight: 600;
+  word-break: break-all;
 }
 
 body.landing .legal-contact-list a:hover {
   text-decoration: underline;
+  color: var(--primary);
+}
+
+/* Contact Page Specific */
+.contact-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 2rem;
+  margin-top: 2rem;
+}
+
+.contact-form-group {
+  display: grid;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.contact-form-group label {
+  display: block;
+  font-weight: 500;
+  color: var(--foreground);
+}
+
+.contact-input, .contact-textarea {
+  width: 100%;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--input-background);
+  color: var(--foreground);
+  font-family: inherit;
+  font-size: 1rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.contact-input:focus, .contact-textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 20%, transparent);
+}
+
+.contact-textarea {
+  resize: vertical;
+  min-height: 120px;
+}
+
+@media (max-width: 768px) {
+  .contact-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  
+  body.landing .legal-contact-list li {
+    gap: 0.75rem;
+  }
+  
+  body.landing .legal-contact-list i {
+    width: 34px;
+    height: 34px;
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .page-section {
+    padding: 3rem 1rem;
+  }
 }
 
 @media (max-width: 768px) {

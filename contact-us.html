@@ -47,52 +47,62 @@
                 </p>
             </div>
 
-            <div class="legal-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; margin-top: 2rem;">
+            <div class="contact-grid">
                 <div class="legal-block">
                     <h2 class="text-primary">Get in Touch</h2>
                     <p>For support, inquiries, or feedback, please reach out via any of the channels below:</p>
                     <ul class="legal-contact-list">
                         <li>
                             <i class="fas fa-envelope"></i>
-                            <strong>Email:</strong>
-                            <a href="mailto:eelthesis@gmail.com">eelthesis@gmail.com</a>
+                            <div class="contact-detail">
+                                <strong>Email</strong>
+                                <a href="mailto:eelthesis@gmail.com">eelthesis@gmail.com</a>
+                            </div>
                         </li>
                         <li>
                             <i class="fas fa-phone"></i>
-                            <strong>Phone:</strong>
-                            <a href="tel:09127288329">0912-728-8329</a>
+                            <div class="contact-detail">
+                                <strong>Phone</strong>
+                                <a href="tel:09127288329">0912-728-8329</a>
+                            </div>
                         </li>
                         <li>
                             <i class="fab fa-facebook"></i>
-                            <strong>Facebook:</strong>
-                            <a href="https://www.facebook.com/people/Enhancing-English-Literacy-EEL-Official/61566326561366/" target="_blank" rel="noopener noreferrer">EEL Official Facebook</a>
+                            <div class="contact-detail">
+                                <strong>Facebook</strong>
+                                <a href="https://www.facebook.com/people/Enhancing-English-Literacy-EEL-Official/61566326561366/" target="_blank" rel="noopener noreferrer">EEL Official Facebook</a>
+                            </div>
                         </li>
                         <li>
                             <i class="fab fa-youtube"></i>
-                            <strong>YouTube:</strong>
-                            <a href="https://www.youtube.com/@eel-2026-q7g" target="_blank" rel="noopener noreferrer">EEL Official YouTube</a>
+                            <div class="contact-detail">
+                                <strong>YouTube</strong>
+                                <a href="https://www.youtube.com/@eel-2026-q7g" target="_blank" rel="noopener noreferrer">EEL Official YouTube</a>
+                            </div>
                         </li>
                     </ul>
-                    <p style="margin-top: 2rem;"><strong>EEL Learning Platform</strong></p>
-                    <p>Norzagaray National High School / Norzagaray College</p>
+                    <div style="margin-top: 2rem;">
+                        <p><strong>EEL Learning Platform</strong></p>
+                        <p>Norzagaray National High School / Norzagaray College</p>
+                    </div>
                 </div>
 
                 <div class="legal-block" style="border-left-color: var(--secondary);">
                     <h2 class="text-secondary">Send us a Message</h2>
-                    <form id="contact-form" style="display: grid; gap: 1rem; margin-top: 1rem;">
-                        <div class="form-group">
-                            <label for="contact-name" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Full Name</label>
-                            <input type="text" id="contact-name" placeholder="Enter your name" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--input-background); color: var(--foreground);" required>
+                    <form id="contact-form" style="margin-top: 1rem;">
+                        <div class="contact-form-group">
+                            <label for="contact-name">Full Name</label>
+                            <input type="text" id="contact-name" class="contact-input" placeholder="Enter your name" required>
                         </div>
-                        <div class="form-group">
-                            <label for="contact-email" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Email Address</label>
-                            <input type="email" id="contact-email" placeholder="Enter your email" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--input-background); color: var(--foreground);" required>
+                        <div class="contact-form-group">
+                            <label for="contact-email">Email Address</label>
+                            <input type="email" id="contact-email" class="contact-input" placeholder="Enter your email" required>
                         </div>
-                        <div class="form-group">
-                            <label for="contact-message" style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Your Message</label>
-                            <textarea id="contact-message" rows="5" placeholder="How can we help you?" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--input-background); color: var(--foreground); resize: vertical;" required></textarea>
+                        <div class="contact-form-group">
+                            <label for="contact-message">Your Message</label>
+                            <textarea id="contact-message" class="contact-textarea" placeholder="How can we help you?" required></textarea>
                         </div>
-                        <button type="submit" class="btn btn-secondary" style="padding: 1rem;">Send Message</button>
+                        <button type="submit" class="btn btn-secondary" style="width: 100%; padding: 1rem;">Send Message</button>
                     </form>
                 </div>
             </div>
