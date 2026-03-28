@@ -38,7 +38,7 @@ function toNameCase(input) {
     .join(" ");
 }
 
-const { nowPhilippineDatetime } = require("./utils/datetime");
+const { nowPhilippineDatetime, formatPhilippineDatetime } = require("./utils/datetime");
 
 function parseSqlDatetimePhilippines(value) {
   if (!value) return null;
@@ -884,7 +884,12 @@ router.patch("/api/teacher/reading-quiz-attempts/:id/submit", async (req, res) =
 
     let totalScore = 0;
     let totalPoints = 0;
-    const endTime = nowPhilippineDatetime();
+    
+    // ✅ Fix: Use provided end_time from frontend and format as Manila time
+    const end_time_raw = req.body.end_time;
+    const endTime = end_time_raw ? 
+      formatPhilippineDatetime(new Date(end_time_raw)) : 
+      nowPhilippineDatetime();
 
     for (const a of answers) {
       const questionId = a.question_id;
@@ -973,6 +978,7 @@ router.patch("/api/teacher/reading-quiz-attempts/:id/submit", async (req, res) =
       score: finalScore,
       total_points: totalPoints,
       end_time: endTime,
+      timeTakenSeconds: req.body.timeTakenSeconds || 0, // ✅ Return timeTakenSeconds
       show_retake: !!showRetake
     });
   } catch (err) {

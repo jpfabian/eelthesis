@@ -493,7 +493,14 @@
 
     if (teacherQuizAttemptId != null) {
       var answers = buildAnswersPayload();
-      var payload = { answers: answers, cheating_violations: cheatingViolations, cheating_voided: !!cheatingVoided };
+      var timeTakenSeconds = quizStartTime ? Math.floor((new Date() - quizStartTime) / 1000) : 0;
+      var payload = { 
+        answers: answers, 
+        cheating_violations: cheatingViolations, 
+        cheating_voided: !!cheatingVoided,
+        end_time: new Date().toISOString(), // Still useful for reference
+        timeTakenSeconds: timeTakenSeconds // ✅ Added timeTakenSeconds to payload
+      };
       fetch((window.API_BASE || "") + "/api/teacher/reading-quiz-attempts/" + teacherQuizAttemptId + "/submit", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -658,6 +665,7 @@
             var gateEl = document.getElementById("quiz-fullscreen-gate");
             var quizPageEl = document.getElementById("quiz-page");
             function startQuizInFullscreen() {
+              quizStartTime = new Date(); // ✅ Set quizStartTime when quiz starts
               requestFullscreen();
               if (gateEl) gateEl.classList.add("hidden");
               if (quizPageEl) quizPageEl.classList.remove("hidden");
