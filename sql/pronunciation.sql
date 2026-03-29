@@ -70,6 +70,7 @@ CREATE TABLE pronunciation_quiz_answers (
   difficulty ENUM('beginner','intermediate','advanced') NOT NULL, -- 🔹 identifies which question table
   student_audio VARCHAR(255) NOT NULL,                            -- 🔹 path or URL to recorded file
   pronunciation_score DECIMAL(5,2) DEFAULT 0.00,                  -- 🔹 AI or teacher rating
+  ai_feedback TEXT,
   feedback TEXT,
   evaluated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (attempt_id) REFERENCES pronunciation_quiz_attempts(attempt_id) ON DELETE CASCADE

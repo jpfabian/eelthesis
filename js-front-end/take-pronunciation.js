@@ -436,6 +436,11 @@
               .map(function (a, i) {
                 const qText = a.question_text || "Question " + (i + 1);
                 const score = a.pronunciation_score != null ? a.pronunciation_score + "%" : "—";
+                const feedbackHtml = a.ai_feedback 
+                  ? '<div class="mt-2 p-2 bg-indigo-50 border border-indigo-100 rounded text-sm text-indigo-700">' +
+                    '<strong>AI Feedback:</strong> ' + String(a.ai_feedback).replace(/</g, "&lt;").replace(/>/g, "&gt;") +
+                    '</div>'
+                  : "";
                 return (
                   '<div class="p-4 mb-3 border rounded-lg bg-muted/10 shadow-sm">' +
                   "<h4 class='font-semibold text-primary mb-1'>Question " +
@@ -451,7 +456,9 @@
                     : "") +
                   "<p class='text-sm text-green-600 font-medium'>Score: " +
                   score +
-                  "</p></div>"
+                  "</p>" +
+                  feedbackHtml +
+                  "</div>"
                 );
               })
               .join("");

@@ -1891,7 +1891,10 @@ async function openStudentPronunciationReviewModal(quizId, quizTitle = '') {
       const scoreText = `${score}/100 ${isCorrect ? 'correct' : 'incorrect'}`;
       const targetValue = expected;
       const speakerHtml = `<button class="pronunciation-speaker-btn" onclick="speakPronunciation('${(a.question_text || "").replace(/'/g, "\\'")}')" title="Listen to word"><i data-lucide="volume-2"></i></button>`;
-      return `<div class="quiz-review-item ${isCorrect ? 'quiz-review-item--correct' : (score < 60 ? 'quiz-review-item--incorrect' : '')}"><div class="quiz-review-item__header"><span class="quiz-review-item__num">Question ${i + 1}</span><span class="quiz-review-score">${scoreText}</span></div><div class="quiz-review-item__row"><span class="quiz-review-item__row-label">Word</span><span class="quiz-review-item__row-value">${promptText}</span></div><div class="quiz-review-item__row"><span class="quiz-review-item__row-label">Target pronunciation</span><span class="quiz-review-item__row-value">${targetValue}${speakerHtml}</span></div><div class="quiz-review-item__row"><span class="quiz-review-item__row-label">Your recording</span><div class="quiz-review-audio-wrap"><audio controls src="${escapeHtml(audioSrc)}" class="quiz-review-audio"></audio></div></div></div>`;
+      const feedbackHtml = a.ai_feedback 
+        ? `<div class="quiz-review-item__row"><span class="quiz-review-item__row-label">AI Feedback</span><span class="quiz-review-item__row-value text-indigo-600 font-medium">${escapeHtml(a.ai_feedback)}</span></div>`
+        : "";
+      return `<div class="quiz-review-item ${isCorrect ? 'quiz-review-item--correct' : (score < 60 ? 'quiz-review-item--incorrect' : '')}"><div class="quiz-review-item__header"><span class="quiz-review-item__num">Question ${i + 1}</span><span class="quiz-review-score">${scoreText}</span></div><div class="quiz-review-item__row"><span class="quiz-review-item__row-label">Word</span><span class="quiz-review-item__row-value">${promptText}</span></div><div class="quiz-review-item__row"><span class="quiz-review-item__row-label">Target pronunciation</span><span class="quiz-review-item__row-value">${targetValue}${speakerHtml}</span></div><div class="quiz-review-item__row"><span class="quiz-review-item__row-label">Your recording</span><div class="quiz-review-audio-wrap"><audio controls src="${escapeHtml(audioSrc)}" class="quiz-review-audio"></audio></div></div>${feedbackHtml}</div>`;
     }).join("");
 
     loadingEl.classList.add("hidden");
@@ -2594,6 +2597,16 @@ async function loadTeacherPronAttempt(attemptId) {
                       <audio controls src="${audioSrc}" class="teacher-pron-audio-el"></audio>
                     </div>
                   </div>
+                  ${a.ai_feedback ? `
+                  <div class="teacher-pron-answer-section teacher-pron-ai-feedback">
+                    <div class="teacher-pron-section-label">
+                      <i data-lucide="sparkles" class="size-4"></i>
+                      <span>AI Feedback</span>
+                    </div>
+                    <div class="mt-1 p-2 bg-indigo-50 border border-indigo-100 rounded text-xs text-indigo-700">
+                      ${escapeHtml(a.ai_feedback)}
+                    </div>
+                  </div>` : ''}
                   <div class="teacher-pron-answer-section teacher-pron-score-section">
                     <div class="teacher-pron-section-label">
                       <i data-lucide="award" class="size-4"></i>

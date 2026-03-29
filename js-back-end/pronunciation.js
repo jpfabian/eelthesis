@@ -155,14 +155,14 @@ function scoreLetterPronunciation(expectedWord, transcript) {
   return 20;
 }
 
-/** Assess pronunciation using Groq LLM. Returns score 0-100 or null on error. */
+/** Assess pronunciation using Groq LLM. Returns { score, feedback } or null on error. */
 async function assessPronunciationWithGroq(expectedWord, transcript) {
   if (!groq) return null;
   const expected = String(expectedWord || "").trim();
   const transcriptText = String(transcript || "").trim();
   if (!expected) return null;
   const letterScore = scoreLetterPronunciation(expected, transcriptText);
-  if (letterScore != null) return letterScore;
+  if (letterScore != null) return { score: letterScore, feedback: letterScore >= 80 ? "Great job!" : "Try to be clearer." };
   try {
     const completion = await groq.chat.completions.create({
       model: "llama-3.3-70b-versatile",
@@ -170,20 +170,23 @@ async function assessPronunciationWithGroq(expectedWord, transcript) {
         {
           role: "system",
           content:
-            "You are a pronunciation assessment expert for English. Given the expected English word/phrase and the student's transcription (from speech-to-text), rate pronunciation accuracy from 0 to 100. Reply with ONLY a number.\n\nIMPORTANT:\n- The student must say the EXPECTED word/phrase in English.\n- Give a LOW score (0-25) if the student said a different word entirely, a translation in another language, or a different English word.\n- If the expected is a SINGLE LETTER (A-Z), the student must say the LETTER NAME (e.g. J -> 'jay', K -> 'kay'). Do NOT give 100 for unrelated words like 'okay'.\n\nScoring: 100 = perfect match; 80-99 = phonetically correct; 50-79 = partially correct (same target, minor errors); 25-49 = wrong word or heavily mispronounced; 0-24 = completely wrong.",
+            "You are a pronunciation assessment expert for English. Given the expected English word/phrase and the student's transcription (from speech-to-text), rate pronunciation accuracy from 0 to 100 and provide brief, encouraging feedback in 1-2 sentences. Format your response as a JSON object with 'score' (number) and 'feedback' (string).\n\nIMPORTANT:\n- The student must say the EXPECTED word/phrase in English.\n- Give a LOW score (0-25) if the student said a different word entirely, a translation in another language, or a different English word.\n- If the expected is a SINGLE LETTER (A-Z), the student must say the LETTER NAME (e.g. J -> 'jay', K -> 'kay').\n\nScoring: 100 = perfect match; 80-99 = phonetically correct; 50-79 = partially correct (same target, minor errors); 25-49 = wrong word or heavily mispronounced; 0-24 = completely wrong.",
         },
         {
           role: "user",
-          content: `Expected (English): "${expected}"\nStudent transcription: "${transcriptText}"\nScore (0-100):`,
+          content: `Expected (English): "${expected}"\nStudent transcription: "${transcriptText}"`,
         },
       ],
       temperature: 0.2,
-      max_tokens: 10,
+      response_format: { type: "json_object" }
     });
-    const text = (completion?.choices?.[0]?.message?.content || "").trim();
-    const num = parseInt(text.replace(/\D/g, ""), 10);
-    if (!Number.isFinite(num)) return null;
-    return clampPronunciationScore(num, { min: 20, max: 95 });
+    const content = completion?.choices?.[0]?.message?.content || "";
+    const result = JSON.parse(content);
+    if (!result || typeof result.score !== 'number') return null;
+    return {
+      score: clampPronunciationScore(result.score, { min: 20, max: 95 }),
+      feedback: result.feedback || ""
+    };
   } catch (e) {
     console.warn("Groq pronunciation assessment error:", e?.message || e);
     return null;
@@ -835,12 +838,17 @@ router.post("/api/pronunciation-submit", upload.any(), async (req, res) => {
 
       // Groq AI: transcribe audio if no transcript, then assess pronunciation
       let pronunciationScore = null;
+      let aiFeedback = null;
       if (process.env.GROQ_API_KEY) {
         const transcribed = transcript.trim() ? null : await transcribeWithGroq(file);
         const textToAssess = (transcript.trim() || transcribed || "").trim();
         const expectedWord = await getExpectedWordForQuestion(pool, quiz_id, question_id);
         if (expectedWord && textToAssess) {
-          pronunciationScore = await assessPronunciationWithGroq(expectedWord, textToAssess);
+          const assessment = await assessPronunciationWithGroq(expectedWord, textToAssess);
+          if (assessment) {
+            pronunciationScore = assessment.score;
+            aiFeedback = assessment.feedback;
+          }
         }
         if (transcribed && !transcript.trim()) transcript = transcribed;
       }
@@ -851,9 +859,9 @@ router.post("/api/pronunciation-submit", upload.any(), async (req, res) => {
 
       await pool.query(
         `INSERT INTO pronunciation_quiz_answers
-          (attempt_id, question_id, difficulty, student_audio, transcript, pronunciation_score)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-        [attempt_id, question_id, difficulty, fileUrl, transcript, score]
+          (attempt_id, question_id, difficulty, student_audio, transcript, pronunciation_score, ai_feedback)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [attempt_id, question_id, difficulty, fileUrl, transcript, score, aiFeedback]
       );
     }
 
@@ -974,7 +982,8 @@ router.get("/api/pronunciation-review", async (req, res) => {
                WHEN a.difficulty = 'intermediate' THEN i.stressed_syllable
                WHEN a.difficulty = 'advanced' THEN adv.reduced_form
                ELSE ''
-             END AS correct_pronunciation
+             END AS correct_pronunciation,
+             a.ai_feedback
       FROM pronunciation_quiz_answers a
       JOIN pronunciation_quiz_attempts t ON a.attempt_id = t.attempt_id
       LEFT JOIN pronunciation_beginner_questions b ON a.question_id = b.question_id
@@ -1072,7 +1081,8 @@ router.get("/api/teacher/pronunciation-attempts/:attemptId", async (req, res) =>
                WHEN a.difficulty = 'intermediate' THEN i.stressed_syllable
                WHEN a.difficulty = 'advanced' THEN adv.reduced_form
                ELSE ''
-             END AS correct_pronunciation
+             END AS correct_pronunciation,
+             a.ai_feedback
       FROM pronunciation_quiz_answers a
       LEFT JOIN pronunciation_beginner_questions b ON a.question_id = b.question_id
       LEFT JOIN pronunciation_intermediate_questions i ON a.question_id = i.question_id

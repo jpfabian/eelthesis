@@ -651,6 +651,7 @@ CREATE TABLE IF NOT EXISTS pronunciation_quiz_answers (
   student_audio VARCHAR(1000) NOT NULL,
   transcript TEXT NULL,
   pronunciation_score DECIMAL(6,2) NULL,
+  ai_feedback TEXT NULL,
   /* Teacher can override pronunciation grading */
   teacher_score DECIMAL(6,2) NULL,
   teacher_notes TEXT NULL,
