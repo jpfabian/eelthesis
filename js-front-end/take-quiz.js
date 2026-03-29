@@ -466,6 +466,9 @@
         card.classList.remove("quiz-done--high", "quiz-done--low");
       }
       if (scoreWrap) scoreWrap.classList.add("hidden");
+      var backBtn = doneEl ? doneEl.querySelector(".back-to-lessons-link") : null;
+      if (backBtn) backBtn.classList.add("hidden");
+
       if (doneMsg) {
         doneMsg.textContent = isAuto 
           ? "Time's up! Your attempt has been saved." 
@@ -494,10 +497,14 @@
             ? prefix + "Great job! Your attempt has been saved."
             : prefix + "Keep practicing! Your attempt has been saved.";
         }
+        if (backBtn) backBtn.classList.remove("hidden");
       } else if (doneMsg && !success) {
         doneMsg.textContent = isAuto
           ? "Time's up! There was a problem saving your attempt."
           : "Quiz completed. There was a problem saving your attempt.";
+        if (backBtn) backBtn.classList.remove("hidden");
+      } else {
+        if (backBtn) backBtn.classList.remove("hidden");
       }
     }
 

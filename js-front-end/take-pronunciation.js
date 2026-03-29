@@ -338,6 +338,7 @@
     const percentEl = document.getElementById("pronunciation-quiz-done-percent");
     const msgEl = document.getElementById("pronunciation-quiz-done-msg");
     const retakeBtn = document.getElementById("pronunciation-quiz-done-retake-btn");
+    const backBtn = doneEl ? doneEl.querySelector(".back-to-lessons-link") : null;
     if (!doneEl) return;
     const totalAccuracy = Math.max(0, Math.min(parseFloat(accuracyValue) || 0, 100));
     if (card) card.classList.remove("quiz-done--high", "quiz-done--low");
@@ -358,6 +359,7 @@
       if (showRetake) retakeBtn.classList.remove("hidden");
       else retakeBtn.classList.add("hidden");
     }
+    if (backBtn) backBtn.classList.remove("hidden");
     doneEl.classList.remove("hidden");
     if (window.lucide && typeof window.lucide.createIcons === "function") window.lucide.createIcons();
   }

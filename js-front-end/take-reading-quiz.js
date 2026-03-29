@@ -47,6 +47,40 @@
     el.style.userSelect = "none";
   }
 
+  function shuffleArray(array) {
+    for (var i = array.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var temp = array[i];
+      array[i] = array[j];
+      array[j] = temp;
+    }
+    return array;
+  }
+
+  function randomizeQuizData(data) {
+    if (!data || !data.questions || !data.questions.length) return;
+
+    // Separate essays from other questions
+    var essays = data.questions.filter(function(q) { return q.question_type === "essay"; });
+    var others = data.questions.filter(function(q) { return q.question_type !== "essay"; });
+
+    // Shuffle non-essay questions
+    shuffleArray(others);
+
+    // Shuffle options for MCQ (except identification)
+    others.forEach(function(q) {
+      if (q.question_type === "mcq" && q.options && q.options.length > 1) {
+        var isIdentification = q.options.some(function (o) { return String(o.option_text || "").trim() === "(Other)"; });
+        if (!isIdentification) {
+          shuffleArray(q.options);
+        }
+      }
+    });
+
+    // Combine: shuffled non-essays followed by original essays
+    data.questions = others.concat(essays);
+  }
+
   let quizData = null;
   let currentQuestionIndex = -1;
   let studentAnswers = {};
@@ -523,12 +557,16 @@
     var percentEl = doneEl ? document.getElementById("quiz-done-percent") : null;
 
     var retakeBtn = document.getElementById("quiz-done-retake-btn");
+    var backBtn = doneEl ? doneEl.querySelector(".back-to-lessons-link") : null;
+
     function renderDone(score, totalPoints, success, showRetake) {
       if (card) card.classList.remove("quiz-done--high", "quiz-done--low");
       if (scoreWrap) scoreWrap.classList.add("hidden");
       if (doneMsg) doneMsg.textContent = "Quiz completed. Your attempt has been saved.";
       if (charImg) { charImg.src = "image/eel-character-celebrate.png"; charImg.alt = "EEL character celebrating"; }
       if (retakeBtn) retakeBtn.classList.add("hidden");
+      if (backBtn) backBtn.classList.add("hidden");
+
       if (success && score != null && totalPoints != null && totalPoints > 0) {
         var pct = Math.round((score / totalPoints) * 100);
         var isHigh = pct >= 70;
@@ -545,8 +583,13 @@
         }
         if (doneMsg) doneMsg.textContent = isHigh ? "Great job! Your attempt has been saved." : "Keep practicing! Your attempt has been saved.";
         if (retakeBtn && showRetake) retakeBtn.classList.remove("hidden");
+        if (backBtn) backBtn.classList.remove("hidden");
       } else if (doneMsg && !success) {
         doneMsg.textContent = "Quiz completed. There was a problem saving your attempt.";
+        if (backBtn) backBtn.classList.remove("hidden");
+      } else {
+        // Fallback for cases where success is true but score is not applicable (e.g. manual grading required)
+        if (backBtn) backBtn.classList.remove("hidden");
       }
     }
 
@@ -673,6 +716,7 @@
           throw new Error("This quiz is not yet available or has already closed.");
         }
         quizData = quiz;
+        randomizeQuizData(quizData);
         studentAnswers = {};
         var attemptParams = "quiz_id=" + quizId + "&student_id=" + encodeURIComponent(user.user_id) + (classId ? "&class_id=" + classId : "");
         return fetch((window.API_BASE || "") + "/api/reading-quiz-attempts?" + attemptParams)
@@ -949,6 +993,7 @@
         if (now > lockTime) throw new Error("This quiz has closed.");
 
         quizData = quiz;
+        randomizeQuizData(quizData);
         studentAnswers = {};
         currentQuestionIndex = -1;
 
