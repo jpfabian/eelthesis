@@ -260,6 +260,13 @@
         try { return d.toLocaleDateString(undefined, { dateStyle: "long" }); } catch (_) { return String(d); }
       }
 
+      function capitalizeWords(str) {
+        if (!str) return "—";
+        return str.split(" ").map(function(w) {
+          return w.charAt(0).toUpperCase() + w.slice(1);
+        }).join(" ");
+      }
+
       async function load() {
         const userStr = localStorage.getItem("eel_user");
         const user = userStr ? JSON.parse(userStr) : null;
@@ -288,7 +295,7 @@
 
           nameEl.textContent = studentName;
           classEl.textContent = className || "—";
-          subjectEl.textContent = subjectName;
+          subjectEl.textContent = capitalizeWords(subjectName);
           dateEl.textContent = fmtDate(new Date());
 
           if (!eligible) {
