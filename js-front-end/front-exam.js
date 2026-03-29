@@ -864,8 +864,9 @@ function formatExamContentForPDF(content, options = {}) {
 
     // 🎯 Use specialized formatting for the Answer Key section
     if (insideAnswerKey || lastWasAnswerKey) {
-      // Find all numbered items (e.g., "1. (c) ..."). Removed \b to handle bunched text.
-      const itemRegex = /(?:[_\-\s]*)?(\d+)[\.\)]\s*([\s\S]+?)(?=\s*(?:[_\-\s]*)?\d+[\.\)]\s*|$)/g;
+      // Find all numbered items (e.g., "1. (c) ...").
+      // Added \b before \d+ to prevent splitting "10." into "1" and "0."
+      const itemRegex = /(?:[_\-\s]*)?\b(\d+)[\.\)]\s*([\s\S]+?)(?=\s*(?:[_\-\s]*)?\b\d+[\.\)]\s*|$)/g;
       const matches = Array.from(part.matchAll(itemRegex));
       
       if (matches.length > 0) {
@@ -909,14 +910,15 @@ function formatExamContentForPDF(content, options = {}) {
       
       // 2. Split questions more robustly. Handle questions even if they don't have a newline before them.
       // Now also matches the optional "____ " prefix so it doesn't get stuck at the end of the previous question.
-      const qBlocks = part.split(/(?=(?:____\s*)?\d+[\.\)]\s+)/);
+      // Added \b before \d+ to prevent splitting multi-digit numbers (like "10.") into separate parts.
+      const qBlocks = part.split(/(?=(?:____\s*)?\b\d+[\.\)]\s+)/);
       
       for (const block of qBlocks) {
         const trimmed = block.trim();
-        // Updated regex to handle optional "____ " prefix
-        if (!trimmed || !/^(?:____\s*)?\d+[\.\)]\s+/.test(trimmed)) continue;
+        // Updated regex to handle optional "____ " prefix and word boundary
+        if (!trimmed || !/^(?:____\s*)?\b\d+[\.\)]\s+/.test(trimmed)) continue;
 
-        const numMatch = trimmed.match(/^(?:____\s*)?(\d+)[\.\)]\s+([\s\S]+)$/);
+        const numMatch = trimmed.match(/^(?:____\s*)?\b(\d+)[\.\)]\s+([\s\S]+)$/);
         if (!numMatch) continue;
         const num = numMatch[1];
         const rest = numMatch[2];

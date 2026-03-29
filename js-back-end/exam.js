@@ -138,7 +138,7 @@ CRITICAL: Include ONLY the sections that appear in the layout below. Do NOT add 
 CRITICAL: Generate EVERY question. For example, if a section count is 50, you must output all 50 full questions (numbered 1 to 50) and 50 answers in the answer key. Do not stop early, and do not abbreviate.
 
 CRITICAL NUMBERING RULE: 
-- Use full consecutive numbering (1, 2, 3, ... 9, 10, 11, ... 50). 
+- Use full consecutive numbering (1, 2, 3, ... 9, 10, 11, 12, 13, ... 21, 22, 23, ... 50). 
 - Do NOT use only the last digit (e.g., do NOT show 0 for 10, 1 for 11). 
 - Always place "____ " before the number for Multiple Choice, True/False, and Identification.
 - Example: "____ 10. Which of the following..."
