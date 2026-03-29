@@ -1395,9 +1395,11 @@ function renderLessonTeacherReviewAttemptsList() {
   }
 
   list.innerHTML = attempts.map(function (a) {
-    const name = a.student_name || "Student #" + (a.student_id || a.user_id);
+    const name = a.student_name || "Student #" + (a.student_id || a.user_id || a.id);
+    const rawAvatar = a.student_avatar_url || a.avatar_url;
+    const avatarUrl = rawAvatar ? (rawAvatar.startsWith('/') ? (window.API_BASE || '') + rawAvatar : rawAvatar) : null;
     const score = (a.score != null && a.total_points != null) ? Math.round(a.score) + "/" + Math.round(a.total_points) : "-";
-    const isActive = Number(_lessonTeacherReviewState.studentId) === Number(a.student_id || a.user_id);
+    const isActive = Number(_lessonTeacherReviewState.studentId) === Number(a.student_id || a.user_id || a.id);
     const timeStr = a.time_taken || (a.end_time ? formatDateTimePhilippineMilitary(a.end_time) : "");
     const cheated = !!(a.cheating_voided || (a.cheating_violations && a.cheating_violations > 0));
     const cheatTitle = a.cheating_voided
@@ -1410,12 +1412,15 @@ function renderLessonTeacherReviewAttemptsList() {
         "<i data-lucide=\"alert-triangle\" class=\"size-3\" aria-hidden=\"true\"></i>" +
         "</span>"
       : "";
+    const avatarHtml = avatarUrl 
+      ? "<img src=\"" + escapeHtml(avatarUrl) + "\" alt=\"" + escapeHtml(name) + "\" class=\"mini-avatar-img\" style=\"width:100%; height:100%; object-fit:cover; border-radius:inherit;\">"
+      : escapeHtml(getInitials(name));
     return (
       "<button type=\"button\" class=\"btn btn-outline w-full justify-between lesson-teacher-attempt-item " + (isActive ? "is-active" : "") + "\" " +
-      "data-student-id=\"" + escapeHtml(String(a.student_id != null ? a.student_id : a.user_id)) + "\" " +
+      "data-student-id=\"" + escapeHtml(String(a.student_id != null ? a.student_id : (a.user_id != null ? a.user_id : a.id))) + "\" " +
       "style=\"display:flex; align-items:center; gap:.5rem;\">" +
       "<span class=\"student-chip\" style=\"min-width:0;\">" +
-      "<span class=\"mini-avatar\" aria-hidden=\"true\">" + escapeHtml(getInitials(name)) + "</span>" +
+      "<span class=\"mini-avatar\" aria-hidden=\"true\">" + avatarHtml + "</span>" +
       "<span style=\"min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;\">" + escapeHtml(name) + "</span>" +
       "</span>" +
       "<span class=\"teacher-attempt-meta\">" +
@@ -1484,9 +1489,11 @@ function renderLessonTeacherReviewDetail(data, targetEl) {
   const detail = targetEl || document.getElementById("lesson-teacher-review-detail");
   if (!detail) return;
   const attempt = ( _lessonTeacherReviewState.attempts || [] ).find(function (a) {
-    return Number(a.student_id || a.user_id) === Number(_lessonTeacherReviewState.studentId);
+    return Number(a.student_id || a.user_id || a.id) === Number(_lessonTeacherReviewState.studentId);
   });
   const studentName = attempt?.student_name || ("Student #" + _lessonTeacherReviewState.studentId);
+  const rawAvatar = attempt?.student_avatar_url || attempt?.avatar_url;
+  const avatarUrl = rawAvatar ? (rawAvatar.startsWith('/') ? (window.API_BASE || '') + rawAvatar : rawAvatar) : null;
   const score = data.attempt && data.attempt.total_points != null
     ? (Math.round(data.attempt.score) + " / " + Math.round(data.attempt.total_points))
     : "-";
@@ -1497,6 +1504,10 @@ function renderLessonTeacherReviewDetail(data, targetEl) {
   function getInitials(name) {
     return (name || "").trim().split(/\s+/).map(function (n) { return n[0]; }).join("").slice(0, 2).toUpperCase() || "?";
   }
+
+  const avatarHtml = avatarUrl 
+    ? "<img src=\"" + escapeHtml(avatarUrl) + "\" alt=\"" + escapeHtml(studentName) + "\" class=\"mini-avatar-img\" style=\"width:100%; height:100%; object-fit:cover; border-radius:inherit;\">"
+    : escapeHtml(getInitials(studentName));
 
   const blocks = (data.answers || []).map(function (a) {
     const correctTextRaw = a.correct_answer_text != null ? String(a.correct_answer_text) : (a.correct_answer != null ? String(a.correct_answer) : "—");
@@ -1575,7 +1586,7 @@ function renderLessonTeacherReviewDetail(data, targetEl) {
     "<div style=\"min-width:0;\">" +
     "<div class=\"text-xs text-muted-foreground\">Student</div>" +
     "<div class=\"student-chip\" style=\"margin-top:.25rem; min-width:0;\">" +
-    "<span class=\"mini-avatar\" aria-hidden=\"true\">" + escapeHtml(getInitials(studentName)) + "</span>" +
+    "<span class=\"mini-avatar\" aria-hidden=\"true\">" + avatarHtml + "</span>" +
     "<span class=\"font-semibold\" style=\"min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;\">" + escapeHtml(studentName) + "</span>" +
     "</div></div>" +
     "<div class=\"teacher-review-summary__right\">" +

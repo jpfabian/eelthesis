@@ -1058,7 +1058,8 @@ router.get("/api/teacher/pronunciation-attempts/:attemptId", async (req, res) =>
   try {
     const [[attempt]] = await pool.query(
       `SELECT a.*, q.title, q.difficulty AS quiz_difficulty, q.subject_id, q.quiz_id,
-              CONCAT(u.fname, ' ', u.lname) AS student_name
+              CONCAT(u.fname, ' ', u.lname) AS student_name,
+              u.avatar_url AS student_avatar_url
        FROM pronunciation_quiz_attempts a
        JOIN pronunciation_quizzes q ON q.quiz_id = a.quiz_id
        JOIN users u ON a.student_id = u.user_id

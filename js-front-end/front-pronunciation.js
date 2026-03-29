@@ -167,6 +167,11 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         // Only Built-in quizzes
         // Don't load any list yet; wait for category button click.
+        
+        // Update category locking/passing status
+        if (currentUser.role !== 'teacher') {
+            await updatePronunciationCategoryStatus(currentUser);
+        }
 
         // Category buttons: load quizzes by difficulty when clicked
         const catButtons = document.querySelectorAll(".pronunciation-category-btn");
@@ -770,8 +775,19 @@ async function loadPronunciationQuizzes(user, difficultyFilter = null) {
         );
         const quizzes = await res.json();
 
-        // ✅ Ensure consistent ordering before numbering
+        // ✅ Sort ALL quizzes first to ensure consistent numbering
         const diffOrder = { beginner: 0, intermediate: 1, advanced: 2 };
+        if (Array.isArray(quizzes)) {
+            quizzes.sort((a, b) => {
+                const da = diffOrder[a.difficulty] ?? 99;
+                const db = diffOrder[b.difficulty] ?? 99;
+                if (da !== db) return da - db;
+                const qa = Number(a.quiz_number || 0);
+                const qb = Number(b.quiz_number || 0);
+                if (qa !== qb) return qa - qb;
+                return (a.quiz_id || 0) - (b.quiz_id || 0);
+            });
+        }
 
         const filteredQuizzes = Array.isArray(quizzes)
             ? quizzes.filter(q => {
@@ -779,16 +795,6 @@ async function loadPronunciationQuizzes(user, difficultyFilter = null) {
                 return String(q.difficulty || "").toLowerCase() === String(difficultyFilter).toLowerCase();
             })
             : [];
-
-        filteredQuizzes.sort((a, b) => {
-            const da = diffOrder[a.difficulty] ?? 99;
-            const db = diffOrder[b.difficulty] ?? 99;
-            if (da !== db) return da - db;
-            const qa = Number(a.quiz_number || 0);
-            const qb = Number(b.quiz_number || 0);
-            if (qa !== qb) return qa - qb;
-            return (a.quiz_id || 0) - (b.quiz_id || 0);
-        });
 
         // ✅ Fetch student attempts (if user is not a teacher)
         let studentAttempts = [];
@@ -808,28 +814,26 @@ async function loadPronunciationQuizzes(user, difficultyFilter = null) {
         container.innerHTML = "";
         container.className = "space-y-6";
 
-        // ✅ Numbering (consecutive)
-        // If your DB uses quiz_number 1..30, we display that.
-        // If your DB restarts quiz_number per difficulty (1..10 each),
-        // we compute a consecutive number using offsets.
-        const hasGlobalQuizNumber = filteredQuizzes.some(q => Number(q.quiz_number || 0) > 10);
+        // ✅ Numbering (consecutive) - COMPUTE FOR ALL QUIZZES
+        const hasGlobalQuizNumber = Array.isArray(quizzes) && quizzes.some(q => Number(q.quiz_number || 0) > 10);
         let beginnerCount = 0, intermediateCount = 0, advancedCount = 0;
         const displayNumberByQuizId = new Map();
-        filteredQuizzes.forEach(q => {
-            let n;
-            if (hasGlobalQuizNumber && q.quiz_number != null) n = Number(q.quiz_number);
-            else {
-                if (q.difficulty === "beginner") n = (++beginnerCount);
-                else if (q.difficulty === "intermediate") n = 10 + (++intermediateCount);
-                else if (q.difficulty === "advanced") n = 20 + (++advancedCount);
-                else n = (beginnerCount + intermediateCount + advancedCount + 1);
-            }
-            displayNumberByQuizId.set(Number(q.quiz_id), n);
-        });
+        
+        if (Array.isArray(quizzes)) {
+            quizzes.forEach(q => {
+                let n;
+                if (hasGlobalQuizNumber && q.quiz_number != null) n = Number(q.quiz_number);
+                else {
+                    if (q.difficulty === "beginner") n = (++beginnerCount);
+                    else if (q.difficulty === "intermediate") n = 10 + (++intermediateCount);
+                    else if (q.difficulty === "advanced") n = 20 + (++advancedCount);
+                    else n = (beginnerCount + intermediateCount + advancedCount + 1);
+                }
+                displayNumberByQuizId.set(Number(q.quiz_id), n);
+            });
+        }
 
-        // ✅ Unlock progression (STRICT): use the LATEST completed attempt per quiz.
-        // This ensures retake scores affect unlocking (e.g. if you retake and score below passing,
-        // the next quiz becomes locked again).
+        // ✅ Unlock progression (STRICT): use ALL quizzes for progression, not just filtered ones
         let unlockedUpTo = 1;
         if (!isTeacher && Array.isArray(studentAttempts) && studentAttempts.length) {
             const latestByQuizId = new Map();
@@ -848,7 +852,7 @@ async function loadPronunciationQuizzes(user, difficultyFilter = null) {
             const passedNums = new Set(
                 Array.from(latestByQuizId.entries())
                     .map(([quizId, a]) => {
-                        const q = filteredQuizzes.find(x => Number(x.quiz_id) === Number(quizId));
+                        const q = Array.isArray(quizzes) ? quizzes.find(x => Number(x.quiz_id) === Number(quizId)) : null;
                         const passing = Number(q?.passing_score ?? 70);
                         const scoreNum = Number(a.score);
                         const totalNum = Number(a.total_points);
@@ -867,7 +871,7 @@ async function loadPronunciationQuizzes(user, difficultyFilter = null) {
             unlockedUpTo = inferred;
         }
 
-        // ✅ Loop through quizzes
+        // ✅ Loop through filtered quizzes for display
         filteredQuizzes.forEach(quiz => {
             const backendLocked = (Number(quiz.is_locked) === 1) || (quiz.is_locked === true);
             const displayNum = displayNumberByQuizId.get(Number(quiz.quiz_id)) || 1;
@@ -2471,8 +2475,10 @@ function renderTeacherPronAttemptsList() {
     }
 
     list.innerHTML = attempts.map(a => {
-        const name = a.student_name || `Student #${a.student_id}`;
+        const name = a.student_name || `Student #${a.student_id || a.user_id || a.id}`;
         const initials = getInitials(name);
+        const rawAvatar = a.student_avatar_url || a.avatar_url;
+        const avatarUrl = rawAvatar ? (rawAvatar.startsWith('/') ? (window.API_BASE || '') + rawAvatar : rawAvatar) : null;
         const score = a.score != null
             ? `${Math.round(a.score)}/${Math.round(a.total_points ?? 100)}`
             : '-';
@@ -2482,6 +2488,9 @@ function renderTeacherPronAttemptsList() {
             ? 'Quiz invalidated (score of 0): The student exited fullscreen or switched tabs multiple times, resulting in an automatic zero score.'
             : `Left fullscreen or switched tabs (${a.cheating_violations || 0} time(s)).`;
         const cheatBadge = cheated ? `<span class="text-xs px-1 py-0.5 rounded bg-destructive/20 text-destructive shrink-0" title="${escapeHtml(cheatTitle)}">⚠</span>` : '';
+        const avatarHtml = avatarUrl 
+            ? `<img src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(name)}" class="mini-avatar-img" style="width:100%; height:100%; object-fit:cover; border-radius:inherit;">`
+            : escapeHtml(initials);
         return `
             <button
               type="button"
@@ -2490,7 +2499,7 @@ function renderTeacherPronAttemptsList() {
               style="display:flex; align-items:center; gap:.5rem;"
             >
               <span class="student-chip" style="min-width:0;">
-                <span class="mini-avatar" aria-hidden="true">${escapeHtml(initials)}</span>
+                <span class="mini-avatar" aria-hidden="true">${avatarHtml}</span>
                 <span style="min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
                   ${escapeHtml(name)}
                 </span>
@@ -2534,6 +2543,7 @@ async function loadTeacherPronAttempt(attemptId) {
         const attempt = data.attempt || {};
         const studentName = attempt.student_name || `Student #${attempt.student_id || ''}`;
         const initials = getInitials(studentName);
+        const avatarUrl = attempt.student_avatar_url ? (attempt.student_avatar_url.startsWith('/') ? (window.API_BASE || '') + attempt.student_avatar_url : attempt.student_avatar_url) : null;
         const score = (attempt.score != null && attempt.total_points != null)
             ? `${Math.round(attempt.score)}/${Math.round(attempt.total_points)}`
             : (attempt.score != null ? `${Math.round(attempt.score)}` : '-');
@@ -2552,12 +2562,15 @@ async function loadTeacherPronAttempt(attemptId) {
                 </span>
               </div>`
             : '';
+        const avatarHtml = avatarUrl 
+            ? `<img src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(studentName)}" class="mini-avatar-img" style="width:100%; height:100%; object-fit:cover; border-radius:inherit;">`
+            : escapeHtml(initials);
         const studentHeader = `
           <div class="teacher-review-summary" style="margin-bottom:1rem;">
             <div style="min-width:0;">
               <div class="text-xs text-muted-foreground">Student</div>
               <div class="student-chip" style="margin-top:.25rem; min-width:0;">
-                <span class="mini-avatar" aria-hidden="true">${escapeHtml(initials)}</span>
+                <span class="mini-avatar" aria-hidden="true">${avatarHtml}</span>
                 <span class="font-semibold" style="min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(studentName)}</span>
               </div>
             </div>
@@ -2672,6 +2685,102 @@ async function saveTeacherPronunciationOverrides() {
     } catch (e) {
         console.error(e);
         showNotification?.("Failed to save adjustments.", "error");
+    }
+}
+
+/**
+ * 🔒 Pronunciation category locking logic (Student side)
+ */
+async function updatePronunciationCategoryStatus(user) {
+    if (!user || user.role === 'teacher') return;
+
+    try {
+        const selectedClass = JSON.parse(localStorage.getItem("eel_selected_class") || "null");
+        const classId = selectedClass?.id ?? selectedClass?.class_id ?? localStorage.getItem("eel_selected_class_id") ?? null;
+        let subjectId = selectedClass?.subject_id != null ? Number(selectedClass.subject_id) : null;
+        if (subjectId == null || !Number.isFinite(subjectId)) {
+            subjectId = resolveSubjectIdFromName(selectedClass?.subject) ?? 1;
+        }
+
+        // Fetch all quizzes for this subject
+        const quizRes = await fetch(`${window.API_BASE || ""}/api/pronunciation-quizzes?subject_id=${subjectId}&student_id=${user.user_id}`);
+        const quizzes = await quizRes.json();
+        if (!Array.isArray(quizzes)) return;
+
+        // Fetch all student attempts for this subject
+        let attemptUrl = `${window.API_BASE || ""}/api/pronunciation-attempts?student_id=${user.user_id}`;
+        if (classId != null) attemptUrl += `&class_id=${classId}`;
+        const attemptRes = await fetch(attemptUrl);
+        const attemptData = await attemptRes.json();
+        const studentAttempts = attemptData.success ? attemptData.attempts : [];
+
+        const categories = ['beginner', 'intermediate', 'advanced'];
+        const categoryStatus = {};
+
+        categories.forEach(cat => {
+            const catQuizzes = quizzes.filter(q => String(q.difficulty).toLowerCase() === cat);
+            if (catQuizzes.length === 0) {
+                categoryStatus[cat] = { passed: false, total: 0, passedCount: 0 };
+                return;
+            }
+
+            let passedCount = 0;
+            catQuizzes.forEach(q => {
+                const latestAttempt = studentAttempts
+                    .filter(a => Number(a.quiz_id) === Number(q.quiz_id) && a.status === 'completed')
+                    .sort((a, b) => b.attempt_id - a.attempt_id)[0];
+
+                if (latestAttempt) {
+                    const passing = Number(q.passing_score ?? 70);
+                    const score = Number(latestAttempt.score || 0);
+                    const total = Number(latestAttempt.total_points || 100);
+                    const percent = (total > 0) ? (score / total) * 100 : score;
+                    if (percent >= passing) passedCount++;
+                }
+            });
+
+            categoryStatus[cat] = {
+                passed: passedCount === catQuizzes.length && catQuizzes.length > 0,
+                total: catQuizzes.length,
+                passedCount: passedCount
+            };
+        });
+
+        // Update UI
+        const btnBeginner = document.getElementById('btn-category-consonant');
+        const btnIntermediate = document.getElementById('btn-category-stress');
+        const btnAdvanced = document.getElementById('btn-category-linking');
+
+        if (btnBeginner) {
+            if (categoryStatus.beginner.passed) btnBeginner.classList.add('pronunciation-category-btn--passed');
+        }
+
+        if (btnIntermediate) {
+            const isLocked = !categoryStatus.beginner.passed;
+            if (isLocked) {
+                btnIntermediate.classList.add('pronunciation-category-btn--locked');
+                btnIntermediate.setAttribute('disabled', 'true');
+            } else {
+                btnIntermediate.classList.remove('pronunciation-category-btn--locked');
+                btnIntermediate.removeAttribute('disabled');
+                if (categoryStatus.intermediate.passed) btnIntermediate.classList.add('pronunciation-category-btn--passed');
+            }
+        }
+
+        if (btnAdvanced) {
+            const isLocked = !categoryStatus.intermediate.passed;
+            if (isLocked) {
+                btnAdvanced.classList.add('pronunciation-category-btn--locked');
+                btnAdvanced.setAttribute('disabled', 'true');
+            } else {
+                btnAdvanced.classList.remove('pronunciation-category-btn--locked');
+                btnAdvanced.removeAttribute('disabled');
+                if (categoryStatus.advanced.passed) btnAdvanced.classList.add('pronunciation-category-btn--passed');
+            }
+        }
+
+    } catch (err) {
+        console.error("Error updating category status:", err);
     }
 }
 

@@ -2926,8 +2926,10 @@ function renderTeacherReadingAttemptsList() {
     }
 
     list.innerHTML = attempts.map(a => {
-        const name = a.student_name || `Student #${a.student_id}`;
+        const name = a.student_name || `Student #${a.student_id || a.user_id || a.id}`;
         const initials = getInitials(name);
+        const rawAvatar = a.student_avatar_url || a.avatar_url;
+        const avatarUrl = rawAvatar ? (rawAvatar.startsWith('/') ? (window.API_BASE || '') + rawAvatar : rawAvatar) : null;
         const score = (a.score != null && a.total_points != null)
             ? `${Math.round(a.score)}/${Math.round(a.total_points)}`
             : '-';
@@ -2938,6 +2940,9 @@ function renderTeacherReadingAttemptsList() {
             ? 'Quiz invalidated (score of 0): The student exited fullscreen or switched tabs multiple times, resulting in an automatic zero score.'
             : `Left fullscreen or switched tabs (${a.cheating_violations || 0} time(s)).`;
         const cheatBadge = cheated ? `<span class="text-xs px-1 py-0.5 rounded bg-destructive/20 text-destructive shrink-0" title="${escapeHtml(cheatTitle)}">⚠</span>` : '';
+        const avatarHtml = avatarUrl 
+            ? `<img src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(name)}" class="mini-avatar-img" style="width:100%; height:100%; object-fit:cover; border-radius:inherit;">`
+            : escapeHtml(initials);
         return `
             <button
               type="button"
@@ -2946,7 +2951,7 @@ function renderTeacherReadingAttemptsList() {
               style="display:flex; align-items:center; gap:.5rem;"
             >
               <span class="student-chip teacher-attempt-left" style="min-width:0;">
-                <span class="mini-avatar" aria-hidden="true">${escapeHtml(initials)}</span>
+                <span class="mini-avatar" aria-hidden="true">${avatarHtml}</span>
                 <span class="teacher-attempt-name-block">
                   <span class="teacher-attempt-name" style="min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
                     ${escapeHtml(name)}
@@ -3007,6 +3012,8 @@ function renderTeacherReadingAttemptDetail(answers, targetEl) {
     const attempt = (teacherReadingReviewState.attempts || []).find(a => Number(a.attempt_id) === Number(teacherReadingReviewState.attemptId));
     const studentName = attempt?.student_name || (attempt?.student_id ? `Student #${attempt.student_id}` : 'Student');
     const studentInitials = getInitials(studentName);
+    const rawAvatar = attempt?.student_avatar_url || attempt?.avatar_url;
+    const avatarUrl = rawAvatar ? (rawAvatar.startsWith('/') ? (window.API_BASE || '') + rawAvatar : rawAvatar) : null;
     const score = (attempt?.score != null && attempt?.total_points != null)
         ? `${Math.round(attempt.score)}/${Math.round(attempt.total_points)}`
         : '-';
@@ -3026,6 +3033,9 @@ function renderTeacherReadingAttemptDetail(answers, targetEl) {
           </div>`
         : '';
 
+    const avatarHtml = avatarUrl 
+        ? `<img src="${escapeHtml(avatarUrl)}" alt="${escapeHtml(studentName)}" class="mini-avatar-img" style="width:100%; height:100%; object-fit:cover; border-radius:inherit;">`
+        : escapeHtml(studentInitials);
     const byQuestionId = new Map((answers || []).map(a => [Number(a.question_id), a]));
 
     // Build a map optionId -> optionText for MCQ display
@@ -3213,7 +3223,7 @@ function renderTeacherReadingAttemptDetail(answers, targetEl) {
         <div style="min-width:0;">
           <div class="text-xs text-muted-foreground">Student</div>
           <div class="student-chip" style="margin-top:.25rem; min-width:0;">
-            <span class="mini-avatar" aria-hidden="true">${escapeHtml(studentInitials)}</span>
+            <span class="mini-avatar" aria-hidden="true">${avatarHtml}</span>
             <span class="font-semibold" style="min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
               ${escapeHtml(studentName)}
             </span>
