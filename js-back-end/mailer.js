@@ -81,7 +81,7 @@ function buildAccountStatusEmail({ name, status, reason }) {
           </div>
         </div>
         <div style="margin-top:12px; text-align:center; color:#94a3b8; font-size:12px;">
-          EEL (English Enhancement Learning)
+          EEL (Efficient English Literacy)
         </div>
       </div>
     </div>
@@ -148,7 +148,7 @@ async function sendPasswordResetCode({ to, code }) {
           </div>
         </div>
         <div style="margin-top:12px; text-align:center; color:#94a3b8; font-size:12px;">
-          EEL (English Enhancement Learning)
+          EEL (Efficient English Literacy)
         </div>
       </div>
     </div>

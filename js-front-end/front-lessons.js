@@ -684,7 +684,7 @@ function downloadLessonAsPpt() {
           x: 0.8, y: 1.0, w: 8.4, h: 1.2,
           fontSize: 32, bold: true, align: "center", color: VIOLET,
         });
-        titleSlide.addText("English Enhancement Learning", {
+        titleSlide.addText("Efficient English Literacy", {
           x: 0.8, y: 2.2, w: 8.4, h: 0.4,
           fontSize: 16, align: "center", color: GREEN, bold: true,
         });

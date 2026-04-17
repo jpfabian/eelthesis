@@ -1,7 +1,7 @@
 ================================================================================
-EEL (English Enhancement Learning) - DATA DICTIONARY
+EEL (Efficient English Literacy) - DATA DICTIONARY
 ================================================================================
-Project: EEL (English Enhancement Learning)
+Project: EEL (Efficient English Literacy)
 File: DATA_DICTIONARY.txt
 ================================================================================
 

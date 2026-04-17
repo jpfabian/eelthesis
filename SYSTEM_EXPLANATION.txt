@@ -1,7 +1,8 @@
 ================================================================================
-EEL (English Enhancement Learning) - SYSTEM EXPLANATION & USER GUIDE
-================================================================================
-Project: EEL (English Enhancement Learning)
+EEL (Efficient English Literacy) - SYSTEM EXPLANATION & USER GUIDE
+==================================================================
+
+Project: EEL (Efficient English Literacy)
 Purpose: Thesis Defense Presentation (March 30)
 ================================================================================
 

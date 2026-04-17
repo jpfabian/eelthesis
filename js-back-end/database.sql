@@ -1,5 +1,5 @@
 /* =========================================================
-   EEL (English Enhancement Learning) - MySQL Schema
+   EEL (Efficient English Literacy) - MySQL Schema
    Covers all tables used in `js-back-end/*.js`.
    Engine: InnoDB, Charset: utf8mb4
    ========================================================= */
