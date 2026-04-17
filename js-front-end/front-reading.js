@@ -3164,6 +3164,7 @@ function renderTeacherReadingAttemptDetail(answers, targetEl) {
             `;
         }
 
+        if (q.question_type === 'essay') {
                 let aiFeedbackText = '';
                 let highlightedAnswer = escapeHtml(ans.student_answer || '');
 
@@ -3171,9 +3172,6 @@ function renderTeacherReadingAttemptDetail(answers, targetEl) {
                     try {
                         const parsed = JSON.parse(ans.ai_feedback);
                         aiFeedbackText = parsed.feedback || '';
-                        // Reuse the helper function if it was defined in this scope
-                        // Since I defined it inside the load function earlier, I'll need to define it again or move it.
-                        // Actually, I'll move it to a higher scope in the next step.
                         highlightedAnswer = renderEssayFeedback(ans.student_answer, ans.ai_feedback);
                     } catch (e) {
                         aiFeedbackText = ans.ai_feedback;
@@ -3227,6 +3225,7 @@ function renderTeacherReadingAttemptDetail(answers, targetEl) {
                 </div>
               </div>
             `;
+        }
 
         if (q.question_type === 'fill_blank') {
             const blanks = Array.isArray(ans.blanks) ? ans.blanks : [];

@@ -1004,6 +1004,22 @@
               var correctText = a.correct_answer_text != null ? escapeHtml(String(a.correct_answer_text)) : "—";
               var badgeClass = a.is_correct ? "quiz-review-badge--correct" : "quiz-review-badge--incorrect";
               var badgeText = a.is_correct ? "Correct" : "Incorrect";
+
+              if (a.question_type === "essay") {
+                let highlightedAnswer = escapeHtml(a.student_answer || "");
+                let aiFeedbackContent = "";
+                if (a.ai_feedback) {
+                  try {
+                    const parsed = JSON.parse(a.ai_feedback);
+                    highlightedAnswer = renderEssayFeedback(a.student_answer, a.ai_feedback);
+                    aiFeedbackContent = '<div class="quiz-review-item__row"><strong>AI Feedback:</strong> ' + escapeHtml(parsed.feedback || "") + '</div>';
+                  } catch (e) {
+                    aiFeedbackContent = '<div class="quiz-review-item__row"><strong>AI Feedback:</strong> ' + escapeHtml(a.ai_feedback) + '</div>';
+                  }
+                }
+                return "<div class=\"quiz-review-item\"><div class=\"quiz-review-item__header\"><span class=\"quiz-review-item__num\">Question " + (i + 1) + "</span><span class=\"quiz-review-badge quiz-review-badge--correct\">Essay</span></div><p class=\"quiz-review-item__q\">" + escapeHtml(a.question_text || "") + "</p><div class=\"quiz-review-item__row\"><strong>Your answer:</strong> " + highlightedAnswer + "</div>" + aiFeedbackContent + "</div>";
+              }
+
               return "<div class=\"quiz-review-item\"><div class=\"quiz-review-item__header\"><span class=\"quiz-review-item__num\">Question " + (i + 1) + "</span><span class=\"quiz-review-badge " + badgeClass + "\">" + badgeText + "</span></div><p class=\"quiz-review-item__q\">" + escapeHtml(a.question_text || "") + "</p><div class=\"quiz-review-item__row\"><strong>Your answer:</strong> " + yourAnswerText + "</div><div class=\"quiz-review-item__row\"><strong>Correct answer:</strong> " + correctText + "</div></div>";
             }).join("");
           }
