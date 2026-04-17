@@ -578,7 +578,7 @@ function downloadLessonAsPpt() {
   const topicTitle = (titleEl?.textContent || "Topic").trim();
   const pres = new PptxGenJS();
 
-  pres.author = "EEL - Enhancing English Literacy";
+  pres.author = "EEL - Efficient English Literacy";
   pres.title = topicTitle;
 
   const VIOLET = "6d28d9";

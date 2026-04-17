@@ -5292,6 +5292,47 @@ select.form-input optgroup {
 .mb-2 { margin-bottom: 0.5rem; }
 .mb-3 { margin-bottom: 0.75rem; }
 .mb-4 { margin-bottom: 1rem; }
+
+/* Grammar Error Highlighting */
+.grammar-error {
+    background-color: rgba(239, 68, 68, 0.15);
+    border-bottom: 2px dashed #ef4444;
+    cursor: help;
+    position: relative;
+    display: inline;
+}
+
+.grammar-correction {
+    display: none;
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1f2937;
+    color: white;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.375rem;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    z-index: 50;
+    margin-bottom: 0.5rem;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.grammar-error:hover .grammar-correction {
+    display: block;
+}
+
+.grammar-correction::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 5px;
+    border-style: solid;
+    border-color: #1f2937 transparent transparent transparent;
+}
 .mb-6 { margin-bottom: 1.5rem; }
 .mt-0 { margin-top: 0; }
 .mt-1 { margin-top: 0.25rem; }   /* 4px */

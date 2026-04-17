@@ -1,6 +1,6 @@
 ================================================================================
                     EEL SYSTEM - ENTITY-RELATIONSHIP DIAGRAM (ERD)
-              Enhancing English Literacy - Database Schema
+              Efficient English Literacy - Database Schema
 ================================================================================
 
 Reference: Crow's feet notation

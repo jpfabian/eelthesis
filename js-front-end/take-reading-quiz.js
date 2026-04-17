@@ -10,6 +10,29 @@
       .replaceAll("'", "&#39;");
   }
 
+  function renderEssayFeedback(studentAnswer, aiFeedbackJson) {
+    if (!aiFeedbackJson) return escapeHtml(studentAnswer || "");
+    let feedback;
+    try {
+      feedback = typeof aiFeedbackJson === "string" ? JSON.parse(aiFeedbackJson) : aiFeedbackJson;
+    } catch (e) {
+      return escapeHtml(studentAnswer || "");
+    }
+    const text = studentAnswer || "";
+    const errors = feedback.grammar_errors || [];
+    if (errors.length === 0) return escapeHtml(text);
+    let escapedText = escapeHtml(text);
+    const sortedErrors = [...errors].sort((a, b) => b.original.length - a.original.length);
+    sortedErrors.forEach(err => {
+      const original = err.original;
+      if (!original) return;
+      const escapedOriginal = escapeHtml(original);
+      const replacement = `<span class="grammar-error" title="${escapeHtml(err.explanation)}">${escapedOriginal}<span class="grammar-correction">Correction: ${escapeHtml(err.correction)}</span></span>`;
+      escapedText = escapedText.split(escapedOriginal).join(replacement);
+    });
+    return escapedText;
+  }
+
   function formatPassageHTML(text) {
     if (!text || typeof text !== "string") return "<p>(No passage provided)</p>";
     var escaped = String(text)
@@ -847,6 +870,7 @@
                   passageEl.textContent = quiz.passage || "(No passage)";
                   securePassage(passageEl);
                 }
+
                 if (container) {
                   container.innerHTML = answers.map(function (a, i) {
                     var q = qMap[a.question_id];
@@ -862,6 +886,22 @@
                     if (a.question_type === "fill_blank" && a.blanks && a.blanks.length) {
                       correctText = a.blanks.map(function (b, idx) { return "Blank " + (idx + 1) + ": " + escapeHtml(b.correct_answer || "—"); }).join("; ");
                     }
+                    
+                    if (a.question_type === "essay") {
+                      let highlightedAnswer = escapeHtml(a.student_answer || "");
+                      let aiFeedbackContent = "";
+                      if (a.ai_feedback) {
+                        try {
+                          const parsed = JSON.parse(a.ai_feedback);
+                          highlightedAnswer = renderEssayFeedback(a.student_answer, a.ai_feedback);
+                          aiFeedbackContent = '<div class="quiz-review-item__row"><strong>AI Feedback:</strong> ' + escapeHtml(parsed.feedback || "") + '</div>';
+                        } catch (e) {
+                          aiFeedbackContent = '<div class="quiz-review-item__row"><strong>AI Feedback:</strong> ' + escapeHtml(a.ai_feedback) + '</div>';
+                        }
+                      }
+                      return "<div class=\"quiz-review-item\"><div class=\"quiz-review-item__header\"><span class=\"quiz-review-item__num\">Question " + (i + 1) + "</span><span class=\"quiz-review-badge quiz-review-badge--correct\">Essay</span></div><p class=\"quiz-review-item__q\">" + escapeHtml((q && q.question_text) || "") + "</p><div class=\"quiz-review-item__row\"><strong>Your answer:</strong> " + highlightedAnswer + "</div>" + aiFeedbackContent + "</div>";
+                    }
+
                     var badgeClass = a.is_correct ? "quiz-review-badge--correct" : "quiz-review-badge--incorrect";
                     var badgeText = a.is_correct ? "Correct" : "Incorrect";
                     return "<div class=\"quiz-review-item\"><div class=\"quiz-review-item__header\"><span class=\"quiz-review-item__num\">Question " + (i + 1) + "</span><span class=\"quiz-review-badge " + badgeClass + "\">" + badgeText + "</span></div><p class=\"quiz-review-item__q\">" + escapeHtml((q && q.question_text) || "") + "</p><div class=\"quiz-review-item__row\"><strong>Your answer:</strong> " + yourAnswerText + "</div><div class=\"quiz-review-item__row\"><strong>Correct answer:</strong> " + correctText + "</div></div>";

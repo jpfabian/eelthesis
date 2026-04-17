@@ -1,5 +1,37 @@
 let currentUser = null;
 
+function escapeHtml(str) {
+    return String(str == null ? "" : str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+}
+
+function renderEssayFeedback(studentAnswer, aiFeedbackJson) {
+    if (!aiFeedbackJson) return escapeHtml(studentAnswer || '');
+    let feedback;
+    try {
+        feedback = typeof aiFeedbackJson === 'string' ? JSON.parse(aiFeedbackJson) : aiFeedbackJson;
+    } catch (e) {
+        return escapeHtml(studentAnswer || '');
+    }
+    const text = studentAnswer || "";
+    const errors = feedback.grammar_errors || [];
+    if (errors.length === 0) return escapeHtml(text);
+    let escapedText = escapeHtml(text);
+    const sortedErrors = [...errors].sort((a, b) => b.original.length - a.original.length);
+    sortedErrors.forEach(err => {
+        const original = err.original;
+        if (!original) return;
+        const escapedOriginal = escapeHtml(original);
+        const replacement = `<span class="grammar-error" title="${escapeHtml(err.explanation)}">${escapedOriginal}<span class="grammar-correction">Correction: ${escapeHtml(err.correction)}</span></span>`;
+        escapedText = escapedText.split(escapedOriginal).join(replacement);
+    });
+    return escapedText;
+}
+
 function initQuizViewToggle(storageKey) {
     const page = document.querySelector('.quiz-page');
     if (!page) return;
@@ -441,7 +473,19 @@ async function openStudentReadingReviewModal(quizId, quizTitle = '') {
                 const itemClass = a.is_correct ? 'quiz-review-item--correct' : 'quiz-review-item--incorrect';
                 const pointsText = a.points_earned != null ? `Points: ${Math.round(a.points_earned)}/${Math.round(a.points_possible || 5)}` : '';
                 const aiScore = a.ai_score != null ? Math.round(a.ai_score) : null;
-                const aiFeedback = a.ai_feedback || '';
+                
+                let aiFeedbackText = '';
+                let highlightedAnswer = escapeHtml(a.student_answer || '');
+
+                if (a.ai_feedback) {
+                    try {
+                        const parsed = JSON.parse(a.ai_feedback);
+                        aiFeedbackText = parsed.feedback || '';
+                        highlightedAnswer = renderEssayFeedback(a.student_answer, a.ai_feedback);
+                    } catch (e) {
+                        aiFeedbackText = a.ai_feedback;
+                    }
+                }
                 
                 let gradingInfo = '';
                 if (aiScore !== null) {
@@ -460,10 +504,10 @@ async function openStudentReadingReviewModal(quizId, quizTitle = '') {
                                         <li>Completeness and thoughtfulness</li>
                                     </ul>
                                 </div>
-                                ${aiFeedback ? `
+                                ${aiFeedbackText ? `
                                 <div class="quiz-review-criteria-item">
                                     <strong>AI Feedback:</strong>
-                                    <p class="quiz-review-feedback-text">${escapeHtml(aiFeedback)}</p>
+                                    <p class="quiz-review-feedback-text">${escapeHtml(aiFeedbackText)}</p>
                                 </div>
                                 ` : ''}
                             </div>
@@ -471,7 +515,7 @@ async function openStudentReadingReviewModal(quizId, quizTitle = '') {
                     `;
                 }
                 
-                return `<div class="quiz-review-item ${itemClass}"><div class="quiz-review-item__header"><span class="quiz-review-item__num">Question ${i + 1}</span>${pointsText ? `<span class="quiz-review-points">${pointsText}</span>` : ''}</div><p class="quiz-review-item__q">${escapeHtml((q && q.question_text) || '')}</p><div class="quiz-review-item__row"><span class="quiz-review-item__row-label">Your answer</span><span class="quiz-review-item__row-value">${yourAnswerText}</span></div>${gradingInfo}</div>`;
+                return `<div class="quiz-review-item ${itemClass}"><div class="quiz-review-item__header"><span class="quiz-review-item__num">Question ${i + 1}</span>${pointsText ? `<span class="quiz-review-points">${pointsText}</span>` : ''}</div><p class="quiz-review-item__q">${escapeHtml((q && q.question_text) || '')}</p><div class="quiz-review-item__row"><span class="quiz-review-item__row-label">Your answer</span><span class="quiz-review-item__row-value">${highlightedAnswer}</span></div>${gradingInfo}</div>`;
             }
             
             // For MCQ and other question types, show score
@@ -3120,8 +3164,23 @@ function renderTeacherReadingAttemptDetail(answers, targetEl) {
             `;
         }
 
-        if (q.question_type === 'essay') {
-            return `
+                let aiFeedbackText = '';
+                let highlightedAnswer = escapeHtml(ans.student_answer || '');
+
+                if (ans.ai_feedback) {
+                    try {
+                        const parsed = JSON.parse(ans.ai_feedback);
+                        aiFeedbackText = parsed.feedback || '';
+                        // Reuse the helper function if it was defined in this scope
+                        // Since I defined it inside the load function earlier, I'll need to define it again or move it.
+                        // Actually, I'll move it to a higher scope in the next step.
+                        highlightedAnswer = renderEssayFeedback(ans.student_answer, ans.ai_feedback);
+                    } catch (e) {
+                        aiFeedbackText = ans.ai_feedback;
+                    }
+                }
+
+                return `
               <div class="teacher-reading-answer-row teacher-answer-row" data-answer-id="${ans.answer_id}">
                 <div class="teacher-reading-answer-hero">
                   <div class="teacher-reading-answer-q">Q</div>
@@ -3143,7 +3202,7 @@ function renderTeacherReadingAttemptDetail(answers, targetEl) {
                       </div>
                     </div>
                   </div>
-                  <div class="teacher-reading-essay-box" style="white-space:pre-wrap;">${escapeHtml(ans.student_answer || '')}</div>
+                  <div class="teacher-reading-essay-box" style="white-space:pre-wrap;">${highlightedAnswer}</div>
                   <div class="teacher-reading-grading-basis">
                     <div class="teacher-reading-grading-basis-header">
                       <i data-lucide="clipboard-check" class="size-4"></i>
@@ -3161,14 +3220,13 @@ function renderTeacherReadingAttemptDetail(answers, targetEl) {
                       </div>
                       <div class="teacher-reading-grading-basis-section">
                         <div class="teacher-reading-grading-basis-label">AI Feedback:</div>
-                        <div class="teacher-reading-grading-basis-feedback">${escapeHtml(ans.ai_feedback || 'No feedback available.')}</div>
+                        <div class="teacher-reading-grading-basis-feedback">${escapeHtml(aiFeedbackText || 'No feedback available.')}</div>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
             `;
-        }
 
         if (q.question_type === 'fill_blank') {
             const blanks = Array.isArray(ans.blanks) ? ans.blanks : [];

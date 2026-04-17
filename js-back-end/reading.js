@@ -934,18 +934,28 @@ router.patch("/api/teacher/reading-quiz-attempts/:id/submit", async (req, res) =
         const aiResult = await gradeEssayWithGroq(studentAnswerText, questionText);
         pointsEarned = aiResult.score ? Math.round((aiResult.score / 100) * questionPoints) : 0;
         isCorrect = pointsEarned > 0 ? 1 : 0;
+
+        const aiFeedback = JSON.stringify({
+          feedback: aiResult.feedback || "",
+          grammar_errors: aiResult.grammar_errors || []
+        });
+
+        await pool.query(
+          `INSERT INTO teacher_reading_quiz_answers (attempt_id, question_id, question_type, student_answer, is_correct, points_earned, ai_score, ai_feedback)
+           VALUES (?, ?, 'essay', ?, ?, ?, ?, ?)`,
+          [attemptId, questionId, studentAnswerText, isCorrect, pointsEarned, aiResult.score ?? 0, aiFeedback]
+        );
       } else {
         pointsEarned = 0;
         totalPoints += pointsPerQuestion;
+        await pool.query(
+          `INSERT INTO teacher_reading_quiz_answers (attempt_id, question_id, question_type, student_answer, is_correct, points_earned)
+           VALUES (?, ?, 'mcq', ?, ?, ?)`,
+          [attemptId, questionId, studentAnswerText, isCorrect, pointsEarned]
+        );
       }
 
       totalScore += pointsEarned;
-
-      await pool.query(
-        `INSERT INTO teacher_reading_quiz_answers (attempt_id, question_id, question_type, student_answer, is_correct, points_earned)
-         VALUES (?, ?, 'mcq', ?, ?, ?)`,
-        [attemptId, questionId, studentAnswerText, isCorrect, pointsEarned]
-      );
     }
 
     const violations = Number(cheating_violations) || 0;
@@ -1364,12 +1374,17 @@ router.patch("/api/reading-quiz-attempts/:id/submit", async (req, res) => {
           ? Math.round((aiResult.score / 100) * questionPoints)
           : 0;
 
+        const aiFeedback = JSON.stringify({
+          feedback: aiResult.feedback || "",
+          grammar_errors: aiResult.grammar_errors || []
+        });
+
         // 🔹 Update DB
         await pool.query(`
           UPDATE reading_quiz_answers
           SET ai_score = ?, ai_feedback = ?, points_earned = ?
           WHERE answer_id = ?
-        `, [aiResult.score ?? 0, aiResult.feedback ?? "No answer provided.", essayScore, ans.answer_id]);
+        `, [aiResult.score ?? 0, aiFeedback, essayScore, ans.answer_id]);
 
         totalScore += essayScore;
       }
@@ -1533,42 +1548,51 @@ async function gradeEssayWithGroq(studentAnswer, questionText = "") {
               3. Grammar and clarity
               4. Completeness and thoughtfulness
               ${questionText ? `\nQuestion: "${questionText}"` : ""}
-              Respond ONLY in JSON like: {"score": 85, "feedback": "Good structure but weak conclusion."}`
+              
+              Identify specific grammar or spelling errors. For each error, provide the EXACT snippet from the student's text, a correction, and a brief explanation.
+
+              Respond ONLY in JSON like: {
+                "score": 85, 
+                "feedback": "Overall good, but watch your verb tenses.",
+                "grammar_errors": [
+                  {
+                    "original": "exact text from essay",
+                    "correction": "corrected version",
+                    "explanation": "why it was wrong"
+                  }
+                ]
+              }`
           },
           { role: "user", content: `Student's essay: """${studentAnswer}"""` }
         ],
         temperature: 0.2,
-        max_tokens: 250
+        max_tokens: 500,
+        response_format: { type: "json_object" }
       })
     });
 
     if (!response.ok) {
       console.error("Groq API error:", response.status, response.statusText);
-      return { score: 50, feedback: "AI service temporarily unavailable. Essay will be manually reviewed." };
+      return { score: 50, feedback: "AI service temporarily unavailable. Essay will be manually reviewed.", grammar_errors: [] };
     }
 
     const data = await response.json();
     const text = data?.choices?.[0]?.message?.content?.trim() || "";
 
-    // Parse JSON-like output from AI
-    const match = text.match(/\{[\s\S]*\}/);
-    if (match) {
-      try {
-        const result = JSON.parse(match[0]);
-        // Validate score range
-        const score = Math.max(0, Math.min(100, Number(result.score) || 0));
-        const feedback = result.feedback || "Essay graded automatically.";
-        return { score, feedback };
-      } catch (parseErr) {
-        console.error("❌ Failed to parse JSON:", match[0]);
-        return { score: 50, feedback: "AI response format error. Essay will be manually reviewed." };
-      }
+    try {
+      const result = JSON.parse(text);
+      // Validate score range
+      const score = Math.max(0, Math.min(100, Number(result.score) || 0));
+      const feedback = result.feedback || "Essay graded automatically.";
+      const grammar_errors = Array.isArray(result.grammar_errors) ? result.grammar_errors : [];
+      return { score, feedback, grammar_errors };
+    } catch (parseErr) {
+      console.error("❌ Failed to parse JSON:", text);
+      return { score: 50, feedback: "AI response format error. Essay will be manually reviewed.", grammar_errors: [] };
     }
-
-    return { score: 50, feedback: "AI did not return valid format. Essay will be manually reviewed." };
   } catch (err) {
     console.error("Groq essay grading failed:", err);
-    return { score: 50, feedback: "AI service error. Essay will be manually reviewed." };
+    return { score: 50, feedback: "AI service error. Essay will be manually reviewed.", grammar_errors: [] };
   }
 }
 

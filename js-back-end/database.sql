@@ -521,6 +521,8 @@ CREATE TABLE IF NOT EXISTS teacher_reading_quiz_answers (
   student_answer TEXT NULL,
   is_correct TINYINT(1) NULL,
   points_earned DECIMAL(10,2) NULL,
+  ai_score DECIMAL(6,2) NULL,
+  ai_feedback TEXT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (answer_id),
   UNIQUE KEY uq_trq_answers_attempt_question (attempt_id, question_id),
